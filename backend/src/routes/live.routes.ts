@@ -11,9 +11,9 @@ import { listLiveSessions } from '../services/LiveSessionService';
 const router = Router();
 router.use(authenticate);
 
-// GET /api/live/sessions?projectId= — sessions live en cours du projet (badges LIVE :
-// bouton de la review, cartes de version). Rafraîchi côté client sur l'event socket
-// `live:changed` diffusé à la room du projet.
+// GET /api/live/sessions?projectId= — live sessions currently running in the project (LIVE badges:
+// review button, version cards). Refreshed client-side on the `live:changed` socket event broadcast to
+// the project's room.
 router.get(
   '/sessions',
   validate({ query: z.object({ projectId: z.coerce.number().int().positive() }) }),

@@ -32,46 +32,46 @@ import adminRetentionRoutes from './admin-retention.routes';
 const router = Router();
 router.use(authenticate, requireRole(Role.ADMIN));
 
-// Rétention des journaux — routes /retention* (fichier dédié, mêmes gardes que ci-dessus).
+// Log retention: /retention* routes (dedicated file, same guards as above).
 router.use(adminRetentionRoutes);
 
-// GET /api/admin/project-defaults — réglages par défaut des nouveaux projets
+// GET /api/admin/project-defaults — default settings for new projects
 router.get('/project-defaults', async (_req, res) => {
   res.json({ settings: await getStudioProjectDefaults() });
 });
 
-// PUT /api/admin/project-defaults — départements + nomenclature + pipeline par défaut
+// PUT /api/admin/project-defaults — departments + naming convention + default pipeline
 router.put('/project-defaults', validate({ body: projectSettingsSchema }), async (req, res) => {
   const settings = await setStudioProjectDefaults(req.body);
   logAudit({ userId: req.user!.id, action: 'PROJECT_DEFAULTS_UPDATE', entityType: 'Setting' });
   res.json({ settings });
 });
 
-// GET /api/admin/transcode — config de transcodage vidéo (contexte Vidéo)
+// GET /api/admin/transcode — video transcoding config (Video context)
 router.get('/transcode', async (_req, res) => {
   res.json({ config: await getTranscodeConfig() });
 });
 
-// PUT /api/admin/transcode — enregistre la config de transcodage (lue par le worker HLS)
+// PUT /api/admin/transcode — records the transcoding config (read by the HLS worker)
 router.put('/transcode', validate({ body: transcodeConfigSchema }), async (req, res) => {
   const config = await setTranscodeConfig(req.body);
   logAudit({ userId: req.user!.id, action: 'TRANSCODE_CONFIG_UPDATE', entityType: 'Setting' });
   res.json({ config });
 });
 
-// GET /api/admin/burnin — template studio des burn-ins/slates (35.A)
+// GET /api/admin/burnin — studio template for burn-ins and slates (35.A)
 router.get('/burnin', async (_req, res) => {
   res.json({ config: await getStudioBurninConfig() });
 });
 
-// PUT /api/admin/burnin — enregistre le template (appliqué aux prochains transcodages)
+// PUT /api/admin/burnin — records the template (applied to the next transcodes)
 router.put('/burnin', validate({ body: burninConfigSchema }), async (req, res) => {
   const config = await setStudioBurninConfig(req.body);
   logAudit({ userId: req.user!.id, action: 'BURNIN_CONFIG_UPDATE', entityType: 'Setting' });
   res.json({ config });
 });
 
-// GET/PUT /api/admin/derived-purge — purge des dérivés obsolètes (37.H) + exécution manuelle
+// GET/PUT /api/admin/derived-purge — purge of obsolete derivatives (37.H) + manual run
 router.get('/derived-purge', async (_req, res) => {
   res.json({ config: await getDerivedPurgeConfig() });
 });
@@ -91,25 +91,25 @@ router.post('/derived-purge/run', async (req, res) => {
   res.json(result);
 });
 
-// GET /api/admin/oidc — config SSO (36.A, sans le secret)
+// GET /api/admin/oidc — SSO config (36.A, without the secret)
 router.get('/oidc', async (_req, res) => {
   res.json({ oidc: await getPublicOidcConfig() });
 });
 
-// PUT /api/admin/oidc — enregistre la config SSO (secret write-only, chiffré). La garde
-// « SSO seul » vit dans lib/oidcConfig : c'est elle qui empêche l'instance de se refermer.
+// PUT /api/admin/oidc — records the SSO config (secret write-only, encrypted). The "SSO only"
+// guard lives in lib/oidcConfig: it is what prevents the instance from locking itself out.
 router.put('/oidc', validate({ body: oidcConfigSchema }), async (req, res) => {
   await updateOidcConfig(req.body as Record<string, unknown>);
   logAudit({ userId: req.user!.id, action: 'OIDC_CONFIG_UPDATE', entityType: 'Setting' });
   res.json({ oidc: await getPublicOidcConfig() });
 });
 
-// POST /api/admin/oidc/logo/presign — logo affiché dans le bouton SSO de la page de connexion.
+// POST /api/admin/oidc/logo/presign — logo displayed in the SSO button of the login page.
 router.post('/oidc/logo/presign', validate({ body: brandingUploadSchema }), async (req, res) => {
   res.json(await presignBrandingUpload('sso', (req.body as { contentType: string }).contentType));
 });
 
-// GET /api/admin/api-tokens — tous les tokens d'API du studio (36.C, jamais le secret)
+// GET /api/admin/api-tokens — all the studio's API tokens (36.C, never the secret)
 router.get('/api-tokens', async (_req, res) => {
   const tokens = await prisma.apiToken.findMany({
     where: { revokedAt: null },
@@ -127,7 +127,7 @@ router.get('/api-tokens', async (_req, res) => {
   res.json({ tokens });
 });
 
-// DELETE /api/admin/api-tokens/:id — révocation par un admin (n'importe quel compte)
+// DELETE /api/admin/api-tokens/:id — revocation by an admin (any account)
 router.delete(
   '/api-tokens/:id',
   validate({ params: z.object({ id: z.coerce.number().int() }) }),
@@ -148,32 +148,32 @@ router.delete(
   },
 );
 
-// GET /api/admin/media-access — journal d'accès aux médias (36.E), paginé, récent d'abord
+// GET /api/admin/media-access — media access log (36.E), paginated, most recent first
 router.get('/media-access', validate({ query: paginationQuery }), async (req, res) => {
   res.json(await AdminService.mediaAccessLog(readPagination(req.query)));
 });
 
-// GET /api/admin/dashboard — métriques studio (compat. ascendante, vue compacte)
+// GET /api/admin/dashboard — studio metrics (backward compatible, compact view)
 router.get('/dashboard', async (_req, res) => {
   res.json(await AdminService.dashboard());
 });
 
-// GET /api/admin/stats — métriques métier complètes (admin)
+// GET /api/admin/stats — full business metrics (admin)
 router.get('/stats', async (_req, res) => {
   res.json(await AdminService.stats());
 });
 
-// GET /api/admin/system — métriques système + santé des services (admin)
+// GET /api/admin/system — system metrics + service health (admin)
 router.get('/system', async (_req, res) => {
   res.json(await AdminService.system());
 });
 
-// GET /api/admin/trash — projets supprimés (corbeille globale, admin)
+// GET /api/admin/trash — deleted projects (global trash, admin)
 router.get('/trash', async (_req, res) => {
   res.json({ projects: await AdminService.trashProjects() });
 });
 
-// POST /api/admin/jobs/retry — relance tous les jobs média en échec (admin)
+// POST /api/admin/jobs/retry — re-runs all failed media jobs (admin)
 router.post('/jobs/retry', async (req, res) => {
   res.json({ retried: await AdminService.retryFailedJobs(req.user!.id) });
 });

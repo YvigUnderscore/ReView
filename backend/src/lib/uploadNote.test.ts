@@ -8,7 +8,7 @@ import { AppError } from './errors';
 
 const rule = (requireNote: boolean, minNoteLength = 5): ReviewRequestRule => ({ requireNote, minNoteLength });
 
-/** Le code du refus, ou `null` quand la consigne passe. */
+/** The refusal code, or `null` when the note passes. */
 function codeOf(note: string | null | undefined, r: ReviewRequestRule): string | undefined | null {
   try {
     assertUploadNote(note, r);
@@ -20,38 +20,38 @@ function codeOf(note: string | null | undefined, r: ReviewRequestRule): string |
   }
 }
 
-describe('assertUploadNote — consigne obligatoire déplacée à l’upload (Phase 50)', () => {
-  it('laisse passer l’absence de consigne quand le projet n’en exige pas', () => {
+describe('assertUploadNote — mandatory note moved to upload (Phase 50)', () => {
+  it('lets a missing note through when the project does not require one', () => {
     for (const note of [undefined, null, '', '   ']) {
       expect(codeOf(note, rule(false))).toBeNull();
       expect(assertUploadNote(note, rule(false))).toBeNull();
     }
   });
 
-  it('refuse l’absence de consigne quand le projet l’exige', () => {
+  it('rejects a missing note when the project requires one', () => {
     for (const note of [undefined, null, '', '   ']) {
       expect(codeOf(note, rule(true))).toBe('UPLOAD_NOTE_REQUIRED');
     }
   });
 
-  it('applique le plancher à TOUTE consigne écrite, même facultative', () => {
-    // Une consigne de deux caractères n'est pas une consigne courte : c'est un champ vide
-    // qui a pris la place d'un champ vide. Même arbitrage que pour les consignes de review.
+  it('applies the minimum length to EVERY written note, even optional ones', () => {
+    // A two-character note is not a short note: it is an empty field that took the place of
+    // an empty field. Same trade-off as for review notes.
     expect(codeOf('ok', rule(false, 5))).toBe('UPLOAD_NOTE_TOO_SHORT');
     expect(codeOf('ok', rule(true, 5))).toBe('UPLOAD_NOTE_TOO_SHORT');
   });
 
-  it('compare après `trim` : cinq espaces ne satisfont pas un plancher de cinq', () => {
+  it('compares after `trim`: five spaces do not satisfy a minimum of five', () => {
     expect(codeOf('     ', rule(true, 5))).toBe('UPLOAD_NOTE_REQUIRED');
   });
 
-  it('rend la consigne nettoyée de ses espaces de bord', () => {
+  it('returns the note with its edge spaces stripped', () => {
     expect(assertUploadNote('  Regarder le raccord au 1042  ', rule(true))).toBe(
       'Regarder le raccord au 1042',
     );
   });
 
-  it('borne la longueur stockée — le champ ne dicte pas la taille de la colonne', () => {
+  it('caps the stored length: the field does not dictate the column size', () => {
     const long = 'a'.repeat(REVIEW_NOTE_MAX_LENGTH + 500);
     expect(assertUploadNote(long, rule(true))).toHaveLength(REVIEW_NOTE_MAX_LENGTH);
   });

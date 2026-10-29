@@ -8,19 +8,19 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { httpLoggerOptions, isProbeRequest } from './httpLogger';
 
 /**
- * INFRA-11 — le coût se mesure en NOMBRE DE LIGNES, pas en secondes.
+ * INFRA-11: the cost is measured in NUMBER OF LINES, not in seconds.
  *
- * Le healthcheck docker interroge `/health` toutes les 10 s et Prometheus `/metrics`
- * toutes les 15 s : ~14 400 lignes par jour, sur un budget de rotation de 50 Mo par
- * conteneur. L'exploitant qui enquête le lendemain sur l'incident de la veille ne remonte
- * plus assez loin. Ce qui suit compte les lignes réellement émises par la configuration de
- * production, à travers un vrai serveur HTTP — pas une simulation d'objets req/res.
+ * The docker healthcheck polls `/health` every 10 s and Prometheus polls `/metrics` every 15 s:
+ * about 14,400 lines per day, against a rotation budget of 50 MB per container. The operator who
+ * investigates yesterday's incident the next day can no longer reach back far enough. What follows
+ * counts the lines actually emitted by the production configuration, through a real HTTP server,
+ * not a simulation of req/res objects.
  */
 
-/** Lignes émises par pino, une par enregistrement. */
+/** Lines emitted by pino, one per record. */
 const lines: string[] = [];
 
-/** Dernière ligne écrite — `lines.at(-1)` est `string | undefined`, ce que les tests ne veulent pas. */
+/** Last line written: `lines.at(-1)` is `string | undefined`, which the tests do not want. */
 function lastLine(): string {
   const last = lines.at(-1);
   if (last === undefined) throw new Error('aucune ligne journalisée');
@@ -28,8 +28,8 @@ function lastLine(): string {
 }
 
 const middleware = pinoHttp(
-  // La configuration de production, avec le seul niveau forcé à `info` : le logger de
-  // l'application est `silent` en test, ce qui rendrait tout comptage vide et donc vert.
+  // The production configuration, with only the level forced to `info`: the application's logger
+  // is `silent` in tests, which would make any count empty and therefore green.
   { ...httpLoggerOptions, level: 'info' },
   {
     write(line: string) {
@@ -44,7 +44,7 @@ let base = '';
 beforeAll(async () => {
   server = createServer((req, res) => {
     middleware(req, res);
-    // `?status=500` permet de vérifier que l'échec d'une sonde, lui, reste journalisé.
+    // `?status=500` checks that a probe's failure, for its part, stays logged.
     const status = Number(new URL(req.url ?? '/', 'http://x').searchParams.get('status') ?? 200);
     res.statusCode = status;
     res.end('ok');
@@ -57,7 +57,7 @@ afterAll(async () => {
   await new Promise<void>((resolve) => server.close(() => resolve()));
 });
 
-/** Rejoue `count` requêtes et rend le nombre de lignes de journal qu'elles ont produites. */
+/** Replays `count` requests and returns the number of log lines they produced. */
 async function countLines(path: string, count: number): Promise<number> {
   const before = lines.length;
   for (let i = 0; i < count; i += 1) {
@@ -67,8 +67,8 @@ async function countLines(path: string, count: number): Promise<number> {
   return lines.length - before;
 }
 
-describe('isProbeRequest — frontière entre sonde et trafic', () => {
-  it('reconnaît les sondes, sous /api comme hors /api', () => {
+describe('isProbeRequest — boundary between probe and traffic', () => {
+  it('recognizes probes, under /api as well as outside it', () => {
     for (const url of [
       '/health',
       '/health/live',
@@ -82,13 +82,13 @@ describe('isProbeRequest — frontière entre sonde et trafic', () => {
     }
   });
 
-  it('reconnaît /metrics même quand Prometheus porte son jeton en query', () => {
-    // C'est le cas dès que METRICS_TOKEN est posé : une comparaison sur l'URL entière
-    // (`req.url === '/metrics'`) laisserait repasser tout le bruit du scrape.
+  it('recognizes /metrics even when Prometheus carries its token in the query', () => {
+    // This is the case as soon as METRICS_TOKEN is set: a comparison on the whole URL
+    // (`req.url === '/metrics'`) would let all of the scrape noise through.
     expect(isProbeRequest('/metrics?token=s3cr3t')).toBe(true);
   });
 
-  it("ne silencie aucune route de l'application", () => {
+  it("silences no application route", () => {
     for (const url of [
       '/api/media/1',
       '/api/health-checks',
@@ -102,34 +102,34 @@ describe('isProbeRequest — frontière entre sonde et trafic', () => {
   });
 });
 
-describe('httpLogger — volume de journal des sondes automatiques', () => {
-  it("n'écrit aucune ligne pour trente passages du healthcheck", async () => {
-    // Trente passages = cinq minutes de sonde docker. Sans le correctif : 30 lignes.
+describe('httpLogger — log volume of automatic probes', () => {
+  it("writes no line for thirty healthcheck passes", async () => {
+    // Thirty passes = five minutes of docker probing. Without the fix: 30 lines.
     expect(await countLines('/health', 30)).toBe(0);
   });
 
-  it("n'écrit aucune ligne pour vingt scrapes Prometheus, jeton compris", async () => {
+  it("writes no line for twenty Prometheus scrapes, token included", async () => {
     expect(await countLines('/metrics?token=s3cr3t', 20)).toBe(0);
   });
 
-  it('journalise en revanche chaque requête applicative', async () => {
-    // Contre-preuve : le silence est ciblé, la journalisation HTTP n'est pas éteinte.
+  it('logs every application request instead', async () => {
+    // Counter-proof: the silence is targeted, HTTP logging is not switched off.
     expect(await countLines('/api/media/1', 20)).toBe(20);
   });
 
-  it("journalise l'ÉCHEC d'une sonde, qui est ce qu'on vient chercher dans le journal", async () => {
+  it("logs a probe's FAILURE, which is what one comes to the log for", async () => {
     expect(await countLines('/health?status=500', 1)).toBe(1);
     expect(JSON.parse(lastLine()).level).toBe(50);
 
     expect(await countLines('/health/ready?status=503', 1)).toBe(1);
     expect(JSON.parse(lastLine()).level).toBe(50);
 
-    // 4xx : la sonde interroge une route qui n'existe pas — anomalie de configuration.
+    // 4xx: the probe queries a route that does not exist, a configuration anomaly.
     expect(await countLines('/metrics?status=404', 1)).toBe(1);
     expect(JSON.parse(lastLine()).level).toBe(40);
   });
 
-  it('masque toujours les secrets des lignes qui subsistent', async () => {
+  it('still masks the secrets in the lines that remain', async () => {
     await countLines('/metrics?token=s3cr3t&status=500', 1);
     const record = JSON.parse(lastLine()) as { req: { url: string } };
     expect(record.req.url).toBe('/metrics?token=[Redacted]&status=500');

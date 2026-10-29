@@ -4,31 +4,30 @@
 import { z } from 'zod';
 
 /**
- * Formes d'entrée partagées par les routes qui écrivent une tâche.
+ * Input shapes shared by the routes that write a task.
  *
- * Deux routeurs créent une tâche — celui des tâches et celui des commentaires, pour un
- * retour de review — et la consigne se borne de la même façon des deux côtés. Deux
- * schémas recopiés auraient divergé au premier ajustement, et le budget de ligne d'un
- * routeur n'est pas l'endroit où décrire une forme de données (même patron que
- * `lib/commentPayload.ts`).
+ * Two routers create a task (the tasks router and the comments router, for a review
+ * feedback), and the brief is bounded the same way on both sides. Two copied schemas
+ * would diverge at the first adjustment, and one router's line budget is not the place
+ * to describe a data shape (same pattern as `lib/commentPayload.ts`).
  */
 
 /**
- * Longueur maximale d'une consigne de tâche (Phase 50).
+ * Maximum length of a task brief (Phase 50).
  *
- * De quoi écrire un vrai brief — plusieurs paragraphes — sans laisser coller un fichier
- * entier dans une colonne que la fiche relit à chaque ouverture.
+ * Enough to write a real brief (several paragraphs) without letting a whole file be
+ * pasted into a column that the sheet re-reads on every open.
  */
 export const TASK_DESCRIPTION_MAX = 4000;
 
-/** Consigne : texte simple, effaçable (`null`), absente = inchangée. */
+/** Brief: plain text, clearable (`null`), absent means unchanged. */
 export const taskDescriptionField = z.string().max(TASK_DESCRIPTION_MAX).nullable().optional();
 
 /**
- * Ce que le dialogue « créer une tâche depuis ce retour » envoie.
+ * What the "create a task from this feedback" dialog sends.
  *
- * Le nom est optionnel côté API : un client d'intégration qui n'en fournit pas retombe sur
- * le texte du commentaire, comme avant le dialogue.
+ * The name is optional on the API side: an integration client that does not provide one
+ * falls back to the comment's text, as it did before the dialog existed.
  */
 export const commentTaskBody = z.object({
   name: z.string().min(1).max(160).optional(),

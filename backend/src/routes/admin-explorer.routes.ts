@@ -17,22 +17,21 @@ import * as AdminContentService from '../services/AdminContentService';
 import { storageReport } from '../services/AdminStorageService';
 
 /**
- * Explorateur d'administration (refonte admin) : fiches détaillées par entité —
- * utilisateurs, projets (hiérarchie + héritage pipeline), versions et commentaires
- * globaux, cartographie du stockage MinIO. Lecture seule sauf révocation de session ;
- * les actions d'écriture passent par les routes existantes (users, comments…).
+ * Administration explorer (admin overhaul): detailed records per entity (users, projects with their
+ * hierarchy and pipeline inheritance, global versions and comments, MinIO storage map). Read-only
+ * except for session revocation; write actions go through the existing routes (users, comments…).
  */
 const router = Router();
 router.use(authenticate, requireRole(Role.ADMIN));
 
 const idParam = z.object({ id: z.coerce.number().int() });
 
-// GET /api/admin/users/:id — fiche détaillée d'un compte (projets, sessions, activité)
+// GET /api/admin/users/:id — detailed record of an account (projects, sessions, activity)
 router.get('/users/:id', validate({ params: idParam }), async (req, res) => {
   res.json(await AdminUserService.userDetail(Number(req.params.id)));
 });
 
-// DELETE /api/admin/sessions/:sid — révoque une session précise de n'importe quel compte
+// DELETE /api/admin/sessions/:sid — revokes a specific session from any account
 router.delete(
   '/sessions/:sid',
   validate({ params: z.object({ sid: z.string().length(32) }) }),
@@ -49,17 +48,17 @@ router.delete(
   },
 );
 
-// GET /api/admin/projects — liste enrichie (compteurs, stockage, quota)
+// GET /api/admin/projects — enriched list (counters, storage, quota)
 router.get('/projects', async (_req, res) => {
   res.json({ projects: await AdminProjectService.listProjects() });
 });
 
-// GET /api/admin/projects/:id — fiche projet (membres, réglages résolus, hiérarchie)
+// GET /api/admin/projects/:id — project record (members, resolved settings, hierarchy)
 router.get('/projects/:id', validate({ params: idParam }), async (req, res) => {
   res.json(await AdminProjectService.projectDetail(Number(req.params.id)));
 });
 
-// GET /api/admin/versions — versions de tous les projets, filtrables et paginées
+// GET /api/admin/versions — versions of all projects, filterable and paginated
 const versionsQuery = paginationQuery.extend({
   projectId: z.coerce.number().int().optional(),
   status: z.nativeEnum(VersionStatus).optional(),
@@ -68,7 +67,7 @@ const versionsQuery = paginationQuery.extend({
   q: z.string().max(120).optional(),
 });
 router.get('/versions', validate({ query: versionsQuery }), async (req, res) => {
-  // Express 5 : req.query est un getter — on re-parse pour des valeurs typées fiables.
+  // Express 5: req.query is a getter, so we re-parse it to get reliable typed values.
   const f = versionsQuery.parse(req.query);
   res.json(
     await AdminContentService.listVersions(
@@ -84,7 +83,7 @@ router.get('/versions', validate({ query: versionsQuery }), async (req, res) => 
   );
 });
 
-// GET /api/admin/comments — commentaires de tout le studio (recherche + modération)
+// GET /api/admin/comments — comments from the whole studio (search + moderation)
 const commentsQuery = paginationQuery.extend({
   projectId: z.coerce.number().int().optional(),
   authorId: z.coerce.number().int().optional(),
@@ -106,7 +105,7 @@ router.get('/comments', validate({ query: commentsQuery }), async (req, res) => 
   );
 });
 
-// GET /api/admin/storage — cartographie du stockage MinIO (scan complet du bucket)
+// GET /api/admin/storage — MinIO storage map (full scan of the bucket)
 router.get('/storage', async (_req, res) => {
   res.json(await storageReport());
 });

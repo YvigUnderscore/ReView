@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { qualityEncoderArgs, bitrateEncoderArgs } from './videoEncoder';
 
 describe('videoEncoder', () => {
-  it('libx264 : crf + preset x264 + scene-cut désactivé via sc_threshold', () => {
+  it('libx264: crf + x264 preset + scene-cut disabled via sc_threshold', () => {
     expect(qualityEncoderArgs('libx264', 23, 'veryfast')).toEqual([
       '-c:v libx264',
       '-preset veryfast',
@@ -14,7 +14,7 @@ describe('videoEncoder', () => {
     expect(bitrateEncoderArgs('libx264', 'medium')).toContain('-sc_threshold');
   });
 
-  it('nvenc : cq + preset pN mappé + no-scenecut', () => {
+  it('nvenc: cq + mapped pN preset + no-scenecut', () => {
     expect(qualityEncoderArgs('h264_nvenc', 23, 'veryfast')).toEqual([
       '-c:v h264_nvenc',
       '-preset p3',
@@ -27,7 +27,7 @@ describe('videoEncoder', () => {
     expect(b).not.toContain('-sc_threshold');
   });
 
-  it('preset inconnu → p4 par défaut côté nvenc', () => {
+  it('unknown preset → p4 by default on nvenc', () => {
     expect(qualityEncoderArgs('h264_nvenc', 20, 'exotique')).toContain('-preset p4');
   });
 });

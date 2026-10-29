@@ -16,22 +16,22 @@ import {
 } from './version';
 
 describe('resolveVersion', () => {
-  it('préfère la version injectée à la construction plutôt que celle du paquet', () => {
+  it('prefers the version injected at build time over the package one', () => {
     const info = resolveVersion({ APP_VERSION: 'v2.4.1' }, '2.0.0');
     expect(info.version).toBe('2.4.1');
   });
 
-  it('retombe sur le package.json quand rien n’est injecté', () => {
+  it('falls back to package.json when nothing is injected', () => {
     expect(resolveVersion({}, '2.0.0').version).toBe('2.0.0');
   });
 
-  it('ne prend pas une valeur vide ou « unknown » pour une version', () => {
+  it('does not take an empty or "unknown" value as a version', () => {
     expect(resolveVersion({ APP_VERSION: '   ' }, '2.0.0').version).toBe('2.0.0');
     expect(resolveVersion({ APP_VERSION: 'unknown' }, null).version).toBe(UNKNOWN_VERSION);
     expect(resolveVersion({}, null).version).toBe(UNKNOWN_VERSION);
   });
 
-  it('raccourcit le commit et accepte les deux noms de variable', () => {
+  it('shortens the commit and accepts both variable names', () => {
     expect(resolveVersion({ GIT_SHA: 'A1B2C3D4E5F60718293A4B5C6D7E8F9012345678' }, null).commit).toBe(
       'a1b2c3d4e5f6',
     );
@@ -39,27 +39,27 @@ describe('resolveVersion', () => {
     expect(resolveVersion({}, null).commit).toBeNull();
   });
 
-  it('transporte la date de construction telle quelle', () => {
+  it('passes the build date through unchanged', () => {
     expect(resolveVersion({ BUILD_DATE: '2026-08-22T10:00:00Z' }, null).builtAt).toBe('2026-08-22T10:00:00Z');
     expect(resolveVersion({ BUILD_DATE: '' }, null).builtAt).toBeNull();
   });
 });
 
 describe('normalizeVersion / shortCommit / versionLabel', () => {
-  it('retire le « v » des étiquettes git, jamais celui d’un nom', () => {
+  it('strips the "v" from git tags, never from a name', () => {
     expect(normalizeVersion('v1.2.3')).toBe('1.2.3');
     expect(normalizeVersion('1.2.3')).toBe('1.2.3');
-    // `git describe` d'un dépôt aux étiquettes historiques en majuscule.
+    // `git describe` of a repository with historical uppercase tags.
     expect(normalizeVersion('V1.1.1-573-g7f8c200')).toBe('1.1.1-573-g7f8c200');
     expect(normalizeVersion('vnext')).toBe('vnext');
     expect(normalizeVersion(null)).toBeNull();
   });
 
-  it('borne une référence non hexadécimale sans la déformer', () => {
+  it('caps a non-hexadecimal reference without distorting it', () => {
     expect(shortCommit('branche-de-test')).toBe('branche-de-test');
   });
 
-  it('affiche version et commit d’un seul tenant', () => {
+  it('displays version and commit together', () => {
     expect(versionLabel({ version: '2.1.0', commit: 'abc123def456', builtAt: null })).toBe(
       '2.1.0+abc123def456',
     );
@@ -68,7 +68,7 @@ describe('normalizeVersion / shortCommit / versionLabel', () => {
 });
 
 describe('readPackageVersion', () => {
-  it('remonte l’arborescence jusqu’au premier package.json lisible', () => {
+  it('walks up the tree to the first readable package.json', () => {
     const root = mkdtempSync(join(tmpdir(), 'review-version-'));
     writeFileSync(join(root, 'package.json'), JSON.stringify({ version: '9.9.9' }));
     const deep = join(root, 'dist', 'lib');
@@ -76,12 +76,12 @@ describe('readPackageVersion', () => {
     expect(readPackageVersion(deep)).toBe('9.9.9');
   });
 
-  it('rend null plutôt que de lever quand rien n’est trouvé', () => {
+  it('returns null rather than throwing when nothing is found', () => {
     const empty = mkdtempSync(join(tmpdir(), 'review-version-empty-'));
     expect(readPackageVersion(empty, 0)).toBeNull();
   });
 
-  it('ignore un package.json illisible ou sans version', () => {
+  it('ignores an unreadable package.json or one without a version', () => {
     const root = mkdtempSync(join(tmpdir(), 'review-version-bad-'));
     writeFileSync(join(root, 'package.json'), '{ pas du json');
     expect(readPackageVersion(root, 0)).toBeNull();
@@ -89,29 +89,29 @@ describe('readPackageVersion', () => {
 });
 
 describe('compareSemver', () => {
-  it('ordonne numériquement, jamais lexicographiquement', () => {
-    // Le piège qui fait qu'une instance se croit à jour : « 2.10.0 » < « 2.9.0 » en texte.
+  it('orders numerically, never lexicographically', () => {
+    // The trap that makes an instance believe it is up to date: "2.10.0" < "2.9.0" as text.
     expect(compareSemver('v2.10.0', 'v2.9.0')).toBeGreaterThan(0);
     expect(compareSemver('2.9.0', '2.10.0')).toBeLessThan(0);
     expect(compareSemver('v2.3.0', '2.3.0')).toBe(0);
   });
 
-  it('place une pré-version avant la version stable de même noyau', () => {
+  it('places a pre-release before the stable version of the same core', () => {
     expect(compareSemver('2.4.0-rc.1', '2.4.0')).toBeLessThan(0);
     expect(compareSemver('2.4.0-rc.1', '2.4.0-rc.2')).toBeLessThan(0);
     expect(compareSemver('2.4.0-rc.2', '2.4.0-rc.10')).toBeLessThan(0);
     expect(compareSemver('2.4.0-alpha', '2.4.0-beta')).toBeLessThan(0);
-    // Étiquette numérique avant étiquette alphanumérique, et préfixe avant prolongement.
+    // Numeric identifier before alphanumeric identifier, and prefix before extension.
     expect(compareSemver('2.4.0-1', '2.4.0-alpha')).toBeLessThan(0);
     expect(compareSemver('2.4.0-rc.1', '2.4.0-rc.1.2')).toBeLessThan(0);
   });
 
-  it('ignore les métadonnées de construction', () => {
+  it('ignores build metadata', () => {
     expect(compareSemver('2.3.0+abc123', '2.3.0')).toBe(0);
   });
 
-  it('ne jette rien sur une version qui n’en est pas une', () => {
-    // `install.sh` écrit « source » quand `git describe` échoue ; l'écran doit rester debout.
+  it('does not throw on a value that is not a version', () => {
+    // `install.sh` writes "source" when `git describe` fails; the screen must keep working.
     expect(compareSemver('source', '2.3.0')).toBeLessThan(0);
     expect(compareSemver('0.0.0-unknown', '0.0.1')).toBeLessThan(0);
   });

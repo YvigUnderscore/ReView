@@ -35,7 +35,7 @@ import { env } from '../config/env';
 
 const app = express().use(express.json()).use('/api/auth', authRoutes).use(errorHandler);
 
-// Coût 4 : ces tests mesurent le comportement, pas la résistance du hash.
+// Cost 4: these tests measure the behavior, not the resistance of the hash.
 const HASH = bcrypt.hashSync('Motdepasse1', 4);
 const user = {
   id: 7,
@@ -49,26 +49,25 @@ const user = {
 beforeEach(() => {
   vi.clearAllMocks();
   db.user.findUnique.mockResolvedValue(user);
-  // `logAudit` détache l'écriture (`void create(...).catch(...)`) : le double doit rendre
-  // une promesse, sinon c'est le `.catch` qui explose au milieu de la route.
+  // `logAudit` detaches the write (`void create(...).catch(...)`): the double must return a promise,
+  // otherwise it is the `.catch` that explodes in the middle of the route.
   db.auditLog.create.mockResolvedValue({});
 });
 
 /**
- * `/refresh` était la porte de derrière du durcissement 36.B : le middleware refusait un
- * jeton hérité sans `sid`, mais cette route lui fabriquait une session neuve — le porteur
- * repartait donc avec un jeton d'accès parfaitement valide. Fermer l'un sans l'autre ne
- * ferme rien.
+ * `/refresh` was the back door of the 36.B hardening: the middleware refused a legacy token without
+ * `sid`, but this route manufactured a fresh session for it, so the bearer walked away with a perfectly
+ * valid access token. Closing one without the other closes nothing.
  */
-describe('POST /api/auth/refresh — plus de session offerte à un jeton hérité', () => {
-  it('refuse un refresh sans sid au lieu de lui ouvrir une session', async () => {
+describe('POST /api/auth/refresh — no more session offered to a legacy token', () => {
+  it('refuses a refresh without sid instead of opening a session for it', async () => {
     const legacy = signRefreshToken({
       id: user.id,
       email: user.email,
       role: 'ARTIST',
       sid: 'a-retirer',
     });
-    // On retire la claim comme le ferait un jeton d'avant la phase 36.
+    // We remove the claim as a token from before phase 36 would.
     const { sid: _sid, ...sansSid } = jwt.verify(legacy, env.JWT_SECRET) as Record<string, unknown>;
     const forge = jwt.sign({ ...sansSid, kind: 'refresh' }, env.JWT_SECRET);
 
@@ -79,7 +78,7 @@ describe('POST /api/auth/refresh — plus de session offerte à un jeton hérit�
     expect(createSession).not.toHaveBeenCalled();
   });
 
-  it('refuse un refresh dont la session a été révoquée', async () => {
+  it('refuses a refresh whose session has been revoked', async () => {
     vi.mocked(isSessionActive).mockResolvedValue(false);
     const token = signRefreshToken({ id: user.id, email: user.email, role: 'ARTIST', sid: 'morte' });
 
@@ -89,9 +88,9 @@ describe('POST /api/auth/refresh — plus de session offerte à un jeton hérit�
     expect(createSession).not.toHaveBeenCalled();
   });
 
-  it('renouvelle le couple de jetons quand la session est vivante', async () => {
-    // `vi.clearAllMocks()` efface l'historique, pas l'implémentation : sans ce rappel, le
-    // `mockResolvedValue(false)` du test précédent tiendrait encore.
+  it('renews the token pair when the session is alive', async () => {
+    // `vi.clearAllMocks()` clears the history, not the implementation: without this reminder, the
+    // `mockResolvedValue(false)` of the previous test would still hold.
     vi.mocked(isSessionActive).mockResolvedValue(true);
     const token = signRefreshToken({ id: user.id, email: user.email, role: 'ARTIST', sid: 'sid-1' });
 
@@ -103,7 +102,7 @@ describe('POST /api/auth/refresh — plus de session offerte à un jeton hérit�
     expect(touchSession).toHaveBeenCalledWith('sid-1');
   });
 
-  it('refuse un jeton d’accès présenté à la place d’un refresh', async () => {
+  it('refuses an access token presented in place of a refresh', async () => {
     const access = signAccessToken({ id: user.id, email: user.email, role: 'ARTIST', sid: 'sid-1' });
 
     const res = await request(app).post('/api/auth/refresh').send({ refreshToken: access });

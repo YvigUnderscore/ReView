@@ -8,10 +8,9 @@ import { validate } from '../middleware/validate';
 import * as SplatEditService from '../services/SplatEditService';
 
 /**
- * Éditions non-destructives d'un splat (10.G) — sous-routeur monté sous /api/media.
- * Écriture réservée aux gestionnaires du média, splat non publié uniquement (vérifié par
- * le service ; après publication, une édition ne part plus que dans un commentaire). Le
- * fichier splat original n'est jamais modifié.
+ * Non-destructive edits of a splat (10.G), a sub-router mounted under /api/media.
+ * Writes are reserved to the media's managers, on an unpublished splat only (checked by the service; after
+ * publication, an edit only travels in a comment). The original splat file is never modified.
  */
 const router = Router();
 router.use(authenticate);
@@ -26,8 +25,8 @@ const posScale = finite.positive().max(1000);
 const scale3 = z.tuple([posScale, posScale, posScale]);
 
 /**
- * PATCH /api/media/:id/splat-edits — enregistre (ou efface si null) les éditions JSON :
- * transformation TRS (gizmos) + volumes de crop SDF (boîte/sphère, creuser/isoler).
+ * PATCH /api/media/:id/splat-edits: saves (or clears, if null) the JSON edits:
+ * TRS transform (gizmos) and SDF crop volumes (box or sphere, carve or isolate).
  */
 router.patch(
   '/:id/splat-edits',
@@ -48,7 +47,7 @@ router.patch(
               }),
             )
             .max(32),
-          // Flip d'orientation à l'import (11.E) : true/absent = convention Y-down redressée.
+          // Orientation flip at import (11.E): true or absent means the corrected Y-down convention.
           baseFlip: z.boolean().optional(),
         })
         .nullable(),
@@ -60,15 +59,15 @@ router.patch(
 );
 
 /**
- * PUT /api/media/:id/splat-mask — masque de suppression par splat (bitset base64 → MinIO).
- * `count` = nombre de splats masqués (affichage/contrôle côté client).
+ * PUT /api/media/:id/splat-mask: deletion mask per splat (base64 bitset, stored in MinIO).
+ * `count` = number of masked splats (display and control on the client side).
  */
 router.put(
   '/:id/splat-mask',
   validate({
     params: idParam,
     body: z.object({
-      data: z.string().min(1).max(5_400_000), // bitset base64 (≈ 4 Mo binaire max)
+      data: z.string().min(1).max(5_400_000), // base64 bitset (≈ 4 MB binary max)
       count: z.number().int().positive(),
     }),
   }),
@@ -79,21 +78,21 @@ router.put(
   },
 );
 
-/** DELETE /api/media/:id/splat-mask — efface le masque de suppression. */
+/** DELETE /api/media/:id/splat-mask: clears the deletion mask. */
 router.delete('/:id/splat-mask', validate({ params: idParam }), async (req, res) => {
   res.json(await SplatEditService.clearSplatMask(req.user!, Number(req.params.id)));
 });
 
 /**
- * PUT /api/media/:id/splat-subset — transformations de sous-ensembles de splats (Phase 28) :
- * ops binaires (matrice delta + indices) en base64 → MinIO. `count` = nombre d'ops.
+ * PUT /api/media/:id/splat-subset: transformations of splat subsets (Phase 28), as binary ops (delta
+ * matrix and indices) in base64 → MinIO. `count` = number of ops.
  */
 router.put(
   '/:id/splat-subset',
   validate({
     params: idParam,
     body: z.object({
-      data: z.string().min(1).max(5_400_000), // ops base64 (≈ 4 Mo binaire max)
+      data: z.string().min(1).max(5_400_000), // ops base64 (≈ 4 MB binary max)
       count: z.number().int().positive(),
     }),
   }),
@@ -109,7 +108,7 @@ router.put(
   },
 );
 
-/** DELETE /api/media/:id/splat-subset — efface les transformations de sous-ensembles. */
+/** DELETE /api/media/:id/splat-subset: clears the subset transformations. */
 router.delete('/:id/splat-subset', validate({ params: idParam }), async (req, res) => {
   res.json(await SplatEditService.clearSplatSubsetOps(req.user!, Number(req.params.id)));
 });
@@ -118,16 +117,16 @@ const camPose = z.object({
   position: z.object({ x: finite, y: finite, z: finite }),
   target: z.object({ x: finite, y: finite, z: finite }),
   fov: finite.min(5).max(150).optional(),
-  // Aspect (largeur/hauteur) du cadre de review fixe (Phase 17) — rejoué en letterbox pour tous.
+  // Aspect ratio (width/height) of the fixed review frame (Phase 17): replayed letterboxed for everyone.
   aspect: finite.min(0.2).max(5).optional(),
-  // Tilt (roll) de la caméra autour de l'axe de vue, en radians (mode layout).
+  // Tilt (roll) of the camera around the view axis, in radians (layout mode).
   roll: finite.min(-Math.PI).max(Math.PI).optional(),
 });
 
 /**
- * PATCH /api/media/:id/splat-presentation — présentation persistée (10.G-V5) : caméra de base,
- * DoF, reveal, LOD par défaut, animation caméra keyframe. Gestionnaire ; **autorisée même sur
- * un média publié** (mise en scène de la review — le média n'est pas altéré).
+ * PATCH /api/media/:id/splat-presentation: persisted presentation (10.G-V5): base camera, DoF, reveal,
+ * default LOD, and keyframed camera animation. Manager; **allowed even on a published media** (staging
+ * of the review: the media itself is not altered).
  */
 router.patch(
   '/:id/splat-presentation',
@@ -147,25 +146,25 @@ router.patch(
             })
             .optional(),
           lodDefault: z.enum(['auto', 'on', 'off', 'streaming']).optional(),
-          // Éclairage/HDRI par défaut du viewer 3D (Phase 29) — rejoué pour tous.
+          // Default lighting and HDRI of the 3D viewer (Phase 29): replayed for everyone.
           lighting: z
             .object({
               hdriId: z.string().max(300).optional(),
               exposure: finite.min(0).max(10),
               rotationDeg: finite.min(-360).max(360),
               showBackground: z.boolean(),
-              // Sol récepteur d'ombres (39.F) — optionnel (tolère les présentations antérieures).
+              // Shadow-receiving ground (39.F): optional (tolerates earlier presentations).
               groundShadow: z.boolean().optional(),
             })
             .optional(),
-          // Bookmarks caméra partagés (39.D) : vues nommées rejouées/rappelables pour tous.
+          // Shared camera bookmarks (39.D): named views replayed and recallable for everyone.
           bookmarks: z
             .array(z.object({ label: z.string().max(40).optional(), camera: camPose }))
             .max(12)
             .optional(),
-          // Animation caméra « par canaux » (Phase 17, v2) : F-curves éditables (position/cible/
-          // focale/tilt), tangentes Hermite. Remplace le format v1 (keyframes + easing).
-          // Forme partagée avec le payload de commentaire (`lib/cameraAnimSchema`).
+          // "Per-channel" camera animation (Phase 17, v2): editable F-curves (position, target,
+          // focal length, tilt), Hermite tangents. Replaces the v1 format (keyframes and easing).
+          // Shape shared with the comment payload (`lib/cameraAnimSchema`).
           cameraAnim: z
             .object(
               cameraAnimShape(

@@ -7,14 +7,14 @@ import { AppError } from '../lib/errors';
 import { logger } from '../lib/logger';
 
 /**
- * Gestionnaire d'erreurs global. Standardise les réponses JSON et ne fuite jamais
- * de stack trace au client. Doit être monté en dernier.
+ * Global error handler. Standardizes JSON responses and never leaks a stack trace to the client.
+ * Must be mounted last.
  *
- * Le corps porte toujours deux champs : `error`, texte **anglais** destiné aux traces et
- * aux intégrateurs, et `code`, identifiant stable que le client traduit dans la langue du
- * lecteur (`error.<CODE>` au catalogue front). Les deux réponses fabriquées ici — schéma
- * Zod refusé, erreur non gérée — portent donc un code au même titre que les `AppError`,
- * sans quoi les deux fautes les plus courantes resteraient les seules à ne pas se traduire.
+ * The body always carries two fields: `error`, an **English** text intended for logs and
+ * integrators, and `code`, a stable identifier that the client translates into the reader's
+ * language (`error.<CODE>` in the front-end catalog). The two responses built here (a rejected Zod
+ * schema, an unhandled error) therefore carry a code like the `AppError`s do, otherwise the two
+ * most common faults would be the only ones left untranslated.
  */
 
 export const errorHandler = (err: unknown, req: Request, res: Response, _next: NextFunction): void => {
@@ -30,7 +30,7 @@ export const errorHandler = (err: unknown, req: Request, res: Response, _next: N
     return;
   }
 
-  // Logger enfant corrélé au request-id (pino-http) si disponible, sinon logger global.
+  // Child logger correlated with the request id (pino-http) if available, otherwise the global logger.
   (req.log ?? logger).error({ err }, 'Erreur non gérée');
   res.status(500).json({ error: 'Internal server error', code: 'INTERNAL_ERROR' });
 };

@@ -4,16 +4,16 @@
 import { badRequest } from './errors';
 
 /**
- * Le motif d'une règle de masquage, et la seule façon de l'évaluer.
+ * The pattern of a hiding rule, and the only way to evaluate it.
  *
- * Masquer se joue sur le **code** de l'entité (« SH999_TMP »), et sur son **nom** à défaut
- * de code — un asset n'a pas de code. Les deux sont testés : une convention de nommage
- * porte tantôt sur l'un, tantôt sur l'autre, et exiger de l'admin qu'il devine lequel
- * n'aurait servi qu'à produire des règles qui ne masquent rien.
+ * Hiding works on the entity's **code** ("SH999_TMP"), and on its **name** when it has no code
+ * (an asset has no code). Both are tested: a naming convention sometimes concerns one, sometimes
+ * the other, and requiring the admin to guess which would only have produced rules that hide
+ * nothing.
  *
- * Quatre formes, de la plus sûre à la plus expressive. `exact` est le défaut parce que
- * c'est ce que fait le geste « masquer cet élément » ; `regex` existe pour le studio qui a
- * une convention, et il est le seul à pouvoir se tromper — d'où la validation à l'écriture.
+ * Four forms, from the safest to the most expressive. `exact` is the default because it is what
+ * the "hide this item" gesture does; `regex` exists for the studio that has a convention, and it is
+ * the only one able to go wrong, hence validation at write time.
  */
 
 export const MATCH_TYPES = ['exact', 'prefix', 'contains', 'regex'] as const;
@@ -29,32 +29,31 @@ export interface RulePattern {
 }
 
 /**
- * Longueur maximale d'une expression régulière acceptée.
+ * Maximum length of an accepted regular expression.
  *
- * Le moteur d'expressions de JavaScript revient en arrière, et une expression courte suffit
- * déjà à le faire exploser (`(a+)+$`). La borne ne suffit pas à elle seule : c'est le test
- * chronométré ci-dessous qui protège réellement. Elle écarte simplement d'emblée ce qu'aucun
- * nommage de studio ne justifie.
+ * JavaScript's expression engine backtracks, and a short expression is already enough to make it
+ * explode (`(a+)+$`). The bound alone is not sufficient: it is the timed test below that really
+ * protects. It simply rules out from the start what no studio naming justifies.
  */
 const MAX_PATTERN = 200;
 
 /**
- * Durée au-delà de laquelle une expression est tenue pour dangereuse (ms).
+ * Duration beyond which an expression is considered dangerous (ms).
  *
- * Une règle est évaluée sur chaque plan d'un projet — deux mille sur un long-métrage — et
- * rejouée à chaque import. Une expression qui met dix millisecondes sur une chaîne de vingt
- * caractères en mettra des minutes sur le projet entier.
+ * A rule is evaluated on every shot of a project (two thousand on a feature film) and replayed at
+ * each import. An expression that takes ten milliseconds on a twenty-character string would take
+ * minutes on the whole project.
  */
 const BUDGET_MS = 25;
 
-/** Chaîne d'épreuve : de quoi déclencher le retour en arrière d'une expression pathologique. */
+/** Test string: enough to trigger the backtracking of a pathological expression. */
 const PROBE = `${'a'.repeat(40)}!${'A_'.repeat(20)}9`;
 
 /**
- * Compile le motif d'une règle, ou refuse.
+ * Compiles the pattern of a rule, or refuses it.
  *
- * Refuser à l'écriture est le seul moment où l'admin peut corriger : plus tard, la règle
- * paraîtrait active sans rien masquer, et personne ne saurait pourquoi.
+ * Refusing at write time is the only moment when the admin can correct it: later, the rule would
+ * appear active while hiding nothing, and nobody would know why.
  */
 export function compileRule(rule: RulePattern): (candidate: string) => boolean {
   const pattern = rule.pattern.trim();
@@ -77,8 +76,8 @@ export function compileRule(rule: RulePattern): (candidate: string) => boolean {
   } catch {
     throw badRequest('This regular expression is invalid', 'PATTERN_INVALID');
   }
-  // Épreuve chronométrée : une expression à retour en arrière catastrophique se trahit sur
-  // une chaîne courte. La mesurer coûte moins qu'un import bloqué une fois la règle posée.
+  // Timed probe: an expression with catastrophic backtracking gives itself away on a short string.
+  // Measuring it costs less than a blocked import once the rule is in place.
   const started = process.hrtime.bigint();
   regex.test(PROBE);
   const elapsedMs = Number(process.hrtime.bigint() - started) / 1e6;
@@ -86,21 +85,21 @@ export function compileRule(rule: RulePattern): (candidate: string) => boolean {
     throw badRequest('This regular expression is too slow to evaluate', 'PATTERN_TOO_SLOW');
 
   return (candidate: string) => {
-    // `lastIndex` n'a pas à être remis à zéro : le drapeau `g` n'est jamais posé ici.
+    // `lastIndex` does not need resetting: the `g` flag is never set here.
     return regex.test(candidate);
   };
 }
 
-/** Une règle s'applique-t-elle à ce type d'entité ? `all` couvre les quatre. */
+/** Does a rule apply to this type of entity? `all` covers all four. */
 export function coversType(ruleType: string, entityType: VisibilityType): boolean {
   return ruleType === 'all' || ruleType === entityType;
 }
 
 /**
- * Ce qu'une règle examine sur une entité : son code, et son nom quand il en diffère.
+ * What a rule examines on an entity: its code, and its name when it differs.
  *
- * Renvoyer les deux plutôt que le seul code évite la question « faut-il écrire la règle sur
- * le code ou sur le nom ? », à laquelle un admin n'a aucune raison de savoir répondre.
+ * Returning both rather than the code alone avoids the question "should the rule be written on the
+ * code or on the name?", which an admin has no reason to be able to answer.
  */
 export function matchCandidates(entity: { code?: string | null; name?: string | null }): string[] {
   const out: string[] = [];
@@ -109,7 +108,7 @@ export function matchCandidates(entity: { code?: string | null; name?: string | 
   return out;
 }
 
-/** L'entité tombe-t-elle sous cette règle ? */
+/** Does the entity fall under this rule? */
 export function ruleMatches(
   rule: RulePattern & { entityType: string },
   entityType: VisibilityType,

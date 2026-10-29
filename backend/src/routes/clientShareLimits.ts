@@ -5,38 +5,36 @@ import type { Request, RequestHandler } from 'express';
 import { rateLimit } from '../middleware/rateLimit';
 
 /**
- * Freins de débit de la surface PUBLIQUE de partage (A2-02).
+ * Rate brakes of the PUBLIC sharing surface (A2-02).
  *
- * `POST /api/client/:token/media/:id/comments` écrit en base sur présentation d'un lien,
- * sans compte derrière : ni `authenticate`, ni le plafond par identité du limiteur global,
- * qui retombe ici sur l'IP. C'était donc la seule écriture de l'application ouverte à un
- * anonyme et non freinée — chaque appel crée une ligne `Comment`, déclenche une diffusion
- * socket, un webhook sortant, une entrée de journal v1 et une note ShotGrid.
+ * `POST /api/client/:token/media/:id/comments` writes to the database on presentation of a link, with no
+ * account behind it: neither `authenticate` nor the per-identity ceiling of the global limiter, which falls
+ * back to the IP here. It was therefore the only write of the application open to an anonymous visitor
+ * and left unbraked: each call creates a `Comment` row, triggers a socket broadcast, an outgoing webhook,
+ * a v1 journal entry and a ShotGrid note.
  *
- * Deux compteurs, parce qu'aucun des deux ne suffit seul :
+ * Two counters, because neither one suffices alone:
  *
- *  - **par lien** : sous `TRUST_PROXY`, `req.ip` est ce que l'en-tête `X-Forwarded-For`
- *    déclare, donc une valeur que l'appelant choisit. Une clé qui contient l'IP se
- *    renouvelle à volonté et ne borne plus rien. Le jeton de partage, lui, est dans l'URL
- *    et ne peut pas être changé sans perdre l'accès : c'est le seul discriminant
- *    infalsifiable de cette surface, et donc le seul plafond qui tienne vraiment.
- *  - **par lien et par IP**, plus serré : il empêche un client bavard — ou une boucle de
- *    son navigateur — d'avaler à lui seul le budget du lien au détriment des autres
- *    invités. Il ne prétend pas résister à une IP falsifiée ; c'est le premier qui s'en
- *    charge.
+ *  - **per link**: under `TRUST_PROXY`, `req.ip` is what the `X-Forwarded-For` header declares, hence a
+ *    value the caller chooses. A key containing the IP can be renewed at will and then bounds nothing.
+ *    The share token, for its part, is in the URL and cannot be changed without losing access: it is the
+ *    only unforgeable discriminant of this surface, and therefore the only ceiling that truly holds.
+ *  - **per link and per IP**, tighter: it prevents a chatty client, or a loop in its browser, from
+ *    swallowing the link's whole budget on its own to the detriment of the other guests. It does not
+ *    claim to resist a forged IP; the first counter takes care of that.
  *
- * Le limiteur échoue fermé (cf. `middleware/rateLimit`) : Redis muet ⇒ 429.
+ * The limiter fails closed (cf. `middleware/rateLimit`): silent Redis means 429.
  */
 
 const WINDOW_MS = 15 * 60 * 1000;
-/** Budget d'un lien de partage, tous invités confondus. */
+/** Budget of a share link, all guests combined. */
 const PER_LINK_MAX = 120;
-/** Budget d'un invité identifié par son adresse — sous-ensemble du précédent. */
+/** Budget of one guest, identified by their IP on this link: a subset of the previous one. */
 const PER_LINK_AND_IP_MAX = 30;
 
 const TOO_MANY = { error: 'Too many comments, try again later.' };
 
-/** Le jeton tel qu'il arrive : le frein s'exécute AVANT la validation Zod du chemin. */
+/** The token as it arrives: the brake runs BEFORE the Zod validation of the path. */
 const shareToken = (req: Request): string => String(req.params.token ?? '');
 
 export const guestCommentRateLimit: RequestHandler[] = [

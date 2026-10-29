@@ -24,10 +24,9 @@ import {
 
 const router = Router();
 
-// GET /api/studio/branding — identité visuelle **publique** (42.B — №101) : utilisée par la
-// page de connexion (pré-auth) et le bootstrap de l'app pour l'accent + le logo + le nom.
-// Porte aussi `sourceUrl` : l'AGPL §13 impose d'offrir le code source à tout utilisateur
-// distant, y compris non authentifié (connexion, partage client).
+// GET /api/studio/branding — **public** visual identity (42.B, item 101): used by the login page
+// (pre-auth) and the app's bootstrap for the accent colour, the logo and the name. It also carries
+// `sourceUrl`: AGPL §13 requires offering the source code to any remote user, including unauthenticated ones.
 router.get('/branding', async (_req, res) => {
   const [studio, accent, logoKey, sourceUrl, login, draftMode] = await Promise.all([
     prisma.studio.findFirst({ select: { name: true } }),
@@ -46,36 +45,35 @@ router.get('/branding', async (_req, res) => {
     accent: accent?.value ?? null,
     logoUrl,
     sourceUrl,
-    // Mode brouillon (Phase 50) : un booléen de parcours, pas un secret. Il voyage ici parce
-    // que c'est le SEUL canal que tout le monde peut lire — les réglages d'administration
-    // sont réservés aux admins, et un artiste doit savoir si « publier » est encore un geste.
+    // Draft mode (Phase 50): a path boolean, not a secret. It travels here because it is the ONLY channel
+    // everyone can read: admin settings are reserved to admins, and an artist must know whether "publish"
+    // is still a gesture.
     draftMode,
-    // La page de connexion est pré-auth : son habillage doit voyager avec le branding
-    // public, sinon l'image de fond n'apparaît qu'une fois connecté — c'est-à-dire jamais.
+    // The login page is pre-auth: its styling must travel with the public branding, otherwise the background
+    // image would appear only once logged in, that is, never.
     //
-    // `bgKey` est ÉCARTÉ du rendu (CP-SEC de la phase 50) : c'est la clé MinIO brute, et elle
-    // partait sur une réponse NON AUTHENTIFIÉE, à côté de l'URL présignée qui la rend inutile.
-    // Le dépôt s'est donné la règle à la phase 50 (`CommentService.publicAttachments`) :
-    // « jamais la clé MinIO, qui servirait à en signer d'autres ». C'était le seul endroit
-    // où elle était encore enfreinte.
+    // `bgKey` is DROPPED from the rendering (CP-SEC of phase 50): it is the raw MinIO key, and it went out on
+    // an UNAUTHENTICATED response, next to the presigned URL that makes it useless. The repository gave itself
+    // the rule in phase 50 (`CommentService.publicAttachments`): "never the MinIO key, which would serve to sign
+    // others". It was the only place where it was still broken.
     login: { ...loginPublic, bgUrl: await loginBgUrl(login.bgKey) },
   });
 });
 
 router.use(authenticate);
 
-// GET /api/studio — infos du studio (singleton)
-// Sélection explicite : la ligne Studio porte `discordWebhookUrl`, un secret d'intégration
-// qui permet de publier dans le Discord du studio. Un `findFirst()` nu le renvoyait à tout
-// compte authentifié, comptes CLIENT externes compris.
+// GET /api/studio — studio info (singleton)
+// Explicit selection: the Studio row carries `discordWebhookUrl`, an integration secret that lets one post
+// to the studio's Discord. A bare `findFirst()` returned it to any authenticated account, external CLIENT
+// accounts included.
 router.get('/', async (req, res) => {
   const studio = await prisma.studio.findFirst({
     select: { id: true, name: true, slug: true, discordWebhookUrl: true, createdAt: true, updatedAt: true },
   });
   if (!studio) throw notFound('Studio not set up');
   const { discordWebhookUrl, ...rest } = studio;
-  // L'URL elle-même n'est utile qu'à l'admin qui la configure (PATCH ci-dessous) ; les
-  // autres n'ont besoin que de savoir si l'intégration est active.
+  // The URL itself is only useful to the admin who configures it (PATCH below); the others only need to know
+  // whether the integration is active.
   res.json({
     studio:
       req.user?.role === Role.ADMIN ? studio : { ...rest, hasDiscordWebhook: discordWebhookUrl != null },
@@ -100,9 +98,8 @@ router.patch(
     const studio = await prisma.studio.findFirst();
     if (!studio) throw notFound('Studio not set up');
     const updated = await prisma.studio.update({ where: { id: studio.id }, data: body });
-    // Le journal d'audit est la seule trace des changements de configuration privilegies.
-    // Jamais l'URL du webhook elle-meme : un journal consultable ne doit pas devenir la
-    // nouvelle cachette du secret.
+    // The audit log is the only trace of privileged configuration changes. Never the webhook URL itself: a
+    // browsable log must not become the new hiding place of the secret.
     AuditService.logAudit({
       userId: req.user!.id,
       action: 'STUDIO_UPDATE',
@@ -118,15 +115,14 @@ router.patch(
 );
 
 /**
- * Réglages qui portent un secret et ne doivent jamais sortir de la base.
- * La table `Setting` est un fourre-tout clé/valeur : elle mélange des quotas anodins et des
- * secrets (config SMTP chiffrée, paire de clés VAPID dont la MOITIÉ PRIVÉE signe toutes les
- * notifications push de l'instance). Une exclusion nommant un seul réglage laissait sortir
- * tous ceux ajoutés depuis — c'est la liste qui doit être exhaustive, pas la mémoire.
+ * Settings that carry a secret and must never leave the database.
+ * The `Setting` table is a key/value catch-all: it mixes harmless quotas with secrets (encrypted SMTP config,
+ * and the VAPID key pair whose PRIVATE HALF signs all of the instance's push notifications). An exclusion
+ * naming a single setting let out all those added since: the list must be exhaustive, not left to memory.
  */
 const SECRET_SETTING_KEYS = ['smtp_config', 'vapid_keys'];
 
-// GET /api/studio/settings — réglages clé/valeur (admin), secrets exclus.
+// GET /api/studio/settings — key/value settings (admin), secrets excluded.
 router.get('/settings', requireRole(Role.ADMIN), async (_req, res) => {
   const settings = await prisma.setting.findMany({
     where: { key: { notIn: SECRET_SETTING_KEYS } },
@@ -134,20 +130,20 @@ router.get('/settings', requireRole(Role.ADMIN), async (_req, res) => {
   res.json({ settings: Object.fromEntries(settings.map((s) => [s.key, s.value])) });
 });
 
-// PUT /api/studio/settings — upsert d'un réglage (admin) : quotas, limites upload…
+// PUT /api/studio/settings — upserts a setting (admin): quotas, upload limits…
 router.put(
   '/settings',
   requireRole(Role.ADMIN),
   validate({ body: z.object({ key: z.string().min(1).max(100), value: z.string().max(2000) }) }),
   async (req, res) => {
     const { key, value } = req.body as { key: string; value: string };
-    // Les secrets ont leurs propres routes (chiffrement, génération) : les laisser passer
-    // par cet upsert générique permettrait d'écraser la config SMTP ou la paire VAPID par
-    // du texte arbitraire — et de les relire ensuite sous une clé non filtrée.
+    // Secrets have their own routes (encryption, generation): letting them through this generic upsert would
+    // allow overwriting the SMTP config or the VAPID pair with arbitrary text, and reading them back later
+    // under an unfiltered key.
     if (SECRET_SETTING_KEYS.includes(key))
       throw badRequest('This setting has its own endpoint', 'RESERVED_SETTING');
-    // Réglages booléens (`draftMode`…) : « true » ou « false », rien d'autre. Cet upsert est
-    // générique et accepterait « oui », qui se relirait ensuite comme *faux* sans un mot.
+    // Boolean settings (`draftMode`…): "true" or "false", nothing else. This upsert is generic and would
+    // accept "oui" (French for yes), which would then read back as *false* without a word.
     if (BOOLEAN_SETTING_KEYS.includes(key)) booleanSettingSchema.parse(value);
     const setting = await prisma.setting.upsert({
       where: { key },
@@ -164,7 +160,7 @@ router.put(
   },
 );
 
-// GET /api/studio/audit — flux d'audit paginé + auteur/avatar (admin) — { items, total, … } (10.D1)
+// GET /api/studio/audit — paginated audit feed + author and avatar (admin) — { items, total, … } (10.D1)
 router.get('/audit', requireRole(Role.ADMIN), validate({ query: paginationQuery }), async (req, res) => {
   res.json(await AuditService.list(readPagination(req.query)));
 });

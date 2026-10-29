@@ -5,9 +5,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 
 /**
- * Contrat HTTP de la recherche globale : qui la demande, ce qu'elle accepte comme saisie,
- * et le fait que le rôle du demandeur descende bien jusqu'au moteur — c'est lui qui porte
- * le cloisonnement (cf. `lib/search.test.ts`).
+ * HTTP contract of the global search: who requests it, what it accepts as input, and the fact that the
+ * requester's role goes all the way down to the engine. It is the role that carries the segregation
+ * (cf. `lib/search.test.ts`).
  */
 
 const { search, session } = vi.hoisted(() => ({
@@ -54,35 +54,35 @@ beforeEach(() => {
 });
 
 describe('GET /api/search', () => {
-  it('transmet la saisie, le demandeur et son rôle au moteur', async () => {
+  it('passes the input, the requester and their role on to the engine', async () => {
     const res = await request(app).get('/api/search?q=SH0120');
     expect(res.status).toBe(200);
     expect(search.searchEntities).toHaveBeenCalledWith('SH0120', 7, 'ARTIST');
   });
 
-  it('rend les dix familles de résultats', async () => {
+  it('returns the ten result families', async () => {
     const res = await request(app).get('/api/search?q=v012');
     expect(Object.keys(res.body as object).sort()).toEqual(Object.keys(EMPTY).sort());
   });
 
-  it('refuse une saisie trop courte : un caractère ne discrimine rien', async () => {
+  it('rejects an input that is too short: one character discriminates nothing', async () => {
     const res = await request(app).get('/api/search?q=a');
     expect(res.status).toBe(400);
     expect(search.searchEntities).not.toHaveBeenCalled();
   });
 
-  it('refuse une saisie absente ou démesurée', async () => {
+  it('rejects a missing or oversized input', async () => {
     expect((await request(app).get('/api/search')).status).toBe(400);
     expect((await request(app).get(`/api/search?q=${'x'.repeat(101)}`)).status).toBe(400);
     expect(search.searchEntities).not.toHaveBeenCalled();
   });
 
-  it('rogne les espaces avant de compter les caractères', async () => {
+  it('trims spaces before counting characters', async () => {
     await request(app).get('/api/search?q=%20%20v012%20%20');
     expect(search.searchEntities).toHaveBeenCalledWith('v012', 7, 'ARTIST');
   });
 
-  it('descend le rôle CLIENT tel quel — le moteur en dépend', async () => {
+  it('passes the CLIENT role down unchanged: the engine depends on it', async () => {
     session.user = { id: 12, role: 'CLIENT' };
     await request(app).get('/api/search?q=reflet');
     expect(search.searchEntities).toHaveBeenCalledWith('reflet', 12, 'CLIENT');

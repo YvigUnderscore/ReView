@@ -25,28 +25,28 @@ const bodySchema = z.object({
   active: z.boolean().default(true),
 });
 
-// GET /api/announcements/active — annonces à présenter à l'utilisateur (période/rôle/fréquence)
+// GET /api/announcements/active — announcements to show the user (period, role, frequency)
 router.get('/active', async (req, res) => {
   res.json({ announcements: await AnnouncementService.active(req.user!) });
 });
 
-// POST /api/announcements/:id/ack — accusé de lecture (masque selon la fréquence)
+// POST /api/announcements/:id/ack — read receipt (hidden according to the frequency)
 router.post('/:id/ack', validate({ params: idParam }), async (req, res) => {
   await AnnouncementService.acknowledge(req.user!, Number(req.params.id));
   res.status(204).end();
 });
 
-// GET /api/announcements — liste complète (admin)
+// GET /api/announcements — full list (admin)
 router.get('/', requireRole(Role.ADMIN), async (_req, res) => {
   res.json({ announcements: await AnnouncementService.list() });
 });
 
-// POST /api/announcements — création (admin)
+// POST /api/announcements — creation (admin)
 router.post('/', requireRole(Role.ADMIN), validate({ body: bodySchema }), async (req, res) => {
   res.status(201).json({ announcement: await AnnouncementService.create(req.user!, req.body) });
 });
 
-// PATCH /api/announcements/:id — édition (admin)
+// PATCH /api/announcements/:id — edit (admin)
 router.patch(
   '/:id',
   requireRole(Role.ADMIN),
@@ -56,7 +56,7 @@ router.patch(
   },
 );
 
-// DELETE /api/announcements/:id — suppression (admin)
+// DELETE /api/announcements/:id — deletion (admin)
 router.delete('/:id', requireRole(Role.ADMIN), validate({ params: idParam }), async (req, res) => {
   await AnnouncementService.remove(req.user!, Number(req.params.id));
   res.status(204).end();

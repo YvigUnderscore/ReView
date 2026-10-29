@@ -4,15 +4,15 @@
 import { Prisma } from '@prisma/client';
 
 /**
- * Représentations des ressources de l'API v1 — le contrat public.
+ * Representations of the v1 API resources: the public contract.
  *
- * Ces formes sont délibérément découplées du schéma Prisma : une colonne peut être
- * renommée, dénormalisée ou déplacée sans que les intégrations DCC en pâtissent. Chaque
- * ressource porte son `path` canonique (voir `lib/pipelinePath`), qui permet à un client
- * de repartir d'une réponse pour interroger l'API sans jamais manipuler d'identifiant.
+ * These shapes are deliberately decoupled from the Prisma schema: a column can be renamed,
+ * denormalized or moved without DCC integrations suffering. Each resource carries its canonical
+ * `path` (see `lib/pipelinePath`), which lets a client start from a response to query the API
+ * without ever handling an identifier.
  */
 
-// ── Sélections Prisma (source des types de sortie) ───────────────────────────
+// ── Prisma selections (source of the output types) ───────────────────────────
 
 export const projectSelect = {
   id: true,
@@ -126,7 +126,7 @@ type VersionRow = Prisma.VersionGetPayload<{ select: typeof versionSelect }>;
 type MediaRow = Prisma.MediaObjectGetPayload<{ select: typeof mediaSelect }>;
 type CommentRow = Prisma.CommentGetPayload<{ select: typeof commentSelect }>;
 
-// ── Acteurs ─────────────────────────────────────────────────────────────────
+// ── Actors ─────────────────────────────────────────────────────────────────
 
 export interface V1Actor {
   id: number;
@@ -135,11 +135,11 @@ export interface V1Actor {
 
 type ActorRow = { id: number; name: string | null; username: string | null; email: string } | null;
 
-/** Nom d'affichage d'un acteur : pseudo, puis nom, puis partie locale de l'adresse. */
+/** Display name of an actor: username, then name, then the local part of the email address. */
 export const toActor = (row: ActorRow): V1Actor | null =>
   row ? { id: row.id, name: row.username ?? row.name ?? row.email.split('@')[0] ?? String(row.id) } : null;
 
-// ── Ressources ──────────────────────────────────────────────────────────────
+// ── Resources ──────────────────────────────────────────────────────────────
 
 export const toProject = (row: ProjectRow) => ({
   id: row.id,
@@ -162,7 +162,7 @@ export const toSequence = (row: SequenceRow) => ({
   path: `${row.project.slug}/${row.code}`,
 });
 
-/** Chemin canonique d'un shot : par sa séquence, ou sous `shots/` s'il n'en a pas. */
+/** Canonical path of a shot: under its sequence, or under `shots/` if it has none. */
 const shotPath = (projectSlug: string, sequenceCode: string | null | undefined, code: string): string =>
   sequenceCode ? `${projectSlug}/${sequenceCode}/${code}` : `${projectSlug}/shots/${code}`;
 
@@ -187,7 +187,7 @@ export const toAsset = (row: AssetRow) => ({
   path: `${row.project.slug}/assets/${row.name}`,
 });
 
-/** Parent d'une tâche : un shot ou un asset — jamais les deux, jamais aucun. */
+/** Parent of a task: a shot or an asset, never both, never neither. */
 const taskParent = (row: TaskRow) => {
   if (row.shot) {
     return {
@@ -263,14 +263,14 @@ export const toVersion = (row: VersionRow & { media?: MediaRow[] }) => {
 export const toComment = (row: CommentRow) => ({
   id: row.id,
   content: row.content,
-  /** Position dans la vidéo, en secondes (null hors média temporel). */
+  /** Position in the video, in seconds (null outside a time-based media). */
   timestamp: row.timestamp,
   duration: row.duration,
   resolved: row.isResolved,
   visibleToClient: row.isVisibleToClient,
   mediaId: row.mediaObjectId,
   parentId: row.parentId,
-  // Un commentaire déposé via un lien de partage n'a pas d'auteur en base, seulement un nom.
+  // A comment posted through a share link has no author in the database, only a name.
   author: toActor(row.author) ?? (row.guestName ? { id: 0, name: row.guestName } : null),
   createdAt: row.createdAt,
 });

@@ -24,25 +24,25 @@ import { toSessionUser } from '../lib/userView';
 import { logAudit } from '../services/AuditService';
 import { badRequest, unauthorized } from '../lib/errors';
 
-/** 2FA TOTP (36.A) — enrôlement, activation, désactivation, vérification au login. */
+/** 2FA TOTP (36.A): enrolment, activation, deactivation, verification at login. */
 const router = Router();
 
 /**
- * Un code TOTP (6 chiffres) ou un code de secours (128 bits en hexadécimal, groupé par 8
- * pour la recopie : 35 caractères séparateurs compris). Le plafond doit rester au-dessus
- * du plus long des deux, sinon la validation refuse le code de secours avant même de le
- * lire — c'est-à-dire précisément le jour où le téléphone est perdu.
+ * A TOTP code (6 digits) or a backup code (128 bits in hexadecimal, grouped by 8 for transcription:
+ * 35 characters including separators). The ceiling must stay above the longer of the two, otherwise
+ * the validation refuses the backup code before even reading it, that is, precisely on the day the
+ * phone is lost.
  */
 const codeSchema = z.string().min(6).max(64);
 
 /**
- * Deux freins sur la vérification du second facteur, comme sur la connexion.
+ * Two brakes on the second-factor verification, as on the login.
  *
- * Un seul seau par IP faisait les deux erreurs à la fois : quinze coups pour tout un studio
- * derrière une sortie NAT (le seizième arrivant du matin ne pouvait plus valider son code),
- * et aucune borne sur le compte visé dès que les essais venaient de plusieurs machines. Le
- * frein par compte lit le `tmpToken`, qui NOMME le compte — c'est la seule identité
- * disponible ici, le porteur n'a pas encore de session.
+ * A single per-IP bucket made both errors at once: fifteen hits for a whole studio behind a NAT exit
+ * (the sixteenth arrival in the morning could no longer validate their code), and no bound on the
+ * targeted account as soon as attempts came from several machines. The per-account brake reads the
+ * `tmpToken`, which NAMES the account: it is the only identity available here, since the bearer does
+ * not have a session yet.
  */
 const TOO_MANY = { error: 'Too many attempts, try again later.' };
 const twoFaIpLimiter = rateLimit({ name: '2fa-ip', windowMs: 15 * 60_000, max: 100, message: TOO_MANY });
@@ -58,7 +58,7 @@ const twoFaAccountLimiter = rateLimit({
   },
 });
 
-// POST /api/auth/2fa/setup — génère le secret (chiffré) et l'URI otpauth (QR côté client)
+// POST /api/auth/2fa/setup — generates the secret (encrypted) and the otpauth URI (QR code on the client side)
 router.post('/setup', authenticate, async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
   if (!user) throw unauthorized();
@@ -73,7 +73,7 @@ router.post('/setup', authenticate, async (req, res) => {
   res.json({ secret, otpauth: otpauthUri(user.email, studio?.name ?? 'ReView', secret) });
 });
 
-// POST /api/auth/2fa/enable — confirme l'enrôlement avec un code ; renvoie les codes de secours
+// POST /api/auth/2fa/enable — confirms enrolment with a code; returns the backup codes
 router.post('/enable', authenticate, validate({ body: z.object({ code: codeSchema }) }), async (req, res) => {
   const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
   if (!user?.totpSecret) throw badRequest('No enrolment in progress — call /setup first');
@@ -92,7 +92,7 @@ router.post('/enable', authenticate, validate({ body: z.object({ code: codeSchem
   res.json({ enabled: true, backupCodes: plain });
 });
 
-// POST /api/auth/2fa/disable — désactivation (mot de passe requis)
+// POST /api/auth/2fa/disable — deactivation (password required)
 router.post(
   '/disable',
   authenticate,
@@ -112,7 +112,7 @@ router.post(
   },
 );
 
-// POST /api/auth/2fa/verify — échange { tmpToken, code TOTP ou code de secours } → tokens
+// POST /api/auth/2fa/verify — exchanges { tmpToken, TOTP code or backup code } for tokens
 router.post(
   '/verify',
   twoFaIpLimiter,
@@ -124,27 +124,26 @@ router.post(
     if (!userId) throw unauthorized('Token expired — sign in again', 'TWOFA_TOKEN_EXPIRED');
     const user = await prisma.user.findUnique({ where: { id: userId } });
     if (!user?.totpSecret || !user.totpEnabledAt) throw unauthorized('Two-factor authentication is not on');
-    // Offboarding (A1-01) : le compte a pu être désactivé entre le mot de passe et le code.
-    // Le second facteur n'est pas une porte de plus, c'est la même porte — elle se ferme ici
-    // aussi, sinon la 2FA rendrait au partant le jeton que /login vient de lui refuser.
+    // Offboarding (A1-01): the account may have been deactivated between the password and the code.
+    // The second factor is not one more gate, it is the same gate: it closes here too, otherwise 2FA
+    // would hand the leaver the token that /login has just refused them.
     if (user.disabledAt) throw unauthorized('Account disabled', 'ACCOUNT_DISABLED');
 
     const secret = decryptSecret(user.totpSecret);
-    // Un code TOTP ne vaut qu'une fois : sans cette consommation, le code intercepté se
-    // rejoue pendant toute sa fenêtre (30 s + tolérance), et le second facteur ne prouve
-    // plus la possession du téléphone. Le refus est indistinguable d'un code faux.
+    // A TOTP code is valid only once: without this consumption, the intercepted code could be replayed
+    // for its whole window (30 s plus tolerance), and the second factor would no longer prove possession
+    // of the phone. The refusal is indistinguishable from a wrong code.
     //
-    // La consommation est PARTAGÉE (Redis) et non locale au process : la garde de process
-    // ne voit pas la tentative servie par une autre réplique, si bien que le même code
-    // repassait simplement en tombant sur la seconde. Elle est fermée en cas de panne du
-    // marqueur — cf. `lib/twofa.consumeTotpOnceShared`.
+    // Consumption is SHARED (Redis) rather than local to the process: the process guard does not see the
+    // attempt served by another replica, so the same code would simply go through again by landing on
+    // the second one. It fails closed if the marker is down — cf. `lib/twofa.consumeTotpOnceShared`.
     let ok = secret
       ? (await verifyTotp(secret, code)) && (await consumeTotpOnceShared(user.id, code))
       : false;
     if (!ok) {
-      // Code de secours (consommé définitivement). La suppression passe par un `updateMany`
-      // conditionné au code encore présent : deux requêtes concurrentes portant le même
-      // code se sérialisent sur la ligne, et la seconde ne trouve plus rien à consommer.
+      // Backup code (consumed for good). The deletion goes through an `updateMany` conditioned on the
+      // code still being present: two concurrent requests carrying the same code are serialized on the
+      // row, and the second one finds nothing left to consume.
       const rest = consumeBackupCode(user.backupCodes, code);
       if (rest) {
         const consumed = await prisma.user.updateMany({

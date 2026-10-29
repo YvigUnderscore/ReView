@@ -2,23 +2,23 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Construction d'un montage — analyse PURE, testée (Phase 45).
+ * Building a timeline: PURE analysis, tested (Phase 45).
  *
- * Un montage automatique est une suite de plans dans l'ordre de la production, chacun
- * représenté par sa version la plus avancée. Deux principes gouvernent ce fichier :
+ * An automatic timeline is a sequence of shots in production order, each represented by
+ * its most advanced version. Two principles govern this file:
  *
- *  - un plan sans média n'est pas sauté, il est remplacé par un carton à sa durée. Un
- *    montage qui masque ses trous ment sur sa durée et cache précisément ce qu'un
- *    superviseur cherche à voir ;
- *  - la durée affichée est celle du média réel. Quand elle diverge de la plage de frames
- *    déclarée sur le plan, l'écart est SIGNALÉ, jamais corrigé en silence : recadrer sans
- *    le dire transformerait un problème visible en surprise au montage final.
+ *  - a shot without media is not skipped, it is replaced by a placeholder card of its
+ *    duration. A timeline that hides its gaps lies about its duration and conceals exactly
+ *    what a supervisor is trying to see;
+ *  - the displayed duration is that of the actual media. When it diverges from the frame
+ *    range declared on the shot, the gap is FLAGGED, never silently corrected: reframing
+ *    without saying so would turn a visible problem into a surprise at the final edit.
  */
 
-/** Durée d'un carton, faute de plage de frames sur le plan (secondes). */
+/** Duration of a placeholder card when the shot has no frame range (seconds). */
 export const PLACEHOLDER_DURATION = 4;
 
-/** Écart toléré entre durée du média et durée déclarée avant signalement (secondes). */
+/** Tolerated gap between media duration and declared duration before flagging (seconds). */
 const DURATION_TOLERANCE = 0.5;
 
 export interface ShotRow {
@@ -52,13 +52,13 @@ export interface TimelineItem {
   versionName: string | null;
   department: string | null;
   mediaId: number | null;
-  /** Aucun média publié : la place est tenue par un carton. */
+  /** No published media: the slot is held by a placeholder card. */
   placeholder: boolean;
-  /** La durée du média s'écarte de la plage de frames déclarée sur le plan. */
+  /** The media duration deviates from the frame range declared on the shot. */
   durationMismatch: boolean;
 }
 
-/** Durée déclarée d'un plan d'après ses frames, ou null si la plage est absente/absurde. */
+/** Declared duration of a shot from its frames, or null if the range is missing or absurd. */
 export function declaredDuration(shot: ShotRow, fps: number): number | null {
   if (shot.startFrame === null || shot.endFrame === null || fps <= 0) return null;
   const frames = shot.endFrame - shot.startFrame + 1;
@@ -66,8 +66,8 @@ export function declaredDuration(shot: ShotRow, fps: number): number | null {
 }
 
 /**
- * Durée d'un clip. Le média fait foi ; à défaut la plage de frames du plan ; à défaut une
- * durée de carton, pour qu'un plan sans rien occupe quand même une place visible.
+ * Duration of a clip. The media is authoritative; failing that, the shot's frame range;
+ * failing that, a placeholder duration, so that a shot with nothing still takes a visible slot.
  */
 export function clipDuration(mediaDuration: number | null, declared: number | null): number {
   if (mediaDuration !== null && mediaDuration > 0) return mediaDuration;
@@ -75,7 +75,7 @@ export function clipDuration(mediaDuration: number | null, declared: number | nu
   return PLACEHOLDER_DURATION;
 }
 
-/** Assemble les plans et les versions élues en une suite de clips horodatée. */
+/** Assembles the shots and the elected versions into a timestamped sequence of clips. */
 export function buildItems(shots: ShotRow[], picks: Map<number, PickRow>, fps: number): TimelineItem[] {
   const items: TimelineItem[] = [];
   let cursor = 0;
@@ -108,7 +108,7 @@ export function buildItems(shots: ShotRow[], picks: Map<number, PickRow>, fps: n
   return items;
 }
 
-/** Total d'un montage (secondes), arrondi à la milliseconde. */
+/** Total of a timeline (seconds), rounded to the millisecond. */
 export function totalDuration(items: TimelineItem[]): number {
   return Math.round(items.reduce((sum, it) => sum + it.duration, 0) * 1000) / 1000;
 }
@@ -119,7 +119,7 @@ export interface DiffEntry {
   to: string | null;
 }
 
-/** Ce qui a changé d'une révision à l'autre — la question que pose tout superviseur. */
+/** What changed from one revision to the next: the question every supervisor asks. */
 export interface TimelineDiff {
   added: string[];
   removed: string[];
@@ -127,8 +127,8 @@ export interface TimelineDiff {
 }
 
 /**
- * Compare deux états d'un montage par code de plan. Le code est la seule identité stable :
- * un plan peut être recréé (nouvel identifiant) sans que le montage ait changé pour autant.
+ * Compares two states of a timeline by shot code. The code is the only stable identity:
+ * a shot can be recreated (new identifier) without the timeline having changed.
  */
 export function diffItems(
   previous: readonly { shotCode: string; versionName: string | null }[],

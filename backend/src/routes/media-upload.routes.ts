@@ -13,10 +13,9 @@ import { FRAME_NAME_MAX_LENGTH, MAX_SEQUENCE_FRAMES, MIN_SEQUENCE_FRAMES } from 
 import { reviewNoteSchema } from '../lib/projectSettings';
 
 /**
- * Upload résumable multipart (37.A/37.B) et envoi de séquences d'images (vague 5) —
- * monté sous /api/media AVANT media.routes (sinon `/multipart/...` et `/sequence/...`
- * matcheraient `/:id`). L'upload simple (PUT présigné) reste dans media.routes pour les
- * petits fichiers.
+ * Resumable multipart upload (37.A/37.B) and image sequence uploads (wave 5), mounted under /api/media
+ * BEFORE media.routes (otherwise `/multipart/...` and `/sequence/...` would match `/:id`). The simple
+ * upload (presigned PUT) remains in media.routes for small files.
  */
 const router = Router();
 router.use(authenticate);
@@ -28,8 +27,8 @@ const sha256 = z
   .transform((s) => s.toLowerCase());
 
 /**
- * POST /api/media/upload-url — upload simple (PUT présigné) pour les petits fichiers :
- * crée un MediaObject (UPLOADING) + URL présignée, sans toucher le FS serveur.
+ * POST /api/media/upload-url: simple upload (presigned PUT) for small files: creates a MediaObject
+ * (UPLOADING) plus a presigned URL, without touching the server's filesystem.
  */
 router.post(
   '/upload-url',
@@ -40,7 +39,7 @@ router.post(
       contentType: z.string().min(1).max(160),
       kind: z.nativeEnum(MediaKind),
       size: z.number().int().nonnegative().optional(),
-      contentHash: sha256.optional(), // sha256 client (37.B) — vérifié par le worker
+      contentHash: sha256.optional(), // client sha256 (37.B), verified by the worker
     }),
   }),
   async (req, res) => {
@@ -48,7 +47,7 @@ router.post(
   },
 );
 
-// POST /api/media/multipart/init — crée (ou retrouve) l'upload ; dédup par hash
+// POST /api/media/multipart/init — creates (or retrieves) the upload; deduplicated by hash
 router.post(
   '/multipart/init',
   validate({
@@ -73,7 +72,7 @@ router.post(
   },
 );
 
-// POST /api/media/multipart/:id/parts — URLs présignées d'un lot de parts
+// POST /api/media/multipart/:id/parts — presigned URLs for a batch of parts
 router.post(
   '/multipart/:id/parts',
   validate({
@@ -91,7 +90,7 @@ router.post(
   },
 );
 
-// POST /api/media/multipart/:id/complete — assemble les parts (puis appeler /finalize)
+// POST /api/media/multipart/:id/complete — assembles the parts (then call /finalize)
 router.post(
   '/multipart/:id/complete',
   validate({
@@ -114,17 +113,17 @@ router.post(
   },
 );
 
-// POST /api/media/multipart/:id/abort — annule l'upload (multipart, PUT simple ou
-// séquence), libère ce qui a été déposé et supprime le média resté en UPLOADING.
+// POST /api/media/multipart/:id/abort — cancels the upload (multipart, simple PUT or sequence), frees
+// what was stored and deletes the media left in UPLOADING.
 router.post('/multipart/:id/abort', validate({ params: idParam }), async (req, res) => {
   res.json(await MediaUploadService.abortUpload(req.user!, Number(req.params.id)));
 });
 
-/* ── Séquences d'images : N fichiers, UN média (vague 5) ─────────────────────────── */
+/* ── Image sequences: N files, ONE media (wave 5) ─────────────────────────── */
 
 const frameName = z.string().min(1).max(FRAME_NAME_MAX_LENGTH);
 
-// POST /api/media/sequence/init — ouvre (ou reprend) l'envoi d'une séquence.
+// POST /api/media/sequence/init — opens (or resumes) the upload of a sequence.
 router.post(
   '/sequence/init',
   validate({
@@ -144,7 +143,7 @@ router.post(
   },
 );
 
-// POST /api/media/sequence/:id/urls — URLs présignées d'un lot de frames.
+// POST /api/media/sequence/:id/urls — presigned URLs for a batch of frames.
 router.post(
   '/sequence/:id/urls',
   validate({
@@ -157,10 +156,10 @@ router.post(
   },
 );
 
-// POST /api/media/sequence/:id/complete — vérifie les frames arrivées, écrit le manifeste
-// et enfile l'assemblage (proxy + échelle HLS + miniature + sprite). `note` est la consigne
-// d'upload, refusée absente quand le projet l'exige : cette route finalise l'envoi d'une
-// séquence, elle porte donc la même règle que /api/media/:id/finalize (Phase 50).
+// POST /api/media/sequence/:id/complete — checks the frames that arrived, writes the manifest and
+// queues the assembly (proxy, HLS ladder, thumbnail, sprite). `note` is the upload note, refused when
+// absent and the project requires it: this route finalizes the upload of a sequence, so it carries the
+// same rule as /api/media/:id/finalize (Phase 50).
 const sequenceCompleteBody = z.object({ note: reviewNoteSchema }).prefault({});
 router.post(
   '/sequence/:id/complete',
@@ -170,8 +169,8 @@ router.post(
   },
 );
 
-// GET /api/media/sequence/:id/frames — le livrable d'origine, frame par frame (URLs
-// présignées) : une archive de cent gigaoctets ne se fabrique pas dans le processus web.
+// GET /api/media/sequence/:id/frames — the original deliverable, frame by frame (presigned URLs): a
+// hundred-gigabyte archive is not built inside the web process.
 router.get('/sequence/:id/frames', validate({ params: idParam }), async (req, res) => {
   res.json(await ImageSequenceService.listSequenceFrames(req.user!, Number(req.params.id)));
 });

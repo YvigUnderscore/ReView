@@ -5,9 +5,9 @@ import { z } from 'zod';
 import { prisma } from './prisma';
 
 /**
- * Watermark dynamique au nom du spectateur (35.B) — overlay client dissuasif.
- * `internal` : viewers de review authentifiés (identité du compte) ; `shares` : page
- * client publique (label du lien / nom invité). Stocké dans `Setting.watermark_config`.
+ * Dynamic watermark carrying the viewer's name (35.B): a deterrent client-side overlay.
+ * `internal`: authenticated review viewers (account identity); `shares`: public client page
+ * (share link label / guest name). Stored in `Setting.watermark_config`.
  */
 
 export interface WatermarkConfig {
@@ -31,7 +31,7 @@ function sanitize(raw: unknown, base: WatermarkConfig): WatermarkConfig {
   };
 }
 
-/** Config effective (Setting fusionné avec le repli interne). */
+/** Effective config (Setting merged with the internal fallback). */
 export async function getWatermarkConfig(): Promise<WatermarkConfig> {
   const row = await prisma.setting.findUnique({ where: { key: WATERMARK_KEY } });
   if (!row) return FALLBACK;
@@ -42,7 +42,7 @@ export async function getWatermarkConfig(): Promise<WatermarkConfig> {
   }
 }
 
-/** Enregistre la config (validée/bornée). */
+/** Saves the config (validated and bounded). */
 export async function setWatermarkConfig(value: unknown): Promise<WatermarkConfig> {
   const clean = sanitize(value, FALLBACK);
   await prisma.setting.upsert({

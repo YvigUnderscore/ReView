@@ -12,22 +12,21 @@ import * as ProductionService from '../services/ProductionService';
 import * as GridService from '../services/GridService';
 
 /**
- * Production & reporting (Phase 43, étendu Phase 50) — suivi de production par projet.
+ * Production and reporting (Phase 43, extended in Phase 50): production tracking per project.
  *
- * Monté sous /api/projects.
+ * Mounted under /api/projects.
  *
- * **Toutes ces lectures sont réservées à qui GÈRE le projet** (`requireProjectManage`, donc
- * CLIENT exclu). Elles étaient ouvertes à tout membre : l'onglet exposait la charge
- * NOMINATIVE de chaque artiste, ses retards et les tâches que personne n'a prises — de
- * l'information interne qu'un client invité sur un projet n'a aucune raison de lire, et
- * qu'il pouvait obtenir en appelant l'API directement.
+ * **All these reads are reserved to whoever MANAGES the project** (`requireProjectManage`, so CLIENT is
+ * excluded). They were open to any member: the tab exposed the NAMED workload of each artist, their
+ * delays and the tasks nobody had taken, internal information that a guest client on a project has no
+ * reason to read, and that they could obtain by calling the API directly.
  */
 const router = Router();
 router.use(authenticate);
 
 const projectIdParam = z.object({ projectId: z.coerce.number().int() });
 
-// GET /api/projects/:projectId/stats — temps par shot, notes/retakes, convergence par séquence
+// GET /api/projects/:projectId/stats — time per shot, notes and retakes, convergence per sequence
 router.get(
   '/:projectId/stats',
   validate({ params: projectIdParam }),
@@ -38,10 +37,10 @@ router.get(
 );
 
 /**
- * GET /api/projects/:projectId/production?weeks= — pilotage (C6).
+ * GET /api/projects/:projectId/production?weeks=: steering (C6).
  *
- * Quatre réponses en un appel : où en est le projet, ce qui bloque, qui fait quoi, à
- * quel rythme. La fenêtre de rythme est réglable — huit semaines par défaut.
+ * Four answers in one call: where the project stands, what is blocking it, who does what, and at what
+ * pace. The pace window is adjustable: eight weeks by default.
  */
 router.get(
   '/:projectId/production',
@@ -57,12 +56,11 @@ router.get(
 );
 
 /**
- * GET /api/projects/:projectId/schedule?from=&to= — tâches datées (calendrier + Gantt).
+ * GET /api/projects/:projectId/schedule?from=&to=: dated tasks (calendar and Gantt).
  *
- * La fenêtre borne la lecture : un Gantt n'affiche jamais qu'un mois ou un trimestre, et
- * sans elle la route rapatriait tout le projet daté. Les deux bornes restent facultatives
- * — absentes, la réponse est celle d'avant, au plafond de sécurité près, qu'elle annonce
- * alors par `truncated`.
+ * The window bounds the read: a Gantt only ever shows a month or a quarter, and without it the route
+ * fetched the whole dated project. Both bounds remain optional: when absent, the answer is the previous
+ * one, up to the safety ceiling, which it then announces through `truncated`.
  */
 const scheduleQuery = z.object({
   from: z.coerce.date().optional(),
@@ -74,28 +72,28 @@ router.get(
   validate({ params: projectIdParam, query: scheduleQuery }),
   requireProjectManage,
   async (req, res) => {
-    // `validate` a déjà converti les bornes ; on relit par le même schéma pour les typer.
+    // `validate` has already converted the bounds; we re-read through the same schema to type them.
     const { from, to } = scheduleQuery.parse(req.query);
     res.json(await ScheduleService.getProjectSchedule(Number(req.params.projectId), { from, to }));
   },
 );
 
 /**
- * GET /api/projects/:projectId/grid — grille de suivi (plans × départements).
+ * GET /api/projects/:projectId/grid: tracking grid (shots × departments).
  *
- * **La pagination est PAR PLAN.** Une ligne est un plan avec toutes ses cases : un curseur
- * qui compterait des tâches couperait une ligne en deux. `cursor` vient toujours du
- * `nextCursor` de la réponse précédente ; les cinq filtres sont facultatifs et cumulatifs.
+ * **Pagination is PER SHOT.** A row is a shot with all its cells: a cursor that counted tasks would cut
+ * a row in two. `cursor` always comes from the `nextCursor` of the previous answer; the five filters are
+ * optional and cumulative.
  */
 const gridQuery = z.object({
   cursor: z.string().min(1).max(300).optional(),
   limit: z.coerce.number().int().min(1).max(GridService.GRID_MAX_LIMIT).optional(),
   episodeId: z.coerce.number().int().positive().optional(),
   sequenceId: z.coerce.number().int().positive().optional(),
-  /** CLÉ du département (`comp`), pas son libellé — c'est la clé que portent les tâches. */
+  /** KEY of the department (`comp`), not its label: it is the key carried by the tasks. */
   department: z.string().min(1).max(100).optional(),
   assigneeId: z.coerce.number().int().positive().optional(),
-  /** Code de statut du studio, ou valeur de l'enum figé à défaut de référentiel. */
+  /** Studio status code, or value of the frozen enum in the absence of a catalog. */
   status: z.string().min(1).max(60).optional(),
 });
 
@@ -104,8 +102,8 @@ router.get(
   validate({ params: projectIdParam, query: gridQuery }),
   requireProjectManage,
   async (req, res) => {
-    // En Express 5, `req.query` est un getter : la coercition du middleware ne persiste
-    // pas. On relit par le même schéma pour obtenir des nombres, comme le planning.
+    // In Express 5, `req.query` is a getter: the middleware's coercion does not persist.
+    // We re-read through the same schema to obtain numbers, as for the schedule.
     res.json(await GridService.getProjectGrid(Number(req.params.projectId), gridQuery.parse(req.query)));
   },
 );

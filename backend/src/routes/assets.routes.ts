@@ -26,8 +26,8 @@ router.use(authenticate);
 const idParam = z.object({ id: z.coerce.number().int() });
 
 /**
- * GET /api/assets?projectId=X — paginé (10.D1), en page/pageSize ou en curseur.
- * La réponse porte `total`, `pageCount`, `hasMore` et `nextCursor`.
+ * GET /api/assets?projectId=X: paginated (10.D1), by page/pageSize or by cursor.
+ * The response carries `total`, `pageCount`, `hasMore` and `nextCursor`.
  */
 router.get(
   '/',
@@ -39,7 +39,7 @@ router.get(
   },
 );
 
-// POST /api/assets (admin/superviseur)
+// POST /api/assets (admin/supervisor)
 router.post(
   '/',
   requireRole(Role.ADMIN, Role.SUPERVISOR),
@@ -54,19 +54,19 @@ router.post(
   async (req, res) => {
     const body = req.body as AssetService.CreateAssetInput;
     await assertProjectAccess(req, body.projectId);
-    await assertLocalCreationAllowed(body.projectId, 'asset'); // 48 : ShotGrid mène
+    await assertLocalCreationAllowed(body.projectId, 'asset'); // 48: ShotGrid leads
     res.status(201).json({ asset: await AssetService.create(body) });
   },
 );
 
-// GET /api/assets/:id — fiche complète (versions et tâches bornées, cf. AssetService).
+// GET /api/assets/:id — full record (versions and tasks bounded, cf. AssetService).
 router.get('/:id', validate({ params: idParam }), async (req, res) => {
   const asset = await AssetService.getDetail(Number(req.params.id));
   await assertProjectAccess(req, asset.projectId);
   res.json({ asset });
 });
 
-// PATCH /api/assets/:id (admin/superviseur)
+// PATCH /api/assets/:id (admin/supervisor)
 router.patch(
   '/:id',
   requireRole(Role.ADMIN, Role.SUPERVISOR),
@@ -75,15 +75,15 @@ router.patch(
     body: z.object({
       name: z.string().min(1).max(160).optional(),
       type: z.nativeEnum(AssetType).optional(),
-      // C3 : le libellé de type n'était écrit que par la synchronisation ShotGrid.
+      // C3: the type label was only written by the ShotGrid sync.
       typeLabel: z.string().max(120).nullable().optional(),
       description: z.string().max(2000).nullable().optional(),
-      // Statut d'asset : le site en tient une liste propre, distincte de celle des
-      // tâches — l'asset empruntait jusqu'ici le vocabulaire des tâches.
+      // Asset status: the site keeps its own list for it, distinct from that of the tasks: until now
+      // the asset borrowed the vocabulary of the tasks.
       pipelineStatusId: z.number().int().nullable().optional(),
-      // Pas de `thumbnailKey` ici : la clé est écrite par `PUT /api/assets/:id/thumbnail`,
-      // qui la reconstruit et vérifie qu'elle désigne bien CET asset. Reçue du client, elle
-      // faisait présigner n'importe quel objet du bucket — pièce jointe d'autrui comprise.
+      // No `thumbnailKey` here: the key is written by `PUT /api/assets/:id/thumbnail`, which rebuilds it
+      // and checks that it designates THIS asset. Received from the client, it let anyone presign any
+      // object in the bucket, including someone else's attachment.
       shotIds: z.array(z.number().int()).optional(),
       sequenceIds: z.array(z.number().int()).optional(),
     }),
@@ -93,10 +93,10 @@ router.patch(
     const projectId = await resolveProjectIdForAsset(id);
     if (!projectId) throw notFound('Asset not found');
     await assertProjectAccess(req, projectId);
-    // Description tenue par ShotGrid : cf. la route équivalente des séquences.
+    // Description held by ShotGrid: cf. the equivalent route for sequences.
     if (req.body.description !== undefined) await assertDescriptionWritable(projectId);
     const asset = await AssetService.update(projectId, id, req.body as AssetService.UpdateAssetInput);
-    // Aller-retour de description : cf. la route équivalente des séquences.
+    // Description round trip: cf. the equivalent route for sequences.
     if (req.body.description !== undefined) {
       await enqueuePush(projectId, { type: 'description', kind: 'asset', id, actorId: req.user!.id });
     }
@@ -105,11 +105,11 @@ router.patch(
 );
 
 /**
- * GET /api/assets/:id/tree — l'asset vu comme un dossier (Phase 45).
+ * GET /api/assets/:id/tree: the asset seen as a folder (Phase 45).
  *
- * Départements dans l'ordre du pipe → tâches → versions → médias, plus la version qui
- * fait foi. Jusqu'ici la page d'un asset n'affichait que les versions rattachées
- * DIRECTEMENT à l'asset : tout ce qu'un DCC publie sous une tâche était invisible.
+ * Departments in pipe order → tasks → versions → media, plus the version that is authoritative.
+ * Until now an asset's page only displayed the versions attached DIRECTLY to the asset: everything a
+ * DCC published under a task was invisible.
  */
 router.get('/:id/tree', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
@@ -120,9 +120,9 @@ router.get('/:id/tree', validate({ params: idParam }), async (req, res) => {
 });
 
 /**
- * GET /api/assets/:id/latest — l'équivalent d'une « master version » : une adresse stable
- * qui désigne toujours l'état le plus avancé de l'asset. Un lien collé dans une note de
- * production reste juste trois mois plus tard, sans que personne le remette à jour.
+ * GET /api/assets/:id/latest: the equivalent of a "master version", a stable address that always
+ * designates the most advanced state of the asset. A link pasted into a production note stays correct
+ * three months later, without anyone having to update it.
  */
 router.get('/:id/latest', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
@@ -134,7 +134,7 @@ router.get('/:id/latest', validate({ params: idParam }), async (req, res) => {
   res.json({ latest });
 });
 
-// Corbeille : mise à la corbeille, restauration, purge — montage partagé (C3).
+// Trash: move to trash, restore, purge, shared mounting (C3).
 mountTrashRoutes(router, {
   entityType: 'Asset',
   auditPrefix: 'ASSET',

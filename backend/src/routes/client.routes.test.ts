@@ -4,13 +4,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * Partage client : ce que la ROUTE publique fait de ce que les services lui rendent.
+ * Client sharing: what the PUBLIC route does with what the services return to it.
  *
- * Les services sont mockés ici, et c'est délibéré. La portée d'un lien se teste sur des
- * filtres purs (`ClientShareService.test.ts`, `shareBrowse.test.ts`) et la charge utile d'un
- * média sur son constructeur (`ClientMediaSourceService.test.ts`) ; un test de portée écrit
- * ici ne prouverait que la fidélité du mock. Ce qui se vérifie à ce niveau, c'est ce que la
- * route laisse sortir : rien avant déverrouillage, et l'arborescence telle quelle.
+ * The services are mocked here, and deliberately so. The scope of a link is tested on pure filters
+ * (`ClientShareService.test.ts`, `shareBrowse.test.ts`) and the payload of a media on its constructor
+ * (`ClientMediaSourceService.test.ts`); a scope test written here would only prove the fidelity of the
+ * mock. What is verified at this level is what the route lets out: nothing before unlocking, and the
+ * tree as is.
  */
 
 const { db, share, media, emptyBrowse } = vi.hoisted(() => {
@@ -82,13 +82,13 @@ beforeEach(() => {
 });
 
 describe('GET /api/client/:token/media/:id/url', () => {
-  it('rend la charge utile du constructeur, sans la réécrire', async () => {
+  it('returns the constructor's payload, without rewriting it', async () => {
     const res = await request(app).get(`/api/client/${token}/media/128/url`).expect(200);
     expect(res.body).toEqual({ url: 'https://minio/plate?sig' });
   });
 
-  /** Le dérivé suit la portée du lien : c'est `findShareMedia` qui tranche, pas l'appelant. */
-  it('ne construit rien quand le média est hors de la portée du lien', async () => {
+  /** The derivative follows the scope of the link: it is `findShareMedia` that decides, not the caller. */
+  it('builds nothing when the media is outside the scope of the link', async () => {
     const { findShareMedia } = await import('../services/ClientShareService');
     vi.mocked(findShareMedia).mockRejectedValueOnce(notFound('Media not found'));
     await request(app).get(`/api/client/${token}/media/128/url`).expect(404);
@@ -97,7 +97,7 @@ describe('GET /api/client/:token/media/:id/url', () => {
   });
 });
 
-describe('GET /api/client/:token — ce que l’accueil laisse sortir', () => {
+describe('GET /api/client/:token — what the home page lets out', () => {
   beforeEach(() => {
     db.project.findFirst.mockResolvedValue({
       id: 42,
@@ -108,7 +108,7 @@ describe('GET /api/client/:token — ce que l’accueil laisse sortir', () => {
     });
   });
 
-  it('rend l’arborescence et les playlists du service, sans les réécrire', async () => {
+  it('returns the service's tree and playlists, without rewriting them', async () => {
     const { listShareMedia, listSharePlaylists } = await import('../services/ClientShareService');
     vi.mocked(listShareMedia).mockResolvedValueOnce({
       media: [{ id: 7 }],
@@ -125,9 +125,9 @@ describe('GET /api/client/:token — ce que l’accueil laisse sortir', () => {
     expect(res.body.mediaHasMore).toBe(false);
   });
 
-  // Les cartes de playlist ne portent que des identifiants : elles ne peuvent être bornées à
-  // la page servie que si le service connaît cette page.
-  it('ne réclame les playlists qu’avec les médias réellement servis', async () => {
+  // Playlist cards carry only identifiers: they can only be bounded to the served page if the service
+  // knows that page.
+  it('only claims playlists together with the media actually served', async () => {
     const { listShareMedia, listSharePlaylists } = await import('../services/ClientShareService');
     vi.mocked(listShareMedia).mockResolvedValueOnce({
       media: [{ id: 7 }, { id: 9 }],
@@ -140,11 +140,11 @@ describe('GET /api/client/:token — ce que l’accueil laisse sortir', () => {
   });
 
   /**
-   * Un lien à mot de passe, sans session : l'habillage studio et rien d'autre. Ni le nom du
-   * projet, ni un média, ni — surtout — un nom de plan ou de playlist. L'arborescence rend ce
-   * test indispensable : avant elle, le pire qui pouvait fuir était un nom de fichier.
+   * A password-protected link, without a session: the studio decoration and nothing else. Neither the
+   * name of the project, nor a media, nor, above all, a shot or playlist name. The tree makes this test
+   * indispensable: before it, the worst that could leak was a file name.
    */
-  it('ne divulgue ni projet ni arborescence avant déverrouillage', async () => {
+  it('discloses neither project nor tree before unlocking', async () => {
     share.passwordHash = 'hash';
     const { verifyShareSession } = await import('../lib/shareAccess');
     vi.mocked(verifyShareSession).mockReturnValueOnce(false);
@@ -156,25 +156,25 @@ describe('GET /api/client/:token — ce que l’accueil laisse sortir', () => {
   });
 });
 
-describe('POST /api/client/:token/media/:id/comments — le dessin de l’invité', () => {
+describe('POST /api/client/:token/media/:id/comments — the guest's drawing', () => {
   const post = (body: Record<string, unknown>) =>
     request(app).post(`/api/client/${token}/media/128/comments`).send(body);
   const base = { guestName: 'Client', content: 'Trop sombre' };
   const rect = { type: 'rect', id: 'a', color: '#ef4444', width: 3, x: 0.1, y: 0.1, w: 0.2, h: 0.2 };
 
   /**
-   * La régression que ce lot referme : sans la clé au schéma, `validate` remplaçant
-   * `req.body` par le parsé, l'annotation partait, recevait un 201, et n'était jamais écrite.
+   * The regression this batch closes: without the key in the schema, `validate` replacing `req.body`
+   * with the parsed one, the annotation left, received a 201, and was never written.
    */
-  it('transmet l’annotation au service au lieu de la jeter en silence', async () => {
+  it('passes the annotation on to the service instead of silently dropping it', async () => {
     await post({ ...base, annotation: [rect] }).expect(201);
     const { createShareComment } = await import('../services/ClientShareService');
     expect(vi.mocked(createShareComment).mock.calls[0]?.[2].annotation).toEqual([rect]);
   });
 
-  // Mise en scène 3D, traits du painter : des gestes rejoués pour TOUS les spectateurs du
-  // média. Un lien de partage n'a pas à en écrire.
-  it('refuse les parts d’auteur qu’un invité n’a pas à poser', async () => {
+  // Staging in 3D, painter strokes: gestures replayed for ALL the viewers of the media. A share link
+  // has no business writing them.
+  it('refuses the author shares that a guest has no business setting', async () => {
     await post({ ...base, annotation: [{ type: 'scene-override', override: null }] }).expect(400);
     await post({
       ...base,
@@ -184,7 +184,7 @@ describe('POST /api/client/:token/media/:id/comments — le dessin de l’invit�
     expect(createShareComment).not.toHaveBeenCalled();
   });
 
-  it('accepte un retour sans annotation, comme avant', async () => {
+  it('accepts feedback without an annotation, as before', async () => {
     await post(base).expect(201);
     const { createShareComment } = await import('../services/ClientShareService');
     expect(vi.mocked(createShareComment).mock.calls[0]?.[2].annotation).toBeUndefined();

@@ -4,13 +4,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * Surface publique de partage — l'AVIS du client (« c'est bon » / « à revoir »).
+ * Public sharing surface: the CLIENT's opinion ("good to go" / "to revise").
  *
- * Fichier à part, comme `client.routes.guest.test.ts` : le budget de lignes du dossier
- * `routes` compte aussi les tests, et un fichier fourre-tout finit par décourager d'en
- * écrire. Le service est mocké — ce qui se vérifie ici est ce que la ROUTE laisse passer ;
- * la restriction du statut aux deux réponses offertes appartient à `decideAsGuest` et se
- * teste dans `ReviewDecisionService.test.ts`.
+ * Separate file, like `client.routes.guest.test.ts`: the line budget of the `routes` folder also counts
+ * the tests, and a catch-all file ends up discouraging writing them. The service is mocked: what is
+ * verified here is what the ROUTE lets through; restricting the status to the two offered answers
+ * belongs to `decideAsGuest` and is tested in `ReviewDecisionService.test.ts`.
  */
 
 const { db, share } = vi.hoisted(() => ({
@@ -76,15 +75,15 @@ beforeEach(() => {
 });
 
 /**
- * L'avis du client : la route ne décide de rien elle-même, elle garde la porte. Ce qui se
- * vérifie ici est ce qu'elle laisse passer — un identifiant de statut plausible, un nom, et
- * rien d'autre ; la restriction du statut aux deux réponses offertes appartient au service.
+ * The client's opinion: the route decides nothing itself, it guards the door. What is verified here is
+ * what it lets through: a plausible status identifier, a name, and nothing else; restricting the status
+ * to the two offered answers belongs to the service.
  */
-describe('POST /:token/media/:id/decision — l’avis de l’invité', () => {
+describe('POST /:token/media/:id/decision — the guest's opinion', () => {
   const post = (body: Record<string, unknown>) =>
     request(app).post(`/api/client/${token}/media/128/decision`).send(body);
 
-  it('transmet le nom et le statut au service', async () => {
+  it('passes the name and the status on to the service', async () => {
     await post({ guestName: 'Claire', statusId: 2 }).expect(201);
     const { createShareDecision } = await import('../services/ClientShareService');
     expect(vi.mocked(createShareDecision).mock.calls[0]?.[2]).toMatchObject({
@@ -93,7 +92,7 @@ describe('POST /:token/media/:id/decision — l’avis de l’invité', () => {
     });
   });
 
-  it('refuse un corps qui n’a ni nom ni statut utilisable', async () => {
+  it('rejects a body with neither a usable name nor a usable status', async () => {
     await post({ statusId: 2 }).expect(400);
     await post({ guestName: 'Claire' }).expect(400);
     await post({ guestName: 'Claire', statusId: -1 }).expect(400);
@@ -103,10 +102,10 @@ describe('POST /:token/media/:id/decision — l’avis de l’invité', () => {
   });
 
   /**
-   * Les deux réponses ne descendent au front que si le lien a le droit de s'en servir :
-   * afficher les boutons d'un lien qui sera refusé en écriture est une promesse en l'air.
+   * The two answers only reach the front end if the link is allowed to use them: displaying the
+   * buttons of a link that will be refused write access is an empty promise.
    */
-  it('ne sert les réponses offertes que lorsque le service en rend', async () => {
+  it('only serves the offered answers when the service returns them', async () => {
     db.project.findFirst.mockResolvedValue({
       id: 42,
       name: 'Durian',

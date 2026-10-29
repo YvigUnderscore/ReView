@@ -14,22 +14,22 @@ import * as EntityNoteService from '../services/EntityNoteService';
 import * as EntityAssigneeService from '../services/EntityAssigneeService';
 
 /**
- * Ce qu'une entité de pipeline porte en plus de sa fiche technique : les personnes qui en
- * répondent, et son brief markdown.
+ * What a pipeline entity carries in addition to its technical record: the people who answer for it,
+ * and its markdown brief.
  *
- * Les deux sont regroupés parce qu'ils partagent la même forme d'adressage
- * (`/api/:kind/:id/...`) et le même contrôle d'accès. Les séparer aurait dupliqué le
- * schéma de paramètres et le garde-fou de rôle sans rien clarifier.
+ * Both are grouped because they share the same addressing form (`/api/:kind/:id/...`) and the same
+ * access control. Separating them would have duplicated the parameter schema and the role guard
+ * without clarifying anything.
  */
 const router = Router();
 
-/** ⚠ Monté sur `/api` : authentification route par route, jamais `router.use`. */
+/** ⚠ Mounted on `/api`: authentication route by route, never `router.use`. */
 const auth = authenticate;
 const manage = requireRole(Role.ADMIN, Role.SUPERVISOR);
 
 /**
- * Le segment d'URL de chaque type, au pluriel comme partout ailleurs dans l'API.
- * `episode` reste au singulier côté service : c'est le nom du modèle.
+ * The URL segment of each type, in the plural as everywhere else in the API.
+ * `episode` stays singular on the service side: it is the model's name.
  */
 const SEGMENTS = {
   episodes: 'episode',
@@ -44,7 +44,7 @@ for (const [segment, kind] of Object.entries(SEGMENTS) as [
   keyof typeof SEGMENTS,
   (typeof SEGMENTS)[keyof typeof SEGMENTS],
 ][]) {
-  // ── Personnes responsables ────────────────────────────────────────────────
+  // ── Responsible people ────────────────────────────────────────────────
   router.put(
     `/${segment}/:id/assignees`,
     auth,
@@ -65,23 +65,22 @@ for (const [segment, kind] of Object.entries(SEGMENTS) as [
   );
 
   /**
-   * Tout le monde du périmètre : l'entité, ses enfants et les tâches. C'est ce que
-   * l'en-tête dépliable d'une page de séquence montre — s'arrêter à la séquence
-   * elle-même n'aurait montré personne dans le cas courant.
+   * Everyone in the scope: the entity, its children and the tasks. This is what the expandable header
+   * of a sequence page shows: stopping at the sequence itself would have shown nobody in the usual case.
    */
   router.get(`/${segment}/:id/assignees`, auth, validate({ params: idParam }), async (req, res) => {
     const id = Number(req.params.id);
-    // Lire l'équipe d'une entité, c'est lire le projet : sans ce garde, n'importe quel
-    // compte énumérait les identifiants et récupérait la composition de tout le studio.
+    // Reading an entity's team is reading the project: without this guard, any account would enumerate
+    // identifiers and retrieve the make-up of the whole studio.
     await assertProjectAccess(req, await EntityNoteService.resolveProject(kind, id));
     res.json({ assignees: await EntityAssigneeService.scopeAssignees(kind, id) });
   });
 
-  // ── Fiche markdown ────────────────────────────────────────────────────────
+  // ── Markdown sheet ────────────────────────────────────────────────────────
   router.get(`/${segment}/:id/note`, auth, validate({ params: idParam }), async (req, res) => {
     const id = Number(req.params.id);
-    // Même garde que la lecture des images de la fiche (note-images.routes) : le texte du
-    // brief ne doit pas être plus exposé que les images qu'il contient.
+    // Same guard as reading the sheet's images (note-images.routes): the brief's text must not be
+    // more exposed than the images it contains.
     await assertProjectAccess(req, await EntityNoteService.resolveProject(kind, id));
     res.json({ note: await EntityNoteService.getNote(kind, id) });
   });
@@ -99,9 +98,9 @@ for (const [segment, kind] of Object.entries(SEGMENTS) as [
   );
 }
 
-// ── Modèles de fiche ────────────────────────────────────────────────────────
+// ── Record templates ────────────────────────────────────────────────────────
 
-/** Le studio de l'instance — une instance = un studio. */
+/** The studio of the instance: one instance equals one studio. */
 async function currentStudioId(): Promise<number> {
   const project = await prisma.project.findFirst({ select: { studioId: true } });
   if (!project) throw notFound('No studio yet');
@@ -127,8 +126,8 @@ router.get(
   async (req, res) => {
     const studioId = await currentStudioId();
     const projectId = req.query.projectId === undefined ? null : Number(req.query.projectId);
-    // Un modèle de fiche peut être propre à un projet : demander ceux d'un projet auquel on
-    // n'appartient pas reviendrait à en lire le contenu.
+    // A record template can be specific to a project: asking for those of a project one does not
+    // belong to would amount to reading its content.
     if (projectId !== null) await assertProjectAccess(req, projectId);
     const scope = req.query.scope as (typeof TEMPLATE_SCOPES)[number] | undefined;
     res.json({ templates: await EntityNoteService.listTemplates(studioId, projectId, scope) });
@@ -161,7 +160,7 @@ router.delete('/note-templates/:id', auth, manage, validate({ params: idParam })
   res.status(204).end();
 });
 
-/** Les types de fiche connus — sert au contrôle de cohérence des tests et de l'API. */
+/** Known record types: used by the consistency check of the tests and by the API. */
 export const NOTE_SEGMENTS = Object.keys(SEGMENTS) as (keyof typeof SEGMENTS)[];
 export { NOTE_KINDS };
 

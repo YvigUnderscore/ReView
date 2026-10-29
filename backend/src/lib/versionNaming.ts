@@ -2,47 +2,47 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Nom de la version suivante.
+ * Name of the next version.
  *
- * Deux exigences se rejoignent ici. D'abord ne jamais réutiliser un numéro : le compter
- * (« il y a 3 versions, la suivante est la 4 ») régresse dès qu'on en supprime une, et
- * fabrique deux V03 qui ne désignent pas le même travail. On repart donc du plus grand
- * numéro déjà porté, y compris par une version mise à la corbeille.
+ * Two requirements meet here. First, never reuse a number: counting them ("there are 3 versions,
+ * so the next is 4") regresses as soon as one is deleted, and produces two V03 that do not
+ * designate the same work. So we start again from the highest number already taken, including by
+ * a version put in the trash.
  *
- * Ensuite parler la même langue que ShotGrid quand le projet y est relié. Un site nomme
- * ses versions d'après le plan et l'étape qui les produit — `DEMO_SH010_anim_v001` — et
- * c'est ce nom que la production lit dans ses playlists et ses notes. Un « V02 » local
- * en face oblige chacun à traduire de tête. Hors projet relié, rien ne change.
+ * Second, speak the same language as ShotGrid when the project is linked to it. A site names its
+ * versions after the shot and the step that produces them (`DEMO_SH010_anim_v001`), and that is the
+ * name production reads in its playlists and notes. A local "V02" in front of it forces everyone to
+ * translate in their head. Outside a linked project, nothing changes.
  */
 
-/** Numéro porté par un nom de version, quelle qu'en soit la convention. */
+/** Number carried by a version name, whatever its convention. */
 export function versionNumber(name: string): number | null {
-  // `v001`, `V02`, `_v0001` : le numéro est ce qui suit le dernier « v ».
+  // `v001`, `V02`, `_v0001`: the number is what follows the last "v".
   const m = /v(\d+)\s*$/i.exec(name.trim());
   if (m) return Number.parseInt(m[1]!, 10);
-  // À défaut, un nom qui se termine par des chiffres (« SH010_anim_3 »).
+  // Failing that, a name that ends in digits ("SH010_anim_3").
   const tail = /(\d+)\s*$/.exec(name.trim());
   return tail ? Number.parseInt(tail[1]!, 10) : null;
 }
 
-/** Prochain numéro libre sous un parent : au-dessus de tout ce qui a déjà servi. */
+/** Next free number under a parent: above everything that has already been used. */
 export function nextNumber(existing: readonly string[]): number {
   const used = existing.map(versionNumber).filter((n): n is number => n !== null);
   return used.length === 0 ? 1 : Math.max(...used) + 1;
 }
 
 export interface NamingContext {
-  /** Code du plan ou nom de l'asset qui porte la version. */
+  /** Shot code or asset name carrying the version. */
   parentCode?: string | null;
-  /** Étape du pipe (le `step` ShotGrid, porté par `Task.department`). */
+  /** Pipe step (the ShotGrid `step`, carried by `Task.department`). */
   step?: string | null;
-  /** Noms déjà pris sous ce parent, corbeille comprise. */
+  /** Names already taken under this parent, trash included. */
   existing: readonly string[];
-  /** Le projet est-il relié à un site ShotGrid ? */
+  /** Is the project linked to a ShotGrid site? */
   linked: boolean;
 }
 
-/** Fragment de nom réduit à ce qu'un code de version accepte. */
+/** Name fragment reduced to what a version code accepts. */
 const slug = (value: string): string =>
   value
     .trim()
@@ -51,21 +51,21 @@ const slug = (value: string): string =>
     .slice(0, 40);
 
 /**
- * Ce nom ressemble-t-il à un code venu du site ?
+ * Does this name look like a code that came from the site?
  *
- * Un `V01` local n'en est pas un : la forme longue se reconnaît à son suffixe `_v<n>`.
+ * A local `V01` is not one: the long form is recognized by its `_v<n>` suffix.
  */
 export function looksLikeSiteCode(name: string): boolean {
   return /_v\d+\s*$/i.test(name.trim());
 }
 
 /**
- * Rejoue la forme d'un nom existant avec un autre numéro.
+ * Replays the shape of an existing name with another number.
  *
- * On préfère **imiter** le frère le plus avancé plutôt que deviner la convention du
- * studio : le préfixe de projet (`DEMO_`), la casse du « v » et la largeur du padding
- * varient d'un site à l'autre, et une version fabriquée à côté de la plaque oblige la
- * production à traduire de tête à chaque playlist.
+ * We prefer to **imitate** the most advanced sibling rather than guess the studio's convention:
+ * the project prefix (`DEMO_`), the case of the "v" and the padding width vary from one site to
+ * another, and a version made up beside them would force production to translate in its head at
+ * every playlist.
  */
 export function bumpToNumber(model: string, n: number): string | null {
   const m = /^(.*?)(v)(\d+)(\s*)$/i.exec(model.trim());
@@ -78,7 +78,7 @@ export function nextVersionName(ctx: NamingContext): string {
   const n = nextNumber(ctx.existing);
 
   if (ctx.linked) {
-    // Le frère le plus avancé qui porte déjà un code du site : sa forme fait autorité.
+    // The most advanced sibling that already carries a site code: its shape is authoritative.
     const model = [...ctx.existing]
       .filter(looksLikeSiteCode)
       .sort((a, b) => (versionNumber(a) ?? 0) - (versionNumber(b) ?? 0))
@@ -86,8 +86,8 @@ export function nextVersionName(ctx: NamingContext): string {
     const imitated = model ? bumpToNumber(model, n) : null;
     if (imitated) return imitated;
 
-    // Aucun modèle : convention ShotGrid usuelle, <parent>_<étape>_v001. Sans parent
-    // identifiable on retombe sur la forme courte, « _anim_v001 » ne désignant rien.
+    // No model: usual ShotGrid convention, <parent>_<step>_v001. Without an identifiable parent,
+    // we fall back to the short form, since "_anim_v001" designates nothing.
     if (ctx.parentCode) {
       const parts = [slug(ctx.parentCode), ctx.step ? slug(ctx.step) : null].filter(Boolean);
       return `${parts.join('_')}_v${String(n).padStart(3, '0')}`;

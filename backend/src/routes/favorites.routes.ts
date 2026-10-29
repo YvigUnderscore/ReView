@@ -19,7 +19,7 @@ import { notFound } from '../lib/errors';
 const router = Router();
 router.use(authenticate);
 
-// Résout le projet contenant l'entité (pour le contrôle d'accès).
+// Resolves the project containing the entity (for the access check).
 async function projectIdFor(type: EntityType, entityId: number): Promise<number | null> {
   switch (type) {
     case 'PROJECT':
@@ -33,9 +33,9 @@ async function projectIdFor(type: EntityType, entityId: number): Promise<number 
   }
 }
 
-// GET /api/favorites — favoris de l'utilisateur courant (enrichis).
-// L'accès au projet est revérifié à chaque lecture : un favori n'est pas un droit acquis,
-// et la barre latérale ne doit pas continuer à nommer les plans d'un film qu'on a quitté.
+// GET /api/favorites — the current user's favorites (enriched).
+// Project access is re-verified on each read: a favorite is not an acquired right, and the sidebar must
+// not keep naming the shots of a film one has left.
 router.get('/', async (req, res) => {
   const favorites = await prisma.favorite.findMany({
     where: { userId: req.user!.id },
@@ -45,7 +45,7 @@ router.get('/', async (req, res) => {
   res.json({ favorites: await resolveFavorites(req.user!.id, req.user!.role, favorites) });
 });
 
-// POST /api/favorites — ajoute un favori
+// POST /api/favorites — adds a favorite
 router.post(
   '/',
   validate({ body: z.object({ type: z.nativeEnum(EntityType), entityId: z.number().int() }) }),
@@ -63,7 +63,7 @@ router.post(
   },
 );
 
-// DELETE /api/favorites/:type/:entityId — retire un favori
+// DELETE /api/favorites/:type/:entityId — removes a favorite
 router.delete(
   '/:type/:entityId',
   validate({ params: z.object({ type: z.nativeEnum(EntityType), entityId: z.coerce.number().int() }) }),

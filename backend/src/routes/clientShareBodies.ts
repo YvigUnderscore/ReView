@@ -5,31 +5,29 @@ import { z } from 'zod';
 import { cameraStateSchema, guestAnnotationSchema } from '../lib/commentPayload';
 
 /**
- * Ce qu'un invité a le droit d'envoyer sur la surface publique de partage.
+ * What a guest is allowed to send on the public sharing surface.
  *
- * Extrait de `client.routes.ts` pour son budget de lignes, mais le regroupement se tient de
- * lui-même : c'est ici, et nulle part ailleurs, qu'on lit ce qu'un anonyme muni d'un lien
- * peut écrire en base. Les schémas restent rejoués à l'écriture par les services — une
- * route n'est pas le seul appelant possible.
+ * Extracted from `client.routes.ts` for its line budget, but the grouping stands on its own: this is
+ * where, and nowhere else, one reads what an anonymous visitor holding a link can write to the database.
+ * The schemas are still replayed at write time by the services: a route is not the only possible caller.
  */
 
-/** Retour écrit, avec son dessin et, pour un média spatial, la pose caméra. */
+/** Written feedback, with its drawing and, for a spatial media, the camera pose. */
 export const guestCommentBody = z.object({
   guestName: z.string().trim().min(1).max(80),
   content: z.string().min(1).max(10000),
   timestamp: z.number().nonnegative().optional(),
-  // Même schéma que la review interne (A2-04) ; `createGuest` le revalide de toute façon.
+  // Same schema as the internal review (A2-04); `createGuest` revalidates it in any case.
   cameraState: cameraStateSchema.nullish(),
-  // Schéma INVITÉ : ni mise en scène 3D, ni animation caméra, ni traits du painter — ce
-  // sont des gestes rejoués pour tous les spectateurs du média. Sans cette clé, `validate`
-  // remplaçant `req.body` par le parsé, l'annotation partait au serveur, recevait un 201, et
-  // n'était jamais écrite.
+  // GUEST schema: neither 3D staging, nor camera animation, nor painter strokes: these are gestures
+  // replayed for all the viewers of the media. Without this key, `validate` replacing `req.body` with
+  // the parsed one, the annotation went to the server, received a 201, and was never written.
   annotation: guestAnnotationSchema.nullish(),
 });
 
 /**
- * Avis sur une version. `statusId` n'est pas cru sur parole : `decideAsGuest` le restreint
- * aux deux réponses offertes, faute de quoi un invité poserait n'importe quel statut interne.
+ * Opinion on a version. `statusId` is not taken on trust: `decideAsGuest` restricts it to the two
+ * answers offered, failing which a guest could post any internal status.
  */
 export const guestDecisionBody = z.object({
   guestName: z.string().trim().min(1).max(80),

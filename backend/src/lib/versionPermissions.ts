@@ -2,33 +2,33 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Ce que l'appelant a le droit d'écrire sur une version — **calculé côté serveur** et rendu
- * avec le détail du média (`permissions`), pour que l'écran n'ait plus à le deviner.
+ * What the caller is allowed to write on a version, **computed server-side** and returned with the
+ * media detail (`permissions`), so the screen no longer has to guess it.
  *
- * Motif : le front décidait seul d'afficher les gizmos et le bouton « Enregistrer » sur la
- * règle « version non publiée + rôle interne ». Le serveur, lui, exige **l'auteur de la
- * version ou un gestionnaire du projet** (`VersionService.update`) en plus du verrou de
- * publication (`assertWritable(version, 'versionTransform')`). Un ARTIST membre du projet
- * mais non auteur voyait donc un bouton que le serveur refusait ensuite en 403 — un bouton
- * mort, que le projet interdit explicitement.
+ * Reason: the front end alone decided to show the gizmos and the "Save" button based on the rule
+ * "unpublished version + internal role". The server, however, requires **the author of the version
+ * or a project manager** (`VersionService.update`) on top of the publication lock
+ * (`assertWritable(version, 'versionTransform')`). An ARTIST who was a project member but not the
+ * author therefore saw a button that the server then refused with a 403: a dead button, which the
+ * project explicitly forbids.
  *
- * Les deux gardes du service restent en place et gardent leurs messages distincts (403
- * « auteur ou superviseur » d'un côté, `PUBLISHED_LOCKED` de l'autre) : ce prédicat en est la
- * **conjonction**, celle qui décide si le geste est offert. Toute évolution de l'une des deux
- * gardes doit se répercuter ici — c'est le seul endroit qui en répond à l'interface.
+ * The two guards of the service stay in place and keep their distinct messages (a 403 with the
+ * production message "auteur ou superviseur" on one side, `PUBLISHED_LOCKED` on the other): this
+ * predicate is their **conjunction**, the one that decides whether the action is offered. Any change
+ * to either guard must be reflected here: this is the only place that answers for it to the interface.
  */
 
-/** Ce qu'il faut savoir d'une version pour trancher l'édition de sa transformation. */
+/** What needs to be known about a version to decide on editing its transform. */
 export interface VersionTransformSubject {
   authorId: number | null;
   published: boolean;
 }
 
 /**
- * La transformation TRS de cette version est-elle éditable par cet appelant ?
+ * Is this version's TRS transform editable by this caller?
  *
- * `manager` est le rôle **effectif sur le projet** (`isProjectManager`), pas le rôle global :
- * un superviseur nommé sur le projet compte, un ADMIN global aussi, un artiste non auteur non.
+ * `manager` is the **effective role on the project** (`isProjectManager`), not the global role:
+ * a supervisor named on the project counts, a global ADMIN too, a non-author artist does not.
  */
 export function canEditVersionTransform(
   version: VersionTransformSubject,

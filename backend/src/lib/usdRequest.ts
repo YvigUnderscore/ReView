@@ -5,22 +5,22 @@ import { z } from 'zod';
 import { USD_PURPOSES } from './blenderUsd';
 
 /**
- * Schéma d'une **demande de conversion USD** : sélection de variantes + purpose.
+ * Schema of a **USD conversion request**: variant selection + purpose.
  *
- * Deux portes d'entrée la posent, et elles doivent accepter exactement la même chose :
- *  - `POST /api/media/:id/usd/recompose` — rejouer la conversion autrement ;
- *  - `POST /api/v1/publish` — la donner dès la publication, pour que la **première**
- *    conversion soit déjà la bonne et qu'aucune recomposition ne soit nécessaire.
+ * Two entry points set it, and they must accept exactly the same thing:
+ *  - `POST /api/media/:id/usd/recompose`: replay the conversion differently;
+ *  - `POST /api/v1/publish`: provide it at publication, so that the **first** conversion is
+ *    already the right one and no recomposition is needed.
  *
- * Deux définitions divergeraient : un client se verrait refuser à la publication ce que la
- * recomposition acceptait. D'où ce fichier unique.
+ * Two definitions would diverge: a client would be refused at publication what recomposition
+ * accepted. Hence this single file.
  */
 
-/** Bornes de la sélection : un chemin de prim USD est long, mais pas illimité. */
+/** Selection bounds: a USD prim path is long, but not unlimited. */
 const primPath = z.string().min(1).max(1024);
 const variantName = z.string().min(1).max(200);
 
-/** Garde-fou de volume : une sélection réaliste tient en quelques prims. */
+/** Volume guard: a realistic selection fits in a few prims. */
 export const USD_SELECTION_MAX_PRIMS = 64;
 
 export const usdVariantsSchema = z

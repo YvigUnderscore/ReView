@@ -44,13 +44,12 @@ beforeEach(() => {
 });
 
 /**
- * Un `rvk_` vit jusqu'à 3650 jours et survit à la fermeture de l'onglet. Fabriqué depuis
- * un jeton d'accès volé, il transforme un vol de session passager en accès durable — que
- * « se déconnecter partout » ne soupçonne même pas. Le mot de passe est la seule chose que
- * l'attaquant n'a pas.
+ * An `rvk_` lives for up to 3650 days and survives closing the tab. Forged from a stolen access token,
+ * it turns a passing session theft into durable access, which "log out everywhere" does not even
+ * suspect. The password is the only thing the attacker does not have.
  */
-describe('POST /api/auth/tokens — ré-authentification', () => {
-  it('refuse la création sans mot de passe courant', async () => {
+describe('POST /api/auth/tokens — re-authentication', () => {
+  it('refuses creation without the current password', async () => {
     const res = await request(app)
       .post('/api/auth/tokens')
       .send({ name: 'ferme', scopes: ['read'] });
@@ -59,7 +58,7 @@ describe('POST /api/auth/tokens — ré-authentification', () => {
     expect(createPersonal).not.toHaveBeenCalled();
   });
 
-  it('refuse un mot de passe faux', async () => {
+  it('rejects a wrong password', async () => {
     const res = await request(app)
       .post('/api/auth/tokens')
       .send({ name: 'ferme', scopes: ['read'], currentPassword: 'MauvaisMdp1' });
@@ -67,7 +66,7 @@ describe('POST /api/auth/tokens — ré-authentification', () => {
     expect(createPersonal).not.toHaveBeenCalled();
   });
 
-  it('crée le token quand le mot de passe est correct', async () => {
+  it('creates the token when the password is correct', async () => {
     const res = await request(app)
       .post('/api/auth/tokens')
       .send({ name: 'ferme', scopes: ['read'], currentPassword: 'Motdepasse1' });
@@ -76,8 +75,8 @@ describe('POST /api/auth/tokens — ré-authentification', () => {
     expect(createPersonal).toHaveBeenCalledWith(7, expect.objectContaining({ name: 'ferme' }));
   });
 
-  // Anti-escalade : un token d'API ne fabrique pas de token, mot de passe ou non.
-  it('refuse un porteur qui est lui-même un token d’API', async () => {
+  // Anti-escalation: an API token does not mint tokens, password or not.
+  it('refuses a bearer that is itself an API token', async () => {
     actor.apiToken = { id: 3 };
     const res = await request(app)
       .post('/api/auth/tokens')

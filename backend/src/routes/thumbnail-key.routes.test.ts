@@ -6,13 +6,12 @@ import { Role } from '@prisma/client';
 import type { Request, Response, NextFunction } from 'express';
 
 /**
- * Invariant : aucune route ne laisse un client choisir la clé de stockage d'une vignette.
+ * Invariant: no route lets a client choose the storage key of a thumbnail.
  *
- * `EntityThumbnailService.set` reconstruit la clé et vérifie son préfixe, mais les PATCH
- * d'entité acceptaient encore un `thumbnailKey` libre de 512 caractères et l'écrivaient
- * tel quel : la clé d'une pièce jointe, d'une note vocale ou d'un avatar y devenait une
- * URL présignée valable une heure. Le contrôle avait été posé sur la porte neuve et laissé
- * ouvert sur l'ancienne — d'où cette suite, qui garde les quatre portes à la fois.
+ * `EntityThumbnailService.set` rebuilds the key and checks its prefix, but the entity PATCHes still accepted
+ * a free `thumbnailKey` of 512 characters and wrote it as is: the key of an attachment, a voice note or an
+ * avatar then became a presigned URL valid for an hour. The check had been put on the new door and left open
+ * on the old one, hence this suite, which guards the four doors at once.
  */
 
 const { db, services } = vi.hoisted(() => ({
@@ -89,7 +88,7 @@ const app = express()
   .use('/api/projects', projectsRoutes)
   .use(errorHandler);
 
-/** La clé d'une pièce jointe d'un autre utilisateur : le but même de l'attaque. */
+/** The key of another user's attachment: the very purpose of the attack. */
 const STOLEN = 'comments/attachments/9/note-vocale.webm';
 
 beforeEach(() => {
@@ -100,8 +99,8 @@ beforeEach(() => {
   db.sequence.update.mockResolvedValue({ id: 1 });
 });
 
-describe('PATCH d’entité — la vignette ne se choisit pas par la clé', () => {
-  it('PATCH /api/shots/:id écrit le nom, jamais la clé reçue', async () => {
+describe('entity PATCH — the thumbnail is not chosen by the key', () => {
+  it('PATCH /api/shots/:id writes the name, never the key received', async () => {
     const res = await request(app).patch('/api/shots/1').send({ name: 'SH010', thumbnailKey: STOLEN });
     expect(res.status).toBe(200);
     const body = services.shotUpdate.mock.calls[0]![2] as Record<string, unknown>;
@@ -109,7 +108,7 @@ describe('PATCH d’entité — la vignette ne se choisit pas par la clé', () =
     expect(body).not.toHaveProperty('thumbnailKey');
   });
 
-  it('PATCH /api/assets/:id écrit le nom, jamais la clé reçue', async () => {
+  it('PATCH /api/assets/:id writes the name, never the key received', async () => {
     const res = await request(app).patch('/api/assets/1').send({ name: 'Robot', thumbnailKey: STOLEN });
     expect(res.status).toBe(200);
     const body = services.assetUpdate.mock.calls[0]![2] as Record<string, unknown>;
@@ -117,17 +116,17 @@ describe('PATCH d’entité — la vignette ne se choisit pas par la clé', () =
     expect(body).not.toHaveProperty('thumbnailKey');
   });
 
-  it('PATCH /api/sequences/:id écrit le nom, jamais la clé reçue', async () => {
+  it('PATCH /api/sequences/:id writes the name, never the key received', async () => {
     const res = await request(app).patch('/api/sequences/1').send({ name: 'SQ01', thumbnailKey: STOLEN });
     expect(res.status).toBe(200);
-    // Le corps passe désormais par `SequenceService.update` : c'est là qu'on vérifie ce
-    // que la route a laissé entrer, la porte à garder n'ayant pas changé de place.
+    // The body now goes through `SequenceService.update`: that is where we check what the route let in,
+    // the door to guard having not changed place.
     const body = services.sequenceUpdate.mock.calls[0]![2] as Record<string, unknown>;
     expect(body).toEqual({ name: 'SQ01' });
     expect(body).not.toHaveProperty('thumbnailKey');
   });
 
-  it('PATCH /api/projects/:projectId écrit le nom, jamais la clé reçue', async () => {
+  it('PATCH /api/projects/:projectId writes the name, never the key received', async () => {
     const res = await request(app).patch('/api/projects/42').send({ name: 'Démo', thumbnailKey: STOLEN });
     expect(res.status).toBe(200);
     const body = services.projectUpdate.mock.calls[0]![1] as Record<string, unknown>;
@@ -135,9 +134,9 @@ describe('PATCH d’entité — la vignette ne se choisit pas par la clé', () =
     expect(body).not.toHaveProperty('thumbnailKey');
   });
 
-  it('ignore la clé même seule dans le corps, sans faire échouer la requête', async () => {
-    // Le schéma Zod retire la propriété inconnue : l'appelant reçoit 200 et rien n'est
-    // écrit de sa clé — un 400 ferait tomber les intégrations qui l'envoient encore.
+  it('ignores the key even when it is alone in the body, without failing the request', async () => {
+    // The Zod schema strips the unknown property: the caller receives 200 and nothing is written from its
+    // key; a 400 would bring down the integrations that still send it.
     const res = await request(app).patch('/api/shots/1').send({ thumbnailKey: STOLEN });
     expect(res.status).toBe(200);
     expect(services.shotUpdate.mock.calls[0]![2]).toEqual({});

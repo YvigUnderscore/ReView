@@ -4,31 +4,30 @@
 import { Prisma, TaskStatus } from '@prisma/client';
 
 /**
- * Famille de statut — le vocabulaire commun de toutes les jauges (pilotage, accueil,
- * progression d'un projet).
+ * Status family: the common vocabulary of all gauges (steering, home page, project
+ * progress).
  *
- * Les statistiques raisonnaient jusqu'ici sur l'enum figé `TaskStatus`, à six valeurs,
- * alors qu'un studio relié à ShotGrid travaille avec le référentiel `PipelineStatus` :
- * quinze statuts par entité, dont `isDone` dit lesquels sont terminaux et `isInactive`
- * lesquels ne comptent nulle part (« omitted », « n/a », « declined »). Résultat : des
- * jauges fausses des deux côtés — un plan « fin » n'était pas compté comme fait, un plan
- * omis gonflait indéfiniment le reste-à-faire.
+ * Statistics so far reasoned on the frozen `TaskStatus` enum, with six values, while a
+ * studio linked to ShotGrid works with the `PipelineStatus` catalog: fifteen statuses per
+ * entity, where `isDone` says which are terminal and `isInactive` which count nowhere
+ * ("omitted", "n/a", "declined"). Result: wrong gauges on both sides. A "done" shot was
+ * not counted as done, and an omitted shot inflated the remaining work indefinitely.
  *
- * Ce module est la seule traduction statut → famille du serveur. Il est pur, donc testé
- * sans base, et il sert aussi bien au repli côté SQL (filtres Prisma) qu'au repli côté
- * mémoire (repliage des agrégats).
+ * This module is the only status-to-family translation on the server. It is pure, so it
+ * is tested without a database, and it serves both the SQL fallback (Prisma filters) and
+ * the in-memory fallback (folding of aggregates).
  */
 
 export type Family = 'todo' | 'progress' | 'review' | 'done' | 'blocked';
 
 /**
- * « Ni à faire, ni fait ». Ces statuts s'affichent mais ne comptent dans aucune jauge :
- * les compter comme du reste-à-faire gonflerait l'avancement d'une production, les
- * compter comme faits la flatterait.
+ * "Neither to do nor done". These statuses are displayed but count in no gauge:
+ * counting them as remaining work would inflate a production's progress, while counting
+ * them as done would flatter it.
  */
 export type FamilyOrInactive = Family | 'inactive';
 
-/** Traduction de l'enum figé — le repli quand aucun statut personnalisable n'est posé. */
+/** Mapping of the frozen enum: the fallback when no custom status is set. */
 export const FAMILY_OF_ENUM: Record<TaskStatus, Family> = {
   TODO: 'todo',
   IN_PROGRESS: 'progress',
@@ -38,7 +37,7 @@ export const FAMILY_OF_ENUM: Record<TaskStatus, Family> = {
   REJECTED: 'blocked',
 };
 
-/** Le statut personnalisable réduit à ce dont une jauge a besoin. */
+/** The custom status, reduced to what a gauge needs. */
 export interface PipelineStatusRef {
   isDone: boolean;
   isInactive: boolean;
@@ -46,13 +45,13 @@ export interface PipelineStatusRef {
 }
 
 /**
- * La famille d'une tâche.
+ * The family of a task.
  *
- * Sans statut personnalisable, l'enum fait foi (studio sans ShotGrid : comportement
- * inchangé). Avec, c'est `isInactive` puis `isDone` qui tranchent — ils sont écrits par
- * la synchronisation précisément pour cela — et `legacyStatus` sert de pont pour les
- * familles intermédiaires. Un statut non terminal ne peut jamais compter comme fait,
- * même si son pont le prétend : `isDone` est la seule autorité sur « c'est fini ».
+ * Without a custom status, the enum is authoritative (studio without ShotGrid: behavior
+ * unchanged). With one, `isInactive` then `isDone` decide (they are written by the sync
+ * precisely for this), and `legacyStatus` serves as a bridge for intermediate families.
+ * A non-terminal status can never count as done, even if its bridge claims so: `isDone`
+ * is the only authority on "finished".
  */
 export function familyOf(status: TaskStatus, pipelineStatus?: PipelineStatusRef | null): FamilyOrInactive {
   if (!pipelineStatus) return FAMILY_OF_ENUM[status];
@@ -63,8 +62,8 @@ export function familyOf(status: TaskStatus, pipelineStatus?: PipelineStatusRef 
 }
 
 /**
- * Construit une référence de statut depuis des colonnes lues à plat (agrégat SQL).
- * `isDone` nul signifie « aucun statut personnalisable posé », pas « pas terminé ».
+ * Builds a status reference from columns read flat (SQL aggregate).
+ * A null `isDone` means "no custom status set", not "not done".
  */
 export function statusRefOf(row: {
   isDone: boolean | null;
@@ -79,7 +78,7 @@ export function statusRefOf(row: {
   };
 }
 
-/** Ordre d'affichage : ce qui demande une action d'abord, ce qui est clos en dernier. */
+/** Display order: what requires an action first, what is closed last. */
 export const FAMILY_PRIORITY: Record<FamilyOrInactive, number> = {
   blocked: 0,
   review: 1,
@@ -90,11 +89,11 @@ export const FAMILY_PRIORITY: Record<FamilyOrInactive, number> = {
 };
 
 /**
- * Priorité d'une tâche dans une liste « ce qui m'attend ».
+ * Priority of a task in a "what is waiting for me" list.
  *
- * La famille décide du bloc, l'enum départage à l'intérieur (RETAKE avant REJECTED). Sans
- * statut personnalisable, l'ordre est exactement celui d'avant — la famille d'un statut
- * historique est monotone dans le même sens que l'enum.
+ * The family decides the block, the enum breaks ties inside it (RETAKE before REJECTED).
+ * Without a custom status, the order is exactly the previous one: the family of a
+ * historical status is monotonic in the same direction as the enum.
  */
 const ENUM_PRIORITY: Record<TaskStatus, number> = {
   RETAKE: 0,
@@ -109,13 +108,13 @@ export function taskPriority(status: TaskStatus, pipelineStatus?: PipelineStatus
   return FAMILY_PRIORITY[familyOf(status, pipelineStatus)] * 10 + ENUM_PRIORITY[status];
 }
 
-// ── Filtres Prisma correspondants ────────────────────────────────────────────
+// ── Matching Prisma filters ─────────────────────────────────────────────────────
 //
-// Ils disent en SQL ce que `familyOf` dit en mémoire, pour que la base puisse borner une
-// liste sans qu'on ait à charger d'abord le référentiel de statuts. Toute évolution de
-// `familyOf` doit se répercuter ici : c'est la seule duplication assumée du module.
+// They say in SQL what `familyOf` says in memory, so the database can bound a list
+// without first loading the status catalog. Any change to `familyOf` must be reflected
+// here: this is the only duplication the module accepts.
 
-/** Ni terminée, ni hors jeu — le périmètre de tout ce qui « reste à faire ». */
+/** Neither done nor out of play: the scope of everything that "remains to be done". */
 export const TASK_OPEN_FILTER: Prisma.TaskWhereInput = {
   OR: [
     { pipelineStatusId: null, status: { not: TaskStatus.APPROVED } },
@@ -123,13 +122,13 @@ export const TASK_OPEN_FILTER: Prisma.TaskWhereInput = {
   ],
 };
 
-/** Construit le filtre d'une famille intermédiaire (review, blocked…). */
+/** Builds the filter for an intermediate family (review, blocked…). */
 function familyFilter(...legacy: TaskStatus[]): Prisma.TaskWhereInput {
   return {
     OR: [
       { pipelineStatusId: null, status: { in: legacy } },
       { pipelineStatus: { isDone: false, isInactive: false, legacyStatus: { in: legacy } } },
-      // Statut personnalisé sans pont : l'enum de la tâche reprend la main.
+      // Custom status without a bridge: the task enum takes over.
       {
         pipelineStatus: { isDone: false, isInactive: false, legacyStatus: null },
         status: { in: legacy },
@@ -138,8 +137,8 @@ function familyFilter(...legacy: TaskStatus[]): Prisma.TaskWhereInput {
   };
 }
 
-/** En attente d'un verdict. */
+/** Awaiting a verdict. */
 export const TASK_REVIEW_FILTER = familyFilter(TaskStatus.PENDING_REVIEW);
 
-/** Ce qui me revient : retake ou rejet. */
+/** What falls to me: a retake or a rejection. */
 export const TASK_BLOCKED_FILTER = familyFilter(TaskStatus.RETAKE, TaskStatus.REJECTED);

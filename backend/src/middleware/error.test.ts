@@ -7,7 +7,7 @@ import { z } from 'zod';
 import { AppError } from '../lib/errors';
 import { errorHandler } from './error';
 
-/** Double de réponse Express : on ne garde que ce que le client verrait. */
+/** Express response double: we only keep what the client would see. */
 function responseSpy() {
   const sent: { status?: number; body?: Record<string, unknown> } = {};
   const res = {
@@ -23,27 +23,27 @@ function responseSpy() {
   return { res: res as unknown as Response, sent };
 }
 
-/** Requête portant un logger muet — le handler journalise les erreurs non gérées. */
+/** Request carrying a silent logger: the handler logs unhandled errors. */
 const request = () =>
   ({ log: { error: vi.fn() } }) as unknown as Request & { log: { error: ReturnType<typeof vi.fn> } };
 
 const next = (() => undefined) as NextFunction;
 
 describe('errorHandler', () => {
-  it('erreur applicative : statut, message et code du client', () => {
+  it('application error: status, message and client code', () => {
     const { res, sent } = responseSpy();
     errorHandler(new AppError('Project is archived', 403, 'PROJECT_ARCHIVED'), request(), res, next);
     expect(sent.status).toBe(403);
     expect(sent.body).toEqual({ error: 'Project is archived', code: 'PROJECT_ARCHIVED' });
   });
 
-  it('erreur applicative : les détails accompagnent le code', () => {
+  it('application error: details accompany the code', () => {
     const { res, sent } = responseSpy();
     errorHandler(new AppError('Locked', 409, 'SG_LOCKED', { url: 'https://sg/x' }), request(), res, next);
     expect(sent.body).toMatchObject({ code: 'SG_LOCKED', url: 'https://sg/x' });
   });
 
-  it('schéma refusé : 400 avec un code traduisible et les champs fautifs', () => {
+  it('schema rejected: 400 with a translatable code and the offending fields', () => {
     const { res, sent } = responseSpy();
     const parsed = z.object({ email: z.string().email() }).safeParse({ email: 'x' });
     errorHandler(parsed.success ? null : parsed.error, request(), res, next);
@@ -52,7 +52,7 @@ describe('errorHandler', () => {
     expect(sent.body?.details).toHaveProperty('email');
   });
 
-  it('erreur non gérée : 500 anonyme, codé, et journalisé', () => {
+  it('unhandled error: anonymous, coded and logged 500', () => {
     const { res, sent } = responseSpy();
     const req = request();
     errorHandler(new Error('secret de la stack'), req, res, next);
@@ -62,9 +62,9 @@ describe('errorHandler', () => {
     expect(req.log.error).toHaveBeenCalledTimes(1);
   });
 
-  it('les deux réponses fabriquées ici portent un code, comme les erreurs typées', () => {
-    // Sans code, les deux fautes les plus fréquentes seraient les seules à rester
-    // anglaises dans une interface traduite en quatorze langues.
+  it('both responses built here carry a code, like typed errors', () => {
+    // Without a code, the two most frequent faults would be the only ones left in English in an
+    // interface translated into fourteen languages.
     for (const err of [
       new Error('x'),
       z.string().safeParse(1).success ? null : z.string().safeParse(1).error,

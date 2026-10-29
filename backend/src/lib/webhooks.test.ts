@@ -5,12 +5,12 @@ import { describe, it, expect } from 'vitest';
 import { isWebhookUrlAllowed, signWebhookPayload } from './webhooks';
 
 describe('isWebhookUrlAllowed', () => {
-  it('accepte les URLs http(s) publiques', () => {
+  it('accepts public http(s) URLs', () => {
     expect(isWebhookUrlAllowed('https://hooks.slack.com/services/abc')).toBe(true);
     expect(isWebhookUrlAllowed('http://example.com/hook')).toBe(true);
   });
 
-  it('refuse loopback et réseaux privés (SSRF)', () => {
+  it('rejects loopback and private networks (SSRF)', () => {
     for (const url of [
       'http://localhost:3000/hook',
       'http://127.0.0.1/x',
@@ -28,19 +28,19 @@ describe('isWebhookUrlAllowed', () => {
     }
   });
 
-  it('refuse les schémas non http et les URLs invalides', () => {
+  it('rejects non-http schemes and invalid URLs', () => {
     expect(isWebhookUrlAllowed('ftp://example.com/x')).toBe(false);
     expect(isWebhookUrlAllowed('file:///etc/passwd')).toBe(false);
     expect(isWebhookUrlAllowed('pas une url')).toBe(false);
   });
 
-  it('laisse passer 172.32.x (hors plage privée)', () => {
+  it('lets 172.32.x through (outside the private range)', () => {
     expect(isWebhookUrlAllowed('http://172.32.0.1/x')).toBe(true);
   });
 });
 
 describe('signWebhookPayload', () => {
-  it('signature stable et liée au timestamp', () => {
+  it('stable signature bound to the timestamp', () => {
     const a = signWebhookPayload('secret', '1000', '{"a":1}');
     expect(a).toMatch(/^sha256=[0-9a-f]{64}$/);
     expect(signWebhookPayload('secret', '1000', '{"a":1}')).toBe(a);

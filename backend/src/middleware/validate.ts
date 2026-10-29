@@ -10,20 +10,20 @@ export type Schemas = {
   query?: z.ZodTypeAny;
 };
 
-/** Middleware de validation portant ses schémas — lus par le générateur OpenAPI. */
+/** Validation middleware carrying its schemas, read by the OpenAPI generator. */
 export interface ValidateMiddleware {
   (req: Request, res: Response, next: NextFunction): void;
   schemas: Schemas;
 }
 
 /**
- * Middleware de validation Zod. Parse body/params/query selon les schémas fournis.
- * Note : en Express 5, `req.query` est en lecture seule → on mute via Object.assign.
- * Les erreurs Zod sont captées par le gestionnaire d'erreurs global.
+ * Zod validation middleware. Parses body, params and query according to the schemas provided.
+ * Note: in Express 5, `req.query` is read-only, so we mutate it via Object.assign.
+ * Zod errors are caught by the global error handler.
  *
- * Les schémas sont exposés sur la fonction retournée : `lib/openapiRoutes` parcourt les
- * routeurs et les récupère pour décrire l'API. La documentation reste ainsi le reflet
- * exact de la validation, sans second endroit à tenir à jour.
+ * The schemas are exposed on the returned function: `lib/openapiRoutes` walks the routers and
+ * retrieves them to describe the API. The documentation thus stays an exact reflection of the
+ * validation, with no second place to keep up to date.
  */
 export const validate = (schemas: Schemas): ValidateMiddleware => {
   const middleware = (req: Request, _res: Response, next: NextFunction): void => {

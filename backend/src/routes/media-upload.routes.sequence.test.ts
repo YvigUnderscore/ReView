@@ -16,7 +16,7 @@ vi.mock('../services/ImageSequenceService', () => ({
   initSequence: vi.fn(),
   frameUploadUrls: vi.fn(),
   listSequenceFrames: vi.fn(),
-  // Borne lue à la construction des schémas Zod du routeur, pas à l'appel.
+  // Bound read when the router's Zod schemas are built, not at call time.
   FRAME_URL_BATCH_MAX: 64,
 }));
 vi.mock('../services/MediaUploadService', () => ({
@@ -40,20 +40,20 @@ beforeEach(() => {
 });
 
 /**
- * La séquence d'images a sa propre finalisation (`completeSequence`), et elle porte donc la
- * même consigne d'upload que `finalize` (Phase 50). Le corps était INEXISTANT jusqu'ici :
- * tout ce qui clôt une séquence poste sans corps, et en Express 5 un `z.object({…})` nu
- * refuserait alors la requête en 400 — mille frames déposées pour rien.
+ * The image sequence has its own finalization (`completeSequence`), and therefore carries the same
+ * upload note as `finalize` (Phase 50). The body was NONEXISTENT until now: everything that closes a
+ * sequence posts no body, and in Express 5 a bare `z.object({…})` would then refuse the request with a
+ * 400: a thousand frames uploaded for nothing.
  */
-describe('POST /api/media/sequence/:id/complete — la consigne est facultative', () => {
-  it('clôt la séquence sans aucun corps', async () => {
+describe('POST /api/media/sequence/:id/complete — the note is optional', () => {
+  it('closes the sequence without any body', async () => {
     const res = await request(app).post('/api/media/sequence/42/complete');
 
     expect(res.status).toBe(200);
     expect(completeSequence).toHaveBeenCalledWith(expect.objectContaining({ id: 7 }), 42, undefined);
   });
 
-  it('transmet la consigne quand elle est là', async () => {
+  it('passes the note on when it is there', async () => {
     const res = await request(app)
       .post('/api/media/sequence/42/complete')
       .send({ note: 'Regarder le grain du 1001' });
@@ -66,7 +66,7 @@ describe('POST /api/media/sequence/:id/complete — la consigne est facultative'
     );
   });
 
-  it('refuse une consigne qui n’est pas du texte, sans appeler le service', async () => {
+  it('rejects a note that is not text, without calling the service', async () => {
     const res = await request(app).post('/api/media/sequence/42/complete').send({ note: 42 });
 
     expect(res.status).toBe(400);

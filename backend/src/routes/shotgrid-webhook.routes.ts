@@ -11,19 +11,19 @@ import { webhookSecretOf } from '../services/shotgrid/ShotgridConfigService';
 import { enqueueShotgridEvent } from '../services/shotgrid/ShotgridEventService';
 
 /**
- * Réception des webhooks ShotGrid.
+ * Receiving ShotGrid webhooks.
  *
- * Route publique — c'est ShotGrid qui appelle, sans session. Trois protections :
- * un jeton opaque dans l'URL (identifie la connexion), une signature HMAC-SHA1 sur le
- * corps brut (prouve l'origine), une limite de débit (absorbe un emballement).
+ * Public route: it is ShotGrid that calls, without a session. Three protections: an opaque token in the
+ * URL (identifies the connection), an HMAC-SHA1 signature on the raw body (proves the origin), and a rate
+ * limit (absorbs a runaway).
  *
- * ShotGrid exige une réponse en moins de six secondes et compte le temps de réponse
- * dans un quota par site : on accuse réception immédiatement et on traite en file.
- * Un traitement synchrone ferait tomber le débit de livraison de tout le studio.
+ * ShotGrid requires a response in under six seconds and counts the response time in a quota per site: we
+ * acknowledge receipt immediately and process through a queue. A synchronous processing would drop the
+ * delivery rate of the whole studio.
  */
 const router = Router();
 
-/** Corps brut indispensable : la signature porte sur les octets, pas sur l'objet reparsé. */
+/** Raw body is essential: the signature covers the bytes, not the re-parsed object. */
 router.use(raw({ type: '*/*', limit: '5mb' }));
 
 function signatureMatches(secret: string, body: Buffer, header: string | undefined): boolean {
@@ -40,19 +40,19 @@ function signatureMatches(secret: string, body: Buffer, header: string | undefin
 }
 
 router.post('/:token', rateLimit({ windowMs: 60_000, max: 600 }), async (req, res) => {
-  // Mention du code source : surface accessible sans authentification (AGPL §13).
+  // Source code notice: surface reachable without authentication (AGPL §13).
   res.setHeader('X-Source-Code', await getSourceUrl());
 
   const token = String(req.params.token ?? '');
   const connection = await prisma.shotgridConnection.findUnique({ where: { webhookToken: token } });
   /**
-   * Réponse volontairement identique pour un jeton inconnu et une signature fausse :
-   * rien ne doit permettre de deviner qu'un jeton existe.
+   * Deliberately identical response for an unknown token and a wrong signature: nothing must allow
+   * guessing that a token exists.
    *
-   * Le journal, lui, distingue les deux — et ce n'est pas un détail de confort. Une
-   * intégration muette dont toutes les livraisons repartaient en 404 ne laissait aucune
-   * trace permettant de savoir laquelle des deux valeurs était à corriger : l'adresse ou
-   * le secret. On le dit ici, du côté qui a le droit de le savoir.
+   * The journal, for its part, distinguishes the two, and this is not a comfort detail. A silent
+   * integration whose deliveries all came back as 404 left no trace allowing one to know which of the
+   * two values had to be corrected: the address or the secret. It is said here, on the side that has the
+   * right to know it.
    */
   if (!connection) {
     logger.warn({ tokenLength: token.length }, 'Webhook ShotGrid : jeton inconnu (adresse périmée ?)');
@@ -60,8 +60,8 @@ router.post('/:token', rateLimit({ windowMs: 60_000, max: 600 }), async (req, re
   }
 
   const body = Buffer.isBuffer(req.body) ? req.body : Buffer.from(String(req.body ?? ''));
-  // Un secret illisible (clé de chiffrement changée) n'est pas une signature fausse : le
-  // laisser remonter en 500 ferait passer une panne de configuration pour une panne du site.
+  // An unreadable secret (encryption key changed) is not a wrong signature: letting it surface as a 500
+  // would pass a configuration outage off as a site outage.
   let secret: string | null;
   try {
     secret = webhookSecretOf(connection);
@@ -84,13 +84,13 @@ router.post('/:token', rateLimit({ windowMs: 60_000, max: 600 }), async (req, re
     return res.status(400).json({ error: 'invalid_json' });
   }
 
-  // Accusé de réception immédiat ; la mise en file peut se poursuivre après la réponse.
+  // Immediate acknowledgement; the queuing may continue after the response.
   res.status(202).json({ accepted: true });
 
   /**
-   * Le test de connexion de ShotGrid n'a ni entité ni type d'événement exploitable : il
-   * traverse la mise en file sans rien produire. C'est justement le moment où un
-   * administrateur veut une confirmation — il vient de coller l'adresse et le secret.
+   * ShotGrid's connection test has neither an entity nor a usable event type: it passes through the queue
+   * without producing anything. That is precisely the moment when an administrator wants a confirmation:
+   * they have just pasted the address and the secret.
    */
   if ((payload as { data?: { event_type?: string } })?.data?.event_type === 'Test_Connection') {
     logger.info({ connectionId: connection.id }, 'Webhook ShotGrid : test de connexion accepté');

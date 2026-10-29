@@ -4,15 +4,14 @@
 import { createHmac } from 'node:crypto';
 
 /**
- * Webhooks sortants (36.D) — helpers PURS (testés) : validation d'URL anti-SSRF,
- * signature HMAC. La persistance/livraison vit dans services/WebhookService.
+ * Outgoing webhooks (36.D): PURE helpers (tested), covering anti-SSRF URL validation and the HMAC
+ * signature. Persistence and delivery live in services/WebhookService.
  */
 
 /**
- * Catalogue d'événements (API v1). Les trois premiers existaient avant les intégrations
- * et restent inchangés : un webhook déjà configuré continue de recevoir exactement ce
- * qu'il recevait. Les suivants couvrent le cycle de vie du pipeline, ce dont un bot
- * Discord ou une synchronisation ShotGrid a besoin pour suivre une production.
+ * Event catalog (API v1). The first three existed before the integrations and remain unchanged:
+ * a webhook already configured keeps receiving exactly what it received. The following ones cover
+ * the pipeline lifecycle, what a Discord bot or a ShotGrid sync needs to follow a production.
  */
 export const WEBHOOK_EVENTS = [
   'media.published',
@@ -33,14 +32,14 @@ export const WEBHOOK_EVENTS = [
   'version.published',
   'media.uploaded',
   'media.failed',
-  // Qui doit regarder une version, et la consigne donnée à chacun. Émis à chaque écriture :
-  // un bot de production sait qui relancer, et un tableau de bord externe voit arriver une
-  // demande sans interroger l'API en boucle.
+  // Who must look at a version, and the instruction given to each. Emitted on every write: a
+  // production bot knows whom to chase, and an external dashboard sees a request arrive without
+  // polling the API in a loop.
   'version.reviewers_changed',
 ] as const;
 export type WebhookEvent = (typeof WEBHOOK_EVENTS)[number];
 
-/** Alias public du catalogue — exposé par `/api/v1/schema` aux clients d'intégration. */
+/** Public alias of the catalog, exposed by `/api/v1/schema` to integration clients. */
 export const API_EVENTS = WEBHOOK_EVENTS;
 
 export const isWebhookEvent = (value: string): value is WebhookEvent =>
@@ -59,9 +58,9 @@ const PRIVATE_HOST_PATTERNS: RegExp[] = [
 ];
 
 /**
- * URL de webhook autorisée ? http(s) uniquement, et jamais vers un hôte privé/loopback
- * (anti-SSRF : l'app ne doit pas pouvoir être pilotée pour frapper son réseau interne).
- * Contrôle par motif d'hôte — la résolution DNS n'est volontairement pas suivie (documenté).
+ * Is this webhook URL allowed? http(s) only, and never to a private or loopback host
+ * (anti-SSRF: the app must not be steerable into hitting its internal network).
+ * Checked by host pattern: DNS resolution is deliberately not followed (documented).
  */
 export function isWebhookUrlAllowed(raw: string): boolean {
   let url: URL;
@@ -73,12 +72,12 @@ export function isWebhookUrlAllowed(raw: string): boolean {
   if (url.protocol !== 'https:' && url.protocol !== 'http:') return false;
   const host = url.hostname;
   if (!host || PRIVATE_HOST_PATTERNS.some((re) => re.test(host))) return false;
-  // Hôte sans point = nom court interne (docker, intranet) → refusé.
+  // Host without a dot = short internal name (docker, intranet): refused.
   if (!host.includes('.') && !/^\d+$/.test(host)) return false;
   return true;
 }
 
-/** Signature `sha256=<hex>` du corps, préfixée du timestamp signé (anti-rejeu). */
+/** Signature `sha256=<hex>` of the body, prefixed with the signed timestamp (anti-replay). */
 export function signWebhookPayload(secret: string, timestamp: string, body: string): string {
   return 'sha256=' + createHmac('sha256', secret).update(`${timestamp}.${body}`).digest('hex');
 }

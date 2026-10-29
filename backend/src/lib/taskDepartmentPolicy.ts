@@ -2,28 +2,28 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Qui peut écrire sur une tâche, selon son département.
+ * Who can write on a task, according to its department.
  *
- * Un studio de trente personnes et douze étapes propose à chaque artiste la totalité du
- * pipe : une liste de douze départements pour quelqu'un qui n'en touche qu'un, et rien
- * n'empêche l'animateur de faire avancer une tâche de compositing par mégarde.
+ * A thirty-person studio with twelve steps offers each artist the entire pipeline: a list
+ * of twelve departments for someone who only touches one, and nothing prevents the
+ * animator from pushing a compositing task forward by mistake.
  *
- * La règle est **lisible en une phrase** : un artiste écrit sur les tâches de ses
- * départements, et sur celles qu'on lui a confiées. Il voit toutes les autres — la
- * production a besoin que chacun sache où en sont les étapes voisines, et masquer le
- * travail des autres n'a jamais aidé personne à faire le sien.
+ * The rule is **readable in one sentence**: an artist writes on the tasks of their
+ * departments, and on those assigned to them. They see all the others, because production
+ * needs everyone to know where neighboring steps stand, and hiding others' work never
+ * helped anyone do their own.
  *
- * Les gestionnaires (ADMIN, SUPERVISOR) ne sont pas concernés : leur métier est
- * précisément d'intervenir partout.
+ * Managers (ADMIN, SUPERVISOR) are not concerned: their job is precisely to intervene
+ * everywhere.
  *
- * Logique pure : la décision se teste sans base, et les deux appelants (création et mise à
- * jour) ne peuvent pas diverger.
+ * Pure logic: the decision is tested without a database, and the two callers (creation
+ * and update) cannot diverge.
  */
 
 export const TASK_POLICIES = ['open', 'department'] as const;
 export type TaskPolicy = (typeof TASK_POLICIES)[number];
 
-/** Le défaut : ce que faisait ReView avant que la règle existe. */
+/** The default: what ReView did before the rule existed. */
 export const DEFAULT_TASK_POLICY: TaskPolicy = 'open';
 
 export function parseTaskPolicy(raw: string | null | undefined): TaskPolicy {
@@ -32,44 +32,44 @@ export function parseTaskPolicy(raw: string | null | undefined): TaskPolicy {
 
 export interface TaskWriteContext {
   policy: TaskPolicy;
-  /** Vrai pour un ADMIN ou un SUPERVISOR (rôle effectif sur le projet). */
+  /** True for an ADMIN or a SUPERVISOR (effective role on the project). */
   isManager: boolean;
-  /** Départements de la personne. */
+  /** The person's departments. */
   userDepartmentIds: number[];
-  /** Département de la tâche visée — null pour une tâche sans étape. */
+  /** Department of the target task; null for a task without a step. */
   taskDepartmentId: number | null;
-  /** La personne est-elle l'assignée de cette tâche ? */
+  /** Is the person the assignee of this task? */
   isAssignee: boolean;
 }
 
 /**
- * La personne peut-elle écrire sur cette tâche ?
+ * Can the person write on this task?
  *
- * En mode `open`, la règle historique s'applique telle quelle : **seul l'assigné** touche à
- * sa tâche. Le mode `department` l'**élargit** — l'artiste écrit aussi sur les tâches de ses
- * étapes, ce qui est précisément ce qu'un lead d'animation attend de son département.
+ * In `open` mode, the historical rule applies as is: **only the assignee** touches their
+ * task. The `department` mode **widens** it: the artist also writes on the tasks of their
+ * steps, which is exactly what an animation lead expects from their department.
  *
- * Dans les deux cas, ce qu'un non-gestionnaire peut *changer* reste borné au statut et à la
- * checklist : cette fonction dit à quelles tâches il a accès, pas ce qu'il peut y écrire.
+ * In both cases, what a non-manager can *change* remains limited to status and checklist:
+ * this function says which tasks they have access to, not what they can write on them.
  *
- * Une tâche **sans département** est ouverte sous la politique restreinte : elle
- * n'appartient à aucune étape, donc à personne en particulier, et la refuser à tout le
- * monde la rendrait immodifiable — c'est le cas d'une tâche née d'un retour de review.
+ * A task **without a department** is open under the restricted policy: it belongs to no
+ * step, hence to nobody in particular, and refusing it to everyone would make it
+ * unmodifiable. This is the case of a task born from a review feedback.
  */
 export function canWriteTask(ctx: TaskWriteContext): boolean {
   if (ctx.isManager || ctx.isAssignee) return true;
-  // Mode ouvert : rien n'est élargi. L'ouvrir ici donnerait à tout artiste la main sur
-  // toutes les tâches du projet — l'inverse de ce que la politique cherche à obtenir.
+  // Open mode: nothing is widened. Opening it here would give every artist control over
+  // all tasks of the project, the opposite of what the policy aims for.
   if (ctx.policy === 'open') return false;
   if (ctx.taskDepartmentId === null) return true;
   return ctx.userDepartmentIds.includes(ctx.taskDepartmentId);
 }
 
 /**
- * Les départements dans lesquels la personne peut créer une tâche.
+ * The departments in which the person can create a task.
  *
- * C'est ce que l'écran propose — et c'est là que se gagne la lisibilité promise : une liste
- * de deux étapes plutôt que de douze. Un gestionnaire garde le pipe entier.
+ * This is what the screen offers, and where the promised readability is gained: a list
+ * of two steps rather than twelve. A manager keeps the whole pipeline.
  */
 export function writableDepartments(
   all: { id: number }[],

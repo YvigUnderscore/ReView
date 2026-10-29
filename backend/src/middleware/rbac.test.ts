@@ -23,42 +23,41 @@ import {
 } from './rbac';
 
 /**
- * Garde d'appartenance projet.
+ * Project membership guard.
  *
- * Le défaut couvert ici : la garde ne regardait que `ProjectMembership` et jamais
- * `Project.deletedAt`. Les listes filtraient bien les projets en corbeille, mais l'accès
- * DIRECT par URL à un média, un plan, une séquence ou un asset d'un projet retiré restait
- * ouvert — y compris à un ADMIN, dont l'accès est global. Le retrait se contournait donc
- * en connaissant l'URL, et l'incohérence liste/URL rendait la faute invisible à l'usage.
+ * The defect covered here: the guard only looked at `ProjectMembership`, never at `Project.deletedAt`.
+ * Lists did filter trashed projects, but DIRECT URL access to a media, a shot, a sequence or an asset of
+ * a removed project remained open, including to an ADMIN, whose access is global. Removal could thus be
+ * bypassed by knowing the URL, and the list/URL inconsistency made the fault invisible in use.
  *
- * Le double de Prisma est réduit à ce que la garde interroge : `project.count` (le projet
- * est-il désignable ?) et `projectMembership.findUnique` (en est-on membre ?).
+ * The Prisma double is reduced to what the guard queries: `project.count` (is the project addressable?)
+ * and `projectMembership.findUnique` (is the person a member of it?).
  */
 
 const projectCount = vi.mocked(prisma.project.count);
 const membership = vi.mocked(prisma.projectMembership.findUnique);
 
-/** Le projet 7 existe et n'est pas à la corbeille. */
+/** Project 7 exists and is not in the trash. */
 const liveProject = () => projectCount.mockResolvedValue(1);
-/** Le projet 7 est à la corbeille : `count` ne le voit qu'avec `includeTrashed`. */
+/** Project 7 is in the trash: `count` only sees it with `includeTrashed`. */
 const trashedProject = () =>
   projectCount.mockImplementation(
     (args: unknown) =>
       Promise.resolve((args as { where: { deletedAt?: unknown } }).where.deletedAt === null ? 0 : 1) as never,
   );
-/** Le projet 7 n'a jamais existé. */
+/** Project 7 never existed. */
 const missingProject = () => projectCount.mockResolvedValue(0);
 
-/** Membre du projet 7, sans rôle local : son rôle global s'applique tel quel. */
+/** Member of project 7, without a local role: their global role applies as is. */
 const member = () => membership.mockResolvedValue({ userId: 3, projectId: 7, role: null } as never);
-/** Membre du projet 7 AVEC un rôle local — élévation (38.E) ou rétrogradation. */
+/** Member of project 7 WITH a local role: elevation (38.E) or demotion. */
 const memberAs = (role: Role) => membership.mockResolvedValue({ userId: 3, projectId: 7, role } as never);
 const notMember = () => membership.mockResolvedValue(null);
 
 const requestOf = (role: Role, params: Record<string, string> = { projectId: '7' }): Request =>
   ({ user: { id: 3, email: 'a@studio.com', role }, params }) as unknown as Request;
 
-/** Joue un middleware et rend ce qu'il a passé à `next` (une erreur, ou rien). */
+/** Runs a middleware and returns what it passed to `next` (an error, or nothing). */
 const run = async (
   middleware: (req: Request, res: Response, next: NextFunction) => Promise<void>,
   req: Request,
@@ -83,14 +82,14 @@ beforeEach(() => {
   notMember();
 });
 
-describe('resolveProjectAccess — projet vivant', () => {
-  it('ouvre le projet à un ADMIN et à un SUPERVISOR sans interroger l’appartenance', async () => {
+describe('resolveProjectAccess — live project', () => {
+  it('opens the project to an ADMIN and a SUPERVISOR without querying membership', async () => {
     await expect(resolveProjectAccess(3, Role.ADMIN, 7)).resolves.toBe('granted');
     await expect(resolveProjectAccess(3, Role.SUPERVISOR, 7)).resolves.toBe('granted');
     expect(membership).not.toHaveBeenCalled();
   });
 
-  it('ouvre le projet à un membre et le refuse à un non-membre', async () => {
+  it('opens the project to a member and refuses it to a non-member', async () => {
     member();
     await expect(resolveProjectAccess(3, Role.ARTIST, 7)).resolves.toBe('granted');
     notMember();
@@ -98,29 +97,29 @@ describe('resolveProjectAccess — projet vivant', () => {
   });
 });
 
-describe('resolveProjectAccess — projet à la corbeille', () => {
-  it('refuse un membre, et refuse aussi un ADMIN : l’accès global ne rouvre pas la corbeille', async () => {
+describe('resolveProjectAccess — project in the trash', () => {
+  it('refuses a member, and also refuses an ADMIN: global access does not reopen the trash', async () => {
     trashedProject();
     member();
     await expect(resolveProjectAccess(3, Role.ARTIST, 7)).resolves.toBe('unavailable');
     await expect(resolveProjectAccess(3, Role.ADMIN, 7)).resolves.toBe('unavailable');
   });
 
-  it('rend le même verdict qu’un projet inexistant — le retrait ne se devine pas', async () => {
+  it('returns the same verdict as for a nonexistent project: removal cannot be guessed', async () => {
     trashedProject();
     const trashed = await resolveProjectAccess(3, Role.ADMIN, 7);
     missingProject();
     await expect(resolveProjectAccess(3, Role.ADMIN, 7)).resolves.toBe(trashed);
   });
 
-  it('reste visible pour un point d’entrée « corbeille » (restauration, purge)', async () => {
+  it('stays visible for a "trash" entry point (restore, purge)', async () => {
     trashedProject();
     member();
     await expect(resolveProjectAccess(3, Role.ARTIST, 7, { includeTrashed: true })).resolves.toBe('granted');
     await expect(resolveProjectAccess(3, Role.ADMIN, 7, { includeTrashed: true })).resolves.toBe('granted');
   });
 
-  it('ne ressuscite pas pour autant un projet purgé, même en mode corbeille', async () => {
+  it('still does not resurrect a purged project, even in trash mode', async () => {
     missingProject();
     await expect(resolveProjectAccess(3, Role.ADMIN, 7, { includeTrashed: true })).resolves.toBe(
       'unavailable',
@@ -129,33 +128,32 @@ describe('resolveProjectAccess — projet à la corbeille', () => {
 });
 
 /**
- * A1-03 — la racine, et non ses trois symptômes.
+ * A1-03: the root cause, not its three symptoms.
  *
- * La garde n'accordait que sur l'EXISTENCE du `ProjectMembership` et ignorait son champ
- * `role`. Chaque appelant qui écrivait devait donc penser à doubler la garde d'un
- * `assertCanContribute` — et trois l'avaient oublié (marqueurs de timeline, gestion de
- * média, board Excalidraw) : un ARTIST rétrogradé CLIENT sur un projet gardait son
- * membership, la garde disait oui, et il écrivait.
+ * The guard only granted on the EXISTENCE of the `ProjectMembership` and ignored its `role` field. Every
+ * caller that wrote therefore had to remember to double the guard with an `assertCanContribute`, and
+ * three had forgotten it (timeline markers, media management, the Excalidraw board): an ARTIST demoted to
+ * CLIENT on a project kept their membership, the guard said yes, and they wrote.
  *
- * L'intention déplace la décision DANS la garde : un appelant ne peut plus oublier le
- * rôle, il peut seulement déclarer qu'il vient lire. C'est le rôle EFFECTIF qui tranche
- * (élévation et rétrogradation locales comprises), pas le rôle global.
+ * The intent moves the decision INTO the guard: a caller can no longer forget the role, it can only
+ * declare that it comes to read. It is the EFFECTIVE role that decides (local elevation and demotion
+ * included), not the global role.
  */
-describe('resolveProjectAccess — intention déclarée (38.E / A1-03)', () => {
-  it('laisse lire un CLIENT membre : lire et commenter est son métier', async () => {
+describe('resolveProjectAccess — declared intent (38.E / A1-03)', () => {
+  it('lets a member CLIENT read: reading and commenting is their job', async () => {
     member();
     await expect(resolveProjectAccess(3, Role.CLIENT, 7)).resolves.toBe('granted');
     await expect(resolveProjectAccess(3, Role.CLIENT, 7, { intent: 'read' })).resolves.toBe('granted');
   });
 
-  it('refuse l’écriture à un CLIENT membre — c’est le défaut qui laissait passer', async () => {
+  it('refuses writing to a member CLIENT: this is the defect that let it through', async () => {
     member();
     await expect(resolveProjectAccess(3, Role.CLIENT, 7, { intent: 'write' })).resolves.toBe(
       'insufficient-role',
     );
   });
 
-  it('refuse l’écriture à un ARTIST RÉTROGRADÉ CLIENT sur ce projet, malgré son rôle global', async () => {
+  it('refuses writing to an ARTIST demoted to CLIENT on this project, despite the global role', async () => {
     memberAs(Role.CLIENT);
     await expect(resolveProjectAccess(3, Role.ARTIST, 7, { intent: 'read' })).resolves.toBe('granted');
     await expect(resolveProjectAccess(3, Role.ARTIST, 7, { intent: 'write' })).resolves.toBe(
@@ -163,12 +161,12 @@ describe('resolveProjectAccess — intention déclarée (38.E / A1-03)', () => {
     );
   });
 
-  it('laisse gérer un ARTIST PROMU SUPERVISOR sur ce projet, sans droit global', async () => {
+  it('lets an ARTIST promoted to SUPERVISOR manage this project, without a global right', async () => {
     memberAs(Role.SUPERVISOR);
     await expect(resolveProjectAccess(3, Role.ARTIST, 7, { intent: 'manage' })).resolves.toBe('granted');
   });
 
-  it('refuse la gestion à un ARTIST membre, qui peut pourtant écrire', async () => {
+  it('refuses management to a member ARTIST, who can nonetheless write', async () => {
     member();
     await expect(resolveProjectAccess(3, Role.ARTIST, 7, { intent: 'write' })).resolves.toBe('granted');
     await expect(resolveProjectAccess(3, Role.ARTIST, 7, { intent: 'manage' })).resolves.toBe(
@@ -176,22 +174,22 @@ describe('resolveProjectAccess — intention déclarée (38.E / A1-03)', () => {
     );
   });
 
-  it('distingue le non-membre du membre au rôle insuffisant', async () => {
-    // Deux 403, mais pas le même message : « aucun accès à ce projet » serait faux dit à
-    // quelqu'un qui l'a sous les yeux.
+  it('distinguishes a non-member from a member with an insufficient role', async () => {
+    // Two 403s, but not the same message: "no access to this project" would be a lie to someone who
+    // can see it perfectly well.
     notMember();
     await expect(resolveProjectAccess(3, Role.ARTIST, 7, { intent: 'write' })).resolves.toBe('not-member');
   });
 
-  it('fait primer la corbeille sur l’intention : un projet retiré ne s’écrit pas davantage', async () => {
+  it('lets the trash take precedence over intent: a removed project is no more writable', async () => {
     trashedProject();
     memberAs(Role.SUPERVISOR);
     await expect(resolveProjectAccess(3, Role.ARTIST, 7, { intent: 'write' })).resolves.toBe('unavailable');
   });
 });
 
-describe('assertProjectAccess — intention déclarée', () => {
-  it('refuse une écriture par 403 ROLE_FORBIDDEN, pas par « aucun accès »', async () => {
+describe('assertProjectAccess — declared intent', () => {
+  it('refuses a write with a 403 ROLE_FORBIDDEN, not with "no access"', async () => {
     memberAs(Role.CLIENT);
     const err = await assertProjectAccess(requestOf(Role.ARTIST), 7, { intent: 'write' }).catch(
       (e: unknown) => e,
@@ -201,7 +199,7 @@ describe('assertProjectAccess — intention déclarée', () => {
     expect((err as AppError).code).toBe('ROLE_FORBIDDEN');
   });
 
-  it('laisse passer la même écriture pour un ARTIST membre', async () => {
+  it('lets the same write through for a member ARTIST', async () => {
     member();
     await expect(
       assertProjectAccess(requestOf(Role.ARTIST), 7, { intent: 'write' }),
@@ -210,7 +208,7 @@ describe('assertProjectAccess — intention déclarée', () => {
 });
 
 describe('checkProjectAccess', () => {
-  it('ne dit vrai que pour un accès accordé, et transmet l’option corbeille', async () => {
+  it('returns true only for a granted access, and passes the trash option through', async () => {
     member();
     await expect(checkProjectAccess(3, Role.ARTIST, 7)).resolves.toBe(true);
     trashedProject();
@@ -220,18 +218,18 @@ describe('checkProjectAccess', () => {
 });
 
 describe('assertProjectAccess', () => {
-  it('laisse passer un membre d’un projet vivant', async () => {
+  it('lets a member of a live project through', async () => {
     member();
     await expect(assertProjectAccess(requestOf(Role.ARTIST), 7)).resolves.toBeUndefined();
   });
 
-  it('refuse un non-membre par un 403 — le projet existe, il ne lui est pas ouvert', async () => {
+  it('refuses a non-member with a 403: the project exists, it is just not open to them', async () => {
     await expect(assertProjectAccess(requestOf(Role.ARTIST), 7)).rejects.toMatchObject({
       statusCode: 403,
     });
   });
 
-  it('refuse l’accès direct à une ressource d’un projet en corbeille par un 404, membre ou admin', async () => {
+  it('refuses direct access to a resource of a project in the trash with a 404, member or admin', async () => {
     trashedProject();
     member();
     await expect(assertProjectAccess(requestOf(Role.ARTIST), 7)).rejects.toMatchObject({
@@ -242,7 +240,7 @@ describe('assertProjectAccess', () => {
     });
   });
 
-  it('ne nomme pas le projet dans le 404 : le corps reste la réponse générique', async () => {
+  it('does not name the project in the 404: the body stays the generic response', async () => {
     trashedProject();
     const err = await assertProjectAccess(requestOf(Role.ADMIN), 7).catch((e: unknown) => e);
     expect(err).toBeInstanceOf(AppError);
@@ -250,14 +248,14 @@ describe('assertProjectAccess', () => {
     expect((err as AppError).message).not.toMatch(/project/i);
   });
 
-  it('rend l’accès aux points d’entrée « corbeille » qui le demandent explicitement', async () => {
+  it('grants access to the "trash" entry points that explicitly request it', async () => {
     trashedProject();
     await expect(
       assertProjectAccess(requestOf(Role.ADMIN), 7, { includeTrashed: true }),
     ).resolves.toBeUndefined();
   });
 
-  it('refuse une requête non authentifiée', async () => {
+  it('refuses an unauthenticated request', async () => {
     await expect(assertProjectAccess({ params: {} } as unknown as Request, 7)).rejects.toMatchObject({
       statusCode: 401,
     });
@@ -265,13 +263,13 @@ describe('assertProjectAccess', () => {
 });
 
 describe('requireProjectAccess', () => {
-  it('laisse passer un membre d’un projet vivant', async () => {
+  it('lets a member of a live project through', async () => {
     member();
     const { err } = await run(requireProjectAccess, requestOf(Role.ARTIST));
     expect(err).toBeUndefined();
   });
 
-  it('refuse un non-membre (403) et un projet en corbeille (404)', async () => {
+  it('refuses a non-member (403) and a project in the trash (404)', async () => {
     expect(statusOf((await run(requireProjectAccess, requestOf(Role.ARTIST))).err)).toBe(403);
     trashedProject();
     member();
@@ -279,7 +277,7 @@ describe('requireProjectAccess', () => {
     expect(statusOf((await run(requireProjectAccess, requestOf(Role.ADMIN))).err)).toBe(404);
   });
 
-  it('répond 400 sur un projectId qui n’est pas un entier, sans interroger la base', async () => {
+  it('responds 400 to a projectId that is not an integer, without querying the database', async () => {
     const { status, err } = await run(requireProjectAccess, requestOf(Role.ADMIN, { projectId: 'abc' }));
     expect(status).toBe(400);
     expect(err).toBeUndefined();
@@ -288,25 +286,24 @@ describe('requireProjectAccess', () => {
 });
 
 describe('requireProjectManage', () => {
-  it('laisse gérer un projet vivant à un ADMIN', async () => {
+  it('lets an ADMIN manage a live project', async () => {
     const { err } = await run(requireProjectManage, requestOf(Role.ADMIN));
     expect(err).toBeUndefined();
   });
 
-  it('refuse la gestion d’un projet en corbeille par un 404 — restaurer d’abord', async () => {
+  it('refuses managing a project in the trash with a 404: restore it first', async () => {
     trashedProject();
     expect(statusOf((await run(requireProjectManage, requestOf(Role.ADMIN))).err)).toBe(404);
   });
 
-  it('refuse encore un rôle insuffisant sur un projet vivant (403)', async () => {
+  it('still refuses an insufficient role on a live project (403)', async () => {
     member();
     expect(statusOf((await run(requireProjectManage, requestOf(Role.CLIENT))).err)).toBe(403);
   });
 
-  it('reste sensible à l’élévation locale après réécriture sur l’intention (38.E)', async () => {
-    // La garde passe désormais par `resolveProjectAccess({ intent: 'manage' })` : le test
-    // vérifie que la réécriture n'a pas perdu l'élévation par membership, qui est toute la
-    // raison d'être de `requireProjectManage`.
+  it('remains sensitive to local elevation after the rewrite on intent (38.E)', async () => {
+    // The guard now goes through `resolveProjectAccess({ intent: 'manage' })`: the test checks that the
+    // rewrite did not lose the elevation by membership, which is the whole reason for `requireProjectManage`.
     memberAs(Role.SUPERVISOR);
     expect((await run(requireProjectManage, requestOf(Role.ARTIST))).err).toBeUndefined();
     memberAs(Role.CLIENT);

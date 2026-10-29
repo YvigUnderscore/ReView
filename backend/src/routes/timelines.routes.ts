@@ -13,18 +13,17 @@ import * as TimelineService from '../services/TimelineService';
 import * as CommentService from '../services/CommentService';
 
 /**
- * Montages automatiques (Phase 45) : un par séquence, un pour le projet entier.
+ * Automatic timelines (Phase 45): one per sequence, one for the whole project.
  *
- * Le montage n'est jamais « créé » explicitement — il est résolu au premier accès. Les
- * écritures se limitent à ce qu'un humain décide : le nom, l'étape visée, et les
- * révisions figées.
+ * The timeline is never "created" explicitly: it is resolved on first access. The writes are limited to
+ * what a human decides: the name, the target step, and the frozen revisions.
  */
 const router = Router();
 router.use(authenticate);
 
 const idParam = z.object({ id: z.coerce.number().int() });
 
-/** Résout le projet d'un montage + assertion d'accès (RBAC) → renvoie le projectId. */
+/** Resolves a timeline's project and access assertion (RBAC), returns the projectId. */
 async function assertTimelineAccess(req: Request, id: number): Promise<number> {
   const timeline = await prisma.timeline.findUnique({ where: { id }, select: { projectId: true } });
   if (!timeline) throw notFound('Timeline not found');
@@ -33,8 +32,8 @@ async function assertTimelineAccess(req: Request, id: number): Promise<number> {
 }
 
 /**
- * GET /api/timelines?projectId=X[&sequenceId=Y] — le montage courant.
- * Sans `sequenceId`, c'est le montage du projet entier (toutes séquences bout à bout).
+ * GET /api/timelines?projectId=X[&sequenceId=Y]: the current timeline.
+ * Without `sequenceId`, it is the timeline of the whole project (all sequences end to end).
  */
 router.get(
   '/',
@@ -53,14 +52,14 @@ router.get(
   },
 );
 
-// GET /api/timelines/:id — recalcul du montage (jamais un contenu stocké).
+// GET /api/timelines/:id — recalculation of the timeline (never stored content).
 router.get('/:id', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   await assertTimelineAccess(req, id);
   res.json({ timeline: await TimelineService.resolve(id) });
 });
 
-// PATCH /api/timelines/:id — renommer / viser une étape (superviseur+).
+// PATCH /api/timelines/:id — rename, or target a step (supervisor and above).
 router.patch(
   '/:id',
   validate({
@@ -78,14 +77,14 @@ router.patch(
   },
 );
 
-// GET /api/timelines/:id/snapshots — révisions figées.
+// GET /api/timelines/:id/snapshots — frozen revisions.
 router.get('/:id/snapshots', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   await assertTimelineAccess(req, id);
   res.json({ snapshots: await TimelineService.listSnapshots(id) });
 });
 
-// POST /api/timelines/:id/snapshots — figer l'état courant (superviseur+).
+// POST /api/timelines/:id/snapshots — freezes the current state (supervisor and above).
 router.post(
   '/:id/snapshots',
   validate({ params: idParam, body: z.object({ note: z.string().max(500).optional() }) }),
@@ -98,8 +97,8 @@ router.post(
 );
 
 /**
- * GET /api/timelines/:id/snapshots/:revision — une révision et son écart avec la
- * précédente : plans ajoutés, retirés, re-versionnés.
+ * GET /api/timelines/:id/snapshots/:revision: a revision and its difference from the previous one:
+ * shots added, removed, re-versioned.
  */
 router.get(
   '/:id/snapshots/:revision',
@@ -112,8 +111,8 @@ router.get(
 );
 
 /**
- * GET /api/timelines/:id/comments — les retours posés sur le montage (Phase 46), dans
- * l'ordre du film. Ils s'écrivent par `POST /api/comments` avec `timelineId`.
+ * GET /api/timelines/:id/comments: the feedback posted on the timeline (Phase 46), in the order of the film.
+ * They are written via `POST /api/comments` with `timelineId`.
  */
 router.get('/:id/comments', validate({ params: idParam, query: paginationQuery }), async (req, res) => {
   const id = Number(req.params.id);
@@ -121,7 +120,7 @@ router.get('/:id/comments', validate({ params: idParam, query: paginationQuery }
   res.json(await CommentService.listMontage(id, readPagination(req.query)));
 });
 
-// GET /api/timelines/:id/export — un master est-il disponible ? (URL signée si oui)
+// GET /api/timelines/:id/export — is a master available? (signed URL if so)
 router.get('/:id/export', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   await assertTimelineAccess(req, id);
@@ -129,8 +128,8 @@ router.get('/:id/export', validate({ params: idParam }), async (req, res) => {
 });
 
 /**
- * POST /api/timelines/:id/export — encode le montage en un fichier unique (superviseur+).
- * La lecture enchaînée n'a rien à encoder ; ce master sert à l'envoi hors de l'application.
+ * POST /api/timelines/:id/export: encodes the timeline into a single file (supervisor and above).
+ * Chained playback has nothing to encode; this master serves sending outside the application.
  */
 router.post('/:id/export', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);

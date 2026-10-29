@@ -5,9 +5,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 
 /**
- * Écritures du niveau Épisode : création (et son verrou ShotGrid), lot, ordre,
- * rattachement de séquences, corbeille. Fichier séparé du contrat de lecture — le budget
- * de deux cents lignes vaut aussi pour les tests de route.
+ * Writes at the Episode level: creation (and its ShotGrid lock), batch, ordering, attachment of
+ * sequences, and trash. A file separate from the read contract: the two-hundred-line budget also
+ * applies to route tests.
  */
 
 const { episodes, guard, trash, audit } = vi.hoisted(() => ({
@@ -60,8 +60,8 @@ beforeEach(() => {
   guard.assertEpisodeCreationAllowed.mockResolvedValue(undefined);
 });
 
-describe('création', () => {
-  it('crée et rend 201', async () => {
+describe('creation', () => {
+  it('creates and returns 201', async () => {
     episodes.create.mockResolvedValue({ id: 4, code: 'EP101' });
     const res = await request(app)
       .post('/api/episodes')
@@ -70,7 +70,7 @@ describe('création', () => {
     expect(episodes.create).toHaveBeenCalledWith(7, { name: 'Pilote', code: 'EP101' });
   });
 
-  it('s’arrête sur le verrou ShotGrid avant toute écriture', async () => {
+  it('stops at the ShotGrid lock before any write', async () => {
     guard.assertEpisodeCreationAllowed.mockRejectedValue(
       new AppError('driven from ShotGrid', 409, 'SHOTGRID_LOCKED'),
     );
@@ -79,12 +79,12 @@ describe('création', () => {
     expect(episodes.create).not.toHaveBeenCalled();
   });
 
-  it('refuse un code vide', async () => {
+  it('rejects an empty code', async () => {
     const res = await request(app).post('/api/episodes').send({ projectId: 7, name: 'a', code: '' });
     expect(res.status).toBe(400);
   });
 
-  it('borne le lot à deux cents éléments', async () => {
+  it('caps the batch at two hundred items', async () => {
     const items = Array.from({ length: 201 }, (_, i) => ({ name: `E${i}`, code: `EP${i}` }));
     const res = await request(app).post('/api/episodes/bulk').send({ projectId: 7, items });
     expect(res.status).toBe(400);
@@ -92,8 +92,8 @@ describe('création', () => {
   });
 });
 
-describe('ordre et rattachement', () => {
-  it('réordonne dans l’ordre reçu', async () => {
+describe('ordering and attachment', () => {
+  it('reorders in the order received', async () => {
     const res = await request(app)
       .post('/api/episodes/reorder')
       .send({ projectId: 7, ids: [3, 1, 2] });
@@ -101,13 +101,13 @@ describe('ordre et rattachement', () => {
     expect(episodes.reorder).toHaveBeenCalledWith(7, [3, 1, 2]);
   });
 
-  it('refuse une liste d’ordre vide', async () => {
+  it('rejects an empty ordering list', async () => {
     expect((await request(app).post('/api/episodes/reorder').send({ projectId: 7, ids: [] })).status).toBe(
       400,
     );
   });
 
-  it('rattache des séquences et rend le compte réellement écrit', async () => {
+  it('attaches sequences and returns the count actually written', async () => {
     episodes.assignSequences.mockResolvedValue(2);
     const res = await request(app)
       .post('/api/episodes/assign')
@@ -116,7 +116,7 @@ describe('ordre et rattachement', () => {
     expect(res.body.count).toBe(2);
   });
 
-  it('accepte le détachement (episodeId nul)', async () => {
+  it('accepts detachment (null episodeId)', async () => {
     episodes.assignSequences.mockResolvedValue(1);
     const res = await request(app)
       .post('/api/episodes/assign')
@@ -126,15 +126,15 @@ describe('ordre et rattachement', () => {
   });
 });
 
-describe('modification', () => {
-  it('accepte un statut nul (effacement)', async () => {
+describe('editing', () => {
+  it('accepts a null status (clearing)', async () => {
     episodes.update.mockResolvedValue({ id: 4 });
     const res = await request(app).patch('/api/episodes/4').send({ pipelineStatusId: null });
     expect(res.status).toBe(200);
     expect(episodes.update).toHaveBeenCalledWith(4, 7, { pipelineStatusId: null });
   });
 
-  it('refuse une description démesurée', async () => {
+  it('rejects an oversized description', async () => {
     const res = await request(app)
       .patch('/api/episodes/4')
       .send({ description: 'x'.repeat(2001) });
@@ -142,19 +142,19 @@ describe('modification', () => {
   });
 });
 
-describe('corbeille', () => {
-  it('met à la corbeille et journalise', async () => {
+describe('trash', () => {
+  it('moves to the trash and logs', async () => {
     expect((await request(app).delete('/api/episodes/4')).status).toBe(204);
     expect(trash.softDeleteEpisode).toHaveBeenCalledWith(4);
     expect(audit.logAudit).toHaveBeenCalledWith(expect.objectContaining({ action: 'EPISODE_DELETE' }));
   });
 
-  it('restaure', async () => {
+  it('restores', async () => {
     expect((await request(app).post('/api/episodes/4/restore')).status).toBe(204);
     expect(trash.restoreEpisode).toHaveBeenCalledWith(4);
   });
 
-  it('purge et journalise', async () => {
+  it('purges and logs', async () => {
     expect((await request(app).delete('/api/episodes/4/purge')).status).toBe(204);
     expect(trash.purgeEpisode).toHaveBeenCalledWith(4);
     expect(audit.logAudit).toHaveBeenCalledWith(expect.objectContaining({ action: 'EPISODE_PURGE' }));

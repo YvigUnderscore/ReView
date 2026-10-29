@@ -8,9 +8,8 @@ import { validate } from '../middleware/validate';
 import * as TimelineMarkerService from '../services/TimelineMarkerService';
 
 /**
- * Marqueurs de timeline nommés/colorés partagés (Phase 34.C) — posés par clic droit sur
- * la timeline vidéo. RBAC dans le service (lecture = membre ; écriture = rôles d'écriture ;
- * gestion = auteur ou superviseur).
+ * Shared named and colored timeline markers (Phase 34.C), placed by right-clicking the video timeline.
+ * RBAC lives in the service (read = member; write = writing roles; manage = author or supervisor).
  */
 const router = Router();
 router.use(authenticate);
@@ -24,12 +23,12 @@ const name = z.string().trim().min(1).max(80);
 const color = z.string().regex(/^#[0-9a-f]{6}$/i);
 const frame = z.number().int().min(0).max(10_000_000);
 
-// GET /api/media/:id/markers — marqueurs du média (ordonnés par frame)
+// GET /api/media/:id/markers — markers of the media (ordered by frame)
 router.get('/:id/markers', validate({ params: idParam }), async (req, res) => {
   res.json({ markers: await TimelineMarkerService.list(req.user!, Number(req.params.id)) });
 });
 
-// POST /api/media/:id/markers — pose un marqueur nommé/coloré
+// POST /api/media/:id/markers — places a named, colored marker
 router.post(
   '/:id/markers',
   validate({ params: idParam, body: z.object({ frame, name, color }) }),
@@ -41,7 +40,7 @@ router.post(
   },
 );
 
-// PATCH /api/media/:id/markers/:markerId — renomme/recolore/déplace
+// PATCH /api/media/:id/markers/:markerId — renames, recolors, moves
 router.patch(
   '/:id/markers/:markerId',
   validate({

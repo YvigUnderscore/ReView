@@ -17,11 +17,11 @@ import * as ReleaseService from '../services/ReleaseService';
 import { env } from '../config/env';
 
 /**
- * Commander une opération, et en suivre le déroulement.
+ * Orders an operation and follows its progress.
  *
- * Monté sous `/api/admin/ops`, avant le routeur de lecture. Séparé de lui pour deux
- * raisons : le budget de 200 lignes par route, et le fait que **tout ce qui est ici écrit**
- * — donc obéit à des gardes que la lecture n'a pas.
+ * Mounted under `/api/admin/ops`, before the read router. Separated from it for two reasons: the
+ * 200-line budget per route, and the fact that **everything written here** (and therefore obeys
+ * guards that reading does not) lives apart.
  */
 const router = Router();
 router.use(authenticate, requireRole(Role.ADMIN));
@@ -38,17 +38,17 @@ const createBody = z
     backupId: z.string().regex(BACKUP_STAMP).optional(),
     skipBackup: z.boolean().default(false),
     /**
-     * Mot de passe de l'admin, comme pour l'émission d'un token de service. Il ne défend
-     * pas contre une session volée — un attaquant qui tient une session admin sait aussi
-     * créer un compte — mais il arrête le clic accidentel et l'onglet resté ouvert. La
-     * vraie seconde barrière est `deploy/agent.conf`, hors de portée de l'application.
+     * The admin's password, as for issuing a service token. It does not defend against a stolen
+     * session (an attacker holding an admin session can also create an account), but it stops the
+     * accidental click and the tab left open. The real second barrier is `deploy/agent.conf`, out of
+     * the application's reach.
      */
     currentPassword: z.string().min(1).max(200),
   })
   .refine((b) => b.kind !== 'update' || Boolean(b.version), { message: 'version required' })
   .refine((b) => b.kind !== 'verify' || Boolean(b.backupId), { message: 'backupId required' });
 
-/** Traduit l'état du mécanisme en refus lisible — jamais un bouton qui ne fait rien. */
+/** Translates the state of the mechanism into a readable refusal, never a button that does nothing. */
 function assertUsable(mechanism: Awaited<ReturnType<typeof OpsSpoolService.mechanism>>, kind: OpsKind): void {
   if (mechanism.state === 'busy') throw conflict('An operation is already running', 'OPS_BUSY');
   if (mechanism.state !== 'ready') {
@@ -57,10 +57,10 @@ function assertUsable(mechanism: Awaited<ReturnType<typeof OpsSpoolService.mecha
   if (!mechanism.allow[kind]) throw conflict(`Operation ${kind} is not allowed`, 'OPS_NOT_ALLOWED');
 }
 
-// POST /api/admin/ops/runs — commande une opération.
+// POST /api/admin/ops/runs — orders an operation.
 //
-// Borné : dix par heure et par compte. Une mise à jour interrompt tout le studio ; personne
-// n'en commande dix dans l'heure, mais un onglet fou ou un script égaré, si.
+// Bounded: ten per hour and per account. An update interrupts the whole studio; nobody orders ten in
+// an hour, but a runaway tab or a stray script might.
 router.post(
   '/runs',
   rateLimit({ name: 'ops-run', windowMs: 60 * 60_000, max: 10, keyGenerator: identityRateKey }),
@@ -72,9 +72,9 @@ router.post(
     const mechanism = await OpsSpoolService.mechanism();
     assertUsable(mechanism, body.kind);
 
-    // Refuser tôt une étiquette qui n'existe pas : sinon l'échec n'apparaîtrait qu'après la
-    // sauvegarde, une fois l'instance déjà arrêtée. Contrôle d'ergonomie — le garde-fou de
-    // sécurité (refus de rétrogradation) est côté agent, hors de portée de ce processus.
+    // Reject early a label that does not exist: otherwise the failure would only appear after the
+    // backup, once the instance is already stopped. This is an ergonomics check: the security guard
+    // (refusal of a downgrade) lives on the agent side, out of this process's reach.
     if (body.kind === 'update' && !(await ReleaseService.isPublishedTag(body.version!))) {
       throw badRequest('No such published release', 'RELEASE_UNKNOWN');
     }
@@ -94,9 +94,9 @@ router.post(
       skipBackup: body.skipBackup,
     });
 
-    // Tracé AVANT le dépôt, jamais après : une opération qui tourne mal est précisément
-    // celle dont on veut savoir qui l'a lancée, et une trace posée à la fin manquerait
-    // toutes celles qui n'arrivent pas à leur fin.
+    // Logged BEFORE the drop, never after: an operation that goes wrong is precisely the one whose
+    // initiator we want to know, and a trace written at the end would miss all those that never reach
+    // their end.
     logAudit({
       userId: req.user!.id,
       action:
@@ -110,7 +110,7 @@ router.post(
   },
 );
 
-// GET /api/admin/ops/runs — historique court.
+// GET /api/admin/ops/runs — short history.
 router.get(
   '/runs',
   validate({ query: z.object({ limit: z.coerce.number().int().min(1).max(20).default(10) }) }),
@@ -119,11 +119,11 @@ router.get(
   },
 );
 
-// GET /api/admin/ops/runs/:runId — état + tranche de journal depuis un décalage d'octets.
+// GET /api/admin/ops/runs/:runId — state and log slice from a byte offset.
 //
-// Sondé en boucle par l'écran, y compris pendant que l'API redémarre : c'est cette route,
-// et non un socket, qui permet de retrouver une opération commandée par le backend
-// PRÉCÉDENT — le socket, lui, meurt avec le processus qui l'a ouvert.
+// Polled in a loop by the screen, including while the API restarts: this route, not a socket, is what
+// lets one find an operation ordered by the PREVIOUS backend. The socket dies with the process that
+// opened it.
 router.get(
   '/runs/:runId',
   validate({
@@ -137,15 +137,15 @@ router.get(
   },
 );
 
-// POST /api/admin/ops/runs/:runId/cancel — sentinelle d'abandon.
+// POST /api/admin/ops/runs/:runId/cancel — abort sentinel.
 router.post(
   '/runs/:runId/cancel',
   validate({ params: z.object({ runId: z.string().regex(RUN_ID) }) }),
   async (req, res) => {
     const run = await OpsSpoolService.readRun(String(req.params.runId));
     if (!run) throw notFound();
-    // Une bascule engagée ne se défait pas en tuant le script : le retour arrière
-    // automatique, lui, n'aurait pas eu lieu. L'agent applique la même règle de son côté.
+    // A committed switchover is not undone by killing the script: the automatic rollback, for its part,
+    // would not have taken place. The agent applies the same rule on its side.
     if (!run.cancellable) throw conflict('This operation can no longer be cancelled', 'OPS_RUN_FINISHED');
     await OpsSpoolService.cancel(run.id);
     res.status(202).json({ run: await OpsSpoolService.readRun(run.id) });

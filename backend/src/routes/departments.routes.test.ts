@@ -5,15 +5,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 
 /**
- * A5-06 — le pipe d'un projet se lit comme le reste du projet.
+ * A5-06: a project's pipe is read like the rest of the project.
  *
- * `GET /projects/:id/departments` servait la liste de n'importe quel projet à n'importe
- * quel compte authentifié, drapeau `writable` compris. La réponse est propre au projet ET
- * au lecteur : elle se filtre par appartenance, comme toute lecture de projet.
+ * `GET /projects/:id/departments` served the list of any project to any authenticated account, the
+ * `writable` flag included. The response is specific to the project AND to the reader: it is filtered
+ * by membership, like any project read.
  *
- * Deuxième invariant figé ici : ce routeur est monté sur `/api` et ne doit JAMAIS poser
- * `router.use(authenticate)` — Express l'exécuterait pour toute requête traversant le
- * point de montage, partage client compris (401 au lieu de la page).
+ * Second invariant frozen here: this router is mounted on `/api` and must NEVER call
+ * `router.use(authenticate)`: Express would run it for every request crossing the mount point, client
+ * sharing included (401 instead of the page).
  */
 const { db, caller } = vi.hoisted(() => {
   const caller: { user: Request['user'] } = {
@@ -63,8 +63,8 @@ import request from 'supertest';
 import departmentRoutes from './departments.routes';
 import { errorHandler } from '../middleware/error';
 
-// Monté sur `/api`, comme en production : c'est ce montage qui interdit un
-// `router.use(authenticate)` global.
+// Mounted on `/api`, as in production: it is this mounting that forbids a global
+// `router.use(authenticate)`.
 const app = express().use(express.json()).use('/api', departmentRoutes).use(errorHandler);
 
 beforeEach(() => {
@@ -78,33 +78,33 @@ beforeEach(() => {
 });
 
 describe('GET /api/projects/:projectId/departments', () => {
-  it("refuse le pipe d'un projet dont l'appelant n'est pas membre", async () => {
+  it("refuses the pipe of a project the caller is not a member of", async () => {
     const res = await request(app).get('/api/projects/3/departments');
     expect(res.status).toBe(403);
     expect(listForProjectWithRights).not.toHaveBeenCalled();
   });
 
-  it("rend 404 sur un projet qui n'existe pas ou est à la corbeille", async () => {
+  it("returns 404 for a project that does not exist or is in the trash", async () => {
     db.project.count.mockResolvedValue(0);
     const res = await request(app).get('/api/projects/999/departments');
     expect(res.status).toBe(404);
     expect(listForProjectWithRights).not.toHaveBeenCalled();
   });
 
-  it('sert le pipe à un membre', async () => {
+  it('serves the pipe to a member', async () => {
     db.projectMembership.findUnique.mockResolvedValue({ role: null });
     const res = await request(app).get('/api/projects/3/departments');
     expect(res.status).toBe(200);
     expect(listForProjectWithRights).toHaveBeenCalledWith(3, expect.objectContaining({ id: 7 }));
   });
 
-  it('un SUPERVISOR garde son accès global', async () => {
+  it('a SUPERVISOR keeps their global access', async () => {
     caller.user = { id: 2, email: 'sup@studio.com', role: 'SUPERVISOR' };
     const res = await request(app).get('/api/projects/3/departments');
     expect(res.status).toBe(200);
   });
 
-  it('le référentiel du studio reste ouvert à tout compte authentifié', async () => {
+  it('the studio catalog stays open to any authenticated account', async () => {
     const res = await request(app).get('/api/departments');
     expect(res.status).toBe(200);
     expect(listForStudio).toHaveBeenCalledWith(1);
@@ -112,12 +112,12 @@ describe('GET /api/projects/:projectId/departments', () => {
 });
 
 /**
- * A5-03 — les trois écritures structurantes du pipe transmettent l'ACTEUR au service.
+ * A5-03: the three structuring writes of the pipe pass the ACTOR on to the service.
  *
- * Le journal d'audit ne peut nommer personne si la route garde `req.user` pour elle ;
- * renuméroter un pipe décide pourtant de « la dernière version » de tous ses plans.
+ * The audit log cannot name anyone if the route keeps `req.user` to itself; yet renumbering a pipe
+ * decides the "latest version" of all its shots.
  */
-describe("écritures du pipe — l'acteur suit jusqu'au service", () => {
+describe("pipe writes: the actor follows through to the service", () => {
   const supervisor = { id: 2, email: 'sup@studio.com', role: 'SUPERVISOR' as const };
 
   it('PATCH /departments/:id', async () => {

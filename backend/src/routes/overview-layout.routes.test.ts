@@ -4,11 +4,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * Les dispositions par défaut de la vue d'ensemble, une par rôle.
+ * The default layouts of the overview, one per role.
  *
- * Deux exigences tiennent la route : un réglage d'un rôle ne doit jamais effacer celui
- * d'un autre (les quatre vivent dans la même ligne de `Setting`), et une disposition
- * illisible en base ne doit pas empêcher la page de s'ouvrir.
+ * Two requirements hold the route: a setting for one role must never erase that of another (all four
+ * live in the same `Setting` row), and an unreadable layout in the database must not prevent the page
+ * from opening.
  */
 
 const { db } = vi.hoisted(() => ({
@@ -37,7 +37,7 @@ import { errorHandler } from '../middleware/error';
 
 const app = express().use(express.json()).use('/api/studio', overviewLayoutRoutes).use(errorHandler);
 
-/** La transaction n'est qu'un cadre : le test exécute le corps sur le même faux client. */
+/** The transaction is only a frame: the test runs the body on the same fake client. */
 beforeEach(() => {
   vi.clearAllMocks();
   db.$transaction.mockImplementation((fn: (tx: typeof db) => unknown) => fn(db));
@@ -48,22 +48,22 @@ const stored = (value: string | null) =>
   db.setting.findUnique.mockResolvedValue(value === null ? null : { key: 'x', value });
 
 describe('GET /api/studio/overview-layout', () => {
-  it('rend les défauts enregistrés', async () => {
+  it('returns the saved defaults', async () => {
     stored(JSON.stringify({ ARTIST: { hidden: ['counts'] } }));
     const res = await request(app).get('/api/studio/overview-layout');
     expect(res.status).toBe(200);
     expect(res.body.defaults).toEqual({ ARTIST: { hidden: ['counts'] } });
   });
 
-  it('rend une carte vide quand rien n’a jamais été réglé', async () => {
+  it('returns an empty map when nothing has ever been set', async () => {
     stored(null);
     const res = await request(app).get('/api/studio/overview-layout');
     expect(res.body.defaults).toEqual({});
   });
 
-  it('ignore un réglage illisible plutôt que de casser la page', async () => {
-    // JSON cassé, puis JSON valide mais citant un bloc disparu du produit : dans les deux
-    // cas la page doit s'ouvrir sur la disposition livrée, pas sur une erreur.
+  it('ignores an unreadable setting rather than breaking the page', async () => {
+    // Broken JSON, then valid JSON citing a block that no longer exists in the product: in both
+    // cases the page must open on the shipped layout, not on an error.
     stored('{ pas du json');
     expect((await request(app).get('/api/studio/overview-layout')).body.defaults).toEqual({});
     stored(JSON.stringify({ ARTIST: { order: ['bloc-disparu'] } }));
@@ -72,7 +72,7 @@ describe('GET /api/studio/overview-layout', () => {
 });
 
 describe('PUT /api/studio/overview-layout', () => {
-  it('enregistre le défaut d’un rôle sans toucher aux autres', async () => {
+  it('saves a role's default without touching the others', async () => {
     stored(JSON.stringify({ SUPERVISOR: { hidden: ['counts'] } }));
     const res = await request(app)
       .put('/api/studio/overview-layout')
@@ -86,13 +86,13 @@ describe('PUT /api/studio/overview-layout', () => {
     expect(JSON.parse(upsert?.update.value ?? '{}')).toEqual(res.body.defaults);
   });
 
-  it('retire le défaut d’un rôle avec une disposition nulle', async () => {
+  it('removes a role's default with a null layout', async () => {
     stored(JSON.stringify({ ARTIST: { hidden: ['counts'] }, CLIENT: { hidden: ['tasks'] } }));
     const res = await request(app).put('/api/studio/overview-layout').send({ role: 'ARTIST', layout: null });
     expect(res.body.defaults).toEqual({ CLIENT: { hidden: ['tasks'] } });
   });
 
-  it('refuse une disposition citant un bloc inconnu', async () => {
+  it('rejects a layout citing an unknown block', async () => {
     stored(null);
     const res = await request(app)
       .put('/api/studio/overview-layout')
@@ -101,7 +101,7 @@ describe('PUT /api/studio/overview-layout', () => {
     expect(db.setting.upsert).not.toHaveBeenCalled();
   });
 
-  it('refuse un rôle inconnu', async () => {
+  it('rejects an unknown role', async () => {
     stored(null);
     const res = await request(app).put('/api/studio/overview-layout').send({ role: 'PRODUCER', layout: {} });
     expect(res.status).toBe(400);

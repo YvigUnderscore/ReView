@@ -20,14 +20,13 @@ import {
 } from '../lib/loginAppearance';
 
 /**
- * Habillage du studio : logo, watermark, page de connexion. Ce qui se voit avant d'entrer
- * (le branding public) reste dans `studio.routes` — ici, tout exige d'être connecté, et
- * l'écriture d'être admin.
+ * Studio styling: logo, watermark, login page. What is visible before entering (the public branding)
+ * stays in `studio.routes`: here, everything requires being logged in, and writing requires being admin.
  */
 const router = Router();
 router.use(authenticate);
 
-// GET /api/studio/logo — URL présignée du logo studio (tous les connectés)
+// GET /api/studio/logo — presigned URL of the studio logo (all logged-in users)
 router.get('/logo', async (_req, res) => {
   const setting = await prisma.setting.findUnique({ where: { key: 'studio_logo_key' } });
   res.json({
@@ -37,12 +36,12 @@ router.get('/logo', async (_req, res) => {
   });
 });
 
-// GET /api/studio/watermark — config watermark (tous les connectés : les viewers en ont besoin)
+// GET /api/studio/watermark — watermark config (all logged-in users: viewers need it)
 router.get('/watermark', async (_req, res) => {
   res.json({ watermark: await getWatermarkConfig() });
 });
 
-// PUT /api/studio/watermark — enregistre la config watermark (admin)
+// PUT /api/studio/watermark — records the watermark config (admin)
 router.put(
   '/watermark',
   requireRole(Role.ADMIN),
@@ -52,8 +51,8 @@ router.put(
   },
 );
 
-// POST /api/studio/logo/presign — upload du logo studio (35.D : burn-ins + page client).
-// La clé est ensuite enregistrée via PUT /settings (`studio_logo_key`).
+// POST /api/studio/logo/presign — upload of the studio logo (35.D: burn-ins and client page).
+// The key is then recorded via PUT /settings (`studio_logo_key`).
 router.post(
   '/logo/presign',
   requireRole(Role.ADMIN),
@@ -63,22 +62,22 @@ router.post(
   },
 );
 
-// GET /api/studio/login-appearance — habillage de la page de connexion (admin) : la config
-// brute (clé de l'image comprise) + l'URL présignée pour l'aperçu.
+// GET /api/studio/login-appearance — login page styling (admin): the raw config (image key included)
+// plus the presigned URL for the preview.
 router.get('/login-appearance', requireRole(Role.ADMIN), async (_req, res) => {
   const login = await getLoginAppearance();
   res.json({ login: { ...login, bgUrl: await loginBgUrl(login.bgKey) } });
 });
 
-// PUT /api/studio/login-appearance — enregistre l'habillage (admin), patch partiel.
+// PUT /api/studio/login-appearance — records the styling (admin), partial patch.
 router.put(
   '/login-appearance',
   requireRole(Role.ADMIN),
   validate({ body: loginAppearanceSchema }),
   async (req, res) => {
     const login = await setLoginAppearance(req.body);
-    // La page de connexion est la vitrine de l'instance : sa modification se trace comme
-    // les autres changements de configuration visibles de l'extérieur.
+    // The login page is the instance's showcase: changing it is traced like the other configuration
+    // changes visible from outside.
     AuditService.logAudit({
       userId: req.user!.id,
       action: 'SETTING_UPDATE',
@@ -89,8 +88,8 @@ router.put(
   },
 );
 
-// POST /api/studio/login-appearance/bg/presign — upload de l'image de fond (admin).
-// La clé retournée est ensuite enregistrée via PUT /login-appearance.
+// POST /api/studio/login-appearance/bg/presign — upload of the background image (admin).
+// The returned key is then recorded via PUT /login-appearance.
 router.post(
   '/login-appearance/bg/presign',
   requireRole(Role.ADMIN),

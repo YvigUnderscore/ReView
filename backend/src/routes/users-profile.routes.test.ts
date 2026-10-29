@@ -4,11 +4,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * A1-04 / A2-06 — la clé d'avatar se compare sur un motif ancré, pas sur un préfixe.
+ * A1-04 / A2-06: the avatar key is compared on an anchored pattern, not on a prefix.
  *
- * En décimal, l'identifiant d'un compte est souvent le préfixe d'un autre : `avatars/9`
- * couvrait `avatars/91.png`. Le contrôle doit se fermer sur l'extension, sinon il n'est
- * pas un contrôle d'appartenance mais un contrôle de dossier.
+ * In decimal, an account's identifier is often the prefix of another: `avatars/9` covered `avatars/91.png`.
+ * The check must close on the extension, otherwise it is not an ownership check but a folder check.
  */
 const { setAvatar, presignAvatar } = vi.hoisted(() => ({
   setAvatar: vi.fn(),
@@ -35,15 +34,15 @@ beforeEach(() => {
   setAvatar.mockResolvedValue({ id: 9 });
 });
 
-describe('PUT /api/users/me/avatar — appartenance de la clé', () => {
-  it("refuse la clé d'un compte dont l'identifiant commence par le sien", async () => {
+describe('PUT /api/users/me/avatar — key ownership', () => {
+  it("refuses the key of an account whose identifier begins with its own", async () => {
     const res = await request(app).put('/api/users/me/avatar').send({ key: 'avatars/91.png' });
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('BAD_KEY');
     expect(setAvatar).not.toHaveBeenCalled();
   });
 
-  it('refuse une clé hors du dossier des avatars', async () => {
+  it('rejects a key outside the avatars folder', async () => {
     for (const key of ['derived/9/thumbnail.png', 'avatars/9/../91.png', 'avatars/09.png']) {
       const res = await request(app).put('/api/users/me/avatar').send({ key });
       expect(res.status).toBe(400);
@@ -51,7 +50,7 @@ describe('PUT /api/users/me/avatar — appartenance de la clé', () => {
     expect(setAvatar).not.toHaveBeenCalled();
   });
 
-  it('accepte les trois formes que produit la présignature, et le retrait', async () => {
+  it('accepts the three forms the presigning produces, and the removal', async () => {
     for (const key of ['avatars/9.png', 'avatars/9.jpg', 'avatars/9.webp', null]) {
       const res = await request(app).put('/api/users/me/avatar').send({ key });
       expect(res.status).toBe(200);

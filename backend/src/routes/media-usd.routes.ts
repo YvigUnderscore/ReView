@@ -11,9 +11,9 @@ import * as UsdRecomposeService from '../services/UsdRecomposeService';
 import * as UsdOverrideService from '../services/UsdOverrideService';
 
 /**
- * Recomposition d'une scène USD (Phase 45, 45.E) — sous-routeur monté sous /api/media.
- * Réservée aux gestionnaires du média et refusée après publication (verrou Phase 11) :
- * les deux contrôles sont faits par le service. Le fichier USD d'origine n'est jamais modifié.
+ * Recomposition of a USD scene (Phase 45, 45.E): a sub-router mounted under /api/media.
+ * Reserved to the media's managers and refused after publication (Phase 11 lock): both checks are made
+ * by the service. The original USD file is never modified.
  */
 const router = Router();
 router.use(authenticate);
@@ -21,9 +21,9 @@ router.use(authenticate);
 const idParam = z.object({ id: z.coerce.number().int() });
 
 /**
- * POST /api/media/:id/usd/recompose — reconvertit le média avec une autre sélection de
- * variantes et/ou un autre purpose. Les valeurs sont re-filtrées côté service contre les
- * variantSets réellement présents dans la scène.
+ * POST /api/media/:id/usd/recompose: reconverts the media with another selection of variants and/or
+ * another purpose. The values are re-filtered on the service side against the variantSets actually
+ * present in the scene.
  */
 router.post('/:id/usd/recompose', validate({ params: idParam, body: usdRequestSchema }), async (req, res) => {
   res.json(
@@ -36,9 +36,8 @@ router.post('/:id/usd/recompose', validate({ params: idParam, body: usdRequestSc
 });
 
 /**
- * PUT /api/media/:id/usd/override — override de base de la scène (46.D) : mise en scène
- * rejouée pour tous à l'ouverture. Gestionnaire, média non publié (le service tranche).
- * `null` efface l'override.
+ * PUT /api/media/:id/usd/override: base override of the scene (46.D), staging replayed for everyone on
+ * opening. Manager, unpublished media (the service decides). `null` clears the override.
  */
 router.put(
   '/:id/usd/override',

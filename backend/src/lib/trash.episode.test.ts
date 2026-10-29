@@ -4,12 +4,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * La corbeille d'un épisode ne doit RIEN emporter.
+ * An episode's trash must carry NOTHING away.
  *
- * Un épisode regroupe des séquences, il ne les possède pas : le mettre à la corbeille ou
- * le purger ne doit toucher ni ses séquences, ni derrière elles les plans, les versions
- * et les commentaires. C'est la seule chose que ces tests vérifient, et c'est la seule
- * qui ne se rattrape pas.
+ * An episode groups sequences, it does not own them: moving it to the trash or purging it
+ * must touch neither its sequences nor, behind them, the shots, versions and comments.
+ * This is the only thing these tests verify, and the only thing that cannot be recovered.
  */
 
 const { db } = vi.hoisted(() => ({
@@ -45,8 +44,8 @@ const nothingElseTouched = () => {
   expect(db.shot.deleteMany).not.toHaveBeenCalled();
 };
 
-describe('corbeille des épisodes', () => {
-  it('la mise à la corbeille ne marque que l’épisode', async () => {
+describe('episode trash', () => {
+  it('moving to the trash only marks the episode', async () => {
     await softDeleteEpisode(9);
     expect(db.episode.update).toHaveBeenCalledWith({
       where: { id: 9 },
@@ -55,19 +54,19 @@ describe('corbeille des épisodes', () => {
     nothingElseTouched();
   });
 
-  it('la restauration ne relève que l’épisode — le rattachement n’a jamais bougé', async () => {
+  it('restoring only restores the episode: its attachment never moved', async () => {
     await restoreEpisode(9);
     expect(db.episode.update).toHaveBeenCalledWith({ where: { id: 9 }, data: { deletedAt: null } });
     nothingElseTouched();
   });
 
-  it('la purge détruit l’épisode et rien d’autre : ses séquences survivent, détachées', async () => {
+  it('purging destroys the episode and nothing else: its sequences survive, detached', async () => {
     await purgeEpisode(9);
     expect(db.episode.delete).toHaveBeenCalledWith({ where: { id: 9 } });
     nothingElseTouched();
   });
 
-  it('en lot, mêmes règles', async () => {
+  it('in bulk, same rules', async () => {
     await softDeleteEpisodes([1, 2]);
     expect(db.episode.updateMany).toHaveBeenCalledWith({
       where: { id: { in: [1, 2] } },

@@ -31,24 +31,24 @@ import { logMediaAccess } from '../lib/mediaAccess';
 import { badRequest, notFound, unauthorized } from '../lib/errors';
 
 /**
- * Routes PUBLIQUES (sans JWT) pour le partage client sécurisé (35.C/35.D).
- * Session de partage : émise par GET /:token (lien libre) ou POST /:token/unlock (mot de
- * passe) — chaque émission consomme une vue ; les sous-routes exigent `X-Share-Auth`.
- * Tout accès à un média passe par `findShareMedia`, donc par la PORTÉE du lien.
+ * PUBLIC routes (no JWT) for secure client sharing (35.C/35.D).
+ * Sharing session: issued by GET /:token (free link) or POST /:token/unlock (password). Each issuance
+ * consumes one view; the sub-routes require `X-Share-Auth`.
+ * Any access to a media goes through `findShareMedia`, hence through the SCOPE of the link.
  */
 const router = Router();
 
 const tokenParam = z.object({ token: z.string().min(8).max(128) });
 const tokenAndId = tokenParam.extend({ id: z.coerce.number().int() });
 
-// GET /api/client/:token — projet + médias de la portée ; émet la session (compte une vue)
+// GET /api/client/:token — project and media of the scope; issues the session (counts a view)
 router.get('/:token', validate({ params: tokenParam }), async (req, res) => {
   const share = await loadShare(String(req.params.token));
   const studio = await studioBranding();
   const hasSession = verifyShareSession(req.header('x-share-auth') ?? undefined, share.id);
 
   if (share.passwordHash && !hasSession) {
-    // Verrouillé : ne divulguer que l'habillage studio, pas le projet.
+    // Locked: only disclose the studio decoration, not the project.
     res.json({ locked: true, studio });
     return;
   }
@@ -64,15 +64,15 @@ router.get('/:token', validate({ params: tokenParam }), async (req, res) => {
 
   const project = await prisma.project.findFirst({
     where: { id: share.projectId, deletedAt: null },
-    // `episodesEnabled` : sans lui le front devinerait le niveau à `episodes.length > 0`,
-    // faux dès qu'un seul épisode traîne sur un projet où le niveau est désactivé.
+    // `episodesEnabled`: without it the front end would guess the level from `episodes.length > 0`,
+    // which is wrong as soon as a single episode lingers on a project where the level is disabled.
     select: { id: true, name: true, description: true, status: true, episodesEnabled: true },
   });
   if (!project) throw notFound('Project not found');
 
   const { media, browse, total, hasMore } = await listShareMedia(share, share.id);
-  // Les playlists se lisent APRÈS les médias : leurs identifiants sont intersectés avec la
-  // page servie, pour qu'une carte n'ouvre jamais sur une tuile absente du payload.
+  // Playlists are read AFTER the media: their identifiers are intersected with the served page,
+  // so that a card never opens onto a tile absent from the payload.
   const [playlists, watermark, decisionStatuses] = await Promise.all([
     listSharePlaylists(share, new Set(media.map((m) => m.id))),
     getWatermarkConfig(),
@@ -89,15 +89,15 @@ router.get('/:token', validate({ params: tokenParam }), async (req, res) => {
     mediaTotal: total,
     mediaHasMore: hasMore,
     browse: { ...browse, playlists },
-    // Les deux réponses offertes — absentes dès que le lien n'a pas le droit de se
-    // prononcer, ce qui évite au front d'avoir à redécider de la permission.
+    // The two answers offered: absent as soon as the link is not allowed to decide, which spares the
+    // front end from having to re-decide the permission.
     decisionStatuses,
     watermark: { enabled: watermark.shares, opacity: watermark.opacity },
     shareAuth: signShareSession(share.id),
   });
 });
 
-// POST /api/client/:token/unlock — vérifie le mot de passe, émet la session (compte une vue)
+// POST /api/client/:token/unlock — verifies the password, issues the session (counts a view)
 router.post(
   '/:token/unlock',
   rateLimit({
@@ -131,9 +131,9 @@ router.post(
   },
 );
 
-// GET /api/client/:token/media/:id/url — de quoi ouvrir un média DE LA PORTÉE (session
-// requise). `findShareMedia` a déjà tranché l'accès ; la charge utile est assemblée par
-// `ClientMediaSourceService`, qui documente pourquoi chaque champ y est.
+// GET /api/client/:token/media/:id/url — what is needed to open a media OF THE SCOPE (session
+// required). `findShareMedia` has already decided the access; the payload is assembled by
+// `ClientMediaSourceService`, which documents why each field is there.
 router.get('/:token/media/:id/url', validate({ params: tokenAndId }), async (req, res) => {
   const share = await loadShareWithSession(String(req.params.token), req);
   const id = Number(req.params.id);
@@ -142,7 +142,7 @@ router.get('/:token/media/:id/url', validate({ params: tokenAndId }), async (req
   res.json(await buildClientMediaSource(media, share.projectId));
 });
 
-// GET /api/client/:token/media/:id/comments — commentaires visibles client (session requise)
+// GET /api/client/:token/media/:id/comments — client-visible comments (session required)
 router.get('/:token/media/:id/comments', validate({ params: tokenAndId }), async (req, res) => {
   const share = await loadShareWithSession(String(req.params.token), req);
   const id = Number(req.params.id);
@@ -150,13 +150,13 @@ router.get('/:token/media/:id/comments', validate({ params: tokenAndId }), async
   res.json({ comments: await listShareComments(id) });
 });
 
-// POST /api/client/:token/media/:id/comments — commentaire invité (permission COMMENT).
-// Passe par `CommentService.createGuest` : le retour d'un client déclenche la même chaîne
-// qu'un retour interne (suiveurs, webhooks, journal v1, note ShotGrid), au lieu du seul
-// `emit` socket qui se perdait dès que personne n'avait le projet ouvert.
+// POST /api/client/:token/media/:id/comments — guest comment (COMMENT permission).
+// Goes through `CommentService.createGuest`: a client's feedback triggers the same chain as an internal
+// feedback (followers, webhooks, v1 log, ShotGrid note), instead of the mere socket `emit` that was lost
+// as soon as nobody had the project open.
 router.post(
   '/:token/media/:id/comments',
-  // Écriture ouverte à un anonyme : freinée par lien et par lien+IP (cf. clientShareLimits).
+  // Write open to an anonymous visitor: braked per link and per link+IP (cf. clientShareLimits).
   ...guestCommentRateLimit,
   validate({ params: tokenAndId, body: guestCommentBody }),
   async (req, res) => {
@@ -167,11 +167,11 @@ router.post(
   },
 );
 
-// POST /api/client/:token/media/:id/decision — avis de l'invité (permission DECIDE).
-// Il n'écrase pas le statut de la version : le studio tranche (cf. `decideAsGuest`).
+// POST /api/client/:token/media/:id/decision — guest's opinion (DECIDE permission).
+// It does not overwrite the status of the version: the studio decides (cf. `decideAsGuest`).
 router.post(
   '/:token/media/:id/decision',
-  // Même frein que le commentaire : c'est la même surface d'écriture anonyme.
+  // Same brake as for the comment: it is the same anonymous write surface.
   ...guestCommentRateLimit,
   validate({ params: tokenAndId, body: guestDecisionBody }),
   async (req, res) => {

@@ -12,38 +12,38 @@ import * as OpsService from '../services/OpsService';
 import * as ReleaseService from '../services/ReleaseService';
 
 /**
- * Exploitation de l'instance depuis l'administration : quelle version tourne, laquelle est
- * parue, ce qu'elle change, et quelles sauvegardes existent.
+ * Operating the instance from the administration: which version is running, which one has been
+ * released, what it changes, and which backups exist.
  *
- * Monté sous `/api/admin/ops`, **avant** le routeur générique `/api/admin`.
+ * Mounted under `/api/admin/ops`, **before** the generic `/api/admin` router.
  */
 const router = Router();
 router.use(authenticate, requireRole(Role.ADMIN));
 
-// Un jeton d'API n'exploite pas l'instance. Une ferme de rendu a besoin d'écrire des
-// versions, jamais de savoir quand une mise à jour est disponible — et encore moins, une
-// fois le lot d'exécution posé, de la commander sans personne devant l'écran.
+// An API token does not operate the instance. A render farm needs to write versions, never to know
+// when an update is available, and even less, once the execution batch is in place, to order one with
+// nobody in front of the screen.
 router.use((req, _res, next) => {
   next(
     req.apiToken ? badRequest('An API token cannot operate the instance', 'API_TOKEN_FORBIDDEN') : undefined,
   );
 });
 
-// GET /api/admin/ops — tout ce que l'écran affiche, en une réponse.
+// GET /api/admin/ops — everything the screen displays, in one response.
 router.get('/', async (_req, res) => {
   res.json(await OpsService.overview());
 });
 
-// GET /api/admin/ops/releases — le catalogue seul (cache de trente minutes).
+// GET /api/admin/ops/releases — the catalog alone (thirty-minute cache).
 router.get('/releases', async (_req, res) => {
   res.json(await ReleaseService.catalog());
 });
 
-// POST /api/admin/ops/releases/refresh — « Vérifier maintenant ».
+// POST /api/admin/ops/releases/refresh — "Check now".
 //
-// Borné par compte : sans jeton, l'API GitHub n'accorde que soixante appels par heure et
-// par adresse. Un écran laissé ouvert sur un bouton cliquable épuiserait le quota de tout
-// le studio en quelques minutes — et l'écran cesserait alors de renseigner qui que ce soit.
+// Bounded per account: without a token, the GitHub API grants only sixty calls per hour and per address.
+// A screen left open on a clickable button would exhaust the quota of the whole studio within minutes,
+// and the screen would then stop informing anyone.
 router.post(
   '/releases/refresh',
   rateLimit({ name: 'ops-release-refresh', windowMs: 60 * 60_000, max: 20, keyGenerator: identityRateKey }),
@@ -52,7 +52,7 @@ router.post(
   },
 );
 
-// GET /api/admin/ops/backups — catalogue des sauvegardes (manifestes seuls).
+// GET /api/admin/ops/backups — backup catalog (manifests only).
 router.get('/backups', async (_req, res) => {
   res.json(await BackupCatalogService.list());
 });

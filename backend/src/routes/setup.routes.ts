@@ -21,21 +21,20 @@ const slugify = (s: string) =>
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '') || 'studio';
 
-/** Indique si l'instance n'est pas encore configurée (aucun Studio). */
+/** Indicates whether the instance is not yet configured (no Studio). */
 router.get('/status', async (_req, res) => {
   const studioCount = await prisma.studio.count();
   res.json({ needsSetup: studioCount === 0 });
 });
 
 /**
- * Crée le Studio et son ADMIN, ou refuse si l'instance est déjà installée.
+ * Creates the Studio and its ADMIN, or refuses if the instance is already installed.
  *
- * ⚠ Le comptage DOIT rester dans la transaction, et la transaction en `Serializable`.
- * Compté au-dehors, deux requêtes concurrentes lisent toutes deux « zéro studio » et
- * créent chacune un studio et un ADMIN — `Studio.slug @unique` ne rattrape que des noms
- * identiques, et cette route est publique par nature. En `Serializable`, PostgreSQL
- * détecte le conflit entre la lecture du prédicat et l'insertion : la seconde transaction
- * échoue (P2034), et l'installation reste unique.
+ * ⚠ The count MUST stay inside the transaction, and the transaction at `Serializable`. Counted outside,
+ * two concurrent requests both read "zero studios" and each create a studio and an ADMIN: `Studio.slug
+ * @unique` only catches identical names, and this route is public by nature. At `Serializable`, PostgreSQL
+ * detects the conflict between the read of the predicate and the insertion: the second transaction fails
+ * (P2034), and the installation stays unique.
  */
 async function createStudio(name: string, email: string, passwordHash: string, adminName?: string) {
   try {
@@ -53,8 +52,8 @@ async function createStudio(name: string, email: string, passwordHash: string, a
       { isolationLevel: Prisma.TransactionIsolationLevel.Serializable },
     );
   } catch (err) {
-    // Conflit de sérialisation / interblocage : l'autre requête a gagné la course, donc
-    // l'instance est installée. C'est un refus d'installation, pas une panne.
+    // Serialization conflict or deadlock: the other request won the race, so the instance is installed.
+    // It is an installation refusal, not an outage.
     if (
       err instanceof Prisma.PrismaClientKnownRequestError &&
       (err.code === 'P2034' || err.code === 'P2002')
@@ -66,8 +65,8 @@ async function createStudio(name: string, email: string, passwordHash: string, a
 }
 
 /**
- * Premier lancement : crée le Studio (singleton) et le compte ADMIN.
- * Refusé si un Studio existe déjà.
+ * First launch: creates the Studio (singleton) and the ADMIN account.
+ * Refused if a Studio already exists.
  */
 router.post(
   '/',
@@ -92,15 +91,15 @@ router.post(
       adminName?: string;
     };
 
-    // Refus immédiat du cas courant (l'instance est déjà installée) — le contrôle qui
-    // fait foi est celui de la transaction, plus bas.
+    // Immediate refusal of the current case (the instance is already installed): the check that counts
+    // is the one inside the transaction, further down.
     if ((await prisma.studio.count()) > 0) throw conflict('The studio is already set up', 'ALREADY_SETUP');
 
     const hash = await bcrypt.hash(adminPassword, 12);
     const { studio, admin } = await createStudio(studioName, normalizeEmail(adminEmail), hash, adminName);
 
-    // Session révocable (36.B) : sans `sid`, ce tout premier jeton — celui de l'ADMIN —
-    // serait le seul du système qu'aucune révocation ne pourrait invalider.
+    // Revocable session (36.B): without `sid`, this very first token, the ADMIN's, would be the only one
+    // in the system that no revocation could invalidate.
     const sid = await createSession(admin.id, req);
     const token = signAccessToken({ id: admin.id, email: admin.email, role: admin.role, sid });
     res.status(201).json({

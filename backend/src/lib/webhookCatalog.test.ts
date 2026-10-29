@@ -8,17 +8,17 @@ import { WEBHOOK_EVENTS } from './webhooks';
 import { EMITTED_WEBHOOK_EVENTS, PHANTOM_WEBHOOK_EVENTS, isEmittedWebhookEvent } from './webhookCatalog';
 
 /**
- * Le catalogue ne doit pas mentir. Un administrateur qui coche un événement attend un
- * appel : s'abonner à `shot.created` pour ne jamais rien recevoir est pire que ne pas
- * pouvoir s'y abonner du tout — il croit son alerte branchée.
+ * The catalog must not lie. An administrator who ticks an event expects a call: subscribing to
+ * `shot.created` and never receiving anything is worse than not being able to subscribe at all,
+ * since they believe their alert is wired up.
  *
- * Ces tests relisent les sources plutôt que de faire confiance à une liste : c'est la
- * seule façon d'attraper l'écart le jour où quelqu'un ajoute un nom au catalogue sans
- * l'émettre, ou câble enfin un fantôme sans le sortir de sa liste.
+ * These tests re-read the sources rather than trust a list: it is the only way to catch the gap on
+ * the day someone adds a name to the catalog without emitting it, or finally wires up a phantom
+ * without removing it from its list.
  */
 
 const SRC = join(__dirname, '..');
-/** Fichiers qui parlent DU catalogue plutôt que d'émettre : ils ne comptent pas. */
+/** Files that talk ABOUT the catalog rather than emit: they do not count. */
 const IGNORED = new Set(['webhooks.ts', 'webhookCatalog.ts', 'webhookCatalog.test.ts']);
 
 function sourceFiles(dir: string, out: string[] = []): string[] {
@@ -36,23 +36,23 @@ const corpus = sourceFiles(SRC)
 
 const isPublished = (event: string) => corpus.includes(`'${event}'`);
 
-describe('catalogue des événements de webhook', () => {
-  it('partitionne le catalogue : émis + fantômes = tout, sans recouvrement', () => {
+describe('webhook event catalog', () => {
+  it('partitions the catalog: emitted + phantoms = everything, with no overlap', () => {
     expect([...EMITTED_WEBHOOK_EVENTS, ...PHANTOM_WEBHOOK_EVENTS].sort()).toEqual([...WEBHOOK_EVENTS].sort());
     expect(PHANTOM_WEBHOOK_EVENTS.filter((e) => isEmittedWebhookEvent(e))).toEqual([]);
   });
 
-  it('chaque événement proposé à l’abonnement existe bien dans le code', () => {
+  it('every event offered for subscription does exist in the code', () => {
     const missing = EMITTED_WEBHOOK_EVENTS.filter((e) => !isPublished(e));
     expect(missing).toEqual([]);
   });
 
-  it('aucun fantôme n’est publié quelque part (sinon le déplacer dans la liste émise)', () => {
+  it('no phantom is published anywhere (otherwise move it to the emitted list)', () => {
     const wired = PHANTOM_WEBHOOK_EVENTS.filter((e) => isPublished(e));
     expect(wired).toEqual([]);
   });
 
-  it('reconnaît un événement émis et refuse un fantôme', () => {
+  it('recognizes an emitted event and rejects a phantom', () => {
     expect(isEmittedWebhookEvent('version.published')).toBe(true);
     expect(isEmittedWebhookEvent('shot.created')).toBe(false);
     expect(isEmittedWebhookEvent('inconnu')).toBe(false);

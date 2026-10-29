@@ -12,8 +12,8 @@ import * as ReviewDecisionService from '../services/ReviewDecisionService';
 import { DELETE_DOMAINS } from '../services/BulkService';
 
 /**
- * Actions groupées (13.C). Routeur fin : valide (Zod, max 200 ids) puis délègue au
- * `BulkService` qui revalide le RBAC par id. Monté sur `/api/bulk`.
+ * Bulk actions (13.C). Thin router: validates (Zod, max 200 ids) then delegates to `BulkService`,
+ * which re-checks the RBAC per id. Mounted on `/api/bulk`.
  */
 const router = Router();
 router.use(authenticate);
@@ -21,7 +21,7 @@ router.use(authenticate);
 const ids = z.array(z.number().int()).min(1).max(200);
 const domainParam = z.object({ domain: z.enum(DELETE_DOMAINS) });
 
-// POST /api/bulk/:domain/delete — mise à la corbeille en lot
+// POST /api/bulk/:domain/delete — bulk move to the trash
 router.post(
   '/:domain/delete',
   validate({ params: domainParam, body: z.object({ ids }) }),
@@ -36,7 +36,7 @@ router.post(
   },
 );
 
-// POST /api/bulk/:domain/restore — restauration en lot
+// POST /api/bulk/:domain/restore — bulk restore
 router.post(
   '/:domain/restore',
   validate({ params: domainParam, body: z.object({ ids }) }),
@@ -51,7 +51,7 @@ router.post(
   },
 );
 
-// POST /api/bulk/:domain/purge — purge définitive en lot (DB + MinIO, irréversible)
+// POST /api/bulk/:domain/purge — bulk permanent purge (DB + MinIO, irreversible)
 router.post(
   '/:domain/purge',
   validate({ params: domainParam, body: z.object({ ids }) }),
@@ -62,7 +62,7 @@ router.post(
   },
 );
 
-// PATCH /api/bulk/tasks — statut / réassignation en lot
+// PATCH /api/bulk/tasks — bulk status / reassignment
 router.patch(
   '/tasks',
   validate({
@@ -82,7 +82,7 @@ router.patch(
       status?: TaskStatus;
       assigneeId?: number | null;
     };
-    // Ne transmet que les champs réellement fournis (l'assigné ne peut patcher que le statut).
+    // Only forwards the fields actually provided (the assignee can only patch the status).
     const patch: BulkService.BulkTaskPatch = {};
     if (status !== undefined) patch.status = status;
     if (assigneeId !== undefined) patch.assigneeId = assigneeId;
@@ -91,7 +91,7 @@ router.patch(
   },
 );
 
-// PATCH /api/bulk/versions — changement de statut en lot
+// PATCH /api/bulk/versions — bulk status change
 router.patch(
   '/versions',
   validate({ body: z.object({ ids, status: z.nativeEnum(VersionStatus) }) }),
@@ -103,10 +103,10 @@ router.patch(
 );
 
 /**
- * PATCH /api/bulk/versions/decision — décision de review sur une sélection (Phase 31).
+ * PATCH /api/bulk/versions/decision: review decision on a selection (Phase 31).
  *
- * La sélection de la page Reviews traverse volontiers plusieurs projets : le service
- * revérifie donc la supervision et le vocabulaire projet par projet, et compte les refus.
+ * The selection on the Reviews page readily spans several projects: the service therefore re-checks
+ * supervision and the project vocabulary project by project, and counts the refusals.
  */
 router.patch(
   '/versions/decision',
@@ -119,7 +119,7 @@ router.patch(
   },
 );
 
-// PATCH /api/bulk/shots/move — déplacement de shots vers une séquence (null = hors séquence)
+// PATCH /api/bulk/shots/move — moves shots to a sequence (null = outside any sequence)
 router.patch(
   '/shots/move',
   validate({ body: z.object({ ids, sequenceId: z.number().int().nullable() }) }),
@@ -131,11 +131,11 @@ router.patch(
 );
 
 /**
- * PATCH /api/bulk/shots/status — statut d'une sélection de plans.
+ * PATCH /api/bulk/shots/status: status of a selection of shots.
  *
- * `pipelineStatusId: null` retire le statut, comme au singulier. Le service revérifie
- * l'accès au projet et applique le statut plan par plan : la réponse dit combien ont
- * abouti et combien ont été refusés (verrou ShotGrid, projet archivé).
+ * `pipelineStatusId: null` removes the status, as in the single variant. The service re-checks project
+ * access and applies the status shot by shot: the response says how many succeeded and how many were
+ * refused (ShotGrid lock, archived project).
  */
 router.patch(
   '/shots/status',
@@ -150,11 +150,10 @@ router.patch(
 );
 
 /**
- * Assignation d'une sélection d'assets ou de plans.
+ * Assignment of a selection of assets or shots.
  *
- * Une entité qu'on ne peut pas assigner (droits, projet archivé, aucune tâche) est
- * comptée à part plutôt que de faire échouer tout le lot : sur cinquante assets,
- * tout perdre pour un seul serait absurde.
+ * An entity that cannot be assigned (rights, archived project, no task) is counted separately rather
+ * than failing the whole batch: out of fifty assets, losing everything for a single one would be absurd.
  */
 for (const holder of ['assets', 'shots'] as const) {
   router.patch(
@@ -178,7 +177,7 @@ for (const holder of ['assets', 'shots'] as const) {
   );
 }
 
-// PATCH /api/bulk/assets/departments — cocher/décocher des étapes sur une sélection
+// PATCH /api/bulk/assets/departments — tick or untick steps on a selection
 router.patch(
   '/assets/departments',
   validate({

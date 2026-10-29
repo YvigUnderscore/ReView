@@ -3,8 +3,8 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Ni base ni MinIO réels : ce fichier mesure ce que la purge DEMANDE au stockage —
-// quelles clés, quels préfixes, et en combien d'appels.
+// No real database or MinIO: this file measures what the purge ASKS of the storage,
+// which keys, which prefixes, and in how many calls.
 vi.mock('./prisma', () => ({
   prisma: {
     mediaObject: { findUnique: vi.fn(), findMany: vi.fn(), delete: vi.fn(), deleteMany: vi.fn() },
@@ -35,7 +35,7 @@ const deleteObjects = vi.mocked(storage.deleteObjects);
 const deletePrefix = vi.mocked(storage.deletePrefix);
 const enqueue = vi.mocked(enqueueStorageCleanup);
 
-/** Clé telle que la produit `StorageService.mediaKey` : le dossier porte l'id du média. */
+/** Key as produced by `StorageService.mediaKey`: the folder carries the media's id. */
 const mediaFolder = (id: number) => `projects/durian-open-movie/shots/sq010/sh0010/v01/${id}/`;
 const mediaKeyOf = (id: number, filename: string) => `${mediaFolder(id)}${filename}`;
 
@@ -49,13 +49,13 @@ beforeEach(() => {
 });
 
 /**
- * A4-01. Les frames d'une séquence d'images vivent sous `…/{mediaId}/frames/`, préfixe que
- * seule la ligne `ImageSequence` nomme. La purge ne lisant que `storageKey`/`thumbnailKey`,
- * détruire une livraison de 2 000 EXR laissait les octets dans le bucket pour toujours,
- * sans plus rien en base pour les retrouver — et le quota du projet retombait à zéro.
+ * A4-01. The frames of an image sequence live under `…/{mediaId}/frames/`, a prefix that only
+ * the `ImageSequence` row names. The purge only read `storageKey`/`thumbnailKey`, so destroying
+ * a delivery of 2,000 EXRs left the bytes in the bucket forever, with nothing left in the
+ * database to find them, and the project's quota fell back to zero.
  */
-describe('purge d un media — tout ce qui lui appartient, et rien d autre', () => {
-  it('emporte le dossier du media (fichier d origine, manifeste, frames)', async () => {
+describe('purge of a media: everything it owns, and nothing else', () => {
+  it('removes the media folder (original file, manifest, frames)', async () => {
     findUnique.mockResolvedValue({
       id: 19,
       storageKey: mediaKeyOf(19, 'sequence.json'),
@@ -67,11 +67,11 @@ describe('purge d un media — tout ce qui lui appartient, et rien d autre', () 
 
     const prefixes = deletePrefix.mock.calls.map((call) => call[0]);
     expect(prefixes).toContain('derived/19/');
-    // Le dossier du média contient `frames/` ET le manifeste : un seul préfixe suffit.
+    // The media folder holds `frames/` AND the manifest: a single prefix is enough.
     expect(prefixes).toContain(mediaFolder(19));
   });
 
-  it('cle inattendue : se rabat sur le prefixe de frames, jamais sur un dossier trop large', async () => {
+  it('unexpected key: falls back to the frames prefix, never to an overly broad folder', async () => {
     findUnique.mockResolvedValue({
       id: 7,
       storageKey: 'legacy/ancienne-convention/master.exr',
@@ -83,11 +83,11 @@ describe('purge d un media — tout ce qui lui appartient, et rien d autre', () 
 
     const prefixes = deletePrefix.mock.calls.map((call) => call[0]);
     expect(prefixes).toEqual(['derived/7/', 'legacy/ancienne-convention/frames/']);
-    // Surtout pas `legacy/ancienne-convention/`, qui n'est pas démontrablement le sien.
+    // Certainly not `legacy/ancienne-convention/`, which is not provably its own.
     expect(prefixes).not.toContain('legacy/ancienne-convention/');
   });
 
-  it('cle vide (media cree mais pas encore nomme) : aucun prefixe racine', async () => {
+  it('empty key (media created but not yet named): no root prefix', async () => {
     findUnique.mockResolvedValue({
       id: 3,
       storageKey: '',
@@ -97,19 +97,19 @@ describe('purge d un media — tout ce qui lui appartient, et rien d autre', () 
 
     await purgeMedia(3);
 
-    // Un préfixe vide viderait le bucket entier : il ne doit jamais être produit.
+    // An empty prefix would empty the whole bucket: it must never be produced.
     expect(deletePrefix.mock.calls.map((call) => call[0])).toEqual(['derived/3/']);
     expect(deleteObjects).not.toHaveBeenCalled();
   });
 });
 
 /**
- * PERF-11. Le coût se mesure en allers-retours MinIO, pas au chronomètre : la voie groupée
- * appelait la purge unitaire dans une boucle, soit deux suppressions d'objet par média, en
- * série, dans le fil de la requête HTTP.
+ * PERF-11. The cost is measured in MinIO round trips, not by the stopwatch: the grouped path
+ * called the single purge inside a loop, i.e. two object deletions per media, in series, in
+ * the HTTP request's thread.
  */
-describe('purge en lot — nombre d allers-retours', () => {
-  it('200 medias : une lecture, une suppression DB, UN SEUL DeleteObjects pour 400 cles', async () => {
+describe('bulk purge: number of round trips', () => {
+  it('200 media: one read, one DB deletion, ONE single DeleteObjects for 400 keys', async () => {
     const ids = Array.from({ length: 200 }, (_, index) => index + 1);
     findMany.mockResolvedValue(
       ids.map((id) => ({
@@ -125,20 +125,20 @@ describe('purge en lot — nombre d allers-retours', () => {
     expect(findMany).toHaveBeenCalledTimes(1);
     expect(deleteMany).toHaveBeenCalledTimes(1);
     expect(deleteMany).toHaveBeenCalledWith({ where: { id: { in: ids } } });
-    // Avant : 400 appels `deleteObject`. Après : un seul appel, portant les 400 clés.
+    // Before: 400 `deleteObject` calls. After: one call carrying the 400 keys.
     expect(deleteObject).not.toHaveBeenCalled();
     expect(deleteObjects).toHaveBeenCalledTimes(1);
     expect(deleteObjects.mock.calls[0]![0]).toHaveLength(400);
   });
 
-  it('lot vide : aucune requete, aucun appel stockage', async () => {
+  it('empty batch: no query, no storage call', async () => {
     await purgeMedias([]);
     expect(findMany).not.toHaveBeenCalled();
     expect(deleteMany).not.toHaveBeenCalled();
     expect(deleteObjects).not.toHaveBeenCalled();
   });
 
-  it('les prefixes en echec sont reenfiles DANS L ORDRE, malgre le parallelisme', async () => {
+  it('failed prefixes are re-queued IN ORDER, despite the parallelism', async () => {
     const ids = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
     findMany.mockResolvedValue(
       ids.map((id) => ({
@@ -148,8 +148,8 @@ describe('purge en lot — nombre d allers-retours', () => {
         imageSequence: null,
       })) as never,
     );
-    // Échec d'un préfixe sur deux, avec des latences inversées : sans réordonnancement
-    // explicite, la liste réenfilée dépendrait de l'ordre d'arrivée des rejets.
+    // One prefix in two fails, with inverted latencies: without an explicit re-ordering,
+    // the re-queued list would depend on the arrival order of the rejections.
     let rank = 0;
     deletePrefix.mockImplementation(async (prefix: string) => {
       const delay = (23 - rank++) % 7;
@@ -164,8 +164,8 @@ describe('purge en lot — nombre d allers-retours', () => {
   });
 });
 
-describe('purge de projets en lot', () => {
-  it('supprime les lignes trouvees et retire les deux formes de prefixe, par projet', async () => {
+describe('bulk project purge', () => {
+  it('deletes the rows found and removes both prefix forms, per project', async () => {
     vi.mocked(prisma.project.findMany).mockResolvedValue([
       { id: 3, slug: 'alpha' },
       { id: 4, slug: 'beta' },

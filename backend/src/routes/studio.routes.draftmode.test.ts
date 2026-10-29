@@ -46,20 +46,20 @@ beforeEach(() => {
 });
 
 /**
- * Le mode brouillon (Phase 50) est un réglage de studio, et il a deux lecteurs : l'écran
- * d'administration, qui l'écrit, et TOUT LE MONDE, qui a besoin de savoir si « publier » est
- * encore un geste. Le second passe par l'identité publique du studio — le seul canal ouvert
- * à un artiste. Ce fichier verrouille les deux bouts, et la forme de la valeur écrite.
+ * Draft mode (Phase 50) is a studio setting, and it has two readers: the administration screen, which
+ * writes it, and EVERYONE, who needs to know whether "publish" is still a gesture. The second goes
+ * through the studio's public identity, the only channel open to an artist. This file locks down both
+ * ends, and the shape of the value written.
  */
-describe('GET /api/studio/branding — le mode brouillon voyage avec l’identité publique', () => {
-  it('rend `draftMode: false` quand le réglage n’existe pas (publication d’office)', async () => {
+describe('GET /api/studio/branding — draft mode travels with the public identity', () => {
+  it('returns `draftMode: false` when the setting does not exist (publication by default)', async () => {
     const res = await request(app).get('/api/studio/branding');
 
     expect(res.status).toBe(200);
     expect(res.body.draftMode).toBe(false);
   });
 
-  it('rend `draftMode: true` quand le studio a gardé le parcours en deux temps', async () => {
+  it('returns `draftMode: true` when the studio has kept the two-step path', async () => {
     db.setting.findUnique.mockImplementation((args: { where: { key: string } }) =>
       args.where.key === SETTING_KEYS.DRAFT_MODE ? { value: 'true' } : null,
     );
@@ -70,8 +70,8 @@ describe('GET /api/studio/branding — le mode brouillon voyage avec l’identit
   });
 });
 
-describe('PUT /api/studio/settings — la valeur d’un réglage booléen est contrainte', () => {
-  it('accepte « true » et « false »', async () => {
+describe('PUT /api/studio/settings — the value of a boolean setting is constrained', () => {
+  it('accepts "true" and "false"', async () => {
     for (const value of ['true', 'false']) {
       const res = await request(app).put('/api/studio/settings').send({ key: 'draftMode', value });
       expect(res.status).toBe(200);
@@ -79,7 +79,7 @@ describe('PUT /api/studio/settings — la valeur d’un réglage booléen est co
     expect(db.setting.upsert).toHaveBeenCalledTimes(2);
   });
 
-  it('refuse toute autre valeur, sans rien écrire', async () => {
+  it('rejects any other value, without writing anything', async () => {
     for (const value of ['oui', '1', 'True', '']) {
       const res = await request(app).put('/api/studio/settings').send({ key: 'draftMode', value });
       expect(res.status).toBe(400);
@@ -87,7 +87,7 @@ describe('PUT /api/studio/settings — la valeur d’un réglage booléen est co
     expect(db.setting.upsert).not.toHaveBeenCalled();
   });
 
-  it('laisse les autres réglages libres : la contrainte ne vise que les booléens', async () => {
+  it('leaves other settings free: the constraint only targets booleans', async () => {
     const res = await request(app)
       .put('/api/studio/settings')
       .send({ key: 'max_file_size', value: '8589934592' });

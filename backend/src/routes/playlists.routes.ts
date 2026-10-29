@@ -16,7 +16,7 @@ router.use(authenticate);
 const idsSchema = z.array(z.number().int().positive()).max(200);
 const canWrite = requireRole(Role.ADMIN, Role.SUPERVISOR, Role.ARTIST);
 
-// GET /api/playlists?projectId= — playlists du projet (Phase 33)
+// GET /api/playlists?projectId= — the project's playlists (Phase 33)
 router.get(
   '/',
   validate({ query: z.object({ projectId: z.coerce.number().int().positive() }) }),
@@ -28,9 +28,9 @@ router.get(
 );
 
 /**
- * GET /api/playlists/candidates?projectId= — catalogue des versions à mettre en playlist.
+ * GET /api/playlists/candidates?projectId=: catalog of the versions that can be put into a playlist.
  *
- * Déclarée avant `/:id` pour que « candidates » ne soit pas lu comme un identifiant.
+ * Declared before `/:id` so that "candidates" is not read as an identifier.
  */
 router.get(
   '/candidates',
@@ -52,7 +52,7 @@ router.get(
   },
 );
 
-// POST /api/playlists — créer (items initiaux depuis versions et/ou médias sélectionnés)
+// POST /api/playlists — creates (initial items from the selected versions and/or media)
 router.post(
   '/',
   canWrite,
@@ -77,7 +77,7 @@ router.post(
   },
 );
 
-// GET /api/playlists/:id — détail (items ordonnés + premier média visible par version)
+// GET /api/playlists/:id — detail (ordered items + first visible media per version)
 router.get(
   '/:id',
   validate({ params: z.object({ id: z.coerce.number().int().positive() }) }),
@@ -89,7 +89,7 @@ router.get(
   },
 );
 
-// PATCH /api/playlists/:id — renommer et/ou réordonner (itemIds = nouvel ordre complet)
+// PATCH /api/playlists/:id — renames and/or reorders (itemIds = new complete order)
 router.patch(
   '/:id',
   canWrite,
@@ -111,7 +111,7 @@ router.patch(
   },
 );
 
-// POST /api/playlists/:id/items — ajouter des versions/médias en fin (dédupliqué)
+// POST /api/playlists/:id/items — adds versions/media at the end (deduplicated)
 router.post(
   '/:id/items',
   canWrite,
@@ -132,7 +132,7 @@ router.post(
   },
 );
 
-// DELETE /api/playlists/:id/items/:itemId — retirer un item
+// DELETE /api/playlists/:id/items/:itemId — removes an item
 router.delete(
   '/:id/items/:itemId',
   canWrite,
@@ -151,7 +151,7 @@ router.delete(
   },
 );
 
-// DELETE /api/playlists/:id — supprimer la playlist (références seulement, pas de contenu)
+// DELETE /api/playlists/:id — deletes the playlist (references only, no content)
 router.delete(
   '/:id',
   canWrite,

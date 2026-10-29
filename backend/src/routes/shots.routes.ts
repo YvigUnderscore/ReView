@@ -22,7 +22,7 @@ router.use(authenticate);
 
 const idParam = z.object({ id: z.coerce.number().int() });
 
-// Champs d'un shot (création). PATCH les rend optionnels via `.partial()`.
+// Fields of a shot (creation). PATCH makes them optional via `.partial()`.
 const shotBody = z.object({
   sequenceId: z.number().int().nullable().optional(),
   name: z.string().min(1).max(160),
@@ -33,7 +33,7 @@ const shotBody = z.object({
   settings: pipelineOverrideSchema.optional(),
 });
 
-/** Résout le projet d'un shot + assertion d'accès (RBAC dynamique) → renvoie le projectId. */
+/** Resolves a shot's project and access assertion (dynamic RBAC), returns the projectId. */
 async function resolveShotAccess(req: Request, shotId: number): Promise<number> {
   const projectId = await resolveProjectIdForShot(shotId);
   if (!projectId) throw notFound('Shot not found');
@@ -42,13 +42,13 @@ async function resolveShotAccess(req: Request, shotId: number): Promise<number> 
 }
 
 /**
- * GET /api/shots?projectId=X[&sequenceId=Y|none][&episodeId=Z|none] — « none » = hors
- * séquence, respectivement hors épisode. Le filtre d'épisode traverse la séquence (un
- * plan n'appartient pas à un épisode) ; absent, il ne restreint rien.
+ * GET /api/shots?projectId=X[&sequenceId=Y|none][&episodeId=Z|none]: "none" means outside a sequence,
+ * respectively outside an episode. The episode filter goes through the sequence (a shot does not belong
+ * to an episode directly); when absent, it restricts nothing.
  *
- * Paginé (10.D1) en page/pageSize **ou** en curseur : la réponse porte `total`,
- * `pageCount`, `hasMore` et `nextCursor`, de quoi charger un long-métrage de deux mille
- * plans sans en perdre ni en dupliquer.
+ * Paginated (10.D1) by page/pageSize **or** by cursor: the response carries `total`, `pageCount`,
+ * `hasMore` and `nextCursor`, enough to load a feature film of two thousand shots without losing or
+ * duplicating any.
  */
 router.get(
   '/',
@@ -70,19 +70,19 @@ router.get(
   },
 );
 
-// POST /api/shots (admin/superviseur)
+// POST /api/shots (admin and supervisor)
 router.post(
   '/',
   requireRole(Role.ADMIN, Role.SUPERVISOR),
   validate({ body: shotBody.extend({ projectId: z.number().int() }) }),
   async (req, res) => {
     await assertProjectAccess(req, req.body.projectId);
-    await assertLocalCreationAllowed(req.body.projectId, 'shot'); // 48 : ShotGrid mène
+    await assertLocalCreationAllowed(req.body.projectId, 'shot'); // 48: ShotGrid leads
     res.status(201).json({ shot: await ShotService.create(req.body) });
   },
 );
 
-// POST /api/shots/bulk — création en lot (admin/superviseur)
+// POST /api/shots/bulk — bulk creation (admin and supervisor)
 router.post(
   '/bulk',
   requireRole(Role.ADMIN, Role.SUPERVISOR),
@@ -92,7 +92,7 @@ router.post(
   async (req, res) => {
     const { projectId, items } = req.body as { projectId: number; items: ShotService.BulkShotItem[] };
     await assertProjectAccess(req, projectId);
-    await assertLocalCreationAllowed(projectId, 'shot'); // 48 : ShotGrid mène
+    await assertLocalCreationAllowed(projectId, 'shot'); // 48: ShotGrid leads
     res.status(201).json({ shots: await ShotService.createBulk(projectId, items) });
   },
 );
@@ -104,7 +104,7 @@ router.get('/:id', validate({ params: idParam }), async (req, res) => {
   res.json({ shot });
 });
 
-// PATCH /api/shots/:id (admin/superviseur)
+// PATCH /api/shots/:id (admin and supervisor)
 router.patch(
   '/:id',
   requireRole(Role.ADMIN, Role.SUPERVISOR),
@@ -112,12 +112,12 @@ router.patch(
     params: idParam,
     body: shotBody.partial().extend({
       description: z.string().max(2000).nullable().optional(),
-      // Pas de `thumbnailKey` ici : la clé est écrite par `PUT /api/shots/:id/thumbnail`,
-      // qui la reconstruit et vérifie qu'elle désigne bien CE plan. Reçue du client, elle
-      // faisait présigner n'importe quel objet du bucket — pièce jointe d'autrui comprise.
-      // Statut du plan (C3) : la colonne existait, le PATCH ne l'acceptait pas.
+      // No `thumbnailKey` here: the key is written by `PUT /api/shots/:id/thumbnail`, which rebuilds it and
+      // checks that it designates THIS shot. Received from the client, it let anyone presign any object in
+      // the bucket, including someone else's attachment.
+      // Shot status (C3): the column existed, but the PATCH did not accept it.
       pipelineStatusId: z.number().int().nullable().optional(),
-      // Omis du montage (Phase 45) : le plan est coupé au montage sans rien perdre.
+      // Omitted from the edit (Phase 45): the shot is cut at the edit without losing anything.
       omitted: z.boolean().optional(),
     }),
   }),
@@ -128,7 +128,7 @@ router.patch(
   },
 );
 
-// POST /api/shots/:id/assets — rattache un asset existant OU en crée un et le rattache.
+// POST /api/shots/:id/assets — attaches an existing asset, or creates one and attaches it.
 router.post(
   '/:id/assets',
   requireRole(Role.ADMIN, Role.SUPERVISOR),
@@ -152,7 +152,7 @@ router.post(
   },
 );
 
-// DELETE /api/shots/:id/assets/:assetId — détache un asset d'un shot (sans le supprimer)
+// DELETE /api/shots/:id/assets/:assetId — detaches an asset from a shot (without deleting it)
 router.delete(
   '/:id/assets/:assetId',
   requireRole(Role.ADMIN, Role.SUPERVISOR),
@@ -165,7 +165,7 @@ router.delete(
   },
 );
 
-// Corbeille : mise à la corbeille, restauration, purge — montage partagé (C3).
+// Trash: move to trash, restore, purge — shared mounting (C3).
 mountTrashRoutes(router, {
   entityType: 'Shot',
   auditPrefix: 'SHOT',
@@ -176,7 +176,7 @@ mountTrashRoutes(router, {
   purge: (_userId, id) => purgeShot(id),
 });
 
-// GET /api/shots/:id/tree — le plan vu comme un dossier, comme un asset (cf. shotOverview).
+// GET /api/shots/:id/tree — the shot seen as a folder, like an asset (cf. shotOverview).
 router.get('/:id/tree', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   const projectId = await resolveProjectIdForShot(id);
@@ -186,11 +186,11 @@ router.get('/:id/tree', validate({ params: idParam }), async (req, res) => {
 });
 
 /**
- * GET /api/shots/:id/latest — permalien du plan, pendant de celui d'un asset (C3).
+ * GET /api/shots/:id/latest: permalink of the shot, the counterpart of that of an asset (C3).
  *
- * Il manquait, et la page d'un plan proposait quand même « copier le lien » : le bouton
- * copiait `/assets/<id>/latest`, c'est-à-dire l'adresse d'une entité sans rapport, que le
- * destinataire ouvrait sans se douter de rien.
+ * It was missing, and the page of a shot nonetheless offered "copy the link": the button copied
+ * `/assets/<id>/latest`, that is, the address of an unrelated entity, which the recipient opened
+ * without suspecting anything.
  */
 router.get('/:id/latest', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);

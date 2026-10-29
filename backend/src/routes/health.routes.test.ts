@@ -32,11 +32,11 @@ beforeEach(() => {
 });
 
 /**
- * La vivacité ne doit jamais dépendre d'une dépendance : redémarrer le conteneur d'API
- * parce que Postgres est tombé ajoute une panne à la panne.
+ * Liveness must never depend on a dependency: restarting the API container because Postgres went down
+ * adds one outage to another.
  */
-describe('GET /health — vivacité', () => {
-  it('répond sans toucher base, Redis ni stockage', async () => {
+describe('GET /health — liveness', () => {
+  it('responds without touching the database, Redis or storage', async () => {
     const res = await request(app).get('/health');
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('ok');
@@ -45,22 +45,22 @@ describe('GET /health — vivacité', () => {
     expect(storagePing).not.toHaveBeenCalled();
   });
 
-  it('annonce la version de l’instance', async () => {
+  it('announces the instance version', async () => {
     const res = await request(app).get('/health');
     expect(typeof res.body.version).toBe('string');
     expect(res.body.version).not.toBe('');
     expect(typeof res.body.uptimeSec).toBe('number');
   });
 
-  it('expose le même contenu sur /health/live', async () => {
+  it('exposes the same content on /health/live', async () => {
     const res = await request(app).get('/health/live');
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('ok');
   });
 });
 
-describe('GET /health/ready — disponibilité', () => {
-  it('interroge les trois dépendances, répond 200, puis sert le résultat mémorisé', async () => {
+describe('GET /health/ready — availability', () => {
+  it('queries the three dependencies, responds 200, then serves the memoized result', async () => {
     const res = await request(app).get('/health/ready');
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('ready');
@@ -71,13 +71,13 @@ describe('GET /health/ready — disponibilité', () => {
     expect(redisCall).toHaveBeenCalledWith('PING');
     expect(storagePing).toHaveBeenCalledTimes(1);
 
-    // Sonde suivante dans la fenêtre de mémorisation : aucune dépendance n'est retouchée.
+    // Next probe within the memoization window: no dependency is touched again.
     const again = await request(app).get('/health/ready');
     expect(again.body.cached).toBe(true);
     expect(db.$queryRaw).toHaveBeenCalledTimes(1);
   });
 
-  it('répond 503 dès qu’une dépendance manque (un frontal doit pouvoir le lire)', async () => {
+  it('responds 503 as soon as a dependency is missing (a front end must be able to read it)', async () => {
     const degraded = express().use(
       '/health',
       buildHealthRouter({
@@ -93,12 +93,12 @@ describe('GET /health/ready — disponibilité', () => {
   });
 
   /**
-   * L'arrêt propre laisse finir les requêtes en cours pendant quelques secondes. Tant que
-   * la sonde répondait 200 pendant ce délai, le frontal continuait d'y router du trafic
-   * neuf — arrivé après la fermeture. `isShuttingDown` existait pour le dire et n'avait
-   * aucun appelant : le drainage était fait, mais jamais annoncé.
+   * The graceful shutdown lets in-flight requests finish for a few seconds. As long as the probe
+   * answered 200 during that delay, the front end kept routing new traffic to it, arriving after the
+   * closing. `isShuttingDown` existed to say so and had no caller: the draining was done, but never
+   * announced.
    */
-  it('répond 503 pendant l’arrêt, même dépendances saines', async () => {
+  it('responds 503 during shutdown, even with healthy dependencies', async () => {
     vi.mocked(isShuttingDown).mockReturnValue(true);
     const res = await request(app).get('/health/ready');
     expect(res.status).toBe(503);
@@ -106,11 +106,11 @@ describe('GET /health/ready — disponibilité', () => {
   });
 
   /**
-   * L'état est local et certain : rien ne justifie d'attendre une base qui va fermer.
-   * Routeur neuf, sinon le résultat mémorisé par les tests précédents suffirait à éviter
-   * l'appel et l'assertion passerait pour la mauvaise raison.
+   * The state is local and certain: nothing justifies waiting for a database that is about to close.
+   * A fresh router, otherwise the result memoized by the previous tests would suffice to avoid the
+   * call and the assertion would pass for the wrong reason.
    */
-  it('n’interroge aucune dépendance pendant l’arrêt', async () => {
+  it('queries no dependency during shutdown', async () => {
     vi.mocked(isShuttingDown).mockReturnValue(true);
     const sonde = vi.fn().mockResolvedValue(1);
     const neuf = express().use('/health', buildHealthRouter({ database: sonde }));
@@ -119,8 +119,8 @@ describe('GET /health/ready — disponibilité', () => {
     expect(sonde).not.toHaveBeenCalled();
   });
 
-  // La vivacité, elle, ne bouge pas : le process répond encore, c'est tout ce qu'elle dit.
-  it('laisse la vivacité répondre 200 pendant l’arrêt', async () => {
+  // Liveness, for its part, does not move: the process still answers, that is all it says.
+  it('lets liveness answer 200 during shutdown', async () => {
     vi.mocked(isShuttingDown).mockReturnValue(true);
     const res = await request(app).get('/health/live');
     expect(res.status).toBe(200);
@@ -129,7 +129,7 @@ describe('GET /health/ready — disponibilité', () => {
 });
 
 describe('GET /api/version', () => {
-  it('publie version, runtime et URL des sources (AGPL §13)', async () => {
+  it('publishes version, runtime and source URLs (AGPL §13)', async () => {
     const res = await request(app).get('/api/version');
     expect(res.status).toBe(200);
     expect(res.body.source).toBe('https://git.studio.tld/review');

@@ -5,15 +5,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 
 /**
- * A3-04 — la chaîne complète, sans mock au milieu.
+ * A3-04: the complete chain, with no mock in the middle.
  *
- * Les tests unitaires vérifient chaque maillon séparément : la route parle au service, le
- * service rend `allowInsecure`, le transport en tient compte. C'est exactement ainsi qu'un
- * réglage peut être écrit, testé et pourtant inopérant — ce qui était le cas : le schéma
- * Zod de la route le retirait du corps, et aucun test ne traversait la jonction.
+ * The unit tests check each link separately: the route talks to the service, the service returns
+ * `allowInsecure`, the transport takes it into account. This is exactly how a setting can be written,
+ * tested and yet be inoperative, which was the case: the route's Zod schema stripped it from the body,
+ * and no test crossed the junction.
  *
- * Ici, seuls les BORDS sont simulés (la base et nodemailer) : entre les deux, la vraie
- * route, le vrai `SmtpService` et le vrai `lib/mailer`.
+ * Here, only the EDGES are simulated (the database and nodemailer): in between, the real route, the real
+ * `SmtpService` and the real `lib/mailer`.
  */
 const { store, createTransport, transport } = vi.hoisted(() => ({
   store: { value: null as string | null },
@@ -70,7 +70,7 @@ import { errorHandler } from '../middleware/error';
 
 const app = express().use(express.json()).use('/api/studio', smtpRoutes).use(errorHandler);
 
-/** Options remises à nodemailer pour le dernier envoi. */
+/** Options handed to nodemailer for the last send. */
 const lastTransportOptions = () =>
   createTransport.mock.calls[createTransport.mock.calls.length - 1]![0] as { requireTLS?: boolean };
 
@@ -81,19 +81,19 @@ beforeEach(() => {
   transport.sendMail.mockResolvedValue({});
 });
 
-describe('de l’écran d’administration jusqu’au transport nodemailer', () => {
-  it('exige STARTTLS tant que l’administrateur n’a rien demandé', async () => {
+describe('from the administration screen to the nodemailer transport', () => {
+  it('requires STARTTLS as long as the administrator has asked for nothing', async () => {
     await request(app).put('/api/studio/smtp').send({ host: 'smtp.studio', port: 587 });
     const res = await request(app).post('/api/studio/smtp/test').send({ to: 'admin@studio.com' });
     expect(res.status).toBe(200);
     expect(lastTransportOptions().requireTLS).toBe(true);
   });
 
-  it('ouvre le dialogue en clair quand l’administrateur pose l’échappatoire', async () => {
+  it('opens the plaintext channel when the administrator sets the escape hatch', async () => {
     const put = await request(app)
       .put('/api/studio/smtp')
       .send({ host: 'relais.interne', port: 25, allowInsecure: true });
-    // Ce que l'écran relit doit dire le réglage : sinon il se pose sans se voir.
+    // What the screen reads back must state the setting: otherwise it would be set without being seen.
     expect(put.body.smtp.allowInsecure).toBe(true);
     expect((await request(app).get('/api/studio/smtp')).body.smtp.allowInsecure).toBe(true);
 
@@ -102,7 +102,7 @@ describe('de l’écran d’administration jusqu’au transport nodemailer', () 
     expect(lastTransportOptions()).toMatchObject({ host: 'relais.interne', port: 25 });
   });
 
-  it('referme le dialogue en clair au geste inverse', async () => {
+  it('closes the plaintext channel with the reverse action', async () => {
     await request(app).put('/api/studio/smtp').send({ host: 'relais.interne', allowInsecure: true });
     await request(app).put('/api/studio/smtp').send({ allowInsecure: false });
     expect((await request(app).get('/api/studio/smtp')).body.smtp.allowInsecure).toBe(false);

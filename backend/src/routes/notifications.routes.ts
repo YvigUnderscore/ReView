@@ -11,7 +11,7 @@ import { notFound } from '../lib/errors';
 const router = Router();
 router.use(authenticate);
 
-// GET /api/notifications — notifications de l'utilisateur + nombre non lues
+// GET /api/notifications — the user's notifications, plus the unread count
 router.get('/', async (req, res) => {
   const userId = req.user!.id;
   const [notifications, unread] = await Promise.all([
@@ -21,7 +21,7 @@ router.get('/', async (req, res) => {
   res.json({ notifications, unread });
 });
 
-// PATCH /api/notifications/:id/read — marque une notification comme lue
+// PATCH /api/notifications/:id/read — marks a notification as read
 router.patch(
   '/:id/read',
   validate({ params: z.object({ id: z.coerce.number().int() }) }),
@@ -34,7 +34,7 @@ router.patch(
   },
 );
 
-// POST /api/notifications/read-all — marque toutes comme lues
+// POST /api/notifications/read-all — marks all as read
 router.post('/read-all', async (req, res) => {
   await prisma.notification.updateMany({
     where: { userId: req.user!.id, isRead: false },

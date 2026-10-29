@@ -23,7 +23,7 @@ import * as EntityVisitService from '../services/EntityVisitService';
 const router = Router();
 router.use(authenticate);
 
-// Champs d'une séquence (création). PATCH les rend optionnels via `.partial()`.
+// Fields of a sequence (creation). PATCH makes them optional via `.partial()`.
 const sequenceBody = z.object({
   name: z.string().min(1).max(160),
   code: z.string().min(1).max(60),
@@ -31,13 +31,13 @@ const sequenceBody = z.object({
   settings: pipelineOverrideSchema.optional(),
 });
 /**
- * Ce que le PATCH accepte en plus (C3) : la fiche de la séquence. La description vient
- * d'être ajoutée au modèle ; le statut, lui, existait mais n'était écrit que par la
- * synchronisation ShotGrid — un studio autonome ne pouvait pas y toucher.
+ * What the PATCH accepts in addition (C3): the sequence's record. The description has just been added
+ * to the model; the status, for its part, existed but was only written by the ShotGrid sync, so a
+ * standalone studio could not touch it.
  *
- * La vignette n'en fait pas partie : elle s'écrit par `PUT /api/sequences/:id/thumbnail`,
- * qui reconstruit la clé et vérifie qu'elle désigne bien CETTE séquence. Reçue du client,
- * elle faisait présigner n'importe quel objet du bucket.
+ * The thumbnail is not part of it: it is written by `PUT /api/sequences/:id/thumbnail`, which rebuilds
+ * the key and checks that it designates THIS sequence. Received from the client, it let anyone presign
+ * any object in the bucket.
  */
 const sequencePatchBody = sequenceBody.partial().extend({
   description: z.string().max(2000).nullable().optional(),
@@ -47,12 +47,11 @@ const createSequenceBody = sequenceBody.extend({ projectId: z.number().int() });
 type CreateSequenceBody = z.infer<typeof createSequenceBody>;
 
 /**
- * GET /api/sequences?projectId=X — liste les séquences d'un projet
- * + `unsequencedShots` : nombre de shots du projet hors séquence (arbre sidebar).
+ * GET /api/sequences?projectId=X: lists the sequences of a project, plus `unsequencedShots`, the number
+ * of the project's shots outside any sequence (sidebar tree).
  *
- * La requête n'était pas bornée. L'arbre de la sidebar consomme la liste d'un bloc, d'où
- * une taille de page large par défaut — mais elle reste une page : `total` et `hasMore`
- * disent la vérité, et `page`/`pageSize` permettent de lire la suite.
+ * The request was not bounded. The sidebar tree consumes the list in one block, hence a wide default page
+ * size, but it remains a page: `total` and `hasMore` tell the truth, and `page`/`pageSize` allow reading on.
  */
 router.get(
   '/',
@@ -61,17 +60,17 @@ router.get(
     const projectId = Number(req.query.projectId);
     await assertProjectAccess(req, projectId);
     const p = readPagination(req.query, { defaultPageSize: MAX_PAGE_SIZE });
-    // `hiddenAt` : une séquence masquée disparaît de l'arbre comme des listes.
+    // `hiddenAt`: a hidden sequence disappears from the tree as from the lists.
     const where = { projectId, deletedAt: null, hiddenAt: null };
     const [sequences, total, unsequencedShots] = await Promise.all([
       prisma.sequence.findMany({
         where,
-        // Départage sur `id` : les séquences importées partagent toutes `order = 0`.
+        // Tie-break on `id`: the imported sequences all share `order = 0`.
         orderBy: [{ order: 'asc' }, { id: 'asc' }],
         ...pageArgs(p),
         include: {
           _count: { select: { shots: true } },
-          // Personnes responsables : la carte les montre en photos (comme un plan).
+          // Responsible people: the card shows them as photos (as for a shot).
           assignees: { select: CARD_ASSIGNEE_SELECT, orderBy: { id: 'asc' } },
         },
       }),
@@ -79,17 +78,16 @@ router.get(
       prisma.shot.count({ where: { projectId, sequenceId: null, deletedAt: null, hiddenAt: null } }),
     ]);
     const { pageCount, hasMore } = paginate(sequences, total, p);
-    // Pastille « attend une review » : ce qui attend une séquence, ce sont les
-    // livraisons publiées de ses plans qu'aucune décision n'a encore tranchées.
+    // "Awaiting review" badge: what a sequence awaits are the published deliveries of its shots that no
+    // decision has yet settled.
     const [awaiting, unseen] = await Promise.all([
       awaitingReviewBySequence(sequences.map((s) => s.id)),
-      // « Non consulté » (lot 9) : une séquence s'allume sur l'activité de ses plans —
-      // publier un média n'écrit rien sur la séquence, c'est tout le piège du lot.
+      // "Not viewed" (batch 9): a sequence lights up on the activity of its shots. Publishing a media
+      // writes nothing on the sequence: that is the whole trap of the batch.
       EntityVisitService.unseenBySequence(req.user!.id, sequences),
     ]);
-    // Vignette effective : celle qu'on a choisie, sinon celle du premier média publié d'un
-    // de ses plans — sans quoi la carte d'une séquence reste vide même une fois le travail
-    // commencé.
+    // Effective thumbnail: the one chosen by hand, otherwise that of the first published media of one of
+    // its shots, without which the card of a sequence stays empty even once the work has started.
     const signed = await SequenceService.signSequenceThumbnails(await signAssignees(sequences));
     res.json({
       sequences: signed.map((s) => ({
@@ -107,7 +105,7 @@ router.get(
   },
 );
 
-// POST /api/sequences (admin/superviseur)
+// POST /api/sequences (admin and supervisor)
 router.post(
   '/',
   requireRole(Role.ADMIN, Role.SUPERVISOR),
@@ -115,8 +113,8 @@ router.post(
   async (req, res) => {
     const { projectId, name, code, order, settings } = req.body as CreateSequenceBody;
     await assertProjectAccess(req, projectId);
-    await assertProjectWritable(projectId); // 38.B : projet archivé = lecture seule
-    await assertLocalCreationAllowed(projectId, 'sequence'); // 48 : ShotGrid mène
+    await assertProjectWritable(projectId); // 38.B: archived project = read-only
+    await assertLocalCreationAllowed(projectId, 'sequence'); // 48: ShotGrid leads
     if (await prisma.sequence.findUnique({ where: { projectId_code: { projectId, code } } })) {
       throw badRequest('A sequence with this code already exists', 'CODE_TAKEN');
     }
@@ -127,7 +125,7 @@ router.post(
   },
 );
 
-// POST /api/sequences/bulk — création en lot (admin/superviseur)
+// POST /api/sequences/bulk — bulk creation (admin and supervisor)
 router.post(
   '/bulk',
   requireRole(Role.ADMIN, Role.SUPERVISOR),
@@ -154,14 +152,14 @@ router.post(
   },
 );
 
-// GET /api/sequences/:id — fiche complète, celle que sert la page de séquence (C3).
+// GET /api/sequences/:id — full record, the one served by the sequence page (C3).
 router.get('/:id', validate({ params: z.object({ id: z.coerce.number().int() }) }), async (req, res) => {
   const sequence = await SequenceService.getDetail(Number(req.params.id), req.user!.id);
   await assertProjectAccess(req, sequence.projectId);
   res.json({ sequence });
 });
 
-// PATCH /api/sequences/:id (admin/superviseur)
+// PATCH /api/sequences/:id (admin and supervisor)
 router.patch(
   '/:id',
   requireRole(Role.ADMIN, Role.SUPERVISOR),
@@ -179,7 +177,7 @@ router.patch(
   },
 );
 
-// Corbeille : mise à la corbeille, restauration, purge — montage partagé (C3).
+// Trash: move to trash, restore, purge — shared mounting (C3).
 mountTrashRoutes(router, {
   entityType: 'Sequence',
   auditPrefix: 'SEQUENCE',

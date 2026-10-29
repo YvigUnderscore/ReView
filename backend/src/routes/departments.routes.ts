@@ -12,20 +12,19 @@ import { validate } from '../middleware/validate';
 import * as DepartmentService from '../services/DepartmentService';
 
 /**
- * Départements du pipeline (B1).
+ * Pipeline departments (B1).
  *
- * Le référentiel du studio se lit de tout compte authentifié — un département sert
- * d'étiquette partout (regroupements, filtres, badges) ; le pipe d'un projet, lui, se
- * filtre par appartenance comme toute lecture de projet. L'administration reste aux ADMIN
- * et SUPERVISOR, comme les autres réglages structurants du projet.
+ * The studio catalog can be read by any authenticated account: a department serves as a label
+ * everywhere (groupings, filters, badges); a project's pipe, on the other hand, is filtered by
+ * membership like any project read. Administration remains with ADMIN and SUPERVISOR, like the other
+ * structuring project settings.
  */
 const router = Router();
 
 /**
- * ⚠ Ce routeur est monté sur `/api` (il porte plusieurs préfixes) : un `router.use(authenticate)`
- * s'appliquerait à **toute** requête traversant ce point de montage, routes publiques
- * comprises — le partage client répondait 401 au lieu de servir la page. L'authentification
- * est donc posée route par route.
+ * ⚠ This router is mounted on `/api` (it carries several prefixes): a `router.use(authenticate)` would
+ * apply to **every** request crossing this mount point, public routes included: client sharing would
+ * answer 401 instead of serving the page. Authentication is therefore set route by route.
  */
 const auth = authenticate;
 
@@ -43,16 +42,15 @@ const departmentBody = z.object({
 });
 
 /**
- * Départements applicables à un projet : les siens, sinon ceux du studio.
+ * Departments applicable to a project: its own, otherwise those of the studio.
  *
- * Chaque étape porte `writable` — la personne peut-elle y créer une tâche ? C'est ce qui
- * permet à l'écran de proposer deux entrées plutôt que douze, sous la politique de
- * département (cf. `lib/taskDepartmentPolicy`). Le drapeau est **consultatif** : le serveur
- * revérifie à l'écriture, un client ne se contrôle pas lui-même.
+ * Each step carries `writable`: can the person create a task there? This is what lets the screen offer
+ * two entries rather than twelve, under the department policy (cf. `lib/taskDepartmentPolicy`). The flag
+ * is **advisory**: the server re-checks on write, a client does not check itself.
  *
- * Lecture filtrée par appartenance (A5-06) : la réponse est propre au projet ET au
- * lecteur, elle n'a rien d'un référentiel public. Le pipe d'un projet dont on n'est pas
- * membre ne se lit plus ici — le référentiel du studio, lui, reste ouvert ci-dessous.
+ * Read filtered by membership (A5-06): the response is specific to the project AND to the reader, it has
+ * nothing of a public catalog. The pipe of a project one is not a member of is no longer read here; the
+ * studio catalog, for its part, remains open below.
  */
 router.get('/projects/:projectId/departments', auth, validate({ params: projectParam }), async (req, res) => {
   const projectId = Number(req.params.projectId);
@@ -60,7 +58,7 @@ router.get('/projects/:projectId/departments', auth, validate({ params: projectP
   res.json({ departments: await DepartmentService.listForProjectWithRights(projectId, req.user!) });
 });
 
-/** Référentiel du studio, celui que les projets héritent par défaut. */
+/** Studio catalog: the one that projects inherit by default. */
 router.get('/departments', auth, async (_req, res) => {
   const project = await prisma.project.findFirst({ select: { studioId: true } });
   res.json({ departments: project ? await DepartmentService.listForStudio(project.studioId) : [] });
@@ -98,11 +96,11 @@ router.patch(
 );
 
 /**
- * Image d'un département : dépôt direct dans MinIO, puis enregistrement de la clé.
+ * Image of a department: direct upload to MinIO, then recording of the key.
  *
- * Même chemin qu'une vignette d'entité — c'est la seule façon de ne pas faire transiter
- * l'image par le serveur d'API, et la clé est reconstruite côté serveur pour qu'un
- * appelant ne puisse pas faire pointer un département vers un objet quelconque du bucket.
+ * Same path as an entity thumbnail: that is the only way not to route the image through the API server,
+ * and the key is rebuilt server-side so that a caller cannot point a department at an arbitrary object
+ * in the bucket.
  */
 router.post(
   '/departments/:id/image/presign',
@@ -135,8 +133,8 @@ router.put('/departments/order', auth, manage, validate({ body: idsBody }), asyn
 });
 
 /**
- * Départements que traverse une entité — le gabarit de ses tâches. La liste envoyée
- * remplace la précédente : l'appelant décrit l'état voulu, pas un delta.
+ * Departments that an entity goes through: the template of its tasks. The list sent replaces the
+ * previous one: the caller describes the desired state, not a delta.
  */
 for (const [segment, holder] of [
   ['assets', 'asset'],
@@ -155,11 +153,11 @@ for (const [segment, holder] of [
   );
 
   /**
-   * Cocher ou décocher un département sans réécrire la liste entière.
+   * Ticks or unticks a department without rewriting the whole list.
    *
-   * Le `PUT` remplace tout : deux clics rapides dans un menu, et le second repart de la
-   * liste d'avant le premier. La bascule au clic droit demande un ajout et un retrait
-   * ciblés, qui ne peuvent pas se marcher dessus.
+   * The `PUT` replaces everything: two quick clicks in a menu, and the second starts again from the list
+   * before the first. The right-click toggle requires a targeted addition and removal, which cannot step
+   * on each other.
    */
   router.patch(
     `/${segment}/:id/departments`,
@@ -181,9 +179,9 @@ for (const [segment, holder] of [
   );
 }
 
-// `PUT /users/me/departments` a été RETIRÉ (CP-SEC phase 50) : se poser un département donnait
-// l'écriture sur ses tâches sous la politique par département. Ne pas le remettre — le pourquoi
-// et les deux chemins légitimes sont dans `DOCUMENTATION/infrastructure/security.md`.
+// `PUT /users/me/departments` was REMOVED (CP-SEC phase 50): self-assigning a department gave write access
+// to its tasks under the per-department policy. Do not restore it: the reasons and the two legitimate
+// paths are in `DOCUMENTATION/infrastructure/security.md`.
 router.put(
   '/users/:id/departments',
   auth,

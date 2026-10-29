@@ -4,42 +4,42 @@
 import { isUsdModel } from './modelConvert';
 
 /**
- * Choix de la **couche racine** d'une scène USD livrée en archive (Phase 45, 45.A). Logique **pure
- * et testable** : le worker fournit la liste des fichiers extraits et, si l'analyseur `pxr` est
- * disponible, le graphe des dépendances entre couches ; cette fonction désigne la couche à ouvrir.
+ * Choice of the **root layer** of a USD scene delivered as an archive (Phase 45, 45.A). Pure and
+ * testable logic: the worker provides the list of extracted files and, if the `pxr` analyzer is
+ * available, the dependency graph between layers; this function designates the layer to open.
  *
- * Pourquoi ce n'est pas trivial : une livraison USD réaliste contient plusieurs fichiers `.usd*` —
- * une couche racine ASCII (`scene.usda`) qui référence des payloads binaires (`payload/body.usdc`),
- * eux-mêmes référençant des matériaux. Le classement par extension de `pickModelFile` place `.usdc`
- * avant `.usda` : sans ce module, on ouvrait un **payload** au lieu de la racine, et la review
- * n'affichait qu'un morceau de la scène.
+ * Why it is not trivial: a realistic USD delivery contains several `.usd*` files: an ASCII root
+ * layer (`scene.usda`) that references binary payloads (`payload/body.usdc`), themselves
+ * referencing materials. The extension-based ranking of `pickModelFile` places `.usdc` before
+ * `.usda`: without this module, we opened a **payload** instead of the root, and the review only
+ * displayed a piece of the scene.
  *
- * Critère principal : la racine est la couche **qu'aucune autre couche de l'archive ne référence**.
- * À défaut de graphe (analyseur absent) ou en cas d'égalité, on départage par heuristiques stables.
+ * Main criterion: the root is the layer **that no other layer of the archive references**.
+ * Without a graph (analyzer absent) or in case of a tie, we break ties with stable heuristics.
  */
 
-/** Dépendances USD d'une couche, telles que rapportées par l'analyseur (`analyze_usd.py`). */
+/** USD dependencies of a layer, as reported by the analyzer (`analyze_usd.py`). */
 export interface UsdLayerDep {
-  /** Couche source (chemin dans l'archive, absolu ou relatif). */
+  /** Source layer (path in the archive, absolute or relative). */
   layer: string;
-  /** Couches USD qu'elle référence : sublayers, references, payloads, clips. */
+  /** USD layers it references: sublayers, references, payloads, clips. */
   deps: string[];
 }
 
-/** Noms de fichier conventionnels pour une couche racine, du plus au moins probable. */
+/** Conventional file names for a root layer, from most to least likely. */
 export const USD_ROOT_HINTS = ['scene', 'root', 'main', 'asset', 'world', 'shot', 'stage'];
 
-/** Chemin en séparateurs POSIX (les archives mélangent `/` et `\`). */
+/** POSIX-separated path (archives mix `/` and `\`). */
 const toPosix = (p: string): string => p.replace(/\\/g, '/');
 
-/** Nom de fichier sans extension, en minuscules. */
+/** File name without extension, in lowercase. */
 function stemOf(path: string): string {
   const base = toPosix(path).split('/').pop() ?? '';
   const dot = base.lastIndexOf('.');
   return (dot === -1 ? base : base.slice(0, dot)).toLowerCase();
 }
 
-/** Extension (avec le point) en minuscules. */
+/** Extension (with the dot), in lowercase. */
 function extOf(path: string): string {
   const base = toPosix(path).split('/').pop() ?? '';
   const dot = base.lastIndexOf('.');
@@ -47,9 +47,9 @@ function extOf(path: string): string {
 }
 
 /**
- * Retrouve, parmi les candidats, celui que désigne un chemin de dépendance. L'analyseur peut
- * rapporter des chemins relatifs à la couche référençante alors que les candidats sont absolus :
- * on accepte l'égalité exacte ou la correspondance en **suffixe de segments**.
+ * Finds, among the candidates, the one designated by a dependency path. The analyzer may report
+ * paths relative to the referencing layer while the candidates are absolute: we accept an exact
+ * match or a match on **trailing segments**.
  */
 function resolveDep(dep: string, candidates: string[]): string | null {
   const needle = toPosix(dep).replace(/^\.\//, '');
@@ -61,9 +61,9 @@ function resolveDep(dep: string, candidates: string[]): string | null {
 }
 
 /**
- * Désigne la couche racine parmi les fichiers USD d'une archive, ou `null` si l'archive n'en
- * contient aucun. `deps` (optionnel) est le graphe rapporté par l'analyseur ; `archiveName` est le
- * nom du fichier uploadé, souvent identique à celui de la couche racine.
+ * Designates the root layer among the USD files of an archive, or `null` if the archive contains
+ * none. `deps` (optional) is the graph reported by the analyzer; `archiveName` is the name of the
+ * uploaded file, often identical to that of the root layer.
  */
 export function pickUsdRootLayer(
   files: string[],
@@ -72,29 +72,29 @@ export function pickUsdRootLayer(
   const candidates = files.filter((f) => isUsdModel(extOf(f)));
   if (candidates.length <= 1) return candidates[0] ?? null;
 
-  // Couches référencées par une AUTRE couche de l'archive : ce ne sont pas des racines.
+  // Layers referenced by ANOTHER layer of the archive: these are not roots.
   const referenced = new Set<string>();
   for (const { layer, deps } of opts.deps ?? []) {
     const from = resolveDep(layer, candidates);
     for (const dep of deps) {
       const target = resolveDep(dep, candidates);
-      // Une couche qui se référence elle-même (cycle) ne se disqualifie pas comme racine.
+      // A layer that references itself (cycle) is not disqualified as a root.
       if (target && target !== from) referenced.add(target);
     }
   }
 
-  // Toutes référencées (cycle de composition) → aucun candidat n'est éliminé.
+  // All referenced (composition cycle): no candidate is eliminated.
   const roots = candidates.filter((c) => !referenced.has(c));
   const pool = roots.length > 0 ? roots : candidates;
 
   const archiveStem = opts.archiveName ? stemOf(opts.archiveName) : null;
   const rank = (path: string): [number, number, number, string] => [
-    toPosix(path).split('/').length, // profondeur : une racine vit au plus haut de l'arborescence
+    toPosix(path).split('/').length, // depth: a root sits at the top of the tree
     archiveStem && stemOf(path) === archiveStem ? 0 : 1,
     USD_ROOT_HINTS.indexOf(stemOf(path)) === -1
       ? USD_ROOT_HINTS.length
       : USD_ROOT_HINTS.indexOf(stemOf(path)),
-    toPosix(path), // départage alphabétique : choix déterministe d'une exécution à l'autre
+    toPosix(path), // alphabetical tie-break: deterministic choice from one run to the next
   ];
 
   const sorted = [...pool].sort((a, b) => {

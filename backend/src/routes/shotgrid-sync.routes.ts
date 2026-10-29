@@ -17,14 +17,14 @@ import { resolveConflict } from '../services/shotgrid/ShotgridConflictService';
 import { listImportableVersions, pullVersions } from '../services/shotgrid/ShotgridVersionSync';
 import { SyncJournal } from '../services/shotgrid/ShotgridSyncJournal';
 
-/** Synchronisations, journal, comparaison et import de publishes à la carte. */
+/** Syncs, journal, comparison, and on-demand import of publishes. */
 const router = Router();
 router.use(authenticate);
 
 const projectParam = z.object({ projectId: z.coerce.number().int().positive() });
 const runParam = z.object({ runId: z.coerce.number().int().positive() });
 
-/** Lance une synchronisation. `full` reprend tout, `reconcile` la fenêtre de rattrapage. */
+/** Starts a sync. `full` takes everything, `reconcile` the catch-up window. */
 router.post(
   '/projects/:projectId/sync',
   validate({
@@ -84,12 +84,12 @@ router.get(
   },
 );
 
-/** Arbitrage d'un conflit laissé en attente (politique manuelle). */
+/** Resolution of a conflict left pending (manual policy). */
 /**
- * Arbitrage d'un conflit. Le journal ne se contente pas d'être classé : la décision
- * s'applique. « ShotGrid » relit l'entité distante et l'écrit par-dessus la locale ;
- * « ReView » pousse la valeur locale vers le site. Marquer la ligne résolue sans rien
- * faire laisserait l'écart en place, ce qui est pire que de ne rien proposer.
+ * Resolution of a conflict. The journal does not merely classify it: the decision is applied. "ShotGrid"
+ * re-reads the remote entity and writes it over the local one; "ReView" pushes the local value to the site.
+ * Marking the row resolved without doing anything would leave the gap in place, which is worse than
+ * offering nothing.
  */
 router.post(
   '/logs/:logId/resolve',
@@ -121,8 +121,8 @@ router.post(
 );
 
 /**
- * Correspondances du projet — l'interface en tire les liens directs vers les fiches
- * ShotGrid. Une requête par projet plutôt qu'une par carte affichée.
+ * The project's matches: the interface draws direct links to the ShotGrid records from them.
+ * One request per project rather than one per displayed card.
  */
 router.get('/projects/:projectId/links', validate({ params: projectParam }), async (req, res) => {
   const projectId = Number(req.params.projectId);
@@ -133,7 +133,7 @@ router.get('/projects/:projectId/links', validate({ params: projectParam }), asy
 });
 
 /**
- * Comparaison des deux côtés. Aucune écriture : elle sert à décider, pas à corriger.
+ * Comparison of both sides. No write: it serves to decide, not to correct.
  */
 router.get('/projects/:projectId/diff', validate({ params: projectParam }), async (req, res) => {
   const projectId = Number(req.params.projectId);
@@ -141,7 +141,7 @@ router.get('/projects/:projectId/diff', validate({ params: projectParam }), asyn
   res.json({ diff: await buildDiff(projectId) });
 });
 
-/** Publishes ShotGrid disponibles, importés ou non. */
+/** Available ShotGrid publishes, imported or not. */
 router.get('/projects/:projectId/versions', validate({ params: projectParam }), async (req, res) => {
   const projectId = Number(req.params.projectId);
   await assertProjectManager(req.user!, projectId, { allowMembers: true });
@@ -161,7 +161,7 @@ router.get('/projects/:projectId/versions', validate({ params: projectParam }), 
   }
 });
 
-/** Import à la carte : la sélection passe outre le filtre de statuts. */
+/** On-demand import: the selection overrides the status filter. */
 router.post(
   '/projects/:projectId/import-versions',
   validate({

@@ -18,9 +18,9 @@ import {
 } from './splatPoints';
 
 /**
- * Les fixtures sont fabriquées à la main : un PLY gaussien minimal (positions + `f_dc_*` +
- * `opacity`) et un `.splat` de 32 octets par point. Ce sont exactement les deux formats que
- * le rasteriseur de vignettes prétend savoir lire — s'ils cassent, la vignette est fausse.
+ * Fixtures are hand-built: a minimal Gaussian PLY (positions + `f_dc_*` +
+ * `opacity`) and a 32-byte-per-point `.splat`. These are exactly the two formats the
+ * thumbnail rasterizer claims to read. If they break, the thumbnail is wrong.
  */
 
 const PLY_PROPS = ['x', 'y', 'z', 'f_dc_0', 'f_dc_1', 'f_dc_2', 'opacity'];
@@ -65,7 +65,7 @@ afterAll(async () => {
 });
 
 describe('isSplatPreviewSupported', () => {
-  it('n’accepte que les conteneurs réellement lisibles', () => {
+  it('accepts only containers that are actually readable', () => {
     expect(isSplatPreviewSupported('.ply')).toBe(true);
     expect(isSplatPreviewSupported('.SPLAT')).toBe(true);
     expect(isSplatPreviewSupported('.spz')).toBe(false);
@@ -73,7 +73,7 @@ describe('isSplatPreviewSupported', () => {
 });
 
 describe('parsePlyHeader', () => {
-  it('décrit l’enregistrement d’un PLY gaussien binaire', () => {
+  it('describes the record layout of a binary Gaussian PLY', () => {
     const parsed = parsePlyHeader(gaussianPly([[0, 0, 0, 0, 0, 0, 4]]));
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
@@ -84,7 +84,7 @@ describe('parsePlyHeader', () => {
     expect(parsed.layout.alphaScale).toBe('logit');
   });
 
-  it('refuse, avec un motif, ce dont la lecture serait fausse', () => {
+  it('rejects, with a reason, input that would be misread', () => {
     const ascii = Buffer.from('ply\nformat ascii 1.0\nelement vertex 1\nproperty float x\nend_header\n');
     expect(parsePlyHeader(ascii)).toEqual({ ok: false, reason: 'ascii-ply' });
 
@@ -102,14 +102,14 @@ describe('parsePlyHeader', () => {
 });
 
 describe('readPoint', () => {
-  it('convertit un coefficient SH degré 0 en couleur et une opacité logit en alpha', () => {
+  it('converts a degree-0 SH coefficient to a color and a logit opacity to alpha', () => {
     const ply = gaussianPly([[1, 2, 3, 1.7724, -1.7724, 0, 4]]);
     const parsed = parsePlyHeader(ply);
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
     const p = readPoint(ply, parsed.layout.dataOffset, parsed.layout);
     expect([p.x, p.y, p.z]).toEqual([1, 2, 3]);
-    // 0.5 + C0 * 1.7724 = 1.0 → 255 ; le coefficient opposé retombe à 0.
+    // 0.5 + C0 * 1.7724 = 1.0 → 255; the opposite coefficient clamps to 0.
     expect(p.r).toBe(255);
     expect(p.b).toBe(128);
     expect(p.g).toBe(0);
@@ -118,7 +118,7 @@ describe('readPoint', () => {
 });
 
 describe('samplingStep', () => {
-  it('ne sous-échantillonne que ce qui dépasse le budget', () => {
+  it('only downsamples when the count exceeds the budget', () => {
     expect(samplingStep(500, 1000)).toBe(1);
     expect(samplingStep(2500, 1000)).toBe(3);
     expect(samplingStep(1000, 0)).toBe(1);
@@ -126,10 +126,10 @@ describe('samplingStep', () => {
 });
 
 describe('collectPoints', () => {
-  it('retient un point sur `step` et écarte les gaussiennes transparentes', async () => {
+  it('keeps one point per `step` and drops transparent Gaussians', async () => {
     const rows = [
       [0, 0, 0, 0, 0, 0, 5],
-      [1, 0, 0, 0, 0, 0, -8], // transparente : écartée
+      [1, 0, 0, 0, 0, 0, -8], // transparent: dropped
       [2, 0, 0, 0, 0, 0, 5],
       [3, 0, 0, 0, 0, 0, 5],
     ];
@@ -146,7 +146,7 @@ describe('collectPoints', () => {
     expect(all.count).toBe(3);
     expect(Array.from(all.positions.filter((_, i) => i % 3 === 0))).toEqual([0, 2, 3]);
 
-    // Budget de 2 points sur 4 enregistrements → un sur deux, dont un transparent écarté.
+    // Budget of 2 points out of 4 records → every other one, dropping the transparent record.
     const sampled = await collectPoints(
       Readable.from([ply.subarray(parsed.layout.dataOffset)]),
       parsed.layout,
@@ -156,7 +156,7 @@ describe('collectPoints', () => {
     expect(Array.from(sampled.positions.filter((_, i) => i % 3 === 0))).toEqual([0, 2]);
   });
 
-  it('recolle les enregistrements coupés entre deux morceaux du flux', async () => {
+  it('stitches records split across two chunks of the stream', async () => {
     const ply = gaussianPly([
       [0, 0, 0, 0, 0, 0, 5],
       [1, 1, 1, 0, 0, 0, 5],
@@ -165,7 +165,7 @@ describe('collectPoints', () => {
     expect(parsed.ok).toBe(true);
     if (!parsed.ok) return;
     const body = ply.subarray(parsed.layout.dataOffset);
-    // Découpe volontairement au milieu du premier enregistrement.
+    // Deliberately split in the middle of the first record.
     const chunks = [body.subarray(0, 13), body.subarray(13, 40), body.subarray(40)];
     const cloud = await collectPoints(Readable.from(chunks), parsed.layout, 100);
     expect(cloud.count).toBe(2);
@@ -174,7 +174,7 @@ describe('collectPoints', () => {
 });
 
 describe('splatLayout', () => {
-  it('n’accepte qu’une taille multiple de 32 octets', () => {
+  it('accepts only a size that is a multiple of 32 bytes', () => {
     expect(splatLayout(64)?.count).toBe(2);
     expect(splatLayout(65)).toBeNull();
     expect(splatLayout(0)).toBeNull();
@@ -182,7 +182,7 @@ describe('splatLayout', () => {
 });
 
 describe('readSplatCloud', () => {
-  it('lit un PLY gaussien depuis le disque', async () => {
+  it('reads a Gaussian PLY from disk', async () => {
     const path = join(root, 'scene.ply');
     const ply = gaussianPly([
       [0, 0, 0, 1.7724, 0, 0, 5],
@@ -196,7 +196,7 @@ describe('readSplatCloud', () => {
     expect(read.cloud.colors[0]).toBe(255);
   });
 
-  it('lit un `.splat` brut de 32 octets par point', async () => {
+  it('reads a raw `.splat` with 32 bytes per point', async () => {
     const path = join(root, 'scene.splat');
     const buf = splatFile([
       [0, 0, 0, 10, 20, 30, 255],
@@ -210,7 +210,7 @@ describe('readSplatCloud', () => {
     expect(Array.from(read.cloud.colors.subarray(0, 3))).toEqual([10, 20, 30]);
   });
 
-  it('rend un motif plutôt que de lever, pour tout ce qui n’est pas lisible', async () => {
+  it('returns a reason instead of throwing for anything unreadable', async () => {
     const path = join(root, 'broken.ply');
     await writeFile(path, Buffer.from('not a ply at all'));
     await expect(readSplatCloud(path, '.ply', 16, 100)).resolves.toEqual({
@@ -223,7 +223,7 @@ describe('readSplatCloud', () => {
     });
   });
 
-  it('signale un nuage entièrement transparent au lieu de produire une image vide', async () => {
+  it('reports a fully transparent cloud instead of producing an empty image', async () => {
     const path = join(root, 'ghost.ply');
     const ply = gaussianPly([[0, 0, 0, 0, 0, 0, -9]]);
     await writeFile(path, ply);

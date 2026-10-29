@@ -5,16 +5,15 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 
 /**
- * A3-04 — l'échappatoire du relais interne sans TLS doit être ATTEIGNABLE.
+ * A3-04: the internal relay's escape hatch without TLS must be REACHABLE.
  *
- * `SmtpService` sait lire `allowInsecure` et `lib/mailer` sait en tenir compte, mais le
- * schéma Zod de cette route ne le déclarait pas : `z.object` retire les champs inconnus,
- * le réglage n'arrivait donc jamais jusqu'à la base. Conséquence d'exploitation : un studio
- * dont le relais n'annonce pas STARTTLS ne pouvait plus envoyer un seul mail — invitations
- * comprises — sans aucun recours par l'API.
+ * `SmtpService` can read `allowInsecure` and `lib/mailer` takes it into account, but this route's Zod
+ * schema did not declare it: `z.object` strips unknown fields, so the setting never reached the database.
+ * Operational consequence: a studio whose relay does not announce STARTTLS could no longer send a single
+ * email, invitations included, without any recourse through the API.
  *
- * Second volet : quand le mot de passe stocké ne se déchiffre plus, l'envoi est refusé
- * (échec fermé, correct) — mais l'administrateur doit lire POURQUOI, pas « non configuré ».
+ * Second part: when the stored password can no longer be decrypted, sending is refused (fail closed,
+ * correct), but the administrator must read WHY, not "not configured".
  */
 const { smtp, audit, sendMail } = vi.hoisted(() => ({
   smtp: { setConfig: vi.fn(), getPublicConfig: vi.fn() },
@@ -48,7 +47,7 @@ import { errorHandler } from '../middleware/error';
 
 const app = express().use(express.json()).use('/api/studio', smtpRoutes).use(errorHandler);
 
-/** Configuration publique par défaut : relais sain, mot de passe lisible. */
+/** Default public configuration: healthy relay, readable password. */
 const publicConfig = (over: Record<string, unknown> = {}) => ({
   host: 'smtp.studio',
   port: 587,
@@ -69,8 +68,8 @@ beforeEach(() => {
   sendMail.mockResolvedValue(true);
 });
 
-describe('PUT /api/studio/smtp — échappatoire du relais interne (A3-04)', () => {
-  it('transmet allowInsecure jusqu’au service au lieu de le laisser stripper par Zod', async () => {
+describe('PUT /api/studio/smtp — internal relay escape hatch (A3-04)', () => {
+  it('passes allowInsecure on to the service instead of letting Zod strip it', async () => {
     const res = await request(app)
       .put('/api/studio/smtp')
       .send({ host: 'relais.interne', port: 25, allowInsecure: true });
@@ -80,23 +79,23 @@ describe('PUT /api/studio/smtp — échappatoire du relais interne (A3-04)', () 
     );
   });
 
-  it('transmet aussi la remise en sécurité (allowInsecure: false)', async () => {
+  it('also passes the return to security (allowInsecure: false)', async () => {
     await request(app).put('/api/studio/smtp').send({ allowInsecure: false });
     expect(smtp.setConfig).toHaveBeenCalledWith(expect.objectContaining({ allowInsecure: false }));
   });
 
-  it('laisse le réglage en place quand la requête ne le mentionne pas', async () => {
+  it('leaves the setting in place when the request does not mention it', async () => {
     await request(app).put('/api/studio/smtp').send({ host: 'smtp.studio' });
     expect((smtp.setConfig.mock.calls[0]![0] as Record<string, unknown>).allowInsecure).toBeUndefined();
   });
 
-  it('refuse une valeur qui n’est pas un booléen', async () => {
+  it('rejects a value that is not a boolean', async () => {
     const res = await request(app).put('/api/studio/smtp').send({ allowInsecure: 'oui' });
     expect(res.status).toBe(400);
     expect(smtp.setConfig).not.toHaveBeenCalled();
   });
 
-  it('inscrit le passage en clair au journal d’audit', async () => {
+  it('records the switch to plaintext in the audit log', async () => {
     await request(app).put('/api/studio/smtp').send({ host: 'relais.interne', allowInsecure: true });
     expect(audit.logAudit).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -106,7 +105,7 @@ describe('PUT /api/studio/smtp — échappatoire du relais interne (A3-04)', () 
     );
   });
 
-  it('laisse une trace pino au moment de la décision', async () => {
+  it('leaves a pino trace at the time of the decision', async () => {
     smtp.setConfig.mockResolvedValue(publicConfig({ allowInsecure: true, host: 'relais.interne' }));
     await request(app).put('/api/studio/smtp').send({ host: 'relais.interne', allowInsecure: true });
     expect(logger.warn).toHaveBeenCalledWith(
@@ -115,12 +114,12 @@ describe('PUT /api/studio/smtp — échappatoire du relais interne (A3-04)', () 
     );
   });
 
-  it('ne dit rien quand le relais reste chiffré', async () => {
+  it('says nothing when the relay stays encrypted', async () => {
     await request(app).put('/api/studio/smtp').send({ host: 'smtp.studio' });
     expect(logger.warn).not.toHaveBeenCalled();
   });
 
-  it('n’écrit jamais le mot de passe dans le journal d’audit', async () => {
+  it('never writes the password in the audit log', async () => {
     await request(app).put('/api/studio/smtp').send({ host: 'smtp.studio', password: 'tres-secret' });
     const { metadata } = audit.logAudit.mock.calls[0]![0] as { metadata: Record<string, unknown> };
     expect(JSON.stringify(metadata)).not.toContain('tres-secret');
@@ -128,8 +127,8 @@ describe('PUT /api/studio/smtp — échappatoire du relais interne (A3-04)', () 
   });
 });
 
-describe('POST /api/studio/smtp/test — dire pourquoi l’envoi ne part pas (A3-03)', () => {
-  it('nomme le mot de passe illisible au lieu de « non configuré »', async () => {
+describe('POST /api/studio/smtp/test — saying why the send does not go out (A3-03)', () => {
+  it('names the unreadable password instead of "not configured"', async () => {
     sendMail.mockResolvedValue(false);
     smtp.getPublicConfig.mockResolvedValue(publicConfig({ passwordUnreadable: true }));
     const res = await request(app).post('/api/studio/smtp/test').send({ to: 'admin@studio.com' });
@@ -137,14 +136,14 @@ describe('POST /api/studio/smtp/test — dire pourquoi l’envoi ne part pas (A3
     expect(res.body.code).toBe('SMTP_PASSWORD_UNREADABLE');
   });
 
-  it('garde le message générique pour une panne de livraison ordinaire', async () => {
+  it('keeps the generic message for an ordinary delivery failure', async () => {
     sendMail.mockResolvedValue(false);
     const res = await request(app).post('/api/studio/smtp/test').send({ to: 'admin@studio.com' });
     expect(res.status).toBe(400);
     expect(res.body.code).toBe('SMTP_SEND_FAILED');
   });
 
-  it('répond 200 quand le message part', async () => {
+  it('responds 200 when the message goes out', async () => {
     const res = await request(app).post('/api/studio/smtp/test').send({ to: 'admin@studio.com' });
     expect(res.status).toBe(200);
     expect(res.body.sent).toBe(true);

@@ -12,20 +12,19 @@ import { logAudit } from '../services/AuditService';
 import { enqueueOcioBake } from '../workers/ocio/queue';
 
 /**
- * Catalogue couleur OCIO (39.B). Récupération des configs ACES depuis les releases GitHub de
- * l'ASWF, installation dans MinIO, config par défaut (ACES 1.3). Écriture réservée ADMIN.
- * Lecture des configs installées ouverte aux authentifiés (les projets choisissent leur
- * display/view). Monté sur `/api/studio/ocio`.
+ * OCIO colour catalogue (39.B). Retrieves the ACES configs from the ASWF's GitHub releases, installs them
+ * into MinIO, and sets the default config (ACES 1.3). Writes reserved to ADMIN. Reading the installed
+ * configs is open to authenticated users (projects choose their display and view). Mounted on `/api/studio/ocio`.
  */
 const router = Router();
 router.use(authenticate);
 
-// GET /api/studio/ocio/configs — configs installées (+ URL de lecture).
+// GET /api/studio/ocio/configs — installed configs (+ read URLs).
 router.get('/configs', async (_req, res) => {
   res.json({ configs: await OcioService.listInstalled() });
 });
 
-// GET /api/studio/ocio/configs/:id/displays — displays/views d'une config (choix projet).
+// GET /api/studio/ocio/configs/:id/displays — displays and views of a config (project choice).
 router.get(
   '/configs/:id/displays',
   validate({ params: z.object({ id: z.string().uuid() }) }),
@@ -34,9 +33,9 @@ router.get(
   },
 );
 
-// GET /api/studio/ocio/configs/:id/lut — LUT 3D cuite d'un couple display/view (viewer).
-// Cuisson paresseuse du repli colorimétrique si elle manque ; `url: null` si seule la voie
-// OCIO peut la produire (vue tone-mappée + outillage absent du worker).
+// GET /api/studio/ocio/configs/:id/lut — baked 3D LUT of a display/view pair (viewer).
+// Lazy baking of the colorimetric fallback if it is missing; `url: null` if only the OCIO path can
+// produce it (tone-mapped view, with the tooling absent from the worker).
 router.get(
   '/configs/:id/lut',
   validate({
@@ -49,7 +48,7 @@ router.get(
   },
 );
 
-// POST /api/studio/ocio/configs/:id/bake — (re)cuisson des LUT de la config (admin).
+// POST /api/studio/ocio/configs/:id/bake — (re)bakes the LUTs of the config (admin).
 router.post(
   '/configs/:id/bake',
   requireRole(Role.ADMIN),
@@ -66,12 +65,12 @@ router.post(
   },
 );
 
-// GET /api/studio/ocio/releases — releases ACES disponibles (admin ; fetch GitHub).
+// GET /api/studio/ocio/releases — available ACES releases (admin; GitHub fetch).
 router.get('/releases', requireRole(Role.ADMIN), async (_req, res) => {
   res.json({ releases: await OcioService.listReleases() });
 });
 
-// POST /api/studio/ocio/install — installe un asset de release (admin).
+// POST /api/studio/ocio/install — installs a release asset (admin).
 router.post(
   '/install',
   requireRole(Role.ADMIN),
@@ -89,7 +88,7 @@ router.post(
   },
 );
 
-// PUT /api/studio/ocio/configs/:id/default — définit la config par défaut (admin).
+// PUT /api/studio/ocio/configs/:id/default — sets the default config (admin).
 router.put(
   '/configs/:id/default',
   requireRole(Role.ADMIN),
@@ -102,7 +101,7 @@ router.put(
   },
 );
 
-// DELETE /api/studio/ocio/configs/:id — supprime une config installée (admin).
+// DELETE /api/studio/ocio/configs/:id — deletes an installed config (admin).
 router.delete(
   '/configs/:id',
   requireRole(Role.ADMIN),

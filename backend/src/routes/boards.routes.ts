@@ -22,12 +22,11 @@ import {
 } from '../services/BoardService';
 
 /**
- * Boards mood/reference (9.B) — un board par Projet et un board par Asset (Excalidraw).
- * Le document est validé par un schéma borné, les images vivent dans MinIO et l'écriture
- * est conditionnée à l'`updatedAt` chargé par l'éditeur (409 `BOARD_CONFLICT` sinon) :
- * toute la mécanique est dans `services/BoardService`. Il exista un journal `BoardChange`,
- * retiré en 2026-08 — une ligne par sauvegarde autosauvée (1,2 s de débounce) que rien
- * ne relisait jamais.
+ * Mood and reference boards (9.B): one board per project and one board per asset (Excalidraw).
+ * The document is validated by a bounded schema, images live in MinIO, and the write is conditioned
+ * on the `updatedAt` loaded by the editor (409 `BOARD_CONFLICT` otherwise): all the mechanics are in
+ * `services/BoardService`. There used to be a `BoardChange` log, removed in 2026-08: one line per
+ * autosave (1.2 s debounce) that nothing ever read back.
  */
 const router = Router();
 router.use(authenticate);
@@ -35,15 +34,15 @@ router.use(authenticate);
 const ownerProjectId = async (scope: BoardScope): Promise<number | null> =>
   'projectId' in scope ? scope.projectId : resolveProjectIdForAsset(scope.assetId);
 
-/** Accès au board, et pour une écriture : projet non archivé + compte contributeur. */
+/** Access to the board, and for a write: non-archived project plus a contributing account. */
 async function guard(req: Request, scope: BoardScope, write: boolean): Promise<number> {
   const projectId = await ownerProjectId(scope);
   if (!projectId) throw notFound('Target not found');
   await assertProjectAccess(req, projectId);
   if (write) {
-    await assertProjectWritable(projectId); // 38.B : projet archivé = lecture seule
-    // 38.E : rôle EFFECTIF sur CE projet — le rôle global laissait écrire un ARTIST
-    // rétrogradé CLIENT ici, son membership suffisant à passer `assertProjectAccess`.
+    await assertProjectWritable(projectId); // 38.B: archived project = read-only
+    // 38.E: EFFECTIVE role on THIS project. The global role let an ARTIST demoted to CLIENT write here,
+    // their membership being enough to pass `assertProjectAccess`.
     await assertCanContribute(req.user!.id, req.user!.role, projectId);
   }
   return projectId;
@@ -71,14 +70,14 @@ async function handlePresign(req: Request, res: Response, scope: BoardScope): Pr
   res.json({ uploads: await presignBoardFiles(projectId, scope, files) });
 }
 
-// ── Schémas ──────────────────────────────────────────────────────────────────
+// ── Schemas ──────────────────────────────────────────────────────────────────
 const idParam = (key: 'projectId' | 'assetId') =>
   validate({ params: z.object({ [key]: z.coerce.number().int() }) });
 
 /**
- * `baseUpdatedAt` est **obligatoire** : c'est l'horodatage sur lequel l'éditeur a chargé le
- * board (`null` s'il n'existait pas encore). Le rendre facultatif rouvrirait l'écrasement
- * silencieux pour tout client qui l'oublie.
+ * `baseUpdatedAt` is **mandatory**: it is the timestamp on which the editor loaded the board (`null`
+ * if it did not exist yet). Making it optional would reopen silent overwriting for any client that
+ * forgets it.
  */
 const bodySchema = validate({
   body: z.object({
@@ -96,7 +95,7 @@ const filesSchema = validate({
   }),
 });
 
-// ── Board projet ─────────────────────────────────────────────────────────────
+// ── Project board ─────────────────────────────────────────────────────────────
 router.get('/project/:projectId', idParam('projectId'), (req, res) =>
   handleRead(req, res, { projectId: Number(req.params.projectId) }),
 );
@@ -107,7 +106,7 @@ router.post('/project/:projectId/files', idParam('projectId'), filesSchema, (req
   handlePresign(req, res, { projectId: Number(req.params.projectId) }),
 );
 
-// ── Board asset ──────────────────────────────────────────────────────────────
+// ── Asset board ──────────────────────────────────────────────────────────────
 router.get('/asset/:assetId', idParam('assetId'), (req, res) =>
   handleRead(req, res, { assetId: Number(req.params.assetId) }),
 );

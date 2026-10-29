@@ -8,28 +8,28 @@ import { forbidden, notFound, unauthorized } from '../lib/errors';
 import { effectiveProjectRole, canManageProject, canContribute } from '../lib/projectRoles';
 
 /**
- * Ce que l'appelant vient FAIRE du projet.
+ * What the caller is going to DO with the project.
  *
- * Racine du défaut 38.E/A1-03 : la garde d'accès n'accordait que sur l'existence du
- * `ProjectMembership` et ignorait son champ `role`. Chaque appelant qui écrivait devait
- * donc *se souvenir* d'ajouter `assertCanContribute` derrière — et trois l'avaient oublié
- * (marqueurs de timeline, gestion de média, board). Une garde qu'il faut penser à doubler
- * n'est pas une garde : c'est une convention.
+ * Root of the 38.E/A1-03 defect: the access guard only granted on the existence of the
+ * `ProjectMembership` and ignored its `role` field. Every caller that wrote therefore had to
+ * *remember* to add `assertCanContribute` behind it, and three had forgotten (timeline markers,
+ * media management, the board). A guard you must remember to double is not a guard: it is a
+ * convention.
  *
- * L'intention rend le rôle obligatoire au bon endroit. `read` reste le défaut (un CLIENT
- * membre lit et commente, c'est son métier) ; `write` exige de pouvoir contribuer ;
- * `manage` exige le rôle de gestion. Dans les trois cas c'est le rôle EFFECTIF sur CE
- * projet qui décide (`lib/projectRoles`), élévation et rétrogradation locales comprises.
+ * The intent makes the role mandatory at the right place. `read` remains the default (a member
+ * CLIENT reads and comments, that is their job); `write` requires the ability to contribute;
+ * `manage` requires the management role. In all three cases it is the EFFECTIVE role on THIS
+ * project that decides (`lib/projectRoles`), local elevation and demotion included.
  */
 export type ProjectAccessIntent = 'read' | 'write' | 'manage';
 
 /**
- * Options d'un contrôle d'accès projet.
+ * Options of a project access check.
  *
- * `includeTrashed` est la SEULE dérogation à l'invariant de corbeille, et elle est
- * réservée aux points d'entrée qui parlent explicitement de corbeille : lister les projets
- * retirés, en restaurer un, en purger un. Partout ailleurs l'option reste absente — une
- * exception « si admin » posée au cas par cas rouvrirait la porte que cette garde ferme.
+ * `includeTrashed` is the ONLY exception to the trash invariant, and it is reserved for the entry
+ * points that explicitly deal with the trash: listing removed projects, restoring one, purging one.
+ * Everywhere else the option stays absent: a case-by-case "if admin" exception would reopen the door
+ * this guard closes.
  */
 export interface ProjectAccessOptions {
   includeTrashed?: boolean;
@@ -37,15 +37,15 @@ export interface ProjectAccessOptions {
 }
 
 /**
- * Verdict d'un contrôle d'accès projet. Le refus dit sa nature pour que l'appelant
- * choisisse le bon code : 404 quand le projet n'est pas désignable, 403 quand il l'est
- * mais que la personne n'y appartient pas ou que son rôle ne porte pas l'intention.
+ * Verdict of a project access check. The refusal states its nature so the caller can pick the right
+ * code: 404 when the project is not addressable, 403 when it is but the person does not belong to it
+ * or their role does not carry the intent.
  */
 export type ProjectAccessOutcome = 'granted' | 'not-member' | 'unavailable' | 'insufficient-role';
 
 /**
- * Exige que l'utilisateur authentifié possède l'un des rôles donnés.
- * À utiliser après `authenticate`.
+ * Requires the authenticated user to hold one of the given roles.
+ * To be used after `authenticate`.
  */
 export const requireRole =
   (...roles: Role[]) =>
@@ -62,8 +62,8 @@ export const requireRole =
   };
 
 /**
- * Le projet est-il désignable ? Il doit exister et, hors point d'entrée « corbeille »,
- * ne pas y avoir été mis.
+ * Is the project addressable? It must exist and, outside a "trash" entry point, must not have been
+ * put in the trash.
  */
 const projectIsAddressable = async (projectId: number, includeTrashed: boolean): Promise<boolean> =>
   (await prisma.project.count({
@@ -71,22 +71,21 @@ const projectIsAddressable = async (projectId: number, includeTrashed: boolean):
   })) > 0;
 
 /**
- * Résout l'accès d'un utilisateur à un projet.
+ * Resolves a user's access to a project.
  *
- * **Invariant : un projet mis à la corbeille n'existe plus pour le RBAC.** Les listes le
- * filtraient déjà (`deletedAt: null`), mais la garde d'appartenance ne regardait que le
- * membership : un média, un plan, une séquence ou un asset d'un projet retiré restait
- * atteignable en connaissant son URL, et le retrait se contournait. Le refus est un 404,
- * pas un 403 : un projet retiré ne doit pas se laisser deviner davantage qu'un projet qui
- * n'a jamais existé.
+ * **Invariant: a project put in the trash no longer exists for the RBAC.** The lists already filtered
+ * it (`deletedAt: null`), but the membership guard only looked at the membership: a media, a shot, a
+ * sequence or an asset of a removed project remained reachable by knowing its URL, and removal could
+ * be bypassed. The refusal is a 404, not a 403: a removed project must not be guessable any more than
+ * a project that never existed.
  *
- * Règles v2 inchangées par ailleurs : ADMIN et SUPERVISOR ont un accès global, les autres
- * passent par leur `ProjectMembership`.
+ * Otherwise the v2 rules are unchanged: ADMIN and SUPERVISOR have global access, the others go through
+ * their `ProjectMembership`.
  *
- * **Le rôle EFFECTIF est lu ici**, et plus seulement l'existence du membership : c'est ce
- * qui permet à `intent` de trancher sans que l'appelant ait à doubler la garde (38.E).
- * Pour un accès global (ADMIN/SUPERVISOR) `effectiveProjectRole` répond sans interroger le
- * membership — le coût en requêtes est donc inchangé.
+ * **The EFFECTIVE role is read here**, not just the existence of the membership: this is what lets
+ * `intent` decide without the caller having to double the guard (38.E). For global access
+ * (ADMIN/SUPERVISOR), `effectiveProjectRole` answers without querying the membership, so the query
+ * cost is unchanged.
  */
 export const resolveProjectAccess = async (
   userId: number,
@@ -103,8 +102,8 @@ export const resolveProjectAccess = async (
 };
 
 /**
- * Forme booléenne de `resolveProjectAccess`, pour les appelants qui formulent eux-mêmes
- * le refus (contrôles de lot, résolutions par identifiant).
+ * Boolean form of `resolveProjectAccess`, for callers that formulate the refusal themselves
+ * (batch checks, resolutions by identifier).
  */
 export const checkProjectAccess = async (
   userId: number,
@@ -114,12 +113,12 @@ export const checkProjectAccess = async (
 ): Promise<boolean> => (await resolveProjectAccess(userId, role, projectId, options)) === 'granted';
 
 /**
- * Erreur typée correspondant à un verdict de refus. Le 404 reste générique (message et
- * code de repli) : nommer le projet dans la réponse annulerait le bénéfice du 404.
+ * Typed error matching a refusal verdict. The 404 stays generic (message and fallback code): naming
+ * the project in the response would cancel the benefit of the 404.
  *
- * Le refus de RÔLE se distingue du refus d'APPARTENANCE : il porte le code
- * `ROLE_FORBIDDEN` — le même qu'`assertCanContribute` —, sans quoi l'interface dirait
- * « aucun accès à ce projet » à quelqu'un qui le voit parfaitement mais n'y écrit pas.
+ * A ROLE refusal is distinguished from a MEMBERSHIP refusal: it carries the code `ROLE_FORBIDDEN` (the
+ * same as `assertCanContribute`), otherwise the interface would tell someone who can see the project
+ * perfectly well but does not write to it that they have "no access to this project".
  */
 const projectAccessError = (
   outcome: Exclude<ProjectAccessOutcome, 'granted'>,
@@ -133,7 +132,7 @@ const projectAccessError = (
 };
 
 /**
- * Middleware d'accès projet — lit l'id projet depuis `req.params.projectId`.
+ * Project access middleware: reads the project id from `req.params.projectId`.
  */
 export const requireProjectAccess = async (
   req: Request,
@@ -150,18 +149,17 @@ export const requireProjectAccess = async (
     return;
   }
   const outcome = await resolveProjectAccess(req.user.id, req.user.role, projectId);
-  // Erreur typée plutôt que réponse écrite ici : le handler global uniformise `{error, code}`,
-  // seul moyen pour l'interface d'afficher le refus dans la langue du lecteur.
+  // Typed error rather than a response written here: the global handler standardizes `{error, code}`,
+  // the only way for the interface to display the refusal in the reader's language.
   next(outcome === 'granted' ? undefined : projectAccessError(outcome, 'read'));
 };
 
 /**
- * Variante utilisable dans un handler : lève une AppError (captée par le handler global)
- * si l'utilisateur n'a pas accès au projet. `req.user` est supposé présent (après authenticate).
+ * Variant usable in a handler: throws an AppError (caught by the global handler) if the user has no
+ * access to the project. `req.user` is assumed present (after authenticate).
  *
- * Un handler qui ÉCRIT passe `{ intent: 'write' }` : la garde vérifie alors le rôle
- * effectif elle-même, au lieu de compter sur l'appel à `assertCanContribute` que trois
- * chemins d'écriture avaient oublié (A1-03).
+ * A handler that WRITES passes `{ intent: 'write' }`: the guard then checks the effective role itself,
+ * instead of relying on the call to `assertCanContribute` that three write paths had forgotten (A1-03).
  */
 export const assertProjectAccess = async (
   req: Request,
@@ -174,12 +172,12 @@ export const assertProjectAccess = async (
 };
 
 /**
- * Gestion projet (38.E) — lit `req.params.projectId` et autorise si le rôle EFFECTIF de
- * l'utilisateur sur ce projet est ADMIN/SUPERVISOR (élévation locale via membership.role
- * incluse), remplaçant `requireRole(ADMIN, SUPERVISOR)` sur les routes de gestion projet.
+ * Project management (38.E): reads `req.params.projectId` and authorizes if the user's EFFECTIVE role
+ * on this project is ADMIN/SUPERVISOR (local elevation via membership.role included), replacing
+ * `requireRole(ADMIN, SUPERVISOR)` on the project management routes.
  *
- * Même invariant que ci-dessus : un projet à la corbeille ne se gère pas — on le restaure
- * d'abord, par la route dédiée qui, elle, ne passe pas par cette garde.
+ * Same invariant as above: a project in the trash is not managed. It is restored first, through the
+ * dedicated route which does not go through this guard.
  */
 export const requireProjectManage = async (
   req: Request,
@@ -195,8 +193,8 @@ export const requireProjectManage = async (
     res.status(400).json({ error: 'projectId invalide' });
     return;
   }
-  // Même garde que partout ailleurs, l'intention en plus : une seule implémentation du
-  // couple « projet désignable + rôle effectif », donc une seule à corriger.
+  // Same guard as everywhere else, with the intent on top: a single implementation of the pair
+  // "addressable project + effective role", hence a single one to fix.
   const outcome = await resolveProjectAccess(req.user.id, req.user.role, projectId, {
     intent: 'manage',
   });

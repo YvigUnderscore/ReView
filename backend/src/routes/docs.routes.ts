@@ -6,49 +6,48 @@ import { randomBytes } from 'node:crypto';
 import { buildOpenApiDocument } from '../lib/openapi';
 import { getSourceUrl } from '../lib/settings';
 import { localeFromAcceptLanguage, t } from '../i18n';
-// L'URL atterrit dans un `href` : `safeSourceUrl` a filtré le protocole, on neutralise le reste.
+// The URL lands in an `href`: `safeSourceUrl` has filtered the protocol, we neutralize the rest.
 import { escapeHtml } from '../lib/html';
 
 /**
- * Documentation API : spécification OpenAPI générée depuis Zod + interface Scalar.
- * - GET /api/openapi.json : document OpenAPI 3.0
- * - GET /api/docs         : explorateur interactif (Scalar, via CDN)
- * Endpoints publics en lecture (aucune donnée sensible : uniquement la forme de l'API).
+ * API documentation: OpenAPI specification generated from Zod, plus the Scalar interface.
+ * - GET /api/openapi.json: OpenAPI 3.0 document
+ * - GET /api/docs: interactive explorer (Scalar, via CDN)
+ * Public read-only endpoints (no sensitive data: only the shape of the API).
  *
- * Page publique = surface réseau au sens de l'AGPL §13 : elle porte donc, comme la page de
- * connexion et les partages client, le lien vers le code source correspondant.
+ * A public page is a network surface in the sense of AGPL §13: like the login page and client shares,
+ * it therefore carries the link to the corresponding source code.
  */
 const router = Router();
 
 /**
- * Scalar est chargé depuis un CDN, sur l'origine de l'application, alors que les jetons de
- * session vivent en localStorage : une version compromise emporterait la session du premier
- * administrateur qui ouvre la doc, jeton de rafraîchissement compris. Trois garde-fous, à
- * tenir ensemble :
+ * Scalar is loaded from a CDN, on the application's origin, whereas the session tokens live in
+ * localStorage: a compromised version would take the session of the first administrator who opens the
+ * docs, refresh token included. Three safeguards, to be held together:
  *
- *  1. **version épinglée** — `@latest` implicite signifie « le code de demain, sans revue » ;
- *  2. **empreinte SRI** — le navigateur refuse le script si l'octet ne correspond pas, ce qui
- *     couvre la totalité du bundle (`standalone.js` est autonome : il ne charge aucun morceau
- *     annexe, sans quoi l'empreinte ne protégerait que le point d'entrée) ;
- *  3. **CSP resserrée** — plus de `'unsafe-inline'` sur les scripts, et la seule source
- *     autorisée est ce répertoire de cette version.
+ *  1. **pinned version**: an implicit `@latest` means "tomorrow's code, unreviewed";
+ *  2. **SRI fingerprint**: the browser refuses the script if the byte does not match, which covers the
+ *     whole bundle (`standalone.js` is self-contained: it loads no side chunk, otherwise the fingerprint
+ *     would only protect the entry point);
+ *  3. **tightened CSP**: no more `'unsafe-inline'` on scripts, and the only allowed source is this
+ *     directory of this version.
  *
- * ⚠ Monter la version = recalculer l'empreinte :
+ * ⚠ Bumping the version means recomputing the fingerprint:
  *   `curl -s <SCALAR_SRC> | openssl dgst -sha384 -binary | openssl base64 -A`
- * La vraie correction reste d'embarquer le paquet dans les assets servis par Express — elle
- * demande une dépendance (et rend la doc lisible sur une instance coupée d'internet).
+ * The real fix remains to embed the package in the assets served by Express: it requires a dependency
+ * (and makes the docs readable on an instance cut off from the internet).
  */
 const SCALAR_VERSION = '1.66.1';
 const SCALAR_BASE = `https://cdn.jsdelivr.net/npm/@scalar/api-reference@${SCALAR_VERSION}/dist/browser/`;
 const SCALAR_SRC = `${SCALAR_BASE}standalone.js`;
 const SCALAR_SRI = 'sha384-RkhHYpdjsrJH9sH8RmczPchxNiHEhmW300QwMB/8yg6feduTZu9FBN4W0DJnp50Z';
-/** Polices par défaut du thème Scalar — le seul autre tiers que la page contacte. */
+/** Default Scalar theme fonts: the only other third party the page contacts. */
 const SCALAR_FONTS = 'https://fonts.scalar.com';
 
 /**
- * `style-src` garde `'unsafe-inline'` : Scalar injecte sa feuille de style dans le document.
- * `script-src` ne l'a plus — le nonce couvre l'unique balise inline de la page, qui ne porte
- * d'ailleurs pas de code (elle transporte l'URL du document OpenAPI dans un attribut).
+ * `style-src` keeps `'unsafe-inline'`: Scalar injects its stylesheet into the document.
+ * `script-src` no longer has it: the nonce covers the page's only inline tag, which moreover carries no
+ * code (it carries the URL of the OpenAPI document in an attribute).
  */
 const csp = (nonce: string): string =>
   [
@@ -71,13 +70,12 @@ router.get('/openapi.json', (_req, res) => {
 router.get('/docs', async (req, res) => {
   const sourceUrl = escapeHtml(await getSourceUrl());
   const nonce = randomBytes(16).toString('base64');
-  // Page publique : pas de compte, donc pas de préférence enregistrée — la langue se négocie
-  // sur l'en-tête. La mention AGPL §13 était écrite en dur EN FRANÇAIS ici, alors que la même
-  // mention est rendue en anglais par le front : une mention légale ne peut pas dépendre de
-  // la porte d'entrée. Les deux surfaces partagent désormais les clés `license.*`.
+  // Public page: no account, hence no saved preference: the language is negotiated on the header. The
+  // AGPL §13 notice was hard-coded IN FRENCH here, whereas the same notice is rendered in English by the
+  // front end: a legal notice cannot depend on the entry door. Both surfaces now share the `license.*` keys.
   const locale = localeFromAcceptLanguage(req.headers['accept-language']);
   res.setHeader('Content-Security-Policy', csp(nonce));
-  // `Vary` : sans lui, un cache intermédiaire servirait la version française à tout le monde.
+  // `Vary`: without it, an intermediate cache would serve the French version to everyone.
   res.setHeader('Vary', 'Accept-Language');
   res.type('html').send(`<!doctype html>
 <html lang="${escapeHtml(locale)}">

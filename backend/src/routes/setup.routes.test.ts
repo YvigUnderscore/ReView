@@ -9,7 +9,7 @@ const { db, tx } = vi.hoisted(() => {
     tx,
     db: {
       studio: { count: vi.fn() },
-      // Le callback reçoit le client transactionnel : c'est LUI qui doit porter le comptage.
+      // The callback receives the transactional client: IT must carry the count.
       $transaction: vi.fn(
         async (fn: (c: typeof tx) => Promise<unknown>, _opts?: { isolationLevel?: string }) => fn(tx),
       ),
@@ -43,13 +43,12 @@ beforeEach(() => {
 });
 
 /**
- * Route publique par nature : elle crée le premier compte ADMIN sans authentification.
- * Comptée hors transaction, deux requêtes concurrentes lisent toutes deux « zéro studio »
- * et créent chacune un studio et un ADMIN — `Studio.slug @unique` ne rattrape que des noms
- * identiques.
+ * A public route by nature: it creates the first ADMIN account without authentication. Counted outside a
+ * transaction, two concurrent requests both read "zero studios" and each create a studio and an ADMIN:
+ * `Studio.slug @unique` only catches identical names.
  */
-describe('POST /api/setup — unicité de l’installation', () => {
-  it('installe l’instance quand aucun studio n’existe', async () => {
+describe('POST /api/setup — uniqueness of the installation', () => {
+  it('installs the instance when no studio exists', async () => {
     const res = await request(app).post('/api/setup').send(body);
     expect(res.status).toBe(201);
     expect(tx.user.create).toHaveBeenCalledWith(
@@ -59,27 +58,27 @@ describe('POST /api/setup — unicité de l’installation', () => {
     );
   });
 
-  it('compte les studios DANS la transaction, pas seulement avant', async () => {
+  it('counts the studios INSIDE the transaction, not only before it', async () => {
     await request(app).post('/api/setup').send(body);
     expect(tx.studio.count).toHaveBeenCalled();
   });
 
-  it('demande explicitement le niveau Serializable', async () => {
+  it('explicitly requests the Serializable level', async () => {
     await request(app).post('/api/setup').send(body);
     expect(db.$transaction).toHaveBeenCalledWith(expect.any(Function), {
       isolationLevel: Prisma.TransactionIsolationLevel.Serializable,
     });
   });
 
-  it('refuse dès qu’un studio existe (contrôle rapide, hors transaction)', async () => {
+  it('rejects as soon as a studio exists (fast check, outside the transaction)', async () => {
     db.studio.count.mockResolvedValue(1);
     const res = await request(app).post('/api/setup').send(body);
     expect(res.status).toBe(409);
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 
-  // La course : le contrôle rapide passe, mais un studio est apparu entre-temps.
-  it('refuse quand le studio apparaît pendant la transaction', async () => {
+  // The race: the fast check passes, but a studio appeared in the meantime.
+  it('rejects when the studio appears during the transaction', async () => {
     tx.studio.count.mockResolvedValue(1);
     const res = await request(app).post('/api/setup').send(body);
     expect(res.status).toBe(409);
@@ -87,8 +86,8 @@ describe('POST /api/setup — unicité de l’installation', () => {
     expect(tx.user.create).not.toHaveBeenCalled();
   });
 
-  // Ce que PostgreSQL renvoie à la transaction perdante : un conflit de sérialisation.
-  it('traduit le conflit de sérialisation en refus d’installation, pas en panne', async () => {
+  // What PostgreSQL returns to the losing transaction: a serialization conflict.
+  it('translates the serialization conflict into an installation refusal, not an outage', async () => {
     db.$transaction.mockRejectedValue(
       new Prisma.PrismaClientKnownRequestError('write conflict', {
         code: 'P2034',

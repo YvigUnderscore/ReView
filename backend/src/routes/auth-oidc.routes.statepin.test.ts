@@ -4,10 +4,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * L'issuer OIDC est une URL d'administration que le serveur va chercher lui-même, depuis
- * le réseau applicatif : jusqu'ici `openid-client` la suivait sans aucun contrôle. Ces
- * tests vérifient que la bibliothèque reçoit bien notre `fetch` durci, et que ce dernier
- * refuse une cible interne.
+ * The OIDC issuer is an administration URL that the server fetches itself, from the application
+ * network: until now `openid-client` followed it without any control. These tests verify that the
+ * library does receive our hardened `fetch`, and that the latter refuses an internal target.
  */
 const { CUSTOM_FETCH, discoveryMock, buildUrlMock, oidcCfg } = vi.hoisted(() => ({
   CUSTOM_FETCH: Symbol.for('openid-client.customFetch'),
@@ -64,13 +63,13 @@ beforeEach(() => {
 });
 
 /**
- * A3-07 / A1-08 — le cookie `oidc_state` porte le state et le nonce, c'est-à-dire toute la
- * protection CSRF du flux de connexion, et il est signé du même `JWT_SECRET` que les jetons
- * de session. Sa vérification lisait l'algorithme dans l'en-tête du jeton : c'était donc
- * celui qui PRÉSENTE le cookie qui choisissait comment il avait été signé, et la liste des
- * algorithmes acceptés dépendait de la version de jsonwebtoken plutôt que de nous.
+ * A3-07 / A1-08: the `oidc_state` cookie carries the state and the nonce, that is, the whole CSRF
+ * protection of the login flow, and it is signed with the same `JWT_SECRET` as the session tokens.
+ * Its verification read the algorithm from the token header: the party PRESENTING the cookie therefore
+ * chose how it had been signed, and the list of accepted algorithms depended on the jsonwebtoken
+ * version rather than on us.
  */
-describe('GET /api/auth/oidc/callback — algorithme du cookie d’état épinglé', () => {
+describe('GET /api/auth/oidc/callback — state cookie algorithm pinned', () => {
   const callback = (algorithm: 'HS256' | 'HS512') => {
     discoveryMock.mockResolvedValue({});
     vi.mocked(oidc.authorizationCodeGrant).mockResolvedValue({
@@ -89,20 +88,20 @@ describe('GET /api/auth/oidc/callback — algorithme du cookie d’état épingl
       .set('Cookie', `oidc_state=${cookie}`);
   };
 
-  it('accepte le cookie signé dans l’algorithme déclaré', async () => {
+  it('accepts the cookie signed with the declared algorithm', async () => {
     expect((await callback('HS256')).headers.location).toContain('#sso=');
   });
 
-  it('refuse un cookie signé dans un AUTRE algorithme du même secret', async () => {
+  it('rejects a cookie signed with ANOTHER algorithm from the same secret', async () => {
     const res = await callback('HS512');
     expect(res.headers.location).toContain('#ssoerr=');
     expect(res.headers.location).not.toContain('#sso=');
     expect(createSession).not.toHaveBeenCalled();
   });
 
-  // Verrou de non-régression (vert avant comme après) : l'émission suit l'algorithme
-  // déclaré par `lib/jwt` au lieu de s'en remettre au défaut de la bibliothèque.
-  it('émet le cookie dans l’algorithme déclaré', async () => {
+  // Non-regression lock (green before as well as after): issuance follows the algorithm declared by
+  // `lib/jwt` instead of relying on the library's default.
+  it('issues the cookie with the declared algorithm', async () => {
     discoveryMock.mockResolvedValue({});
     const res = await request(app).get('/api/auth/oidc/login');
     const raw = (res.headers['set-cookie'] as unknown as string[])[0]!;

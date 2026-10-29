@@ -4,20 +4,20 @@
 import { describe, it, expect } from 'vitest';
 import { compileRule, coversType, matchCandidates, ruleMatches } from './visibility';
 
-describe('compileRule — formes littérales', () => {
-  it('exact ne masque que le code entier', () => {
+describe('compileRule — literal forms', () => {
+  it('exact only masks the whole code', () => {
     const test = compileRule({ matchType: 'exact', pattern: 'SH010', ignoreCase: true });
     expect(test('SH010')).toBe(true);
     expect(test('SH0100')).toBe(false);
     expect(test('ASH010')).toBe(false);
   });
 
-  it('ignore la casse par défaut, la respecte quand on le demande', () => {
+  it('ignores case by default, respects it when asked', () => {
     expect(compileRule({ matchType: 'exact', pattern: 'sh010', ignoreCase: true })('SH010')).toBe(true);
     expect(compileRule({ matchType: 'exact', pattern: 'sh010', ignoreCase: false })('SH010')).toBe(false);
   });
 
-  it('prefix et contains couvrent les conventions de nommage courantes', () => {
+  it('prefix and contains cover the common naming conventions', () => {
     expect(compileRule({ matchType: 'prefix', pattern: 'TEST_', ignoreCase: true })('TEST_SH010')).toBe(true);
     expect(compileRule({ matchType: 'prefix', pattern: 'TEST_', ignoreCase: true })('SH010_TEST')).toBe(
       false,
@@ -28,30 +28,30 @@ describe('compileRule — formes littérales', () => {
   });
 });
 
-describe('compileRule — expressions régulières', () => {
-  it('accepte une expression valide', () => {
+describe('compileRule — regular expressions', () => {
+  it('accepts a valid expression', () => {
     const test = compileRule({ matchType: 'regex', pattern: '_(TMP|TEST)$', ignoreCase: true });
     expect(test('SH010_TMP')).toBe(true);
     expect(test('SH010_FINAL')).toBe(false);
   });
 
-  it('refuse une expression invalide plutôt que de la laisser ne rien masquer', () => {
+  it('rejects an invalid expression rather than letting it mask nothing', () => {
     expect(() => compileRule({ matchType: 'regex', pattern: '([a-z', ignoreCase: true })).toThrow(/invalid/i);
   });
 
-  it('refuse un motif vide', () => {
+  it('rejects an empty pattern', () => {
     expect(() => compileRule({ matchType: 'exact', pattern: '   ', ignoreCase: true })).toThrow();
   });
 
-  it('refuse un motif démesuré', () => {
+  it('rejects an excessively long pattern', () => {
     expect(() => compileRule({ matchType: 'regex', pattern: 'a'.repeat(300), ignoreCase: true })).toThrow(
       /too long/i,
     );
   });
 
-  it("n'est pas piégée par le drapeau global d'un appel à l'autre", () => {
-    // Une expression compilée est réutilisée pour chaque entité de la passe : avec `g`,
-    // `lastIndex` persisterait et un candidat sur deux échapperait au masquage.
+  it("is not tripped up by the global flag from one call to the next", () => {
+    // A compiled expression is reused for each entity of the pass: with `g`,
+    // `lastIndex` would persist and one candidate in two would escape masking.
     const test = compileRule({ matchType: 'regex', pattern: 'TMP', ignoreCase: true });
     expect(test('SH010_TMP')).toBe(true);
     expect(test('SH020_TMP')).toBe(true);
@@ -60,7 +60,7 @@ describe('compileRule — expressions régulières', () => {
 });
 
 describe('coversType', () => {
-  it('« all » couvre les quatre types, un type précis seulement le sien', () => {
+  it('"all" covers the four types, a specific type only its own', () => {
     expect(coversType('all', 'shot')).toBe(true);
     expect(coversType('shot', 'shot')).toBe(true);
     expect(coversType('sequence', 'shot')).toBe(false);
@@ -68,11 +68,11 @@ describe('coversType', () => {
 });
 
 describe('matchCandidates', () => {
-  it('examine le code puis le nom, sans doublon quand ils coïncident', () => {
+  it('examines the code then the name, without duplicates when they coincide', () => {
     expect(matchCandidates({ code: 'SH010', name: 'Arrivée' })).toEqual(['SH010', 'Arrivée']);
     expect(matchCandidates({ code: 'SH010', name: 'SH010' })).toEqual(['SH010']);
-    // Un asset n'a pas de code : son nom doit tout de même être examiné, sinon aucune
-    // règle ne pourrait jamais masquer un asset.
+    // An asset has no code: its name must still be examined, otherwise no rule could ever mask
+    // an asset.
     expect(matchCandidates({ code: null, name: 'Robot_TEST' })).toEqual(['Robot_TEST']);
   });
 });
@@ -80,11 +80,11 @@ describe('matchCandidates', () => {
 describe('ruleMatches', () => {
   const rule = { entityType: 'shot', matchType: 'contains' as const, pattern: '_TMP', ignoreCase: true };
 
-  it('masque un plan dont le nom porte le motif, même si le code ne le porte pas', () => {
+  it('masks a shot whose name carries the pattern, even if its code does not', () => {
     expect(ruleMatches(rule, 'shot', { code: 'SH010', name: 'SH010_TMP' })).toBe(true);
   });
 
-  it('ne touche pas un type que la règle ne vise pas', () => {
+  it('does not touch a type the rule does not target', () => {
     expect(ruleMatches(rule, 'asset', { code: null, name: 'Robot_TMP' })).toBe(false);
   });
 });

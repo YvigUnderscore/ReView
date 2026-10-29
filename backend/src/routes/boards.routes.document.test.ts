@@ -7,16 +7,16 @@ import type { Request, Response, NextFunction } from 'express';
 
 const { db, actor } = vi.hoisted(() => ({
   db: {
-    // `count` : la garde d'accès projet commence par vérifier que le projet n'est pas à la
-    // corbeille (`middleware/rbac`). Il ne l'est jamais dans ce fichier.
+    // `count`: the project access guard starts by checking that the project is not in the trash
+    // (`middleware/rbac`). It never is in this file.
     project: { findFirst: vi.fn(), count: vi.fn(() => Promise.resolve(1)) },
     projectMembership: { findUnique: vi.fn() },
     asset: { findUnique: vi.fn() },
     board: { findUnique: vi.fn(), create: vi.fn(), updateMany: vi.fn() },
-    // Présent exprès : si le code se remettait à journaliser, le test 3 le verrait.
+    // Present on purpose: if the code started logging again, test 3 would see it.
     boardChange: { create: vi.fn() },
   },
-  // `vi.hoisted` court avant les imports : pas de `Role.ARTIST` ici, la valeur n'existe pas encore.
+  // `vi.hoisted` runs before the imports: no `Role.ARTIST` here, the value does not exist yet.
   actor: { current: { id: 7, role: 'ARTIST' } },
 }));
 
@@ -45,7 +45,7 @@ const app = express().use(express.json()).use('/api/boards', boardsRoutes).use(e
 
 const document = { elements: [{ id: 'a', type: 'rectangle' }], files: {} };
 const LOADED_AT = '2026-08-22T10:00:00.000Z';
-/** Corps d'une sauvegarde d'éditeur : le document et l'horodatage sur lequel il a chargé. */
+/** Body of an editor save: the document and the timestamp it was loaded at. */
 const save = { document, baseUpdatedAt: LOADED_AT };
 
 beforeEach(() => {
@@ -62,10 +62,10 @@ beforeEach(() => {
   db.board.updateMany.mockResolvedValue({ count: 1 });
   db.board.create.mockResolvedValue({ id: 1, projectId: 42, document, updatedAt: new Date(LOADED_AT) });
 });
-describe('PUT /api/boards — document borné', () => {
+describe('PUT /api/boards — bounded document', () => {
   beforeEach(() => db.project.findFirst.mockResolvedValue({ status: 'ACTIVE' }));
 
-  it('refuse un document qui n’a pas la forme attendue', async () => {
+  it('rejects a document that does not have the expected shape', async () => {
     const res = await request(app)
       .put('/api/boards/project/42')
       .send({ document: { elements: 'nope' }, baseUpdatedAt: LOADED_AT });
@@ -73,7 +73,7 @@ describe('PUT /api/boards — document borné', () => {
     expect(db.board.updateMany).not.toHaveBeenCalled();
   });
 
-  it('refuse une image collée restée en base64 au-delà du plafond inline', async () => {
+  it('rejects a pasted image still in base64 beyond the inline ceiling', async () => {
     const files = {
       f1: { id: 'f1', mimeType: 'image/png', dataURL: `data:image/png;base64,${'A'.repeat(70_000)}` },
     };
@@ -84,7 +84,7 @@ describe('PUT /api/boards — document borné', () => {
     expect(db.board.updateMany).not.toHaveBeenCalled();
   });
 
-  it('accepte une image externalisée : le document ne porte que son id et son type', async () => {
+  it('accepts an externalized image: the document carries only its id and type', async () => {
     const files = { f1: { id: 'f1', mimeType: 'image/png', created: 1 } };
     const res = await request(app)
       .put('/api/boards/project/42')
@@ -94,18 +94,18 @@ describe('PUT /api/boards — document borné', () => {
 });
 
 /**
- * Aucun contrôle de concurrence : deux personnes sur le même board s'écrasaient en silence.
+ * No concurrency control: two people on the same board silently overwrote each other.
  */
-describe('PUT /api/boards — concurrence', () => {
+describe('PUT /api/boards — concurrency', () => {
   beforeEach(() => db.project.findFirst.mockResolvedValue({ status: 'ACTIVE' }));
 
-  it('exige l’horodatage de chargement — sans lui, pas d’écriture', async () => {
+  it('requires the load timestamp: without it, no write', async () => {
     const res = await request(app).put('/api/boards/project/42').send({ document });
     expect(res.status).toBe(400);
     expect(db.board.updateMany).not.toHaveBeenCalled();
   });
 
-  it('répond 409 BOARD_CONFLICT avec l’horodatage courant si quelqu’un a sauvegardé entre-temps', async () => {
+  it('responds 409 BOARD_CONFLICT with the current timestamp if someone saved in the meantime', async () => {
     const server = new Date('2026-08-22T12:00:00.000Z');
     db.board.updateMany.mockResolvedValue({ count: 0 });
     db.board.findUnique.mockResolvedValue({ id: 1, projectId: 42, document, updatedAt: server });
@@ -115,7 +115,7 @@ describe('PUT /api/boards — concurrence', () => {
     expect(res.body.updatedAt).toBe(server.toISOString());
   });
 
-  it('crée le board quand l’éditeur l’a chargé inexistant (baseUpdatedAt null)', async () => {
+  it('creates the board when the editor loaded it as nonexistent (baseUpdatedAt null)', async () => {
     const res = await request(app).put('/api/boards/project/42').send({ document, baseUpdatedAt: null });
     expect(res.status).toBe(200);
     expect(db.board.create).toHaveBeenCalled();
@@ -123,9 +123,9 @@ describe('PUT /api/boards — concurrence', () => {
   });
 });
 
-/** Dépôt des images : même garde que l'écriture du document. */
+/** Image uploads: same guard as the document write. */
 describe('POST /api/boards/:scope/:id/files', () => {
-  it('rend une URL de dépôt par image', async () => {
+  it('returns an upload URL per image', async () => {
     db.project.findFirst.mockResolvedValue({ status: 'ACTIVE' });
     const res = await request(app)
       .post('/api/boards/project/42/files')
@@ -136,7 +136,7 @@ describe('POST /api/boards/:scope/:id/files', () => {
     ]);
   });
 
-  it('refuse un compte CLIENT', async () => {
+  it('rejects a CLIENT account', async () => {
     db.project.findFirst.mockResolvedValue({ status: 'ACTIVE' });
     actor.current = { id: 7, role: Role.CLIENT };
     const res = await request(app)
@@ -145,7 +145,7 @@ describe('POST /api/boards/:scope/:id/files', () => {
     expect(res.status).toBe(403);
   });
 
-  it('refuse un identifiant de fichier fabriqué', async () => {
+  it('rejects a forged file identifier', async () => {
     db.project.findFirst.mockResolvedValue({ status: 'ACTIVE' });
     const res = await request(app)
       .post('/api/boards/project/42/files')
@@ -154,9 +154,9 @@ describe('POST /api/boards/:scope/:id/files', () => {
   });
 });
 
-/** La lecture signe l'accès aux images externalisées — sinon le board s'ouvre vide. */
-describe('GET /api/boards — URL des images', () => {
-  it('accompagne le document des URL de lecture de ses fichiers', async () => {
+/** Reading signs access to the externalized images, otherwise the board opens empty. */
+describe('GET /api/boards — image URLs', () => {
+  it('returns the document together with read URLs for its files', async () => {
     db.project.findFirst.mockResolvedValue({ status: 'ACTIVE' });
     db.board.findUnique.mockResolvedValue({
       id: 1,

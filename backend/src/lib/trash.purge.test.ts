@@ -3,7 +3,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Aucune base ni MinIO réels : la purge planifiée est vérifiée sur ses appels.
+// No real database or MinIO: the scheduled purge is verified through its calls.
 vi.mock('./prisma', () => {
   const level = () => ({
     findMany: vi.fn().mockResolvedValue([]),
@@ -35,24 +35,24 @@ vi.mock('./logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.f
 import { purgeExpiredTrash, TRASH_PURGE_MAX_ITEMS } from './trash';
 import { prisma } from './prisma';
 
-/** Arguments du n-ième appel simulé (les types génériques de Prisma ne servent à rien ici). */
+/** Arguments of the n-th mocked call (Prisma's generic types are of no use here). */
 function callArgs<T>(fn: unknown, index = 0): T {
   return (fn as { mock: { calls: unknown[][] } }).mock.calls[index]![0] as T;
 }
 
 beforeEach(() => vi.clearAllMocks());
 
-describe('purgeExpiredTrash — balayage plafonné de la corbeille', () => {
-  it('rétention nulle ou négative : purge désactivée, aucune requête', async () => {
+describe('purgeExpiredTrash — capped sweep of the trash', () => {
+  it('zero or negative retention: purge disabled, no query', async () => {
     await expect(purgeExpiredTrash(0)).resolves.toBe(0);
     await expect(purgeExpiredTrash(-1)).resolves.toBe(0);
     expect(prisma.mediaObject.findMany).not.toHaveBeenCalled();
   });
 
-  it('descend la hiérarchie enfants → parents et compte chaque élément purgé', async () => {
+  it('walks the hierarchy from children to parents and counts each purged item', async () => {
     vi.mocked(prisma.mediaObject.findMany)
-      .mockResolvedValueOnce([{ id: 1 }] as never) // balayage des médias expirés
-      .mockResolvedValue([] as never); // relectures internes (clés storage d'une version)
+      .mockResolvedValueOnce([{ id: 1 }] as never) // sweep of expired media
+      .mockResolvedValue([] as never); // internal re-reads (storage keys of a version)
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue({
       storageKey: 'k/a.mp4',
       thumbnailKey: null,
@@ -65,7 +65,7 @@ describe('purgeExpiredTrash — balayage plafonné de la corbeille', () => {
     expect(prisma.version.delete).toHaveBeenCalledWith({ where: { id: 5 } });
   });
 
-  it('plafonne la passe : au-delà du budget, les niveaux suivants ne sont même pas interrogés', async () => {
+  it('caps the pass: beyond the budget, the next levels are not even queried', async () => {
     vi.mocked(prisma.mediaObject.findMany).mockResolvedValueOnce([{ id: 1 }, { id: 2 }] as never);
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue({
       storageKey: 'k/a.mp4',
@@ -75,12 +75,12 @@ describe('purgeExpiredTrash — balayage plafonné de la corbeille', () => {
     await expect(purgeExpiredTrash(30, 2)).resolves.toBe(2);
 
     expect(callArgs<{ take: number }>(prisma.mediaObject.findMany).take).toBe(2);
-    // Budget épuisé : la purge reprendra à la passe suivante plutôt que de vider la base d'un coup.
+    // Budget exhausted: the purge resumes on the next pass rather than emptying the database at once.
     expect(prisma.version.findMany).not.toHaveBeenCalled();
     expect(prisma.project.findMany).not.toHaveBeenCalled();
   });
 
-  it('le budget restant se transmet au niveau suivant', async () => {
+  it('the remaining budget carries over to the next level', async () => {
     vi.mocked(prisma.mediaObject.findMany)
       .mockResolvedValueOnce([{ id: 1 }] as never)
       .mockResolvedValue([] as never);
@@ -94,12 +94,12 @@ describe('purgeExpiredTrash — balayage plafonné de la corbeille', () => {
     expect(callArgs<{ take: number }>(prisma.version.findMany).take).toBe(9);
   });
 
-  it('sans budget explicite, la passe est bornée par le plafond du produit', async () => {
+  it('without an explicit budget, the pass is bounded by the product cap', async () => {
     await purgeExpiredTrash(30);
     expect(callArgs<{ take: number }>(prisma.mediaObject.findMany).take).toBe(TRASH_PURGE_MAX_ITEMS);
   });
 
-  it('la coupure suit la durée de rétention demandée', async () => {
+  it('the cutoff follows the requested retention period', async () => {
     const before = Date.now();
     await purgeExpiredTrash(7);
     const where = callArgs<{ where: { deletedAt: { lt: Date } } }>(prisma.mediaObject.findMany).where;

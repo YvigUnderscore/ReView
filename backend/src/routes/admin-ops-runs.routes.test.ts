@@ -78,7 +78,7 @@ beforeEach(() => {
 });
 
 describe('POST /api/admin/ops/runs', () => {
-  it('commande une mise à jour et rend 202', async () => {
+  it('orders an update and returns 202', async () => {
     const res = await request(app).post('/api/admin/ops/runs').send(UPDATE);
     expect(res.status).toBe(202);
     expect(spool.enqueue).toHaveBeenCalledTimes(1);
@@ -87,9 +87,9 @@ describe('POST /api/admin/ops/runs', () => {
     expect(order.params.version).toBe('v2.4.0');
   });
 
-  it('trace AVANT de déposer l’ordre', async () => {
-    // Une opération qui tourne mal est précisément celle dont on veut savoir qui l'a
-    // lancée : une trace posée à la fin manquerait toutes celles qui n'y arrivent pas.
+  it('logs BEFORE dropping the order', async () => {
+    // An operation that goes wrong is precisely the one whose initiator we want to know: a trace
+    // written at the end would miss all those that never finish.
     const calls: string[] = [];
     audit.logAudit.mockImplementation(() => calls.push('audit'));
     spool.enqueue.mockImplementation(() => {
@@ -100,14 +100,14 @@ describe('POST /api/admin/ops/runs', () => {
     expect(calls).toEqual(['audit', 'enqueue']);
   });
 
-  it('exige le mot de passe de l’admin', async () => {
+  it('requires the admin's password', async () => {
     tokens.assertActorPassword.mockRejectedValue(forbidden('Invalid password'));
     const res = await request(app).post('/api/admin/ops/runs').send(UPDATE);
     expect(res.status).toBe(403);
     expect(spool.enqueue).not.toHaveBeenCalled();
   });
 
-  it('refuse une étiquette qui n’a pas la forme d’une étiquette, sans rien demander à personne', async () => {
+  it('rejects a label that is not shaped like a tag, without asking anyone anything', async () => {
     for (const version of ['v2.4.0; rm -rf /', 'latest', '../../etc', '-v2.4.0']) {
       const res = await request(app)
         .post('/api/admin/ops/runs')
@@ -118,7 +118,7 @@ describe('POST /api/admin/ops/runs', () => {
     expect(spool.enqueue).not.toHaveBeenCalled();
   });
 
-  it('refuse une étiquette bien formée mais jamais publiée', async () => {
+  it('rejects a well-formed label that was never published', async () => {
     releases.isPublishedTag.mockResolvedValue(false);
     const res = await request(app)
       .post('/api/admin/ops/runs')
@@ -127,7 +127,7 @@ describe('POST /api/admin/ops/runs', () => {
     expect(code(res.body)).toBe('RELEASE_UNKNOWN');
   });
 
-  it('exige une version pour une mise à jour, un identifiant pour une vérification', async () => {
+  it('requires a version for an update, an identifier for a verification', async () => {
     expect(
       (await request(app).post('/api/admin/ops/runs').send({ kind: 'update', currentPassword: 'x' })).status,
     ).toBe(400);
@@ -136,14 +136,14 @@ describe('POST /api/admin/ops/runs', () => {
     ).toBe(400);
   });
 
-  it('refuse quand une opération tourne déjà', async () => {
+  it('refuses when an operation is already running', async () => {
     spool.mechanism.mockResolvedValue({ ...READY, state: 'busy' });
     const res = await request(app).post('/api/admin/ops/runs').send(UPDATE);
     expect(res.status).toBe(409);
     expect(code(res.body)).toBe('OPS_BUSY');
   });
 
-  it('refuse quand l’agent est absent, muet ou bloqué', async () => {
+  it('refuses when the agent is absent, silent or blocked', async () => {
     for (const state of ['absent', 'stalled', 'blocked']) {
       spool.mechanism.mockResolvedValue({ ...READY, state, reason: 'ROOT_MISMATCH' });
       const res = await request(app).post('/api/admin/ops/runs').send(UPDATE);
@@ -152,16 +152,16 @@ describe('POST /api/admin/ops/runs', () => {
     }
   });
 
-  it('respecte ce que l’exploitant a refusé dans la configuration de l’agent', async () => {
-    // `deploy/agent.conf` n'est monté dans aucun conteneur de l'application : c'est la
-    // barrière qu'une session d'administration volée ne franchit pas.
+  it('respects what the operator refused in the agent configuration', async () => {
+    // `deploy/agent.conf` is not mounted in any application container: it is the barrier that a stolen
+    // admin session does not get past.
     spool.mechanism.mockResolvedValue({ ...READY, allow: { update: false, backup: true, verify: true } });
     const res = await request(app).post('/api/admin/ops/runs').send(UPDATE);
     expect(res.status).toBe(409);
     expect(code(res.body)).toBe('OPS_NOT_ALLOWED');
   });
 
-  it('refuse un jeton d’API et un rôle non admin', async () => {
+  it('refuses an API token and a non-admin role', async () => {
     actor.apiToken = { id: 7 };
     expect((await request(app).post('/api/admin/ops/runs').send(UPDATE)).status).toBe(400);
     actor.apiToken = undefined;
@@ -171,25 +171,25 @@ describe('POST /api/admin/ops/runs', () => {
   });
 });
 
-describe('suivi et annulation', () => {
-  it('sert l’état et une tranche de journal', async () => {
+describe('tracking and cancellation', () => {
+  it('serves the state and a slice of the log', async () => {
     const res = await request(app).get(`/api/admin/ops/runs/${RUN.id}?from=12`);
     expect(res.status).toBe(200);
     expect(res.body.log.text).toBe('salut');
     expect(spool.readLog).toHaveBeenCalledWith(RUN.id, 12);
   });
 
-  it('refuse un identifiant qui n’en est pas un, avant de toucher au disque', async () => {
+  it('refuses an identifier that is not one, before touching the disk', async () => {
     expect((await request(app).get('/api/admin/ops/runs/..%2F..%2Fetc')).status).toBe(400);
     expect(spool.readRun).not.toHaveBeenCalled();
   });
 
-  it('rend 404 sur une exécution inconnue', async () => {
+  it('returns 404 for an unknown run', async () => {
     spool.readRun.mockResolvedValue(null);
     expect((await request(app).get(`/api/admin/ops/runs/${RUN.id}`)).status).toBe(404);
   });
 
-  it('annule tant que la bascule n’est pas engagée, et refuse ensuite', async () => {
+  it('cancels while the switchover is not committed, and refuses afterwards', async () => {
     expect((await request(app).post(`/api/admin/ops/runs/${RUN.id}/cancel`)).status).toBe(202);
     expect(spool.cancel).toHaveBeenCalledWith(RUN.id);
 

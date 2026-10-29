@@ -20,21 +20,21 @@ const config: TranscodeConfig = {
 };
 
 describe('transcodeConfig.selectRenditions (Phase 22)', () => {
-  it('garde les paliers ≤ hauteur source', () => {
+  it('keeps the rungs at or below the source height', () => {
     expect(selectRenditions(config, 1080).map((r) => r.height)).toEqual([360, 720, 1080]);
   });
 
-  it('borne par maxHeight (pas d’up-scale au-delà du plafond)', () => {
+  it('caps by maxHeight (no up-scaling beyond the ceiling)', () => {
     expect(selectRenditions({ ...config, maxHeight: 720 }, 2160).map((r) => r.height)).toEqual([360, 720]);
   });
 
-  it('source plus petite que le plus petit palier → une rendition à la hauteur source', () => {
+  it('source smaller than the smallest rung → one rendition at the source height', () => {
     const out = selectRenditions(config, 240);
     expect(out).toHaveLength(1);
     expect(out[0]!.height).toBe(240);
   });
 
-  it('source 4K → toute l’échelle', () => {
+  it('4K source → the whole ladder', () => {
     expect(selectRenditions(config, 2160).map((r) => r.height)).toEqual([360, 720, 1080, 2160]);
   });
 });

@@ -5,7 +5,7 @@ import type { Role, UserStatus } from '@prisma/client';
 import { storage } from '../services/StorageService';
 import { imageTypeFromKey } from './uploadContentType';
 
-/** Champs d'identité bruts d'un utilisateur, tels que sélectionnés en base. */
+/** Raw identity fields of a user, as selected in the database. */
 export interface RawUserIdentity {
   id: number;
   email: string;
@@ -16,7 +16,7 @@ export interface RawUserIdentity {
   avatarKey?: string | null;
 }
 
-/** Identité + profil enrichi (42.B №89) + rôle : ce que voit l'utilisateur de sa session. */
+/** Identity, enriched profile (42.B №89) and role: what the user sees of their session. */
 export interface RawSessionUser extends RawUserIdentity {
   jobTitle?: string | null;
   bio?: string | null;
@@ -25,7 +25,7 @@ export interface RawSessionUser extends RawUserIdentity {
   status?: UserStatus;
 }
 
-/** Nom d'affichage : pseudo > nom complet legacy > prénom+nom > email. */
+/** Display name: username > legacy full name > first name + last name > email. */
 export function displayName(u: RawUserIdentity): string {
   if (u.username) return u.username;
   if (u.name) return u.name;
@@ -34,7 +34,7 @@ export function displayName(u: RawUserIdentity): string {
   return u.email;
 }
 
-/** Initiales (1–2 lettres) pour l'avatar de repli. */
+/** Initials (1–2 letters) for the fallback avatar. */
 export function initials(u: RawUserIdentity): string {
   const first = u.firstName?.[0];
   const last = u.lastName?.[0];
@@ -49,13 +49,13 @@ export function initials(u: RawUserIdentity): string {
   return name.slice(0, 2).toUpperCase();
 }
 
-/** URL d'avatar présignée (null si pas d'avatar uploadé → repli initiales côté front). */
+/** Presigned avatar URL (null if no avatar uploaded, so the front end falls back to initials). */
 export async function avatarUrl(avatarKey?: string | null): Promise<string | null> {
   if (!avatarKey) return null;
   try {
-    // Type imposé d'après l'extension : l'avatar est déposé par PUT présigné, dont la
-    // signature ne contraint pas le Content-Type envoyé. Un « avatar » en text/html
-    // s'exécuterait sur l'origine de l'app au moment où quelqu'un ouvre l'URL.
+    // Type imposed from the extension: the avatar is uploaded via presigned PUT, whose signature
+    // does not constrain the Content-Type sent. An "avatar" served as text/html would run on the
+    // app's origin when someone opens the URL.
     return await storage.getPresignedGetUrl(avatarKey, 3600, imageTypeFromKey(avatarKey));
   } catch {
     return null;
@@ -63,12 +63,11 @@ export async function avatarUrl(avatarKey?: string | null): Promise<string | nul
 }
 
 /**
- * Vue d'un auteur dont le compte a été supprimé.
+ * View of an author whose account has been deleted.
  *
- * La plupart des relations d'auteur sont en `SetNull` : supprimer un compte laisse derrière
- * lui des commentaires, décisions et marqueurs dont l'auteur vaut `null`. Les vues publiques
- * déréférençaient cet auteur sans précaution — un seul départ suffisait à casser en 500 tous
- * les fils de review où la personne était passée.
+ * Most author relations are `SetNull`: deleting an account leaves behind comments, decisions and
+ * markers whose author is `null`. The public views dereferenced this author without care: a single
+ * departure was enough to break every review thread the person had taken part in, with a 500 error.
  */
 export const DELETED_USER_VIEW = {
   id: null,
@@ -78,14 +77,13 @@ export const DELETED_USER_VIEW = {
 } as const;
 
 /**
- * Comme `toPublicUser`, mais tolère un auteur absent (compte supprimé).
+ * Like `toPublicUser`, but tolerates a missing author (deleted account).
  *
- * `externalName` distingue les deux façons de n'avoir pas de compte. Un compte supprimé
- * ne laisse rien derrière lui : c'est le cas que couvre `DELETED_USER_VIEW`. Un invité,
- * ou un intervenant qui a écrit depuis ShotGrid, n'a jamais eu de compte ici mais porte
- * son nom (`Comment.guestName`) : renvoyer `null` laisse alors l'affichage retomber sur
- * ce nom-là. Les confondre revient à présenter quelqu'un de bien vivant comme un compte
- * supprimé — c'est faux, et c'est ce que voyaient les retours venus de ShotGrid.
+ * `externalName` distinguishes the two ways of having no account. A deleted account leaves nothing
+ * behind: that is the case covered by `DELETED_USER_VIEW`. A guest, or a contributor who wrote from
+ * ShotGrid, never had an account here but carries their name (`Comment.guestName`): returning
+ * `null` lets the display fall back to that name. Confusing the two would present a living person
+ * as a deleted account, which is wrong, and is what feedback coming from ShotGrid used to show.
  */
 export async function toPublicUserOrDeleted<T extends RawUserIdentity>(
   u: T | null | undefined,
@@ -95,7 +93,7 @@ export async function toPublicUserOrDeleted<T extends RawUserIdentity>(
   return externalName ? null : DELETED_USER_VIEW;
 }
 
-/** Vue publique normalisée d'un utilisateur (avec displayName + avatarUrl résolu). */
+/** Normalized public view of a user (with displayName and resolved avatarUrl). */
 export async function toPublicUser<T extends RawUserIdentity>(
   u: T,
 ): Promise<T & { displayName: string; initials: string; avatarUrl: string | null }> {
@@ -107,7 +105,7 @@ export async function toPublicUser<T extends RawUserIdentity>(
   };
 }
 
-/** Champs à sélectionner pour construire une vue publique — le strict nécessaire. */
+/** Fields to select to build a public view: only what is strictly necessary. */
 export const publicUserSelect = {
   select: {
     id: true,
@@ -120,20 +118,20 @@ export const publicUserSelect = {
   },
 } as const;
 
-/** Remplace l'auteur brut de chaque ligne par sa vue publique (avatar, displayName). */
+/** Replaces the raw author of each row with its public view (avatar, displayName). */
 export async function withPublicAuthors<T extends { createdBy: RawUserIdentity }>(rows: T[]) {
   return Promise.all(rows.map(async (r) => ({ ...r, createdBy: await toPublicUser(r.createdBy) })));
 }
 
 /**
- * Vue de l'utilisateur connecté, renvoyée par toutes les routes qui ouvrent ou rejouent
- * une session (`/api/auth/login`, `/api/auth/2fa/verify`, `/api/auth/me`).
+ * View of the logged-in user, returned by all routes that open or replay a session
+ * (`/api/auth/login`, `/api/auth/2fa/verify`, `/api/auth/me`).
  *
- * Ces trois routes recopiaient chacune la liste des champs à la main, et aucune n'y avait
- * ajouté le profil enrichi (42.B №89) : poste, bio et téléphone étaient bien enregistrés
- * par `PATCH /api/users/me`, mais le premier rechargement de page rappelait `/me` et les
- * effaçait du store — le formulaire les réaffichait vides, comme si la sauvegarde n'avait
- * rien gardé. La vue est donc unique, et sert de contrat au type `AuthUser` du front.
+ * Each of these three routes copied the list of fields by hand, and none had added the enriched
+ * profile (42.B №89): job title, bio and phone were indeed saved by `PATCH /api/users/me`, but the
+ * first page reload called `/me` and cleared them from the store, so the form displayed them empty
+ * again, as if the save had kept nothing. The view is therefore unique, and serves as the contract
+ * for the front end's `AuthUser` type.
  */
 export async function toSessionUser(u: RawSessionUser) {
   const view = await toPublicUser({

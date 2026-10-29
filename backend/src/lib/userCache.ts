@@ -6,18 +6,16 @@ import { publishRedis, subscribeRedis } from './redis';
 import type { Role } from '@prisma/client';
 
 /**
- * Cache de l'identité authentifiée (B3).
+ * Cache of the authenticated identity (B3).
  *
- * `authenticate` relisait l'utilisateur en base à **chaque requête HTTP** — tous les
- * routeurs le montent. Une navigation ordinaire déclenche vingt à quarante appels d'API :
- * autant d'allers-retours sur la table la plus sollicitée de l'instance, pour trois
- * colonnes qui ne changent presque jamais.
+ * `authenticate` re-read the user from the database on **every HTTP request**: all routers mount
+ * it. An ordinary navigation triggers twenty to forty API calls, as many round trips on the most
+ * used table of the instance, for three columns that almost never change.
  *
- * Le cache reste **en mémoire de process** — c'est ce qui lui donne son intérêt — mais son
- * **invalidation traverse les répliques** (canal Redis). Sans cela, rétrograder un compte
- * n'aurait effacé l'entrée que sur la réplique qui a traité l'écriture : les autres
- * auraient continué à servir l'ancien rôle jusqu'à l'expiration, c'est-à-dire jusqu'à
- * trente secondes de droits qu'on croyait retirés.
+ * The cache stays **in process memory**, which is what gives it its value, but its **invalidation
+ * crosses replicas** (Redis channel). Without this, demoting an account would only have cleared
+ * the entry on the replica that handled the write: the others would have kept serving the old
+ * role until expiry, that is, up to thirty seconds of rights we thought were withdrawn.
  */
 
 export interface CachedUser {
@@ -25,11 +23,11 @@ export interface CachedUser {
   email: string;
   role: Role;
   /**
-   * Date de désactivation du compte (offboarding), `null` tant qu'il est actif.
+   * Account deactivation date (offboarding), `null` while the account is active.
    *
-   * Elle est ici parce qu'un droit qu'on ne charge pas est un droit qu'on ne peut pas
-   * refuser : sans cette colonne, `middleware/auth` n'avait rien à tester et un compte
-   * désactivé continuait de passer avec un jeton neuf.
+   * It lives here because a right that is not loaded is a right that cannot be refused: without
+   * this column, `middleware/auth` had nothing to test, and a deactivated account kept passing
+   * with a fresh token.
    */
   disabledAt: Date | null;
 }
@@ -41,7 +39,7 @@ const INVALIDATE_CHANNEL = 'review:user-cache';
 const cache = new Map<number, { user: CachedUser | null; until: number }>();
 let wired = false;
 
-/** Souscription posée à la première lecture : un process qui n'authentifie pas s'en passe. */
+/** Subscription set up on the first read: a process that does not authenticate can do without it. */
 function ensureWiring(): void {
   if (wired) return;
   wired = true;
@@ -56,7 +54,7 @@ function cacheSet(id: number, user: CachedUser | null): void {
   cache.set(id, { user, until: Date.now() + TTL_MS });
 }
 
-/** Identité minimale d'un compte, mise en cache 30 s. `null` = compte supprimé. */
+/** Minimal identity of an account, cached for 30 s. `null` = deleted account. */
 export async function getAuthUser(id: number): Promise<CachedUser | null> {
   ensureWiring();
   const hit = cache.get(id);
@@ -70,9 +68,9 @@ export async function getAuthUser(id: number): Promise<CachedUser | null> {
 }
 
 /**
- * À appeler après toute écriture qui touche le rôle, l'adresse ou l'existence d'un compte.
- * Sans cet oubli-là, un compte rétrogradé garderait ses droits pendant la durée du cache —
- * sur **toutes** les répliques, d'où la notification et pas seulement l'oubli local.
+ * To call after any write that touches the role, email or existence of an account.
+ * Without this forgetting, a demoted account would keep its rights for the duration of the cache,
+ * on **all** replicas: hence the notification, not just the local forgetting.
  */
 export function invalidateAuthUser(id: number): void {
   cache.delete(id);

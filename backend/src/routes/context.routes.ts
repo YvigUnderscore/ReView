@@ -14,7 +14,7 @@ router.use(authenticate);
 
 const ENTITIES = ['media', 'version', 'task', 'shot', 'sequence', 'asset', 'project'] as const;
 
-// GET /api/context/:entity/:id — chaîne d'ancêtres pour le fil d'Ariane
+// GET /api/context/:entity/:id — ancestor chain for the breadcrumb
 router.get(
   '/:entity/:id',
   validate({ params: z.object({ entity: z.enum(ENTITIES), id: z.coerce.number().int().positive() }) }),

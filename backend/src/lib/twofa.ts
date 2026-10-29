@@ -7,21 +7,21 @@ import { getRedis } from './redis';
 import { logger } from './logger';
 
 /**
- * 2FA TOTP (36.A) — helpers (testés) au-dessus d'otplib v13 (API fonctionnelle, async).
- * Le secret est stocké chiffré (lib/crypto) sur User.totpSecret ; les codes de secours
- * sont stockés hashés (sha256) et consommés un par un.
+ * 2FA TOTP (36.A): helpers (tested) built on top of otplib v13 (functional, async API).
+ * The secret is stored encrypted (lib/crypto) in User.totpSecret; backup codes are stored
+ * hashed (sha256) and consumed one at a time.
  */
 
 export const generateTotpSecret = (): string => generateSecret();
 
-/** URI `otpauth://` pour le QR code (rendu côté client). */
+/** `otpauth://` URI for the QR code (rendered client-side). */
 export const otpauthUri = (email: string, issuer: string, secret: string): string =>
   generateURI({ secret, issuer, label: email });
 
-/** Code TOTP courant (tests / outillage). */
+/** Current TOTP code (tests / tooling). */
 export const currentTotp = (secret: string): Promise<string> => generate({ secret });
 
-/** Vérifie un code TOTP (fenêtre gérée par otplib). */
+/** Verifies a TOTP code (window handled by otplib). */
 export async function verifyTotp(secret: string, code: string): Promise<boolean> {
   try {
     const r = await verify({ secret, token: code.replace(/\s/g, '') });
@@ -32,9 +32,9 @@ export async function verifyTotp(secret: string, code: string): Promise<boolean>
 }
 
 /**
- * Normalisation d'un code saisi : casse, espaces et séparateurs de lisibilité ignorés.
- * Les codes de secours émis avant le passage à 128 bits n'avaient aucun séparateur —
- * leur hash est donc inchangé, et ils continuent de fonctionner.
+ * Normalizes an entered code: case, spaces and readability separators are ignored.
+ * Backup codes issued before the switch to 128 bits had no separators, so their hash is
+ * unchanged and they keep working.
  */
 const normalizeCode = (code: string): string =>
   code
@@ -42,24 +42,24 @@ const normalizeCode = (code: string): string =>
     .toLowerCase()
     .replace(/[^a-z0-9]/g, '');
 
-// ── Anti-rejeu du code TOTP ──────────────────────────────────────────────────
+// ── TOTP code replay protection ──────────────────────────────────────────────────
 
 /**
- * Un code TOTP reste valide pendant tout son pas de temps (30 s, plus la tolérance
- * d'otplib). Sans mémoire des codes déjà présentés, celui qu'on intercepte — épaule,
- * hameçonnage en temps réel, journal d'un client mal réglé — se rejoue tant que la
- * fenêtre n'est pas passée : le second facteur ne prouve alors plus rien.
+ * A TOTP code stays valid for its whole time step (30 s, plus otplib's tolerance). Without a
+ * memory of the codes already presented, the one that is intercepted (shoulder surfing,
+ * real-time phishing, a misconfigured client's log) can be replayed as long as the window has
+ * not passed: the second factor then proves nothing.
  *
- * Deux étages, et ils ne jouent pas le même rôle :
+ * Two layers, which do not play the same role:
  *
- *  - `consumeTotpOnce` — garde LOCALE au process. Gratuite, elle court-circuite le rejeu
- *    déjà vu par CETTE réplique et rattrape une éviction du marqueur partagé sous pression
- *    mémoire. Elle ne suffit pas : elle ignore tout de ce que sert l'autre réplique.
- *  - `consumeTotpOnceShared` — garde PARTAGÉE (Redis), **la seule que la route de
- *    vérification doit appeler**. Sur deux répliques derrière le même frontal, la garde
- *    locale ne voit pas la tentative servie par l'autre : le code intercepté se rejoue en
- *    tombant sur la seconde. Le limiteur de débit a été porté sur Redis pour exactement ce
- *    motif (`middleware/rateLimit`), la présence et les salles live aussi.
+ *  - `consumeTotpOnce`: LOCAL guard inside the process. Free, it short-circuits a replay already
+ *    seen by THIS replica and catches an eviction of the shared marker under memory pressure.
+ *    It is not enough: it knows nothing of what the other replica serves.
+ *  - `consumeTotpOnceShared`: SHARED guard (Redis), **the only one the verification route must
+ *    call**. On two replicas behind the same front end, the local guard does not see the attempt
+ *    served by the other: the intercepted code is replayed by landing on the second one. The rate
+ *    limiter was moved to Redis for exactly this reason (`middleware/rateLimit`); presence and
+ *    live rooms too.
  */
 const REPLAY_TTL_MS = 120_000;
 const REPLAY_MAX_ENTRIES = 50_000;
@@ -68,17 +68,17 @@ const usedTotp = new Map<string, number>();
 const totpKey = (userId: number, code: string): string => `${userId}:${normalizeCode(code)}`;
 
 /**
- * Enregistre un code TOTP comme consommé. Renvoie `false` s'il l'était déjà — l'appelant
- * doit alors refuser la vérification, exactement comme pour un code faux.
+ * Records a TOTP code as consumed. Returns `false` if it already was: the caller must then refuse
+ * the verification, exactly as for a wrong code.
  */
 export function consumeTotpOnce(userId: number, code: string): boolean {
   const now = Date.now();
-  // Balayage à l'insertion : pas de timer à faire vivre, et la table reste bornée.
+  // Sweep on insertion: no timer to keep alive, and the table stays bounded.
   for (const [k, until] of usedTotp) {
     if (until <= now) usedTotp.delete(k);
   }
-  // Plafond de sûreté : mieux vaut oublier (et retomber sur le comportement d'avant) que
-  // laisser une saturation mémoire devenir un déni de service.
+  // Safety ceiling: better to forget (and fall back to the earlier behavior) than
+  // to let memory saturation become a denial of service.
   if (usedTotp.size >= REPLAY_MAX_ENTRIES) usedTotp.clear();
 
   const key = totpKey(userId, code);
@@ -87,26 +87,25 @@ export function consumeTotpOnce(userId: number, code: string): boolean {
   return true;
 }
 
-/** Marqueur partagé entre répliques. Le préfixe le range avec les autres états volatils. */
+/** Marker shared between replicas. The prefix files it with the other volatile states. */
 const totpRedisKey = (userId: number, code: string): string => `totp:used:${totpKey(userId, code)}`;
 
 /**
- * Consommation d'un code TOTP valable pour TOUTE l'instance, répliques comprises.
+ * Consumption of a TOTP code valid for the WHOLE instance, replicas included.
  *
- * `SET … PX … NX` est atomique : la première réplique pose la clé et reçoit `OK`, la
- * seconde reçoit `null` et refuse. La garde locale reste interrogée d'abord — elle est
- * gratuite et évite un aller-retour sur un rejeu que cette réplique a déjà vu.
+ * `SET … PX … NX` is atomic: the first replica sets the key and receives `OK`, the second
+ * receives `null` and refuses. The local guard is still consulted first: it is free and avoids
+ * a round trip on a replay this replica has already seen.
  *
- * ⚠ **Échec FERMÉ si Redis ne répond pas.** Un anti-rejeu qui a perdu la mémoire de ce qui
- * a été présenté ne peut pas répondre « jamais vu » : laisser passer ferait de la panne du
- * marqueur le moyen de le contourner — c'est mot pour mot la règle déjà tenue par le
- * limiteur de débit (`middleware/rateLimit`, échec fermé en 429). Et cette fermeture ne
- * coûte aucune disponibilité que la 2FA aurait encore : `/api/auth/2fa/verify` est précédé
- * de deux limiteurs eux-mêmes adossés à Redis, qui refusent la requête avant d'arriver ici
- * quand le serveur est injoignable.
+ * ⚠ **FAIL CLOSED if Redis does not answer.** An anti-replay store that lost the memory of what
+ * was presented cannot answer "never seen": letting it through would make the marker's outage the
+ * way to bypass it. This is word for word the rule already upheld by the rate limiter
+ * (`middleware/rateLimit`, fail closed with a 429). And this closure costs no availability that
+ * 2FA would still have: `/api/auth/2fa/verify` is preceded by two limiters that are themselves
+ * backed by Redis, which refuse the request before it gets here when the server is unreachable.
  *
- * Effet de bord assumé : le code présenté pendant la panne est brûlé par la garde locale.
- * Il vaut trente secondes — l'utilisateur en lit un autre.
+ * Accepted side effect: the code presented during the outage is burned by the local guard. It is
+ * valid for thirty seconds, and the user reads another one.
  */
 export async function consumeTotpOnceShared(userId: number, code: string): Promise<boolean> {
   if (!consumeTotpOnce(userId, code)) return false;
@@ -119,18 +118,18 @@ export async function consumeTotpOnceShared(userId: number, code: string): Promi
   }
 }
 
-// ── Codes de secours ─────────────────────────────────────────────────────────
+// ── Backup codes ─────────────────────────────────────────────────────────
 
 export const hashBackupCode = (code: string): string =>
   createHash('sha256').update(normalizeCode(code)).digest('hex');
 
 /**
- * 10 codes de secours, **128 bits** chacun, groupés par 8 caractères pour la recopie.
+ * 10 backup codes, **128 bits** each, grouped in blocks of 8 characters for transcription.
  *
- * Les hashs sont stockés sans sel ni étirement : c'est tenable uniquement parce que le
- * code est assez long pour rendre la recherche exhaustive hors de portée. Les 40 bits
- * précédents (`randomBytes(5)`) se parcouraient sur un GPU si la base fuitait — d'où la
- * règle : ne pas raccourcir ces codes pour les rendre plus commodes.
+ * Hashes are stored without salt or stretching: this is bearable only because the code is long
+ * enough to put an exhaustive search out of reach. The previous 40 bits (`randomBytes(5)`) could
+ * be enumerated on a GPU if the database leaked, hence the rule: do not shorten these codes to
+ * make them more convenient.
  */
 export function generateBackupCodes(): { plain: string[]; hashes: string[] } {
   const plain = Array.from({ length: 10 }, () =>
@@ -139,7 +138,7 @@ export function generateBackupCodes(): { plain: string[]; hashes: string[] } {
   return { plain, hashes: plain.map(hashBackupCode) };
 }
 
-/** Consomme un code de secours : renvoie la liste des hashs restants, ou null si invalide. */
+/** Consumes a backup code: returns the list of remaining hashes, or null if invalid. */
 export function consumeBackupCode(hashes: string[], code: string): string[] | null {
   const h = hashBackupCode(code);
   if (!hashes.includes(h)) return null;

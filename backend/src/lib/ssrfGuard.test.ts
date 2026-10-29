@@ -9,14 +9,14 @@ import { lookup } from 'node:dns/promises';
 import { isPrivateAddress, assertPublicHttpTarget } from './ssrfGuard';
 
 describe('isPrivateAddress', () => {
-  it('reconnaît les espaces internes IPv4', () => {
+  it('recognizes internal IPv4 ranges', () => {
     for (const ip of [
       '127.0.0.1',
       '10.1.2.3',
       '192.168.1.1',
       '172.16.0.1',
       '172.31.255.255',
-      '169.254.169.254', // métadonnées cloud
+      '169.254.169.254', // cloud metadata
       '0.0.0.0',
       '100.64.0.1', // CGNAT
       '224.0.0.1', // multicast
@@ -24,43 +24,43 @@ describe('isPrivateAddress', () => {
       expect(isPrivateAddress(ip), ip).toBe(true);
   });
 
-  it('laisse passer les adresses publiques', () => {
+  it('lets public addresses through', () => {
     for (const ip of ['1.1.1.1', '8.8.8.8', '93.184.216.34', '172.32.0.1', '2606:4700::1111'])
       expect(isPrivateAddress(ip), ip).toBe(false);
   });
 
-  it('reconnaît les espaces internes IPv6, IPv4 mappée comprise', () => {
+  it('recognizes internal IPv6 ranges, including mapped IPv4', () => {
     for (const ip of ['::1', '::', 'fd00::1', 'fe80::1', 'ff02::1', '::ffff:127.0.0.1'])
       expect(isPrivateAddress(ip), ip).toBe(true);
   });
 
-  it('refuse ce qui n’est pas une adresse', () => {
+  it('rejects anything that is not an address', () => {
     expect(isPrivateAddress('pas-une-ip')).toBe(true);
   });
 });
 
 describe('assertPublicHttpTarget', () => {
-  it('refuse les schémas autres que http(s)', async () => {
+  it('rejects schemes other than http(s)', async () => {
     for (const u of ['file:///etc/passwd', 'gopher://x/', 'redis://cache:6379'])
       expect((await assertPublicHttpTarget(u)).ok).toBe(false);
   });
 
-  it('refuse une IP interne littérale sans résoudre quoi que ce soit', async () => {
+  it('rejects a literal internal IP without resolving anything', async () => {
     expect((await assertPublicHttpTarget('http://169.254.169.254/latest/meta-data/')).ok).toBe(false);
     expect((await assertPublicHttpTarget('http://[::1]:9000/review/')).ok).toBe(false);
     expect(lookup).not.toHaveBeenCalled();
   });
 
-  // Le cœur du correctif : la vérification porte sur l'adresse RÉSOLUE. Un nom parfaitement
-  // public peut pointer vers la boucle locale ou le service de métadonnées.
-  it('refuse un nom public qui résout vers une adresse interne', async () => {
+  // The core of the fix: the check targets the RESOLVED address. A perfectly public name
+  // can point to the loopback or to the metadata service.
+  it('rejects a public name that resolves to an internal address', async () => {
     vi.mocked(lookup).mockResolvedValue([{ address: '127.0.0.1', family: 4 }] as never);
     const v = await assertPublicHttpTarget('https://interne.exemple.com/hook');
     expect(v.ok).toBe(false);
     expect(v.reason).toMatch(/internal/);
   });
 
-  it('refuse dès qu’UNE des adresses renvoyées est interne', async () => {
+  it('rejects as soon as ONE of the returned addresses is internal', async () => {
     vi.mocked(lookup).mockResolvedValue([
       { address: '93.184.216.34', family: 4 },
       { address: '10.0.0.5', family: 4 },
@@ -68,12 +68,12 @@ describe('assertPublicHttpTarget', () => {
     expect((await assertPublicHttpTarget('https://mixte.exemple.com/hook')).ok).toBe(false);
   });
 
-  it('accepte une cible publique', async () => {
+  it('accepts a public target', async () => {
     vi.mocked(lookup).mockResolvedValue([{ address: '93.184.216.34', family: 4 }] as never);
     expect((await assertPublicHttpTarget('https://hooks.slack.com/services/x')).ok).toBe(true);
   });
 
-  it('refuse un nom introuvable', async () => {
+  it('rejects an unknown name', async () => {
     vi.mocked(lookup).mockRejectedValue(new Error('ENOTFOUND'));
     expect((await assertPublicHttpTarget('https://nexistepas.exemple/hook')).ok).toBe(false);
   });

@@ -6,35 +6,34 @@ import { getSourceUrl } from '../lib/settings';
 import { appVersion } from '../lib/version';
 import { isShuttingDown } from '../lib/gracefulShutdown';
 import { createReadinessCache, dependencyProbes, runChecks, READY_CACHE_MS } from '../lib/health';
-// Réexport : la mécanique a déménagé dans lib/health, les appelants historiques (tests,
-// écran d'administration système) continuent de la trouver ici.
+// Re-export: the mechanics moved to lib/health; the historical callers (tests, the system
+// administration screen) still find it here.
 export * from '../lib/health';
 
 /**
- * Sondes de santé et version de l'instance.
+ * Health probes and instance version.
  *
- * `GET /health` répondait « ok » sans rien toucher : un backend dont le pool de connexions
- * est mort restait « healthy » et continuait de recevoir du trafic. On sépare donc les deux
- * questions, qui n'ont pas les mêmes réponses :
+ * `GET /health` answered "ok" without touching anything: a backend whose connection pool had died stayed
+ * "healthy" and kept receiving traffic. The two questions are therefore separated, as they do not have
+ * the same answers:
  *
- *  - **vivacité** (`/health`, `/health/live`) — le process répond-il ? Aucune E/S, jamais
- *    d'échec sur une dépendance : c'est la sonde de `docker compose`, et redémarrer un
- *    conteneur parce que Postgres est tombé ne ferait qu'ajouter une panne à la panne ;
- *  - **disponibilité** (`/health/ready`) — l'instance peut-elle réellement servir ? Base,
- *    Redis et MinIO sont interrogés, chacun sous délai maximal ; toute dépendance en défaut
- *    donne un **503**, ce qu'un frontal ou une supervision externe savent lire.
+ *  - **liveness** (`/health`, `/health/live`): does the process answer? No I/O, never a failure on a
+ *    dependency. This is the probe of `docker compose`, and restarting a container because Postgres went
+ *    down would only add one outage to another;
+ *  - **availability** (`/health/ready`): can the instance actually serve? The database, Redis and MinIO
+ *    are queried, each under a maximum delay; any faulty dependency gives a **503**, which a front end or
+ *    external supervision knows how to read.
  *
- * La sonde de disponibilité est bornée en charge par construction : chaque contrôle a un
- * délai, le résultat est mémorisé quelques secondes, et les appels concurrents partagent la
- * même exécution. Marteler `/health/ready` coûte donc, au pire, un aller-retour par
- * dépendance toutes les `READY_CACHE_MS` — sans quoi la sonde serait elle-même le vecteur
- * de charge qui achève une instance déjà en difficulté.
+ * The availability probe is bounded in load by construction: each check has a delay, the result is
+ * memoized for a few seconds, and concurrent calls share the same execution. Hammering `/health/ready`
+ * therefore costs, at worst, one round trip per dependency every `READY_CACHE_MS`: otherwise the probe
+ * would itself be the load vector that finishes off an instance already in difficulty.
  *
- * Surface publique (aucune authentification) : elle porte donc, comme `/api/docs`, l'offre
- * de code source correspondant exigée par l'AGPL §13 — c'est aussi la seule façon pour un
- * utilisateur de savoir *quelles* sources correspondent à l'instance qu'il utilise.
+ * Public surface (no authentication): it therefore carries, like `/api/docs`, the offer of corresponding
+ * source code required by AGPL §13. It is also the only way for a user to know *which* sources match the
+ * instance they use.
  */
-/** Vivacité : aucune E/S, aucune dépendance. Répond tant que la boucle d'événements tourne. */
+/** Liveness: no I/O, no dependency. Answers as long as the event loop is running. */
 const liveness = (): Record<string, unknown> => ({
   status: 'ok',
   version: appVersion.version,
@@ -43,9 +42,9 @@ const liveness = (): Record<string, unknown> => ({
 });
 
 /**
- * Construit le routeur de santé. Paramétrable pour que les tests éprouvent le 503 sans
- * dépendre de l'état mémorisé du routeur réel (le cache est justement partagé par tous les
- * appels : c'est ce qu'on veut en production, pas dans une suite de tests).
+ * Builds the health router. Parameterizable so that the tests can exercise the 503 without depending on
+ * the memoized state of the real router (the cache is precisely shared by all calls: that is what we want
+ * in production, not in a test suite).
  */
 export function buildHealthRouter(
   probes: Record<string, () => Promise<unknown>> = dependencyProbes,
@@ -64,15 +63,14 @@ export function buildHealthRouter(
 
   router.get('/ready', async (_req, res) => {
     /*
-     * Un process qui s'arrête n'est pas prêt, même si ses dépendances répondent encore.
-     * L'arrêt propre laisse finir les requêtes en cours pendant quelques secondes ; sans
-     * ce contrôle, la sonde répond 200 pendant tout ce délai et le frontal continue de
-     * router du trafic neuf vers un process qui se vide — chaque requête envoyée là arrive
-     * après la fermeture. C'est précisément à quoi sert `isShuttingDown`, qui existait sans
-     * appelant : le drainage était écrit côté serveur, mais jamais annoncé au dehors.
+     * A process that is shutting down is not ready, even if its dependencies still answer. The graceful
+     * shutdown lets in-flight requests finish for a few seconds; without this check, the probe answers 200
+     * for that whole delay and the front end keeps routing new traffic to a process that is emptying: each
+     * request sent there arrives after the closing. This is exactly what `isShuttingDown` is for, which
+     * existed without a caller: the draining was written server-side, but never announced outside.
      *
-     * Avant la lecture des dépendances : l'état est certain et local, il n'y a rien à
-     * attendre pour le savoir.
+     * Before reading the dependencies: the state is certain and local, there is nothing to wait for to
+     * know it.
      */
     if (isShuttingDown()) {
       res.status(503).json({
@@ -98,10 +96,10 @@ export function buildHealthRouter(
 export default buildHealthRouter();
 
 /**
- * Version de l'instance, publique (`GET /api/version`) : le support, la supervision et
- * l'écran « À propos » de l'administration lisent la même source. Publier la version d'un
- * logiciel AGPL n'est pas une fuite — l'§13 impose au contraire de pouvoir désigner les
- * sources *correspondantes*, ce que le couple version + commit permet seul.
+ * Instance version, public (`GET /api/version`): support, monitoring and the "About" screen of the
+ * administration all read the same source. Publishing the version of an AGPL software is not a leak:
+ * §13, on the contrary, requires being able to designate the *corresponding* sources, which the
+ * version plus commit pair alone allows.
  */
 export const versionRouter = Router();
 

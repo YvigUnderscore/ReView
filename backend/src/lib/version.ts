@@ -5,39 +5,39 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 
 /**
- * Version de l'instance.
+ * Version of the instance.
  *
- * Deux installations faites à deux dates n'étaient pas distinguables : ni l'API, ni la
- * sonde, ni l'écran d'administration ne disaient quelle version de ReView tournait. Sans
- * cela, aucun diagnostic à distance n'est possible — et l'AGPL §13 oblige à offrir le code
- * source *correspondant*, ce qui suppose de savoir à quel commit il correspond.
+ * Two installations made on two different dates were indistinguishable: neither the API, nor the
+ * probe, nor the administration screen said which version of ReView was running. Without this, no
+ * remote diagnosis is possible, and AGPL §13 requires offering the *corresponding* source code,
+ * which presumes knowing which commit it corresponds to.
  *
- * Trois sources, par ordre de préséance :
+ * Three sources, in order of precedence:
  *
- *  1. `APP_VERSION` / `GIT_SHA` / `BUILD_DATE` de l'environnement — posés par
- *     `scripts/install.sh` et `scripts/update.sh` dans `.env` (que le compose charge dans
- *     le backend ET le worker), ou injectés à la construction de l'image ;
- *  2. le `version` du `package.json` embarqué dans l'image, qui existe toujours ;
- *  3. `0.0.0-unknown`, jamais atteint en pratique mais préférable à une exception.
+ *  1. `APP_VERSION` / `GIT_SHA` / `BUILD_DATE` from the environment, set by `scripts/install.sh`
+ *     and `scripts/update.sh` in `.env` (which compose loads into the backend AND the worker), or
+ *     injected at image build time;
+ *  2. the `version` of the `package.json` embedded in the image, which always exists;
+ *  3. `0.0.0-unknown`, never reached in practice but preferable to an exception.
  *
- * Lecture directe de `process.env` — et non du schéma Zod de `config/env.ts` : ces trois
- * valeurs sont purement informatives, elles ne doivent ni faire échouer le démarrage
- * quand elles manquent (le cas normal en développement), ni obliger l'exploitant à les
- * renseigner. Le schéma refuse ce qu'il ne connaît pas ; ici, tout est facultatif.
+ * Direct reading of `process.env`, not of the Zod schema in `config/env.ts`: these three values
+ * are purely informative; they must neither make startup fail when missing (the normal case in
+ * development), nor oblige the operator to set them. The schema refuses what it does not know;
+ * here, everything is optional.
  */
 
 export interface VersionInfo {
-  /** Version SemVer de l'application (`2.1.0`), sans le `v` de l'étiquette git. */
+  /** SemVer version of the application (`2.1.0`), without the `v` of the git tag. */
   version: string;
-  /** Commit court de la construction, quand il est connu. */
+  /** Short commit of the build, when known. */
   commit: string | null;
-  /** Horodatage ISO de la construction de l'image, quand il est connu. */
+  /** ISO timestamp of the image build, when known. */
   builtAt: string | null;
 }
 
 export const UNKNOWN_VERSION = '0.0.0-unknown';
 
-/** Nettoie une valeur d'environnement : vide, `unknown` et espaces ne valent rien. */
+/** Cleans an environment value: empty, `unknown` and blank values are worth nothing. */
 function clean(value: string | null | undefined): string | null {
   const trimmed = value?.trim();
   if (!trimmed || trimmed.toLowerCase() === 'unknown') return null;
@@ -45,18 +45,18 @@ function clean(value: string | null | undefined): string | null {
 }
 
 /**
- * Normalise une version : `v2.1.0` et `2.1.0` désignent la même chose, l'étiquette git
- * porte le `v` par convention, pas la version.
+ * Normalizes a version: `v2.1.0` and `2.1.0` designate the same thing; the git tag carries the
+ * `v` by convention, not the version.
  */
 export function normalizeVersion(value: string | null): string | null {
   if (!value) return null;
   return /^v\d/i.test(value) ? value.slice(1) : value;
 }
 
-/** Version décomposée : noyau numérique et étiquettes de pré-version. */
+/** Decomposed version: numeric core and pre-release identifiers. */
 function parseSemver(value: string): { core: number[]; pre: string[] } {
   const normalized = normalizeVersion(value.trim()) ?? '0';
-  // Les métadonnées de construction (`+abc`) ne participent JAMAIS à l'ordre (SemVer §10).
+  // Build metadata (`+abc`) NEVER takes part in ordering (SemVer §10).
   const plus = normalized.indexOf('+');
   const withoutBuild = plus >= 0 ? normalized.slice(0, plus) : normalized;
   const dash = withoutBuild.indexOf('-');
@@ -69,14 +69,14 @@ function parseSemver(value: string): { core: number[]; pre: string[] } {
 }
 
 /**
- * Ordonne deux versions : négatif si `a` précède `b`, positif si elle la suit, 0 si elles
- * désignent la même. C'est ce qui décide si une release est « disponible ».
+ * Orders two versions: negative if `a` precedes `b`, positive if it follows it, 0 if they designate
+ * the same. This is what decides whether a release is "available".
  *
- * Deux pièges, tous deux visibles à l'écran le jour où ils se produisent :
- *  - la comparaison est **numérique champ par champ**, jamais lexicographique — sinon
- *    « 2.10.0 » précède « 2.9.0 » et l'instance se croit à jour à contretemps ;
- *  - une **pré-version précède** la version stable de même noyau (SemVer §11.4.3) : une
- *    instance en `2.4.0-rc.1` doit voir arriver `2.4.0`, pas se croire en avance.
+ * Two traps, both visible on screen the day they occur:
+ *  - the comparison is **numeric field by field**, never lexicographic: otherwise "2.10.0" precedes
+ *    "2.9.0" and the instance believes itself up to date at the wrong time;
+ *  - a **pre-release precedes** the stable version of the same core (SemVer §11.4.3): an instance
+ *    at `2.4.0-rc.1` must see `2.4.0` arrive, not believe itself ahead.
  */
 export function compareSemver(a: string, b: string): number {
   const left = parseSemver(a);
@@ -91,7 +91,7 @@ export function compareSemver(a: string, b: string): number {
   for (let i = 0; i < Math.max(left.pre.length, right.pre.length); i += 1) {
     const l = left.pre[i];
     const r = right.pre[i];
-    // Un jeu d'étiquettes plus court précède celui qui le prolonge (`rc.1` < `rc.1.2`).
+    // A shorter set of identifiers precedes the one that extends it (`rc.1` < `rc.1.2`).
     if (l === undefined) return -1;
     if (r === undefined) return 1;
     const lNum = /^\d+$/.test(l);
@@ -101,20 +101,20 @@ export function compareSemver(a: string, b: string): number {
       if (diff !== 0) return diff < 0 ? -1 : 1;
       continue;
     }
-    // Une étiquette numérique précède toujours une étiquette alphanumérique.
+    // A numeric identifier always precedes an alphanumeric identifier.
     if (lNum !== rNum) return lNum ? -1 : 1;
     if (l !== r) return l < r ? -1 : 1;
   }
   return 0;
 }
 
-/** Commit court (12 caractères) : un SHA complet ne se lit pas dans une interface. */
+/** Short commit (12 characters): a full SHA is not readable in an interface. */
 export function shortCommit(value: string | null): string | null {
   if (!value) return null;
   return /^[0-9a-f]{7,40}$/i.test(value) ? value.slice(0, 12).toLowerCase() : value.slice(0, 40);
 }
 
-/** Résout la version à partir d'un environnement et de la version du paquet. */
+/** Resolves the version from an environment and the package version. */
 export function resolveVersion(environment: NodeJS.ProcessEnv, packageVersion: string | null): VersionInfo {
   return {
     version:
@@ -127,9 +127,9 @@ export function resolveVersion(environment: NodeJS.ProcessEnv, packageVersion: s
 }
 
 /**
- * Remonte l'arborescence depuis `startDir` jusqu'à trouver un `package.json` lisible.
- * Le code exécuté vit dans `dist/lib/` en production et dans `src/lib/` en développement :
- * la profondeur n'est pas la même, on cherche donc plutôt que de compter les `..`.
+ * Walks up the tree from `startDir` until it finds a readable `package.json`.
+ * Code runs from `dist/lib/` in production and from `src/lib/` in development: the depth is not
+ * the same, so we search rather than count the `..`.
  */
 export function readPackageVersion(startDir: string, depth = 5): string | null {
   let dir = startDir;
@@ -140,7 +140,7 @@ export function readPackageVersion(startDir: string, depth = 5): string | null {
       const version = (parsed as { version?: unknown }).version;
       if (typeof version === 'string' && version.trim()) return version.trim();
     } catch {
-      // Pas de package.json ici (ou illisible) : on continue de remonter.
+      // No package.json here (or unreadable): keep walking up.
     }
     const parent = dirname(dir);
     if (parent === dir) break;
@@ -149,10 +149,10 @@ export function readPackageVersion(startDir: string, depth = 5): string | null {
   return null;
 }
 
-/** Version de ce process, résolue une fois au chargement. */
+/** Version of this process, resolved once at load time. */
 export const appVersion: VersionInfo = resolveVersion(process.env, readPackageVersion(__dirname));
 
-/** Chaîne compacte pour les journaux et l'en-tête `X-ReView-Version`. */
+/** Compact string for logs and the `X-ReView-Version` header. */
 export function versionLabel(info: VersionInfo = appVersion): string {
   return info.commit ? `${info.version}+${info.commit}` : info.version;
 }
