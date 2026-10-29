@@ -109,7 +109,7 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U review"
+          --health-cmd "pg_isready -U review -d review_itest"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
@@ -262,11 +262,15 @@ jobs:
         env:
           POSTGRES_USER: review
           POSTGRES_PASSWORD: review_ci
-          POSTGRES_DB: review_itest
+          # The application's own database, as on a development machine. The integration suite
+          # derives and resets `review_itest` itself (backend/src/integration/itestEnv.ts); pointing
+          # the app at that database made the E2E run on what the integration tests left there — a
+          # studio whose admin is `ci-admin@review.local` — so every Playwright sign-in was refused.
+          POSTGRES_DB: review
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U review"
+          --health-cmd "pg_isready -U review -d review"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
@@ -286,7 +290,7 @@ jobs:
       # help output. It is therefore started with `docker run` below, on the same host network.
 
     env:
-      DATABASE_URL: postgresql://review:review_ci@localhost:5432/review_itest?schema=public
+      DATABASE_URL: postgresql://review:review_ci@localhost:5432/review?schema=public
       JWT_SECRET: ci-placeholder-secret-not-used-outside-ci
       S3_ENDPOINT: http://localhost:9000
       S3_ACCESS_KEY: ci-minio-user
@@ -298,6 +302,8 @@ jobs:
       # (machine without docker). Here one is, so it becomes mandatory; otherwise the only place
       # it could run would also be the only place not requiring it.
       REVIEW_REQUIRE_DRIFT_CHECK: '1'
+      # Backend output of the Playwright run (playwright.config.ts), kept for the failure steps below.
+      E2E_SERVER_LOG: ${{ github.workspace }}/frontend/e2e-logs/backend.log
 
     steps:
       - name: Récupérer le dépôt
@@ -378,3 +384,19 @@ jobs:
 
       - name: Suite de validation + E2E Playwright
         run: bash scripts/validate.sh --with-e2e
+
+      - name: Journal du backend (E2E)
+        if: failure()
+        run: tail -n 400 "$E2E_SERVER_LOG" || echo "Pas de journal backend (le serveur n'a pas démarré ?)."
+
+      - name: Artefacts Playwright (traces, rapport, journal backend)
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-e2e
+          path: |
+            frontend/test-results
+            frontend/playwright-report
+            frontend/e2e-logs
+          if-no-files-found: ignore
+          retention-days: 14

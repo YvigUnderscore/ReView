@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { expect, type Page } from '@playwright/test';
+import { expect, type Page, type Response } from '@playwright/test';
 
 /**
  * Shared steps of the E2E specs (sign-in, API set-up/cleanup, seeding a reviewable media).
@@ -44,6 +44,10 @@ export async function signIn(page: Page): Promise<void> {
   // cannot tell setup from sign-in.
   const studioName = page.locator('#studioName');
   await expect(studioName.or(page.locator('#email'))).toBeVisible();
+  // Once signed in, the shell loads the account's preferences: they say whether the first-run tour opens.
+  const preferences = page.waitForResponse(
+    (res) => res.url().endsWith('/api/users/me/preferences') && res.request().method() === 'GET',
+  );
   if (await studioName.isVisible()) {
     await studioName.fill('E2E Studio');
     await page.getByRole('button', { name: 'Continue', exact: true }).click();
@@ -53,7 +57,14 @@ export async function signIn(page: Page): Promise<void> {
   } else {
     await submitLogin(page, EMAIL, PASSWORD);
   }
-  await dismissOnboarding(page);
+  // A refused sign-in (wrong account on this database, rate limit…) says so in the form: fail on its
+  // message rather than time out waiting for a shell that will never come.
+  const refusal = page.locator('form .text-destructive');
+  const refused = refusal.waitFor({ state: 'visible' }).then(() => null);
+  refused.catch(() => undefined);
+  const loaded = await Promise.race([preferences, refused]);
+  if (loaded === null) throw new Error(`Sign-in as ${EMAIL} refused: ${await refusal.innerText()}`);
+  await dismissOnboarding(page, loaded);
   await expectSignedIn(page);
 }
 
@@ -61,17 +72,13 @@ export async function signIn(page: Page): Promise<void> {
  * A new account gets the first-run tour, a modal over the whole shell. Skip it the way a user would (it
  * records `onboardingSeen`, so it does not come back on the next load).
  */
-async function dismissOnboarding(page: Page): Promise<void> {
+async function dismissOnboarding(page: Page, preferences: Response): Promise<void> {
+  const body = (await preferences.json().catch(() => null)) as {
+    preferences?: { onboardingSeen?: boolean };
+  } | null;
+  if (body?.preferences?.onboardingSeen === true) return;
   const tour = page.getByRole('dialog', { name: 'Welcome to ReView' });
-  const skip = tour.getByRole('button', { name: 'Skip', exact: true });
-  await expect(skip.or(page.getByRole('button', { name: 'Log out', exact: true }))).toBeVisible();
-  // The tour opens once the preferences load, which can land just after the shell renders.
-  const opened = await skip
-    .waitFor({ state: 'visible', timeout: 3000 })
-    .then(() => true)
-    .catch(() => false);
-  if (!opened) return;
-  await skip.click();
+  await tour.getByRole('button', { name: 'Skip', exact: true }).click();
   await expect(tour).toBeHidden();
 }
 

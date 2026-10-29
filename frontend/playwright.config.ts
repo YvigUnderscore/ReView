@@ -1,7 +1,16 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { mkdirSync } from 'node:fs';
+import { dirname } from 'node:path';
 import { defineConfig } from '@playwright/test';
+
+/**
+ * `E2E_SERVER_LOG` (CI): file that receives the backend's output. Without it, the request log and the
+ * server errors of a failed run were lost — Playwright drops a web server's stdout.
+ */
+const serverLog = process.env.E2E_SERVER_LOG;
+if (serverLog) mkdirSync(dirname(serverLog), { recursive: true });
 
 /**
  * Smoke E2E (10.F3): protects the complete critical path:
@@ -33,7 +42,8 @@ export default defineConfig({
   fullyParallel: false,
   timeout: 90_000,
   expect: { timeout: 15_000 },
-  reporter: [['list']],
+  // In CI, an HTML report as well: the workflow uploads it with the traces when the job fails.
+  reporter: process.env.CI ? [['list'], ['html', { open: 'never' }]] : [['list']],
   use: {
     baseURL: process.env.E2E_BASE_URL ?? 'http://localhost:5173',
     trace: 'retain-on-failure',
@@ -43,7 +53,7 @@ export default defineConfig({
   },
   webServer: [
     {
-      command: 'npm run dev',
+      command: serverLog ? `npm run dev > "${serverLog}" 2>&1` : 'npm run dev',
       cwd: '../backend',
       url: 'http://localhost:3000/health',
       reuseExistingServer: true,
