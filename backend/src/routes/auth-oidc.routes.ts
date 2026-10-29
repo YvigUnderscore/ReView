@@ -8,14 +8,9 @@ import bcrypt from 'bcryptjs';
 import * as oidc from 'openid-client';
 import { prisma } from '../lib/prisma';
 import { env } from '../config/env';
+import { readCookie, setRefreshCookie } from '../lib/refreshCookie';
 import { getOidcConfig, getOidcLogoUrl, isOidcReady, type OidcConfig } from '../lib/oidcConfig';
-import {
-  JWT_ALGORITHM,
-  JWT_VERIFY_OPTIONS,
-  signAccessToken,
-  signRefreshToken,
-  signTwoFaToken,
-} from '../lib/jwt';
+import { JWT_ALGORITHM, JWT_VERIFY_OPTIONS, signRefreshToken, signTwoFaToken } from '../lib/jwt';
 import { createSession } from '../lib/sessions';
 import { logAudit } from '../services/AuditService';
 import { logger } from '../lib/logger';
@@ -81,16 +76,6 @@ async function readyConfig(): Promise<OidcConfig> {
   const cfg = await getOidcConfig();
   if (!isOidcReady(cfg)) throw notFound('SSO is not configured');
   return cfg;
-}
-
-/** Reads a cookie without a dependency (there is no cookie-parser in the app). */
-function readCookie(header: string | undefined, name: string): string | null {
-  if (!header) return null;
-  for (const part of header.split(';')) {
-    const [k, ...rest] = part.trim().split('=');
-    if (k === name) return decodeURIComponent(rest.join('='));
-  }
-  return null;
 }
 
 // GET /api/auth/oidc/status — public: the front end shows (or not) the SSO button and its logo, and
@@ -161,7 +146,7 @@ router.get('/callback', async (req, res) => {
 
     let user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      if (!cfg.autoProvision) return fail('Aucun compte pour cet email — contactez un admin');
+      if (!cfg.autoProvision) return fail('No account for this email — contact an administrator');
       user = await prisma.user.create({
         data: {
           email,
@@ -177,7 +162,7 @@ router.get('/callback', async (req, res) => {
     // refusal, SSO handed the leaver, even without a password, the access that the deactivation had just
     // withdrawn from them. Same message as "no account": from their point of view it is the same fact,
     // and nothing is said about the state of the account.
-    if (user.disabledAt) return fail('Aucun compte pour cet email — contactez un admin');
+    if (user.disabledAt) return fail('No account for this email — contact an administrator');
 
     if (user.totpEnabledAt) {
       return res.redirect(`/login#tfa=${encodeURIComponent(signTwoFaToken(user.id))}`);
@@ -185,9 +170,10 @@ router.get('/callback', async (req, res) => {
     const sid = await createSession(user.id, req);
     const payload = { id: user.id, email: user.email, role: user.role, sid };
     logAudit({ userId: user.id, action: 'OIDC_LOGIN', entityType: 'User', entityId: user.id });
-    res.redirect(
-      `/login#sso=${encodeURIComponent(signAccessToken(payload))}&refresh=${encodeURIComponent(signRefreshToken(payload))}`,
-    );
+    // No token in the URL: the fragment lands in the browser history. The refresh token goes into its
+    // httpOnly cookie; the page obtains its access token from /api/auth/refresh (`sso=cookie`).
+    setRefreshCookie(req, res, signRefreshToken(payload));
+    res.redirect('/login#sso=cookie');
   } catch (err) {
     logger.warn({ err }, '[oidc] callback failed');
     fail('SSO login failed');

@@ -172,3 +172,25 @@ describe('listService and revokeService', () => {
     expect(err.statusCode).toBe(404);
   });
 });
+describe('listPersonal and revokePersonal', () => {
+  it("lists the account's live tokens, never their hash", async () => {
+    db.apiToken.findMany.mockResolvedValue([]);
+    await ApiTokenService.listPersonal(7);
+    const args = db.apiToken.findMany.mock.calls[0]?.[0] as {
+      where: Record<string, unknown>;
+      select: Record<string, unknown>;
+    };
+    expect(args.where).toEqual({ userId: 7, revokedAt: null });
+    expect(args.select).not.toHaveProperty('tokenHash');
+  });
+
+  it('revokes only a token of the account, 404 otherwise', async () => {
+    db.apiToken.updateMany.mockResolvedValueOnce({ count: 1 });
+    await expect(ApiTokenService.revokePersonal(7, 3)).resolves.toBeUndefined();
+    expect(db.apiToken.updateMany.mock.calls[0]?.[0]).toMatchObject({
+      where: { id: 3, userId: 7, revokedAt: null },
+    });
+    db.apiToken.updateMany.mockResolvedValueOnce({ count: 0 });
+    expect((await caught(() => ApiTokenService.revokePersonal(7, 4))).statusCode).toBe(404);
+  });
+});

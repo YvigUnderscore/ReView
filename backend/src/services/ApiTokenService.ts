@@ -40,7 +40,7 @@ const expiryFrom = (days?: number): Date | null => (days ? new Date(Date.now() +
 /** Rejects unknown scopes early, with a message naming the offender. */
 function assertScopes(scopes: readonly string[]): void {
   const unknown = scopes.filter((s) => !isGrantableScope(s));
-  if (unknown.length > 0) throw badRequest(`Scopes inconnus : ${unknown.join(', ')}`, 'UNKNOWN_SCOPE');
+  if (unknown.length > 0) throw badRequest(`Unknown scopes: ${unknown.join(', ')}`, 'UNKNOWN_SCOPE');
 }
 
 /**
@@ -103,6 +103,25 @@ export async function createPersonal(userId: number, input: CreateTokenInput) {
     metadata: { name: input.name, scopes: created.scopes, kind: 'PERSONAL' },
   });
   return { token, apiToken: created };
+}
+
+/** Active personal tokens of an account (never the secret), newest first. */
+export function listPersonal(userId: number) {
+  return prisma.apiToken.findMany({
+    where: { userId, revokedAt: null },
+    orderBy: { createdAt: 'desc' },
+    select: tokenSelect,
+  });
+}
+
+/** Revokes one of the account's own tokens; another account's token is a 404, not a 403. */
+export async function revokePersonal(userId: number, id: number): Promise<void> {
+  const r = await prisma.apiToken.updateMany({
+    where: { id, userId, revokedAt: null },
+    data: { revokedAt: new Date() },
+  });
+  if (r.count === 0) throw notFound('Token not found');
+  logAudit({ userId, action: 'API_TOKEN_REVOKE', entityType: 'ApiToken', entityId: id });
 }
 
 export interface CreateServiceTokenInput extends CreateTokenInput {

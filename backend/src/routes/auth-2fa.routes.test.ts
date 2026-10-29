@@ -74,6 +74,8 @@ describe('POST /api/auth/2fa/verify — TOTP code replay protection', () => {
     const res = await verify(await currentTotp(secret));
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('token');
+    expect(res.body).not.toHaveProperty('refreshToken'); // httpOnly cookie instead
+    expect(String(res.headers['set-cookie'])).toMatch(/review_refresh=.*HttpOnly/i);
   });
 
   it('rejects the same code replayed, like a wrong code', async () => {

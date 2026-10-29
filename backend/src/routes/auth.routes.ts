@@ -5,8 +5,8 @@ import { Router, type Request, type Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
-import { signAccessToken, signRefreshToken, signTwoFaToken, verifyToken } from '../lib/jwt';
-import { createSession, isSessionActive, touchSession } from '../lib/sessions';
+import { signAccessToken, signRefreshToken, signTwoFaToken } from '../lib/jwt';
+import { createSession } from '../lib/sessions';
 import { validate } from '../middleware/validate';
 import { authenticate, requireUser } from '../middleware/auth';
 import { rateLimit, targetAccountRateKey } from '../middleware/rateLimit';
@@ -17,6 +17,7 @@ import * as InvitationService from '../services/InvitationService';
 import { isPasswordLoginBlocked } from '../lib/oidcConfig';
 import { env } from '../config/env';
 import { badRequest, forbidden, unauthorized } from '../lib/errors';
+import { setRefreshCookie } from '../lib/refreshCookie';
 
 const router = Router();
 
@@ -71,12 +72,15 @@ const refuseIfDisabled = (user: { disabledAt: Date | null }): void => {
   if (user.disabledAt) throw unauthorized('Account disabled', 'ACCOUNT_DISABLED');
 };
 
-/** Opens the session and returns the token pair: the shared response of `/login` and of activation. */
+/**
+ * Opens the session: the shared response of `/login` and of activation. The access token goes in the body
+ * (kept in memory by the page), the refresh token in its httpOnly cookie (`lib/refreshCookie`).
+ */
 async function grantSession(user: RawSessionUser, req: Request, res: Response): Promise<void> {
   const sid = await createSession(user.id, req);
   const payload = { id: user.id, email: user.email, role: user.role, sid };
-  const token = signAccessToken(payload);
-  res.json({ token, refreshToken: signRefreshToken(payload), user: await toSessionUser(user) });
+  setRefreshCookie(req, res, signRefreshToken(payload));
+  res.json({ token: signAccessToken(payload), user: await toSessionUser(user) });
 }
 
 // POST /api/auth/register — creates an artist. Closed by default (ALLOW_SELF_REGISTRATION): otherwise
@@ -138,27 +142,6 @@ router.post('/login', loginGuards, async (req: Request, res: Response) => {
     return;
   }
   await grantSession(user, req, res);
-});
-
-// POST /api/auth/refresh — requires an active session.
-//
-// ⚠ A refresh without `sid` is REFUSED: it does not obtain a fresh session. The "transparent migration"
-// that manufactured one was the back door of the 36.B fix: closing `middleware/auth` is pointless if the
-// legacy token that was just set aside is enough to walk away with a perfectly valid access token. The
-// bearer logs in again.
-router.post('/refresh', validate({ body: z.object({ refreshToken: z.string() }) }), async (req, res) => {
-  const { refreshToken } = req.body as { refreshToken: string };
-  const payload = verifyToken(refreshToken);
-  if (!payload || payload.kind !== 'refresh') throw unauthorized('Invalid refresh token');
-  const { sid } = payload;
-  if (!sid) throw unauthorized('Session revoked', 'SESSION_REVOKED');
-  const user = await prisma.user.findUnique({ where: { id: payload.id } });
-  if (!user) throw unauthorized('User not found');
-  refuseIfDisabled(user);
-  if (!(await isSessionActive(sid))) throw unauthorized('Session revoked', 'SESSION_REVOKED');
-  await touchSession(sid);
-  const next = { id: user.id, email: user.email, role: user.role, sid };
-  res.json({ token: signAccessToken(next), refreshToken: signRefreshToken(next) });
 });
 
 // ── Invitation of a new member (Phase 47) ────────────────────────────────

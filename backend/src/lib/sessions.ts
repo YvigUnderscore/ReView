@@ -96,6 +96,15 @@ export async function touchSession(sid: string): Promise<void> {
     .catch(ignoreFailure('session touch failed', { sessionId: sid }));
 }
 
+/** Live sessions of an account, most recently seen first (account security screen). */
+export function listActiveSessions(userId: number) {
+  return prisma.userSession.findMany({
+    where: { userId, revokedAt: null, expiresAt: { gt: new Date() } },
+    orderBy: { lastSeenAt: 'desc' },
+    select: { id: true, userAgent: true, ip: true, createdAt: true, lastSeenAt: true },
+  });
+}
+
 /** Revokes a session (bounded to `userId` if supplied). Returns true if found. */
 export async function revokeSession(sid: string, userId?: number): Promise<boolean> {
   const r = await prisma.userSession.updateMany({

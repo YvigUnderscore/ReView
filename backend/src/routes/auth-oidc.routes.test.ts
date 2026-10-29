@@ -152,4 +152,14 @@ describe('GET /api/auth/oidc/callback — deactivated account', () => {
     expect(res.headers.location).toContain('#sso=');
     expect(createSession).toHaveBeenCalled();
   });
+
+  it('puts no token in the redirect URL: the refresh token goes into its httpOnly cookie', async () => {
+    const res = await callback(null);
+    expect(res.headers.location).toBe('/login#sso=cookie');
+    const cookies = ([] as string[]).concat(res.headers['set-cookie'] ?? []);
+    const refresh = cookies.find((c) => c.startsWith('review_refresh='));
+    expect(refresh).toMatch(/HttpOnly/i);
+    expect(refresh).toMatch(/SameSite=Strict/i);
+    expect(refresh).toMatch(/Path=\/api\/auth\/refresh/);
+  });
 });

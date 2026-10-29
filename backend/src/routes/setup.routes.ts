@@ -7,7 +7,8 @@ import { z } from 'zod';
 import { Prisma } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { validate } from '../middleware/validate';
-import { signAccessToken } from '../lib/jwt';
+import { signAccessToken, signRefreshToken } from '../lib/jwt';
+import { setRefreshCookie } from '../lib/refreshCookie';
 import { createSession } from '../lib/sessions';
 import { normalizeEmail } from '../lib/email';
 import { conflict } from '../lib/errors';
@@ -101,7 +102,9 @@ router.post(
     // Revocable session (36.B): without `sid`, this very first token, the ADMIN's, would be the only one
     // in the system that no revocation could invalidate.
     const sid = await createSession(admin.id, req);
-    const token = signAccessToken({ id: admin.id, email: admin.email, role: admin.role, sid });
+    const payload = { id: admin.id, email: admin.email, role: admin.role, sid };
+    const token = signAccessToken(payload);
+    setRefreshCookie(req, res, signRefreshToken(payload));
     res.status(201).json({
       studio: { id: studio.id, name: studio.name, slug: studio.slug },
       user: { id: admin.id, email: admin.email, name: admin.name, role: admin.role },

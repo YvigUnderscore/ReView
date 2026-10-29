@@ -10,7 +10,7 @@ vi.mock('./prisma', () => ({
   },
 }));
 
-import { revokeAllCredentials } from './sessions';
+import { listActiveSessions, revokeAllCredentials } from './sessions';
 import { prisma } from './prisma';
 
 beforeEach(() => {
@@ -38,5 +38,19 @@ describe('revokeAllCredentials', () => {
     const where = vi.mocked(prisma.userSession.updateMany).mock.calls[0]![0].where as Record<string, unknown>;
     expect(where).toMatchObject({ userId: 42, id: { not: 'session-courante' } });
     expect(prisma.apiToken.updateMany).toHaveBeenCalled();
+  });
+});
+
+describe('listActiveSessions', () => {
+  it('reads only the live sessions of the account, most recent first, without secrets', async () => {
+    await listActiveSessions(7);
+    const args = vi.mocked(prisma.userSession.findMany).mock.calls.at(-1)![0] as {
+      where: Record<string, unknown>;
+      orderBy: unknown;
+      select: Record<string, unknown>;
+    };
+    expect(args.where).toMatchObject({ userId: 7, revokedAt: null });
+    expect(args.orderBy).toEqual({ lastSeenAt: 'desc' });
+    expect(Object.keys(args.select).sort()).toEqual(['createdAt', 'id', 'ip', 'lastSeenAt', 'userAgent']);
   });
 });

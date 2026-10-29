@@ -3,16 +3,15 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import bcrypt from 'bcryptjs';
-import { prisma } from '../lib/prisma';
 import { authenticate, requireUser } from '../middleware/auth';
 import { validate } from '../middleware/validate';
-import { revokeSession } from '../lib/sessions';
+import { listActiveSessions, revokeSession } from '../lib/sessions';
+import { clearRefreshCookie } from '../lib/refreshCookie';
 import { API_SCOPES } from '../lib/apiTokens';
 import { ALL_SCOPES } from '../lib/apiScopes';
 import * as ApiTokenService from '../services/ApiTokenService';
 import { logAudit } from '../services/AuditService';
-import { badRequest, notFound, unauthorized } from '../lib/errors';
+import { badRequest, notFound } from '../lib/errors';
 
 /**
  * Account security (36.B/36.C): active sessions and personal API tokens.
@@ -23,11 +22,7 @@ router.use(authenticate);
 
 // GET /api/auth/sessions — active sessions of the account (the current one marked `current`)
 router.get('/sessions', async (req, res) => {
-  const sessions = await prisma.userSession.findMany({
-    where: { userId: requireUser(req).id, revokedAt: null, expiresAt: { gt: new Date() } },
-    orderBy: { lastSeenAt: 'desc' },
-    select: { id: true, userAgent: true, ip: true, createdAt: true, lastSeenAt: true },
-  });
+  const sessions = await listActiveSessions(requireUser(req).id);
   res.json({
     sessions: sessions.map((s) => ({ ...s, current: s.id === req.sessionId })),
   });
@@ -48,6 +43,7 @@ router.delete(
 // POST /api/auth/logout — revokes the current session (the associated JWTs die with it)
 router.post('/logout', async (req, res) => {
   if (req.sessionId) await revokeSession(req.sessionId, requireUser(req).id);
+  clearRefreshCookie(req, res);
   res.status(204).end();
 });
 
@@ -55,12 +51,7 @@ router.post('/logout', async (req, res) => {
 
 // GET /api/auth/tokens — active tokens of the account (never the secret)
 router.get('/tokens', async (req, res) => {
-  const tokens = await prisma.apiToken.findMany({
-    where: { userId: requireUser(req).id, revokedAt: null },
-    orderBy: { createdAt: 'desc' },
-    select: ApiTokenService.tokenSelect,
-  });
-  res.json({ tokens });
+  res.json({ tokens: await ApiTokenService.listPersonal(requireUser(req).id) });
 });
 
 // POST /api/auth/tokens — creates a token; the secret is returned ONLY HERE, once
@@ -85,13 +76,9 @@ router.post(
     const body = req.body as ApiTokenService.CreateTokenInput & { currentPassword?: string };
 
     // Re-authentication: a `rvk_` lives for up to 3650 days and survives closing the tab. Forged from a
-    // stolen access token, it turns a passing session theft into durable access, which "log out
-    // everywhere" does not even suspect. The password is the only thing the attacker does not have.
-    const user = await prisma.user.findUnique({ where: { id: requireUser(req).id } });
-    if (!user) throw unauthorized();
-    if (!body.currentPassword || !(await bcrypt.compare(body.currentPassword, user.password))) {
-      throw unauthorized('The current password is required', 'CURRENT_PASSWORD_REQUIRED');
-    }
+    // stolen access token, it turns a passing session theft into durable access. A 403, not a 401: the
+    // caller is authenticated, it is the action that is refused (a 401 would trigger session renewal).
+    await ApiTokenService.assertActorPassword(requireUser(req).id, body.currentPassword);
 
     res.status(201).json(await ApiTokenService.createPersonal(requireUser(req).id, body));
   },
@@ -107,17 +94,7 @@ router.delete(
   '/tokens/:id',
   validate({ params: z.object({ id: z.coerce.number().int() }) }),
   async (req, res) => {
-    const r = await prisma.apiToken.updateMany({
-      where: { id: Number(req.params.id), userId: requireUser(req).id, revokedAt: null },
-      data: { revokedAt: new Date() },
-    });
-    if (r.count === 0) throw notFound('Token not found');
-    logAudit({
-      userId: requireUser(req).id,
-      action: 'API_TOKEN_REVOKE',
-      entityType: 'ApiToken',
-      entityId: Number(req.params.id),
-    });
+    await ApiTokenService.revokePersonal(requireUser(req).id, Number(req.params.id));
     res.status(204).end();
   },
 );

@@ -15,6 +15,7 @@ import { apiTokenSurface } from './middleware/scope';
 
 import setupRoutes from './routes/setup.routes';
 import authRoutes from './routes/auth.routes';
+import authRefreshRoutes from './routes/auth-refresh.routes';
 import authSecurityRoutes from './routes/auth-security.routes';
 import webhooksRoutes from './routes/webhooks.routes';
 import auth2faRoutes from './routes/auth-2fa.routes';
@@ -245,6 +246,7 @@ export const createApp = (options: CreateAppOptions = {}): Express => {
     (req, res, next) => (req.path === '/status' ? next() : setupWriteLimiter(req, res, next)),
     setupRoutes,
   );
+  app.use('/api/auth/refresh', authRefreshRoutes); // refresh cookie: renew + logout
   app.use('/api/auth', authRoutes);
   app.use('/api/auth/2fa', auth2faRoutes); // 2FA TOTP (36.A)
   app.use('/api/auth/oidc', authOidcRoutes); // SSO OIDC (36.A)

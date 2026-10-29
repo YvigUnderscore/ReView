@@ -22,9 +22,10 @@ import { escapeHtml } from '../lib/html';
 const router = Router();
 
 /**
- * Scalar is loaded from a CDN, on the application's origin, whereas the session tokens live in
- * localStorage: a compromised version would take the session of the first administrator who opens the
- * docs, refresh token included. Three safeguards, to be held together:
+ * Scalar is loaded from a CDN, on the application's origin: a compromised version would run with the
+ * page's privileges for the first administrator who opens the docs (the refresh token is out of its
+ * reach since it moved to an httpOnly cookie, but the origin still matters). Three safeguards, to be
+ * held together:
  *
  *  1. **pinned version**: an implicit `@latest` means "tomorrow's code, unreviewed";
  *  2. **SRI fingerprint**: the browser refuses the script if the byte does not match, which covers the

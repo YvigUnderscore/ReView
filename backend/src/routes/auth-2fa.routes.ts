@@ -19,6 +19,7 @@ import {
   hashBackupCode,
 } from '../lib/twofa';
 import { signAccessToken, signRefreshToken, verifyTwoFaToken } from '../lib/jwt';
+import { setRefreshCookie } from '../lib/refreshCookie';
 import { createSession } from '../lib/sessions';
 import { toSessionUser } from '../lib/userView';
 import { logAudit } from '../services/AuditService';
@@ -163,11 +164,8 @@ router.post(
 
     const sid = await createSession(user.id, req);
     const payload = { id: user.id, email: user.email, role: user.role, sid };
-    res.json({
-      token: signAccessToken(payload),
-      refreshToken: signRefreshToken(payload),
-      user: await toSessionUser(user),
-    });
+    setRefreshCookie(req, res, signRefreshToken(payload));
+    res.json({ token: signAccessToken(payload), user: await toSessionUser(user) });
   },
 );
 
