@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useEffectEvent, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import type * as THREE from 'three';
 import type { MediaResp } from '../reviewTypes';
 import type { ViewerSceneHandle } from '../viewer/sceneHandle';
@@ -162,9 +162,10 @@ export function useUsdScene(
     setIndexed([]);
   }
   // The pending delta awaiting a comment is also dropped along with the scene that carried it.
+  // Triggered by the media, not by the callback identity: hence an effect event.
+  const dropLocalDelta = useEffectEvent(() => onLocalDelta?.(null));
   useEffect(() => {
-    onLocalDelta?.(null);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- triggered by the media, not by the callback identity
+    dropLocalDelta();
   }, [mediaId]);
 
   const variantDefaults = useMemo(() => defaultsFrom(data), [data]);
@@ -228,7 +229,9 @@ export function useUsdScene(
 
   // Mirror of `local`, readable in event handlers without going through an updater.
   const localRef = useRef(local);
-  localRef.current = local;
+  useLayoutEffect(() => {
+    localRef.current = local;
+  }, [local]);
 
   /**
    * Any local edit goes through here: it updates the scene **and** publishes the delta for the next
@@ -281,7 +284,9 @@ export function useUsdScene(
   // the way to select or unlock it.
   const baseResolver = useMemo(() => makePrimResolver(allIndexed), [allIndexed]);
   const lockedRef = useRef(locked);
-  lockedRef.current = locked;
+  useLayoutEffect(() => {
+    lockedRef.current = locked;
+  }, [locked]);
   const resolvePrim = useCallback(
     (object: THREE.Object3D) => {
       const path = baseResolver(object);

@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getSocket } from '@/lib/socket';
 import { reviewPath } from '../../lib/slug';
@@ -225,11 +225,15 @@ export function useLiveSession({
   }, [key, wantLive]);
 
   // Local navigation of a co-pilot (not following the driver) → immediate takeover.
-  useEffect(() => {
-    if (!canDrive || isDriver || driverMedia.lastId === 0 || driverMedia.lastId === mediaId) return;
+  // One navigation = one claim: the claim is an effect event, so a new `claimInteraction`
+  // identity alone never replays it.
+  const claimOnNavigation = useEffectEvent((navigatedTo: number) => {
+    if (driverMedia.lastId === 0 || driverMedia.lastId === navigatedTo) return;
     claimInteraction();
-    // Deliberately depends only on mount/state: one navigation = one claim.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+  });
+  useEffect(() => {
+    if (!canDrive || isDriver) return;
+    claimOnNavigation(mediaId);
   }, [canDrive, isDriver, mediaId]);
 
   // Viewer (and non-driver co-pilot): applies the driver's state.

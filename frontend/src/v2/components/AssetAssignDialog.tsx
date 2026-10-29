@@ -1,7 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Search } from 'lucide-react';
 import { toast } from 'sonner';
@@ -65,8 +65,11 @@ export default function AssetAssignDialog({
   // A feature film holds two thousand shots: without a filter, the grid is a wall of images.
   const [query, setQuery] = useState('');
   const needle = query.trim().toLocaleLowerCase();
-  const matches = (...values: (string | null | undefined)[]) =>
-    !needle || values.some((v) => (v ?? '').toLocaleLowerCase().includes(needle));
+  const matches = useCallback(
+    (...values: (string | null | undefined)[]) =>
+      !needle || values.some((v) => (v ?? '').toLocaleLowerCase().includes(needle)),
+    [needle],
+  );
 
   const toggle = (kind: 'shotIds' | 'sequenceIds', id: number) => {
     const next = { shotIds: new Set(shotIds), sequenceIds: new Set(sequenceIds) };
@@ -94,9 +97,7 @@ export default function AssetAssignDialog({
 
   const visibleSequences = useMemo(
     () => sequences.filter((s) => matches(s.code, s.name)),
-    // `matches` is rebuilt at each render: it is `needle` that decides the result.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [sequences, needle],
+    [sequences, matches],
   );
 
   // Groups the shots by sequence (codes sorted numerically), "No sequence" last.
@@ -115,8 +116,7 @@ export default function AssetAssignDialog({
     const orphans = shots.filter((s) => s.sequenceId === null && matches(s.code, s.name)).sort(byCode);
     if (orphans.length) list.push({ seq: { id: -1, code: t('shots.noSequence'), name: '' }, shots: orphans });
     return list.filter((g) => g.shots.length > 0);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [shots, sequences, needle, t]);
+  }, [shots, sequences, matches, t]);
 
   return (
     <Dialog

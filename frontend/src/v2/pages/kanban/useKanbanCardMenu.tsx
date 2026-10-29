@@ -19,6 +19,7 @@ import { useAuth } from '../../stores/useAuth';
 import type { StatusChoice } from '../../lib/statusMenu';
 import type { BoardTask } from './kanbanTypes';
 import { useT } from '../../i18n';
+import { useKeyedValue } from '../../lib/useKeyedValue';
 
 /**
  * The menu of a kanban card: status, assignment, step, renaming, deletion.
@@ -122,9 +123,12 @@ export function useKanbanCardMenu(
     ...choices.map((c) => `${c.value}:${c.label}:${c.color ?? ''}`),
   ].join('|');
 
+  // The builders as they were when `epoch` last changed: see the memoization note above.
+  const built = useKeyedValue({ t, myId, canManage, statusEntry, assignEntry, departmentEntry }, epoch);
   const menuFor = useCallback(
-    (task: BoardTask): MenuEntry[] =>
-      entriesOf(
+    (task: BoardTask): MenuEntry[] => {
+      const { t, myId, canManage, statusEntry, assignEntry, departmentEntry } = built;
+      return entriesOf(
         // The assignee changes their own status: exactly what the server accepts from them, and
         // the most useful gesture on the screen for an artist.
         statusEntry(task, {
@@ -151,9 +155,9 @@ export function useKanbanCardMenu(
               onSelect: () => setDeleting(task),
             }
           : null,
-      ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- governed by `epoch`, see above
-    [epoch, applyOptimisticStatus, openRename],
+      );
+    },
+    [built, applyOptimisticStatus, openRename],
   );
 
   const dialogs = (
