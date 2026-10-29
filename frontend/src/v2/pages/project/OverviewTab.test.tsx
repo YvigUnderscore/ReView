@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import OverviewTab from './OverviewTab';
-import { FALLBACK_GEOMETRY } from './overview/overviewSizing';
+import { FALLBACK_GEOMETRY } from '@/v2/components/widgets/widgetSizing';
 import { page, renderWithProviders } from '@/test/renderWithProviders';
 import type { MockResolver } from '@/test/apiMock';
 import { t } from '../../i18n';

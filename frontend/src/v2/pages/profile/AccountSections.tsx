@@ -15,6 +15,7 @@ import { Hint } from '../../components/ui/hint';
 import { SettingsCard } from '../../components/settings/SettingsCard';
 import { SETTINGS_KEYWORDS } from '../../components/settings/settingsKeywords';
 import { useT } from '../../i18n';
+import { isWebImage, presignAndUpload } from '@/v2/lib/presignedUpload';
 
 /**
  * The account itself: profile picture, identity details, password.
@@ -103,17 +104,18 @@ export default function AccountSections() {
     const file = e.target.files?.[0];
     if (fileRef.current) fileRef.current.value = '';
     if (!file) return;
-    if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) {
+    if (!isWebImage(file.type)) {
       toast.error(t('profile.avatar.invalidFormat'));
       return;
     }
     setBusy(true);
     try {
-      const { url, key } = await api.post<{ url: string; key: string }>('/api/users/me/avatar/presign', {
-        contentType: file.type,
-      });
-      const put = await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-      if (!put.ok) throw new Error(t('profile.avatar.uploadFailed'));
+      const { key } = await presignAndUpload(
+        '/api/users/me/avatar/presign',
+        { contentType: file.type },
+        file,
+        t('profile.avatar.uploadFailed'),
+      );
       const { user: updated } = await api.put<{ user: AuthUser }>('/api/users/me/avatar', { key });
       setUser(updated);
       toast.success(t('profile.avatar.updated'));

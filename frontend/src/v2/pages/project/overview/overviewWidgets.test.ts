@@ -3,7 +3,7 @@
 
 import { describe, expect, it } from 'vitest';
 import type { WidgetsPref } from '@/v2/lib/widgetLayout';
-import { OVERVIEW_ROWS } from './overviewSizing';
+import { WIDGET_ROWS } from '@/v2/components/widgets/widgetSizing';
 import {
   ALL_OVERVIEW_IDS,
   BUILTIN_ROLE_LAYOUTS,
@@ -163,7 +163,7 @@ describe('gestes de composition', () => {
 describe('heights', () => {
   it('gives each block a default height', () => {
     for (const id of ALL_OVERVIEW_IDS)
-      expect(OVERVIEW_ROWS).toContain(overviewWidgetSettings(id, undefined).rows);
+      expect(WIDGET_ROWS).toContain(overviewWidgetSettings(id, undefined).rows);
   });
 
   it('applies the saved height', () => {

@@ -14,7 +14,7 @@ import {
   type WidgetSettings,
   type WidgetsPref,
 } from '@/v2/lib/widgetLayout';
-import { resolveRows, type OverviewRows, type WidgetSize } from './overviewSizing';
+import { resolveRows, type WidgetRows, type WidgetSize } from '@/v2/components/widgets/widgetSizing';
 import type { Role } from '@/v2/types/api';
 
 /**
@@ -56,7 +56,7 @@ export const OVERVIEW_PREFERENCE_KEY = 'projectOverview';
 export interface OverviewWidgetDefinition extends WidgetDefinition {
   manage?: boolean;
   /** Default height, in grid rows (cf. `overviewSizing`). */
-  rows: OverviewRows;
+  rows: WidgetRows;
 }
 
 /**
@@ -210,7 +210,7 @@ export function addableOverviewWidgets(
 
 /** Settings of a block on this page: those of any composable page, plus the height. */
 export interface OverviewResolvedSettings extends ResolvedWidgetSettings {
-  rows: OverviewRows;
+  rows: WidgetRows;
 }
 
 /**

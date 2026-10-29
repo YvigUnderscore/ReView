@@ -3,7 +3,7 @@
 
 import type { ReactNode } from 'react';
 import WidgetShell, { type WidgetDragHandle } from '../../components/widgets/WidgetShell';
-import WidgetResizeHandle, { WidgetRowsChoice } from '../../components/widgets/WidgetResizeHandle';
+import WidgetResizeHandle, { WidgetRowsChoice } from '@/v2/components/widgets/WidgetResizeHandle';
 import { rowSpanClass, type WidgetSize } from '../../components/widgets/widgetSizing';
 import {
   HOME_WIDGETS,

@@ -14,6 +14,7 @@ import { QueryState } from '../../components/ui/query-state';
 import { Panel } from './AdminPrimitives';
 import { useT } from '../../i18n';
 import { Hint } from '../../components/ui/hint';
+import { isWebImage, presignAndUpload } from '@/v2/lib/presignedUpload';
 
 interface OidcView {
   enabled: boolean;
@@ -197,17 +198,18 @@ function LogoPanel({
     const file = e.target.files?.[0];
     if (fileRef.current) fileRef.current.value = '';
     if (!file) return;
-    if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) {
+    if (!isWebImage(file.type)) {
       toast.error(t('profile.avatar.invalidFormat'));
       return;
     }
     setUploading(true);
     try {
-      const { url, key } = await api.post<{ url: string; key: string }>('/api/admin/oidc/logo/presign', {
-        contentType: file.type,
-      });
-      const put = await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-      if (!put.ok) throw new Error(t('profile.avatar.uploadFailed'));
+      const { key } = await presignAndUpload(
+        '/api/admin/oidc/logo/presign',
+        { contentType: file.type },
+        file,
+        t('profile.avatar.uploadFailed'),
+      );
       onSaved(key);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { t } from '../i18n';
-import { api } from '../../lib/apiClient';
+import { presignAndUpload } from './presignedUpload';
 
 /**
  * Attachment as it is DISPLAYED. The MinIO key is not part of it: the client portal
@@ -49,12 +49,12 @@ export async function uploadCommentAttachments(files: File[]): Promise<CommentAt
   const allowed = files.filter((f) => isAllowedAttachment(f.type)).slice(0, MAX_COMMENT_ATTACHMENTS);
   const out: CommentAttachment[] = [];
   for (const file of allowed) {
-    const { url, key } = await api.post<{ url: string; key: string }>('/api/comments/attachments/presign', {
-      filename: file.name,
-      contentType: file.type,
-    });
-    const put = await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-    if (!put.ok) throw new Error(t('uploads.failedFor', { name: file.name }));
+    const { key } = await presignAndUpload(
+      '/api/comments/attachments/presign',
+      { filename: file.name, contentType: file.type },
+      file,
+      t('uploads.failedFor', { name: file.name }),
+    );
     out.push({ key, name: file.name, contentType: file.type });
   }
   return out;

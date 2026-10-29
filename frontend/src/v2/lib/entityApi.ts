@@ -6,6 +6,7 @@ import { api } from '../../lib/apiClient';
 import { qk } from './query';
 import { ENTITY_SEGMENT, type EntityKind } from '../components/entity/entitySettings';
 import { useT } from '../i18n';
+import { presignAndUpload } from '@/v2/lib/presignedUpload';
 
 /**
  * Record of a pipeline entity (C3) — settings and thumbnail.
@@ -50,14 +51,12 @@ export function useSetEntityThumbnail(kind: EntityKind, id: number, projectId: n
         await api.put(`/api/${segment}/${id}/thumbnail`, { key: null });
         return null;
       }
-      const { url, key } = await api.post<{ url: string; key: string }>(
+      const { key } = await presignAndUpload(
         `/api/${segment}/${id}/thumbnail/presign`,
         { contentType: file.type },
+        file,
+        t('common.error.upload'),
       );
-      const res = await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-      // The upload goes straight to MinIO: a failure does not go through our HTTP client,
-      // and would come back without a message if we did not phrase it here.
-      if (!res.ok) throw new Error(t('common.error.upload'));
       await api.put(`/api/${segment}/${id}/thumbnail`, { key });
       return key;
     },

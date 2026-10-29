@@ -1,10 +1,10 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { api } from '@/lib/apiClient';
 import { MAX_COMMENT_ATTACHMENTS, type CommentAttachment } from '@/v2/lib/commentAttachments';
 import { t } from '@/v2/i18n';
 import type { SplatEditBlob, SplatEditBlobRef, SplatEditDraft } from './splatEditPart';
+import { presignAndUpload } from '@/v2/lib/presignedUpload';
 
 /**
  * Upload of the two binaries of a cloud-edit proposal (Phase 50, lot 14): the deletion mask and the
@@ -71,15 +71,15 @@ export async function uploadSplatEditBlobs(
 
 /** Presigning, then direct PUT to MinIO: the same path as any other attachment. */
 async function putBlob(bytes: Uint8Array, filename: string): Promise<string> {
-  const { url, key } = await api.post<{ url: string; key: string }>('/api/comments/attachments/presign', {
-    filename,
-    contentType: BLOB_TYPE,
-  });
   // The body goes through a `Blob`: `fetch` only accepts a typed view if it sits on its own
   // `ArrayBuffer`, which an encoded mask does not guarantee. The copy is the price of a call that
   // compiles without forcing the type.
   const body = new Blob([new Uint8Array(bytes)], { type: BLOB_TYPE });
-  const put = await fetch(url, { method: 'PUT', body, headers: { 'Content-Type': BLOB_TYPE } });
-  if (!put.ok) throw new Error(t('splat.proposalUploadFailed'));
+  const { key } = await presignAndUpload(
+    '/api/comments/attachments/presign',
+    { filename, contentType: BLOB_TYPE },
+    body,
+    t('splat.proposalUploadFailed'),
+  );
   return key;
 }

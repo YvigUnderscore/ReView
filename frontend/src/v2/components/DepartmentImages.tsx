@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { useDepartments } from '../lib/departmentsApi';
 import { useT } from '../i18n';
+import { presignAndUpload } from '@/v2/lib/presignedUpload';
 
 /**
  * Image of each department in the pipe.
@@ -34,14 +35,12 @@ function useSetDepartmentImage(projectId: number) {
         await api.put(`/api/departments/${id}/image`, { key: null });
         return;
       }
-      const { url, key } = await api.post<{ url: string; key: string }>(
+      const { key } = await presignAndUpload(
         `/api/departments/${id}/image/presign`,
         { contentType: file.type },
+        file,
+        t('common.error.upload'),
       );
-      const res = await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-      // The upload goes directly to MinIO: its failure does not go through our HTTP client
-      // and would remain without a message if we did not phrase it here.
-      if (!res.ok) throw new Error(t('common.error.upload'));
       await api.put(`/api/departments/${id}/image`, { key });
     },
     onSuccess: () => {

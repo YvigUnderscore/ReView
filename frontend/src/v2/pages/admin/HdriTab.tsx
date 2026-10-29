@@ -13,6 +13,7 @@ import { QueryState } from '../../components/ui/query-state';
 import { Panel } from './AdminPrimitives';
 import HdriPreview from './HdriPreview';
 import { useT } from '../../i18n';
+import { putToPresignedUrl } from '@/v2/lib/presignedUpload';
 
 interface HdriItem {
   id: string;
@@ -53,8 +54,7 @@ export default function HdriTab() {
         '/api/studio/hdris/presign',
         { format: ext },
       );
-      const put = await fetch(uploadUrl, { method: 'PUT', body: file });
-      if (!put.ok) throw new Error(t('hdri.uploadFailed'));
+      await putToPresignedUrl(uploadUrl, file, t('hdri.uploadFailed'), null);
       await api.post('/api/studio/hdris', {
         name: file.name.replace(/\.(hdr|exr)$/i, ''),
         storageKey,

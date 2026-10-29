@@ -12,14 +12,14 @@ import ActivityWidget from './ActivityWidget';
 import TasksWidget from './TasksWidget';
 import MyTasksWidget from './MyTasksWidget';
 import AttentionWidget from './AttentionWidget';
-import WidgetResizeHandle, { WidgetRowsChoice } from './WidgetResizeHandle';
+import WidgetResizeHandle, { WidgetRowsChoice } from '@/v2/components/widgets/WidgetResizeHandle';
 import {
-  OVERVIEW_GRID_CLASS,
+  WIDGET_ROW_GRID_CLASS,
   listCapacity,
   rowSpanClass,
-  type OverviewRows,
+  type WidgetRows,
   type WidgetSize,
-} from './overviewSizing';
+} from '@/v2/components/widgets/widgetSizing';
 import {
   OVERVIEW_WIDGET_DEFS,
   isOverviewWidget,
@@ -114,7 +114,7 @@ export default function OverviewGrid({
 
     const apply = (patch: WidgetSettings) => onLayout(setOverviewWidgetSetting(id, patch, layout));
     const resize = (next: WidgetSize) => onLayout(setOverviewWidgetSize(id, next, layout));
-    const setRows = (rows: OverviewRows) => resize({ span: size.span, rows });
+    const setRows = (rows: WidgetRows) => resize({ span: size.span, rows });
     // Moving by one place: the neighbour serves as target, through the same function as the drag.
     const move = (direction: -1 | 1) => {
       const neighbour = ids[index + direction];
@@ -160,7 +160,7 @@ export default function OverviewGrid({
     );
   };
 
-  const grid = <div className={OVERVIEW_GRID_CLASS}>{ids.map((id, index) => widget(id, index))}</div>;
+  const grid = <div className={WIDGET_ROW_GRID_CLASS}>{ids.map((id, index) => widget(id, index))}</div>;
 
   if (!editing) return grid;
 
@@ -170,7 +170,7 @@ export default function OverviewGrid({
     <Suspense fallback={grid}>
       <WidgetSortable
         ids={ids}
-        className={OVERVIEW_GRID_CLASS}
+        className={WIDGET_ROW_GRID_CLASS}
         onReorder={(from, to) => {
           if (isOverviewWidget(from) && isOverviewWidget(to))
             onLayout(reorderOverviewWidgets(from, to, layout));

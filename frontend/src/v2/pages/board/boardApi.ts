@@ -21,6 +21,7 @@ import {
   type BoardDocument,
   type BoardFiles,
 } from './boardFiles';
+import { putToPresignedUrl } from '@/v2/lib/presignedUpload';
 
 export type BoardScope = 'project' | 'asset';
 
@@ -83,8 +84,7 @@ export async function presignBoardFiles(
 
 /** Uploads an image to MinIO. Failure = save cancelled, nothing is lost locally. */
 export async function uploadBoardFile(url: string, blob: Blob): Promise<void> {
-  const res = await fetch(url, { method: 'PUT', body: blob, headers: { 'Content-Type': blob.type } });
-  if (!res.ok) throw new Error(t('board.uploadFailed'));
+  await putToPresignedUrl(url, blob, t('board.uploadFailed'));
 }
 
 type SaveBody = { document: BoardDocument; baseUpdatedAt: string | null };

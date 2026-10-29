@@ -9,7 +9,7 @@ import { qk } from '@/v2/lib/query';
 import { reviewPath } from '@/v2/lib/slug';
 import { Skeleton } from '@/v2/components/ui/skeleton';
 import type { MediaRef } from '@/v2/types/api';
-import { tileCapacity, tileGridClass, type OverviewRows } from './overviewSizing';
+import { tileCapacity, tileGridClass, type WidgetRows } from '@/v2/components/widgets/widgetSizing';
 import type { WidgetSpan } from '@/v2/lib/widgetLayout';
 import { useT } from '@/v2/i18n';
 
@@ -30,7 +30,7 @@ export default function LatestMediaWidget({
   span,
 }: {
   projectId: number;
-  rows: OverviewRows;
+  rows: WidgetRows;
   span: WidgetSpan;
 }) {
   const t = useT();

@@ -11,6 +11,7 @@ import { Button } from '../../components/ui/button';
 import { Panel } from './AdminPrimitives';
 import { useT } from '../../i18n';
 import { Hint } from '../../components/ui/hint';
+import { isWebImage, presignAndUpload } from '@/v2/lib/presignedUpload';
 
 /**
  * The studio logo — **a single one**, and a single place to upload it.
@@ -42,17 +43,18 @@ export default function StudioLogoPanel() {
     const file = e.target.files?.[0];
     if (fileRef.current) fileRef.current.value = '';
     if (!file) return;
-    if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) {
+    if (!isWebImage(file.type)) {
       toast.error(t('profile.avatar.invalidFormat'));
       return;
     }
     setBusy(true);
     try {
-      const { url, key } = await api.post<{ url: string; key: string }>('/api/studio/logo/presign', {
-        contentType: file.type,
-      });
-      const put = await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-      if (!put.ok) throw new Error(t('profile.avatar.uploadFailed'));
+      const { key } = await presignAndUpload(
+        '/api/studio/logo/presign',
+        { contentType: file.type },
+        file,
+        t('profile.avatar.uploadFailed'),
+      );
       await api.put('/api/studio/settings', { key: 'studio_logo_key', value: key });
       invalidate();
       toast.success(t('distribution.logoUpdated'));

@@ -7,6 +7,7 @@ import { api } from '@/lib/apiClient';
 import type { NoteKind } from '../../lib/notesApi';
 import { t } from '../../i18n';
 import type { ImageResolver } from './noteRender';
+import { presignAndUpload } from '@/v2/lib/presignedUpload';
 
 /**
  * The images a note carries: putting them in, then displaying them.
@@ -38,13 +39,12 @@ export interface UploadedNoteImage {
  * `alt` is unreadable to the screen reader as well as to the internal search engine.
  */
 export async function uploadNoteImage(kind: NoteKind, id: number, file: File): Promise<UploadedNoteImage> {
-  const { url, key, readUrl } = await api.post<{ url: string; key: string; readUrl: string }>(
+  const { key, readUrl } = await presignAndUpload<{ url: string; key: string; readUrl: string }>(
     `/api/${kind}/${id}/note/images/presign`,
     { filename: file.name, contentType: file.type },
+    file,
+    t('note.images.failed', { name: file.name }),
   );
-  const put = await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-  // The upload goes straight to MinIO: the failure message is ours, nobody else writes one.
-  if (!put.ok) throw new Error(t('note.images.failed', { name: file.name }));
   return { key, url: readUrl, alt: file.name.replace(/\.[^.]*$/, '') };
 }
 

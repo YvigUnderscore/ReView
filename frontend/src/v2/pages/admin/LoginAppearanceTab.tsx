@@ -18,6 +18,7 @@ import { useT } from '../../i18n';
 import type { LoginAppearance } from '../../lib/branding';
 import { backdropStyle, overlayStyle } from '../auth/loginStyles';
 import { Hint } from '../../components/ui/hint';
+import { isWebImage, presignAndUpload } from '@/v2/lib/presignedUpload';
 
 /**
  * "Login page" section: styling of the screen seen before any authentication —
@@ -72,18 +73,18 @@ export default function LoginAppearanceTab() {
     const file = e.target.files?.[0];
     if (fileRef.current) fileRef.current.value = '';
     if (!file) return;
-    if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) {
+    if (!isWebImage(file.type)) {
       toast.error(t('profile.avatar.invalidFormat'));
       return;
     }
     setBusy(true);
     try {
-      const { url, key } = await api.post<{ url: string; key: string }>(
+      const { key } = await presignAndUpload(
         '/api/studio/login-appearance/bg/presign',
         { contentType: file.type },
+        file,
+        t('profile.avatar.uploadFailed'),
       );
-      const upload = await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-      if (!upload.ok) throw new Error(t('profile.avatar.uploadFailed'));
       // The image is saved straight away: uploading without setting the key would leave an
       // orphan object in storage and nothing on screen.
       await put({ bgKey: key });

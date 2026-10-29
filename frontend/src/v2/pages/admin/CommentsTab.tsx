@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { CheckCircle2, ExternalLink, RotateCcw, Search, Trash2 } from 'lucide-react';
+import { CheckCircle2, ExternalLink, RotateCcw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
@@ -12,7 +12,6 @@ import Avatar from '../../components/Avatar';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { QueryState } from '../../components/ui/query-state';
@@ -20,6 +19,7 @@ import { fmtDateTime } from './adminShared';
 import type { AdminCommentRow, AdminProjectRow, Paginated, User } from '../../types/api';
 import { useT } from '../../i18n';
 import { Hint } from '../../components/ui/hint';
+import { SearchInput } from '@/v2/components/ui/search-input';
 
 const PAGE_SIZE = 50;
 
@@ -82,19 +82,15 @@ export default function CommentsTab() {
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div className="relative min-w-40 flex-1">
-          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={q}
-            onChange={(e) => {
-              setQ(e.target.value);
-              setPage(1);
-            }}
-            placeholder={t('comments.search.placeholder')}
-            aria-label={t('comments.search.placeholder')}
-            className="pl-8"
-          />
-        </div>
+        <SearchInput
+          value={q}
+          onChange={(e) => {
+            setQ(e.target.value);
+            setPage(1);
+          }}
+          placeholder={t('comments.search.placeholder')}
+          wrapperClassName="min-w-40 flex-1"
+        />
         <Select
           value={projectId}
           onChange={(e) => {

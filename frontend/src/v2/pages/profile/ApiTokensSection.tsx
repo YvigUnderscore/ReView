@@ -22,16 +22,14 @@ import {
   scopeLevel,
   type ScopeLevel,
 } from '../../components/tokens/tokenScopes';
-import { useT, intlLocale, type MessageKey } from '../../i18n';
+import { useT, type MessageKey } from '../../i18n';
 import { SettingsCard } from '../../components/settings/SettingsCard';
 import { SETTINGS_KEYWORDS } from '../../components/settings/settingsKeywords';
 import { Hint } from '../../components/ui/hint';
+import TokenMeta from '@/v2/components/tokens/TokenMeta';
 
 /** Translator passed to the label tables, recomputed on each render. */
 type Tr = (key: MessageKey, params?: Record<string, string | number>) => string;
-
-const fmt = (iso: string) =>
-  new Date(iso).toLocaleDateString(intlLocale(), { day: '2-digit', month: 'short', year: 'numeric' });
 
 const LEVEL_KEY: Record<ScopeLevel, MessageKey> = {
   admin: 'tokens.scope.adminBadge',
@@ -208,16 +206,7 @@ export default function ApiTokensSection() {
                     {t(LEVEL_KEY[scopeLevel(tok.scopes)])}
                   </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {t('tokens.createdOn', { date: fmt(tok.createdAt) })}
-                  {tok.lastUsedAt
-                    ? ` · ${t('tokens.usedOn', { date: fmt(tok.lastUsedAt) })}`
-                    : ` · ${t('common.neverUsed')}`}
-                  {tok.expiresAt ? ` · ${t('tokens.expiresOn', { date: fmt(tok.expiresAt) })}` : ''}
-                </p>
-                <p className="truncate text-2xs text-muted-foreground">
-                  <code>{tok.scopes.join(' ')}</code>
-                </p>
+                <TokenMeta tok={tok} />
               </div>
             </div>
           </EntityContextMenu>

@@ -4,12 +4,10 @@
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { Search } from 'lucide-react';
 import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
-import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { QueryState } from '../../components/ui/query-state';
@@ -17,6 +15,7 @@ import { fmtDateTime, versionStatusLabel } from './adminShared';
 import type { AdminProjectRow, AdminVersionRow, MediaKind, Paginated, VersionStatus } from '../../types/api';
 import { useT } from '../../i18n';
 import { Hint } from '../../components/ui/hint';
+import { SearchInput } from '@/v2/components/ui/search-input';
 
 const PAGE_SIZE = 50;
 const KINDS: MediaKind[] = ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT'];
@@ -59,19 +58,15 @@ export default function VersionsTab() {
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div className="relative min-w-40 flex-1">
-          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={q}
-            onChange={(e) => {
-              setQ(e.target.value);
-              resetPage();
-            }}
-            placeholder={t('versions.namePlaceholder')}
-            aria-label={t('versions.namePlaceholder')}
-            className="pl-8"
-          />
-        </div>
+        <SearchInput
+          value={q}
+          onChange={(e) => {
+            setQ(e.target.value);
+            resetPage();
+          }}
+          placeholder={t('versions.namePlaceholder')}
+          wrapperClassName="min-w-40 flex-1"
+        />
         <Select
           value={projectId}
           onChange={(e) => {
