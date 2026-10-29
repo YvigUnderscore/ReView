@@ -21,7 +21,8 @@ const { smtp, audit, sendMail } = vi.hoisted(() => ({
   sendMail: vi.fn(),
 }));
 
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: Request, _res: Response, next: NextFunction) => {
     req.user = { id: 1, email: 'admin@studio.com', role: 'ADMIN' };
     next();

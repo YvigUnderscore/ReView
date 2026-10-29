@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { TaskStatus, VersionStatus } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import * as BulkService from '../services/BulkService';
 import * as AssignmentService from '../services/AssignmentService';
@@ -28,7 +28,7 @@ router.post(
   async (req, res) => {
     const { ids: list } = req.body as { ids: number[] };
     const count = await BulkService.bulkDelete(
-      req.user!,
+      requireUser(req),
       req.params.domain as BulkService.DeleteDomain,
       list,
     );
@@ -43,7 +43,7 @@ router.post(
   async (req, res) => {
     const { ids: list } = req.body as { ids: number[] };
     const count = await BulkService.bulkRestore(
-      req.user!,
+      requireUser(req),
       req.params.domain as BulkService.DeleteDomain,
       list,
     );
@@ -57,7 +57,11 @@ router.post(
   validate({ params: domainParam, body: z.object({ ids }) }),
   async (req, res) => {
     const { ids: list } = req.body as { ids: number[] };
-    const count = await BulkService.bulkPurge(req.user!, req.params.domain as BulkService.DeleteDomain, list);
+    const count = await BulkService.bulkPurge(
+      requireUser(req),
+      req.params.domain as BulkService.DeleteDomain,
+      list,
+    );
     res.json({ count });
   },
 );
@@ -86,7 +90,7 @@ router.patch(
     const patch: BulkService.BulkTaskPatch = {};
     if (status !== undefined) patch.status = status;
     if (assigneeId !== undefined) patch.assigneeId = assigneeId;
-    const count = await BulkService.bulkPatchTasks(req.user!, taskIds, patch);
+    const count = await BulkService.bulkPatchTasks(requireUser(req), taskIds, patch);
     res.json({ count });
   },
 );
@@ -97,7 +101,7 @@ router.patch(
   validate({ body: z.object({ ids, status: z.nativeEnum(VersionStatus) }) }),
   async (req, res) => {
     const { ids: versionIds, status } = req.body as { ids: number[]; status: VersionStatus };
-    const count = await BulkService.bulkPatchVersions(req.user!, versionIds, status);
+    const count = await BulkService.bulkPatchVersions(requireUser(req), versionIds, status);
     res.json({ count });
   },
 );
@@ -115,7 +119,7 @@ router.patch(
   }),
   async (req, res) => {
     const b = req.body as { ids: number[]; statusId: number; comment?: string };
-    res.json(await ReviewDecisionService.decideMany(req.user!, b.ids, b.statusId, b.comment));
+    res.json(await ReviewDecisionService.decideMany(requireUser(req), b.ids, b.statusId, b.comment));
   },
 );
 
@@ -125,7 +129,7 @@ router.patch(
   validate({ body: z.object({ ids, sequenceId: z.number().int().nullable() }) }),
   async (req, res) => {
     const { ids: shotIds, sequenceId } = req.body as { ids: number[]; sequenceId: number | null };
-    const count = await BulkService.bulkMoveShots(req.user!, shotIds, sequenceId);
+    const count = await BulkService.bulkMoveShots(requireUser(req), shotIds, sequenceId);
     res.json({ count });
   },
 );
@@ -145,7 +149,7 @@ router.patch(
       ids: number[];
       pipelineStatusId: number | null;
     };
-    res.json(await BulkService.bulkPatchShotStatus(req.user!, shotIds, pipelineStatusId));
+    res.json(await BulkService.bulkPatchShotStatus(requireUser(req), shotIds, pipelineStatusId));
   },
 );
 
@@ -167,7 +171,7 @@ for (const holder of ['assets', 'shots'] as const) {
     }),
     async (req, res) => {
       const result = await AssignmentService.assignMany(
-        req.user!,
+        requireUser(req),
         holder === 'assets' ? 'asset' : 'shot',
         req.body.ids as number[],
         { userId: req.body.userId, departmentIds: req.body.departmentIds },
@@ -188,7 +192,7 @@ router.patch(
     }),
   }),
   async (req, res) => {
-    const count = await BulkService.bulkAssetDepartments(req.user!, req.body.ids as number[], {
+    const count = await BulkService.bulkAssetDepartments(requireUser(req), req.body.ids as number[], {
       add: req.body.add ?? [],
       remove: req.body.remove ?? [],
     });

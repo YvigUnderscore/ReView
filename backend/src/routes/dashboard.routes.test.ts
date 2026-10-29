@@ -22,7 +22,8 @@ const { listMyTasks, listMyComments, getDashboard } = vi.hoisted(() => ({
   getDashboard: vi.fn(),
 }));
 
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: Request, _res: Response, next: NextFunction) => {
     req.user = caller.user;
     next();

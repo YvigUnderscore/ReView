@@ -47,7 +47,8 @@ vi.mock('../config/env', () => ({
   },
 }));
 vi.mock('nodemailer', () => ({ default: { createTransport } }));
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: Request, _res: Response, next: NextFunction) => {
     req.user = { id: 1, email: 'admin@studio.com', role: 'ADMIN' };
     next();

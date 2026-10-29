@@ -4,7 +4,7 @@
 import { Router, type Request } from 'express';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { notFound } from '../lib/errors';
@@ -72,7 +72,7 @@ router.patch(
   async (req, res) => {
     const id = Number(req.params.id);
     await assertTimelineAccess(req, id);
-    await TimelineService.update(req.user!, id, req.body as TimelineService.UpdateTimelineInput);
+    await TimelineService.update(requireUser(req), id, req.body as TimelineService.UpdateTimelineInput);
     res.json({ timeline: await TimelineService.resolve(id) });
   },
 );
@@ -92,7 +92,7 @@ router.post(
     const id = Number(req.params.id);
     await assertTimelineAccess(req, id);
     const { note } = req.body as { note?: string };
-    res.status(201).json({ snapshot: await TimelineService.snapshot(req.user!, id, note) });
+    res.status(201).json({ snapshot: await TimelineService.snapshot(requireUser(req), id, note) });
   },
 );
 
@@ -134,7 +134,7 @@ router.get('/:id/export', validate({ params: idParam }), async (req, res) => {
 router.post('/:id/export', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   await assertTimelineAccess(req, id);
-  res.status(202).json(await TimelineService.requestExport(req.user!, id));
+  res.status(202).json(await TimelineService.requestExport(requireUser(req), id));
 });
 
 export default router;

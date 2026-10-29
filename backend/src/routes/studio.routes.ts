@@ -5,7 +5,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { isValidDiscordWebhook } from '../lib/sanitize';
@@ -101,7 +101,7 @@ router.patch(
     // The audit log is the only trace of privileged configuration changes. Never the webhook URL itself: a
     // browsable log must not become the new hiding place of the secret.
     AuditService.logAudit({
-      userId: req.user!.id,
+      userId: requireUser(req).id,
       action: 'STUDIO_UPDATE',
       entityType: 'Studio',
       entityId: studio.id,
@@ -151,7 +151,7 @@ router.put(
       create: { key, value },
     });
     AuditService.logAudit({
-      userId: req.user!.id,
+      userId: requireUser(req).id,
       action: 'SETTING_UPDATE',
       entityType: 'Setting',
       metadata: { key },

@@ -15,7 +15,8 @@ const { search, session } = vi.hoisted(() => ({
   session: { user: { id: 7, role: 'ARTIST' } },
 }));
 
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: Request, _res: Response, next: NextFunction) => {
     req.user = session.user as Request['user'];
     next();

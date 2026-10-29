@@ -3,7 +3,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { prisma } from '../lib/prisma';
 import { notFound } from '../lib/errors';
@@ -38,13 +38,13 @@ router.post(
   }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId);
+    await assertProjectManager(requireUser(req), projectId);
     const result =
       req.body.kind === 'reconcile'
         ? await Sync.runReconcile(projectId)
         : await Sync.runSync(projectId, {
             kind: 'full',
-            triggeredById: req.user!.id,
+            triggeredById: requireUser(req).id,
             withMedia: req.body.withMedia,
           });
     res.json({ result });
@@ -53,7 +53,7 @@ router.post(
 
 router.get('/projects/:projectId/runs', validate({ params: projectParam }), async (req, res) => {
   const projectId = Number(req.params.projectId);
-  await assertProjectManager(req.user!, projectId, { allowMembers: true });
+  await assertProjectManager(requireUser(req), projectId, { allowMembers: true });
   const conn = await Config.getConnectionOrThrow(projectId);
   res.json({
     runs: await Journal.listRuns(conn.id),
@@ -78,7 +78,7 @@ router.get(
       include: { connection: { select: { projectId: true } } },
     });
     if (!run) throw notFound('Run not found');
-    await assertProjectManager(req.user!, run.connection.projectId, { allowMembers: true });
+    await assertProjectManager(requireUser(req), run.connection.projectId, { allowMembers: true });
     const { level, skip, take } = req.query as unknown as { level?: string; skip: number; take: number };
     res.json(await Journal.listLogs(runId, { level, skip, take }));
   },
@@ -104,13 +104,13 @@ router.post(
       include: { run: { include: { connection: { select: { projectId: true } } } } },
     });
     if (!log) throw notFound('Log entry not found');
-    await assertProjectManager(req.user!, log.run.connection.projectId);
+    await assertProjectManager(requireUser(req), log.run.connection.projectId);
 
     const applied = await resolveConflict(
       log.run.connection.projectId,
       log,
       req.body.resolution,
-      req.user!.id,
+      requireUser(req).id,
     );
     await prisma.shotgridSyncLog.update({
       where: { id: logId },
@@ -126,7 +126,7 @@ router.post(
  */
 router.get('/projects/:projectId/links', validate({ params: projectParam }), async (req, res) => {
   const projectId = Number(req.params.projectId);
-  await assertProjectManager(req.user!, projectId, { allowMembers: true });
+  await assertProjectManager(requireUser(req), projectId, { allowMembers: true });
   const conn = await Config.getConnection(projectId);
   if (!conn?.active) return res.json({ links: [] });
   res.json({ links: await listForUi(conn.id) });
@@ -137,14 +137,14 @@ router.get('/projects/:projectId/links', validate({ params: projectParam }), asy
  */
 router.get('/projects/:projectId/diff', validate({ params: projectParam }), async (req, res) => {
   const projectId = Number(req.params.projectId);
-  await assertProjectManager(req.user!, projectId, { allowMembers: true });
+  await assertProjectManager(requireUser(req), projectId, { allowMembers: true });
   res.json({ diff: await buildDiff(projectId) });
 });
 
 /** Available ShotGrid publishes, imported or not. */
 router.get('/projects/:projectId/versions', validate({ params: projectParam }), async (req, res) => {
   const projectId = Number(req.params.projectId);
-  await assertProjectManager(req.user!, projectId, { allowMembers: true });
+  await assertProjectManager(requireUser(req), projectId, { allowMembers: true });
   const ctx = await Config.openConnection(projectId, { verifyProject: false });
   const journal = await SyncJournal.start(ctx.connection.id, 'diff');
   try {
@@ -170,9 +170,9 @@ router.post(
   }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId);
+    await assertProjectManager(requireUser(req), projectId);
     const ctx = await Config.openConnection(projectId);
-    const journal = await SyncJournal.start(ctx.connection.id, 'import-versions', req.user!.id);
+    const journal = await SyncJournal.start(ctx.connection.id, 'import-versions', requireUser(req).id);
     try {
       await pullVersions(
         {

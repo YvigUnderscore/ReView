@@ -17,7 +17,8 @@ vi.mock('../services/ApiTokenService', () => ({
 }));
 vi.mock('../services/AuditService', () => ({ logAudit: vi.fn() }));
 vi.mock('../lib/sessions', () => ({ revokeSession: vi.fn().mockResolvedValue(true) }));
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: Request, _res: Response, next: NextFunction) => {
     req.user = actor.current as Request['user'];
     req.apiToken = actor.apiToken as Request['apiToken'];

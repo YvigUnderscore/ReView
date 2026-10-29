@@ -11,7 +11,8 @@ const { access, manage, resolveShot, resolveAsset, create } = vi.hoisted(() => (
   create: vi.fn(),
 }));
 
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: { user?: unknown }, _res: unknown, next: () => void) => {
     // GLOBAL artist role: this is the case that decides here: the person may very well supervise that
     // project through their membership.

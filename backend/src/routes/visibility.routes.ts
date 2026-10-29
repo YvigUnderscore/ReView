@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { notFound } from '../lib/errors';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { MATCH_TYPES, VISIBILITY_TYPES } from '../lib/visibility';
@@ -65,7 +65,7 @@ router.get(
 
 router.post('/visibility/rules', auth, admin, validate({ body: ruleBody }), async (req, res) => {
   const studioId = await currentStudioId();
-  const { rule, applied } = await VisibilityService.createRule(studioId, req.user!.id, req.body);
+  const { rule, applied } = await VisibilityService.createRule(studioId, requireUser(req).id, req.body);
   res.status(201).json({ rule, applied });
 });
 

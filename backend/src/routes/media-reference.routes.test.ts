@@ -12,7 +12,8 @@ import type { Request, Response, NextFunction } from 'express';
  */
 const { add, remove } = vi.hoisted(() => ({ add: vi.fn(), remove: vi.fn() }));
 
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: Request, _res: Response, next: NextFunction) => {
     req.user = { id: 7, email: 'artist@studio.com', role: 'ARTIST' };
     next();

@@ -5,7 +5,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { finalize } = vi.hoisted(() => ({ finalize: vi.fn() }));
 
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: { user?: unknown }, _res: unknown, next: () => void) => {
     req.user = { id: 7, role: 'ARTIST', email: 'a@b.c' };
     next();

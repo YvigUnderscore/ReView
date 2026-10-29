@@ -4,7 +4,7 @@
 import { Router, type Request } from 'express';
 import { z } from 'zod';
 import { VersionStatus } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import {
@@ -68,7 +68,7 @@ router.get(
     const taskId = req.query.taskId ? Number(req.query.taskId) : undefined;
     const assetId = req.query.assetId ? Number(req.query.assetId) : undefined;
     await resolveParentAccess(req, taskId, assetId);
-    res.json({ versions: await VersionService.list(req.user!.id, taskId, assetId) });
+    res.json({ versions: await VersionService.list(requireUser(req).id, taskId, assetId) });
   },
 );
 
@@ -98,7 +98,7 @@ router.post(
     // Contribution rights are read from the EFFECTIVE role (38.E), asserted by the service:
     // testing `req.user.role === CLIENT` here would let a member demoted to CLIENT on this project
     // through, and refuse an ARTIST promoted to SUPERVISOR on it.
-    res.status(201).json({ version: await VersionService.create(req.user!, projectId, body) });
+    res.status(201).json({ version: await VersionService.create(requireUser(req), projectId, body) });
   },
 );
 
@@ -106,7 +106,7 @@ router.post(
 router.get('/:id', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   await resolveVersionAccess(req, id);
-  res.json({ version: await VersionService.getDetail(req.user!.id, id) });
+  res.json({ version: await VersionService.getDetail(requireUser(req).id, id) });
 });
 
 // PATCH /api/versions/:id: author or supervisor+. Publication (PUBLISHED) reserved to supervisor+.
@@ -123,7 +123,7 @@ router.patch(
   async (req, res) => {
     const id = Number(req.params.id);
     const projectId = await resolveVersionAccess(req, id);
-    res.json({ version: await VersionService.update(req.user!, projectId, id, req.body) });
+    res.json({ version: await VersionService.update(requireUser(req), projectId, id, req.body) });
   },
 );
 
@@ -135,14 +135,14 @@ router.post('/:id/publish', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   const projectId = await resolveVersionAccess(req, id);
   // Contribution judged on the project's effective role (38.E), asserted by the service.
-  res.json(await VersionService.publishAll(req.user!, projectId, id));
+  res.json(await VersionService.publishAll(requireUser(req), projectId, id));
 });
 
 // DELETE /api/versions/:id: trash (soft-delete, author or supervisor+)
 router.delete('/:id', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   const projectId = await resolveVersionAccess(req, id);
-  await VersionService.remove(req.user!, projectId, id);
+  await VersionService.remove(requireUser(req), projectId, id);
   res.status(204).end();
 });
 
@@ -150,7 +150,7 @@ router.delete('/:id', validate({ params: idParam }), async (req, res) => {
 router.post('/:id/restore', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   const projectId = await resolveVersionAccess(req, id);
-  await VersionService.restore(req.user!, projectId, id);
+  await VersionService.restore(requireUser(req), projectId, id);
   res.status(204).end();
 });
 
@@ -166,10 +166,10 @@ router.post(
     const projectId = await resolveVersionAccess(req, id);
     // Deciding a review is a supervision act ON THIS PROJECT: the effective role counts (38.E), not the
     // global role, otherwise a supervisor named on the project would be excluded.
-    await assertProjectManage(req.user!.id, req.user!.role, projectId);
+    await assertProjectManage(requireUser(req).id, requireUser(req).role, projectId);
     const { statusId, comment } = req.body as { statusId: number; comment?: string };
     res.status(201).json({
-      decision: await ReviewDecisionService.decide(req.user!, projectId, id, statusId, comment),
+      decision: await ReviewDecisionService.decide(requireUser(req), projectId, id, statusId, comment),
     });
   },
 );
@@ -185,7 +185,7 @@ router.get('/:id/decisions', validate({ params: idParam }), async (req, res) => 
 router.delete('/:id/purge', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   const projectId = await resolveVersionAccess(req, id);
-  await VersionService.purge(req.user!, projectId, id);
+  await VersionService.purge(requireUser(req), projectId, id);
   res.status(204).end();
 });
 

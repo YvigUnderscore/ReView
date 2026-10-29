@@ -17,7 +17,10 @@ vi.mock('../lib/sessions', () => ({
 }));
 vi.mock('../lib/oidcConfig', () => ({ isPasswordLoginBlocked: vi.fn().mockResolvedValue(false) }));
 vi.mock('../lib/userView', () => ({ toSessionUser: vi.fn(async (u: { id: number }) => ({ id: u.id })) }));
-vi.mock('../middleware/auth', () => ({ authenticate: vi.fn() }));
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
+  authenticate: vi.fn(),
+}));
 
 import express from 'express';
 import request from 'supertest';

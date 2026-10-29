@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role, AssetType } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole, assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { resolveProjectIdForAsset } from '../lib/pipeline';
@@ -35,7 +35,7 @@ router.get(
   async (req, res) => {
     const projectId = Number(req.query.projectId);
     await assertProjectAccess(req, projectId);
-    res.json(await AssetService.list(projectId, readPagination(req.query), req.user!.id));
+    res.json(await AssetService.list(projectId, readPagination(req.query), requireUser(req).id));
   },
 );
 
@@ -98,7 +98,7 @@ router.patch(
     const asset = await AssetService.update(projectId, id, req.body as AssetService.UpdateAssetInput);
     // Description round trip: cf. the equivalent route for sequences.
     if (req.body.description !== undefined) {
-      await enqueuePush(projectId, { type: 'description', kind: 'asset', id, actorId: req.user!.id });
+      await enqueuePush(projectId, { type: 'description', kind: 'asset', id, actorId: requireUser(req).id });
     }
     res.json({ asset });
   },
@@ -116,7 +116,7 @@ router.get('/:id/tree', validate({ params: idParam }), async (req, res) => {
   const projectId = await resolveProjectIdForAsset(id);
   if (!projectId) throw notFound('Asset not found');
   await assertProjectAccess(req, projectId);
-  res.json(await PipelineLatestService.assetOverview(id, req.user!.id));
+  res.json(await PipelineLatestService.assetOverview(id, requireUser(req).id));
 });
 
 /**
@@ -129,7 +129,7 @@ router.get('/:id/latest', validate({ params: idParam }), async (req, res) => {
   const projectId = await resolveProjectIdForAsset(id);
   if (!projectId) throw notFound('Asset not found');
   await assertProjectAccess(req, projectId);
-  const { latest } = await PipelineLatestService.assetOverview(id, req.user!.id);
+  const { latest } = await PipelineLatestService.assetOverview(id, requireUser(req).id);
   if (!latest) throw notFound('No published version for this asset', 'NO_PUBLISHED_VERSION');
   res.json({ latest });
 });

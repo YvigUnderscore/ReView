@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { identityRateKey, rateLimit } from '../middleware/rateLimit';
@@ -67,7 +67,7 @@ router.post(
   validate({ body: createBody }),
   async (req, res) => {
     const body = req.body as z.infer<typeof createBody>;
-    await ApiTokenService.assertActorPassword(req.user!.id, body.currentPassword);
+    await ApiTokenService.assertActorPassword(requireUser(req).id, body.currentPassword);
 
     const mechanism = await OpsSpoolService.mechanism();
     assertUsable(mechanism, body.kind);
@@ -81,7 +81,7 @@ router.post(
 
     const run = {
       id: newRunId(new Date()),
-      actor: { id: req.user!.id, displayName: req.user!.email },
+      actor: { id: requireUser(req).id, displayName: requireUser(req).email },
     };
     const order = buildOrder({
       id: run.id,
@@ -98,7 +98,7 @@ router.post(
     // initiator we want to know, and a trace written at the end would miss all those that never reach
     // their end.
     logAudit({
-      userId: req.user!.id,
+      userId: requireUser(req).id,
       action:
         body.kind === 'update' ? 'INSTANCE_UPDATE' : `BACKUP_${body.kind === 'backup' ? 'CREATE' : 'VERIFY'}`,
       entityType: body.kind === 'update' ? 'Release' : 'Backup',

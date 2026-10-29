@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { MediaKind } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import * as MediaUploadService from '../services/MediaUploadService';
 import * as MediaService from '../services/MediaService';
@@ -43,7 +43,7 @@ router.post(
     }),
   }),
   async (req, res) => {
-    res.status(201).json(await MediaService.createUpload(req.user!, req.body));
+    res.status(201).json(await MediaService.createUpload(requireUser(req), req.body));
   },
 );
 
@@ -65,7 +65,7 @@ router.post(
       .status(201)
       .json(
         await MediaUploadService.initMultipart(
-          req.user!,
+          requireUser(req),
           req.body as Parameters<typeof MediaUploadService.initMultipart>[1],
         ),
       );
@@ -82,7 +82,7 @@ router.post(
   async (req, res) => {
     res.json(
       await MediaUploadService.getPartUrls(
-        req.user!,
+        requireUser(req),
         Number(req.params.id),
         (req.body as { partNumbers: number[] }).partNumbers,
       ),
@@ -105,7 +105,7 @@ router.post(
   async (req, res) => {
     res.json(
       await MediaUploadService.completeMultipart(
-        req.user!,
+        requireUser(req),
         Number(req.params.id),
         (req.body as { parts: { partNumber: number; etag: string }[] }).parts,
       ),
@@ -116,7 +116,7 @@ router.post(
 // POST /api/media/multipart/:id/abort — cancels the upload (multipart, simple PUT or sequence), frees
 // what was stored and deletes the media left in UPLOADING.
 router.post('/multipart/:id/abort', validate({ params: idParam }), async (req, res) => {
-  res.json(await MediaUploadService.abortUpload(req.user!, Number(req.params.id)));
+  res.json(await MediaUploadService.abortUpload(requireUser(req), Number(req.params.id)));
 });
 
 /* ── Image sequences: N files, ONE media (wave 5) ─────────────────────────── */
@@ -139,7 +139,7 @@ router.post(
   }),
   async (req, res) => {
     const body = req.body as ImageSequenceService.InitSequenceInput;
-    res.status(201).json(await ImageSequenceService.initSequence(req.user!, body));
+    res.status(201).json(await ImageSequenceService.initSequence(requireUser(req), body));
   },
 );
 
@@ -152,7 +152,7 @@ router.post(
   }),
   async (req, res) => {
     const { names } = req.body as { names: string[] };
-    res.json(await ImageSequenceService.frameUploadUrls(req.user!, Number(req.params.id), names));
+    res.json(await ImageSequenceService.frameUploadUrls(requireUser(req), Number(req.params.id), names));
   },
 );
 
@@ -165,14 +165,16 @@ router.post(
   '/sequence/:id/complete',
   validate({ params: idParam, body: sequenceCompleteBody }),
   async (req, res) => {
-    res.json(await ImageSequenceService.completeSequence(req.user!, Number(req.params.id), req.body.note));
+    res.json(
+      await ImageSequenceService.completeSequence(requireUser(req), Number(req.params.id), req.body.note),
+    );
   },
 );
 
 // GET /api/media/sequence/:id/frames — the original deliverable, frame by frame (presigned URLs): a
 // hundred-gigabyte archive is not built inside the web process.
 router.get('/sequence/:id/frames', validate({ params: idParam }), async (req, res) => {
-  res.json(await ImageSequenceService.listSequenceFrames(req.user!, Number(req.params.id)));
+  res.json(await ImageSequenceService.listSequenceFrames(requireUser(req), Number(req.params.id)));
 });
 
 export default router;

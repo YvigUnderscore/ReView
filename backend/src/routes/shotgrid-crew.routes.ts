@@ -3,7 +3,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { assertProjectManager, canCreateStudioAccounts } from '../lib/shotgridAccess';
 import { isMailerConfigured } from '../lib/mailer';
@@ -25,13 +25,13 @@ const projectParam = z.object({ projectId: z.coerce.number().int().positive() })
 
 router.get('/projects/:projectId/crew', validate({ params: projectParam }), async (req, res) => {
   const projectId = Number(req.params.projectId);
-  await assertProjectManager(req.user!, projectId);
+  await assertProjectManager(requireUser(req), projectId);
   const crew = await Crew.listCrew(projectId);
   res.json({
     crew,
     // The screen needs both to say what is possible BEFORE offering the gesture: without an email relay,
     // no invitation would be sent.
-    canCreateAccounts: canCreateStudioAccounts(req.user!),
+    canCreateAccounts: canCreateStudioAccounts(requireUser(req)),
     smtpReady: await isMailerConfigured(),
   });
 });
@@ -46,9 +46,9 @@ router.post(
   }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId);
-    const results = await Crew.inviteCrew(req.user!, projectId, req.body.sgIds, {
-      canCreateAccounts: canCreateStudioAccounts(req.user!),
+    await assertProjectManager(requireUser(req), projectId);
+    const results = await Crew.inviteCrew(requireUser(req), projectId, req.body.sgIds, {
+      canCreateAccounts: canCreateStudioAccounts(requireUser(req)),
     });
     res.json({ results });
   },
@@ -68,7 +68,7 @@ router.put(
   }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId);
+    await assertProjectManager(requireUser(req), projectId);
     await Crew.linkCrewMember(projectId, Number(req.params.sgId), req.body.userId);
     res.status(204).end();
   },

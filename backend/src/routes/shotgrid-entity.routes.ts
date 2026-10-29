@@ -3,7 +3,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { prisma } from '../lib/prisma';
 import { badRequest, notFound } from '../lib/errors';
@@ -36,7 +36,7 @@ router.post(
   }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId);
+    await assertProjectManager(requireUser(req), projectId);
     const connection = await Config.getConnection(projectId);
     if (!connection?.active) throw badRequest('Project not linked to ShotGrid');
 
@@ -56,7 +56,7 @@ router.post(
       kind: 'incremental',
       onlySgIds: [{ sgType: link.sgType, sgId: link.sgId }],
       withMedia: req.body.localType === 'version',
-      triggeredById: req.user!.id,
+      triggeredById: requireUser(req).id,
     });
     res.json({ status: result.status, sgType: link.sgType, sgId: link.sgId });
   },
@@ -82,7 +82,7 @@ router.get(
   }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId, { allowMembers: true });
+    await assertProjectManager(requireUser(req), projectId, { allowMembers: true });
     const connection = await Config.getConnection(projectId);
     if (!connection?.active) return res.json({ steps: [] });
     res.json({
@@ -109,8 +109,8 @@ router.post(
   }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId);
-    res.status(201).json(await createTaskFromStep(projectId, req.body, req.user!.email ?? null));
+    await assertProjectManager(requireUser(req), projectId);
+    res.status(201).json(await createTaskFromStep(projectId, req.body, requireUser(req).email ?? null));
   },
 );
 
@@ -120,7 +120,7 @@ router.get(
   validate({ params: z.object({ projectId: z.coerce.number().int().positive() }) }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId, { allowMembers: true });
+    await assertProjectManager(requireUser(req), projectId, { allowMembers: true });
     const connection = await Config.getConnection(projectId);
     if (!connection?.active) return res.json({ members: [] });
     res.json({ members: await listProjectMembers(projectId) });

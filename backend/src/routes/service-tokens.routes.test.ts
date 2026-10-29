@@ -24,7 +24,8 @@ const { svc, actor } = vi.hoisted(() => {
 
 vi.mock('../services/ApiTokenService', () => svc);
 vi.mock('../lib/prisma', () => ({ prisma: {} }));
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: Request, _res: Response, next: NextFunction) => {
     req.user = actor.current as Request['user'];
     req.apiToken = actor.apiToken as Request['apiToken'];

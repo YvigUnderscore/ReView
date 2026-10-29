@@ -3,7 +3,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { paginationQuery, readPagination } from '../lib/pagination';
 import * as DashboardService from '../services/DashboardService';
@@ -15,7 +15,7 @@ router.use(authenticate);
 // GET /api/dashboard — data for the Home page (latest reviews, activity, my tasks, stats), bounded to
 // accessible projects (membership; admin and supervisor see all).
 router.get('/', async (req, res) => {
-  res.json(await DashboardService.getDashboard(req.user!));
+  res.json(await DashboardService.getDashboard(requireUser(req)));
 });
 
 /**
@@ -42,7 +42,7 @@ router.get(
     const scope = req.query.scope === 'blocked' ? 'blocked' : 'all';
     // Express 5: `req.query` is a getter, the middleware's coercion does not persist on it.
     const projectId = req.query.projectId ? Number(req.query.projectId) : undefined;
-    res.json(await MyWorkService.listMyTasks(req.user!, scope, readPagination(req.query), projectId));
+    res.json(await MyWorkService.listMyTasks(requireUser(req), scope, readPagination(req.query), projectId));
   },
 );
 
@@ -53,7 +53,7 @@ router.get(
  * sees only the notes addressed to them (`lib/homeScope`).
  */
 router.get('/comments', validate({ query: paginationQuery }), async (req, res) => {
-  res.json(await MyWorkService.listMyComments(req.user!, readPagination(req.query)));
+  res.json(await MyWorkService.listMyComments(requireUser(req), readPagination(req.query)));
 });
 
 export default router;

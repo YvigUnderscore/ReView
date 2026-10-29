@@ -3,7 +3,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import * as SplatEditService from '../services/SplatEditService';
 
@@ -54,7 +54,7 @@ router.patch(
     }),
   }),
   async (req, res) => {
-    res.json(await SplatEditService.setSplatEdits(req.user!, Number(req.params.id), req.body.edits));
+    res.json(await SplatEditService.setSplatEdits(requireUser(req), Number(req.params.id), req.body.edits));
   },
 );
 
@@ -73,14 +73,19 @@ router.put(
   }),
   async (req, res) => {
     res.json(
-      await SplatEditService.setSplatMask(req.user!, Number(req.params.id), req.body.data, req.body.count),
+      await SplatEditService.setSplatMask(
+        requireUser(req),
+        Number(req.params.id),
+        req.body.data,
+        req.body.count,
+      ),
     );
   },
 );
 
 /** DELETE /api/media/:id/splat-mask: clears the deletion mask. */
 router.delete('/:id/splat-mask', validate({ params: idParam }), async (req, res) => {
-  res.json(await SplatEditService.clearSplatMask(req.user!, Number(req.params.id)));
+  res.json(await SplatEditService.clearSplatMask(requireUser(req), Number(req.params.id)));
 });
 
 /**
@@ -99,7 +104,7 @@ router.put(
   async (req, res) => {
     res.json(
       await SplatEditService.setSplatSubsetOps(
-        req.user!,
+        requireUser(req),
         Number(req.params.id),
         req.body.data,
         req.body.count,
@@ -110,7 +115,7 @@ router.put(
 
 /** DELETE /api/media/:id/splat-subset: clears the subset transformations. */
 router.delete('/:id/splat-subset', validate({ params: idParam }), async (req, res) => {
-  res.json(await SplatEditService.clearSplatSubsetOps(req.user!, Number(req.params.id)));
+  res.json(await SplatEditService.clearSplatSubsetOps(requireUser(req), Number(req.params.id)));
 });
 
 const camPose = z.object({
@@ -181,7 +186,11 @@ router.patch(
   }),
   async (req, res) => {
     res.json(
-      await SplatEditService.setSplatPresentation(req.user!, Number(req.params.id), req.body.presentation),
+      await SplatEditService.setSplatPresentation(
+        requireUser(req),
+        Number(req.params.id),
+        req.body.presentation,
+      ),
     );
   },
 );

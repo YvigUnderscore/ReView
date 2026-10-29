@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { assertProjectAccess, requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import * as PlaylistService from '../services/PlaylistService';
@@ -48,7 +48,7 @@ router.get(
     const projectId = Number(req.query.projectId);
     await assertProjectAccess(req, projectId);
     const query = req.query as unknown as PlaylistCandidateService.CandidateQuery;
-    res.json({ candidates: await PlaylistCandidateService.list(projectId, req.user!.id, query) });
+    res.json({ candidates: await PlaylistCandidateService.list(projectId, requireUser(req).id, query) });
   },
 );
 
@@ -72,7 +72,7 @@ router.post(
       mediaIds?: number[];
     };
     await assertProjectAccess(req, projectId);
-    const playlist = await PlaylistService.create(req.user!, projectId, name, versionIds, mediaIds);
+    const playlist = await PlaylistService.create(requireUser(req), projectId, name, versionIds, mediaIds);
     res.status(201).json({ playlist });
   },
 );
@@ -85,7 +85,7 @@ router.get(
     const id = Number(req.params.id);
     const owning = await PlaylistService.getOwning(id);
     await assertProjectAccess(req, owning.projectId);
-    res.json({ playlist: await PlaylistService.getDetail(req.user!, id) });
+    res.json({ playlist: await PlaylistService.getDetail(requireUser(req), id) });
   },
 );
 
@@ -105,9 +105,9 @@ router.patch(
     const owning = await PlaylistService.getOwning(id);
     await assertProjectAccess(req, owning.projectId);
     const { name, itemIds } = req.body as { name?: string; itemIds?: number[] };
-    if (name !== undefined) await PlaylistService.rename(req.user!, id, name);
-    if (itemIds !== undefined) await PlaylistService.reorder(req.user!, id, itemIds);
-    res.json({ playlist: await PlaylistService.getDetail(req.user!, id) });
+    if (name !== undefined) await PlaylistService.rename(requireUser(req), id, name);
+    if (itemIds !== undefined) await PlaylistService.reorder(requireUser(req), id, itemIds);
+    res.json({ playlist: await PlaylistService.getDetail(requireUser(req), id) });
   },
 );
 
@@ -128,7 +128,7 @@ router.post(
     const owning = await PlaylistService.getOwning(id);
     await assertProjectAccess(req, owning.projectId);
     const { versionIds, mediaIds } = req.body as { versionIds?: number[]; mediaIds?: number[] };
-    res.json(await PlaylistService.addItems(req.user!, id, versionIds, mediaIds));
+    res.json(await PlaylistService.addItems(requireUser(req), id, versionIds, mediaIds));
   },
 );
 
@@ -146,7 +146,7 @@ router.delete(
     const id = Number(req.params.id);
     const owning = await PlaylistService.getOwning(id);
     await assertProjectAccess(req, owning.projectId);
-    await PlaylistService.removeItem(req.user!, id, Number(req.params.itemId));
+    await PlaylistService.removeItem(requireUser(req), id, Number(req.params.itemId));
     res.status(204).end();
   },
 );
@@ -160,7 +160,7 @@ router.delete(
     const id = Number(req.params.id);
     const owning = await PlaylistService.getOwning(id);
     await assertProjectAccess(req, owning.projectId);
-    await PlaylistService.remove(req.user!, id);
+    await PlaylistService.remove(requireUser(req), id);
     res.status(204).end();
   },
 );

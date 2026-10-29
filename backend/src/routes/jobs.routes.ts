@@ -5,7 +5,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import type { Queue } from 'bullmq';
 import { Role } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { mediaQueue, storageCleanupQueue, webhookQueue } from '../services/JobService';
@@ -74,7 +74,7 @@ router.post(
     if (!(await job.isFailed())) throw badRequest('Only a failed job can be retried');
     await job.retry();
     logAudit({
-      userId: req.user!.id,
+      userId: requireUser(req).id,
       action: 'JOB_RETRY',
       entityType: 'Job',
       metadata: { queue: req.params.queue, id: job.id, name: job.name },
@@ -88,7 +88,7 @@ router.post('/:queue/clean-failed', validate({ params: queueParam }), async (req
   const q = QUEUES[String(req.params.queue)]!;
   const removed = await q.clean(0, 1000, 'failed');
   logAudit({
-    userId: req.user!.id,
+    userId: requireUser(req).id,
     action: 'JOBS_CLEAN_FAILED',
     entityType: 'Job',
     metadata: { queue: req.params.queue, removed: removed.length },

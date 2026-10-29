@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import * as HdriService from '../services/HdriService';
@@ -54,7 +54,12 @@ router.post(
       format: HdriService.HdriFormat;
     };
     const entry = await HdriService.add(name, storageKey, format);
-    logAudit({ userId: req.user!.id, action: 'HDRI_ADD', entityType: 'Setting', metadata: { id: entry.id } });
+    logAudit({
+      userId: requireUser(req).id,
+      action: 'HDRI_ADD',
+      entityType: 'Setting',
+      metadata: { id: entry.id },
+    });
     res.status(201).json({ hdri: entry });
   },
 );
@@ -67,7 +72,7 @@ router.delete(
   async (req, res) => {
     const id = req.params.id as string;
     await HdriService.remove(id);
-    logAudit({ userId: req.user!.id, action: 'HDRI_DELETE', entityType: 'Setting', metadata: { id } });
+    logAudit({ userId: requireUser(req).id, action: 'HDRI_DELETE', entityType: 'Setting', metadata: { id } });
     res.status(204).end();
   },
 );

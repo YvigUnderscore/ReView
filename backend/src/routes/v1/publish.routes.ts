@@ -15,6 +15,7 @@ import * as PublishFlowService from '../../services/PublishFlowService';
 import * as Resolve from '../../services/PipelineResolveService';
 import { parsePipelinePath } from '../../lib/pipelinePath';
 import { idParam, requireMediaProject } from './helpers';
+import { requireUser } from '../../middleware/auth';
 
 /**
  * Publishing from a DCC (API v1): two calls, described in `PublishFlowService`.
@@ -76,7 +77,7 @@ router.post(
     await assertProjectAccess(req, project.id);
     assertTokenProject(req, project.id);
 
-    res.status(201).json(await PublishFlowService.start(req.user!, body));
+    res.status(201).json(await PublishFlowService.start(requireUser(req), body));
   },
 );
 
@@ -109,7 +110,7 @@ router.post(
     const mediaId = Number(req.params.id);
     await requireMediaProject(req, mediaId);
     const body = req.body as PublishFlowService.CompletePublishInput;
-    res.json(await PublishFlowService.complete(req.user!, mediaId, body));
+    res.json(await PublishFlowService.complete(requireUser(req), mediaId, body));
   },
 );
 

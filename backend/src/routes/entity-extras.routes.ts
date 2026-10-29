@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { notFound } from '../lib/errors';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { assertProjectAccess, requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { NOTE_KINDS, TEMPLATE_SCOPES } from '../services/EntityNoteService';
@@ -55,7 +55,7 @@ for (const [segment, kind] of Object.entries(SEGMENTS) as [
     }),
     async (req, res) => {
       const assignees = await EntityAssigneeService.setAssignees(
-        req.user!,
+        requireUser(req),
         kind,
         Number(req.params.id),
         req.body.userIds,
@@ -92,7 +92,7 @@ for (const [segment, kind] of Object.entries(SEGMENTS) as [
     validate({ params: idParam, body: z.object({ body: z.string().max(100_000) }) }),
     async (req, res) => {
       res.json({
-        note: await EntityNoteService.setNote(req.user!, kind, Number(req.params.id), req.body.body),
+        note: await EntityNoteService.setNote(requireUser(req), kind, Number(req.params.id), req.body.body),
       });
     },
   );
@@ -138,7 +138,7 @@ router.post('/note-templates', auth, manage, validate({ body: templateBody }), a
   const studioId = await currentStudioId();
   res
     .status(201)
-    .json({ template: await EntityNoteService.createTemplate(studioId, req.user!.id, req.body) });
+    .json({ template: await EntityNoteService.createTemplate(studioId, requireUser(req).id, req.body) });
 });
 
 router.patch(

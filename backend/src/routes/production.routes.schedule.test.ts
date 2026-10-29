@@ -19,7 +19,8 @@ vi.mock('../services/GridService', () => ({
   getProjectGrid: vi.fn(() => Promise.resolve({})),
   GRID_MAX_LIMIT: 200,
 }));
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: Request, _res: Response, next: NextFunction) => {
     req.user = { id: 7, role: 'ADMIN' } as Request['user'];
     next();

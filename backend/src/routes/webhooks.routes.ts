@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { randomBytes } from 'node:crypto';
 import { Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { encryptSecret } from '../lib/crypto';
@@ -81,7 +81,7 @@ router.post(
       select: hookSelect,
     });
     logAudit({
-      userId: req.user!.id,
+      userId: requireUser(req).id,
       action: 'WEBHOOK_CREATE',
       entityType: 'Webhook',
       entityId: webhook.id,
@@ -120,7 +120,7 @@ router.patch(
       select: hookSelect,
     });
     logAudit({
-      userId: req.user!.id,
+      userId: requireUser(req).id,
       action: 'WEBHOOK_UPDATE',
       entityType: 'Webhook',
       entityId: existing.id,
@@ -135,7 +135,7 @@ router.delete('/:id', validate({ params: idParam }), async (req, res) => {
   const existing = await findHook(Number(req.params.id));
   await prisma.webhook.delete({ where: { id: existing.id } });
   logAudit({
-    userId: req.user!.id,
+    userId: requireUser(req).id,
     action: 'WEBHOOK_DELETE',
     entityType: 'Webhook',
     entityId: existing.id,
@@ -149,7 +149,7 @@ router.post('/:id/test', validate({ params: idParam }), async (req, res) => {
   const existing = await findHook(Number(req.params.id));
   const deliveryId = await queueDelivery(existing.id, 'test', {
     message: 'ReView test delivery',
-    requestedBy: req.user!.id,
+    requestedBy: requireUser(req).id,
   });
   res.status(202).json({ queued: true, deliveryId });
 });
@@ -181,7 +181,7 @@ router.post('/:id/deliveries/:deliveryId/replay', validate({ params: deliveryPar
   const deliveryId = await replayDelivery(existing.id, Number(req.params.deliveryId));
   if (deliveryId === null) throw notFound('Delivery not found');
   logAudit({
-    userId: req.user!.id,
+    userId: requireUser(req).id,
     action: 'WEBHOOK_REPLAY',
     entityType: 'Webhook',
     entityId: existing.id,

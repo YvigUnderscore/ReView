@@ -39,6 +39,12 @@ export default defineConfig([
           message:
             'Locale en dur interdite : la langue suit le lecteur (i18n) ; pour un log serveur, préférer toISOString().',
         },
+        {
+          // `authenticate` narrows nothing at the type level: `req.user!` silently turns a route mounted
+          // without it into a 500 on `undefined.id`. `requireUser(req)` (middleware/auth) is a 401.
+          selector: "TSNonNullExpression > MemberExpression[object.name='req'][property.name='user']",
+          message: 'Use requireUser(req) from middleware/auth instead of asserting req.user!.',
+        },
       ],
     },
   },

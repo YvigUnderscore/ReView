@@ -4,7 +4,7 @@
 import { Router, type Request } from 'express';
 import { z } from 'zod';
 import { TaskType, TaskStatus } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { resolveProjectIdForTask, resolveProjectIdForShot, resolveProjectIdForAsset } from '../lib/pipeline';
@@ -127,8 +127,8 @@ router.post(
     // Rights read on the EFFECTIVE role (38.E): the check read the GLOBAL role, so a lead supervising their
     // project (a role given by membership) was refused the creation of a task that the service grants them.
     // It was the only creation path outside ShotGrid: a standalone project's pipe stayed closed to them.
-    await assertProjectManage(req.user!.id, req.user!.role, projectId);
-    res.status(201).json({ task: await TaskService.create(req.user!, projectId, req.body) });
+    await assertProjectManage(requireUser(req).id, requireUser(req).role, projectId);
+    res.status(201).json({ task: await TaskService.create(requireUser(req), projectId, req.body) });
   },
 );
 
@@ -168,7 +168,7 @@ router.patch(
   async (req, res) => {
     const id = Number(req.params.id);
     const projectId = await resolveTaskAccess(req, id);
-    res.json({ task: await TaskService.update(req.user!, projectId, id, req.body) });
+    res.json({ task: await TaskService.update(requireUser(req), projectId, id, req.body) });
   },
 );
 
@@ -176,7 +176,7 @@ router.patch(
 router.delete('/:id', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   const projectId = await resolveTaskAccess(req, id);
-  await TaskService.remove(req.user!, projectId, id);
+  await TaskService.remove(requireUser(req), projectId, id);
   res.status(204).end();
 });
 

@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role, VersionStatus, MediaKind } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { paginationQuery, readPagination } from '../lib/pagination';
@@ -39,7 +39,7 @@ router.delete(
     const ok = await revokeSession(String(req.params.sid));
     if (!ok) throw notFound('Session not found');
     logAudit({
-      userId: req.user!.id,
+      userId: requireUser(req).id,
       action: 'SESSION_REVOKE',
       entityType: 'UserSession',
       metadata: { byAdmin: true },

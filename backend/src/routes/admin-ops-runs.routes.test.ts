@@ -32,7 +32,8 @@ vi.mock('../services/ReleaseService', () => releases);
 vi.mock('../services/ApiTokenService', () => tokens);
 vi.mock('../services/AuditService', () => audit);
 vi.mock('../lib/prisma', () => ({ prisma: {} }));
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: Request, _res: Response, next: NextFunction) => {
     req.user = actor.current as Request['user'];
     req.apiToken = actor.apiToken as Request['apiToken'];

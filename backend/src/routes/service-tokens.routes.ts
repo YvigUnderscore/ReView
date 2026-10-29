@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { badRequest } from '../lib/errors';
@@ -53,13 +53,13 @@ const createBody = z.object({
 // POST /api/admin/service-tokens — issues a token; the secret is returned ONLY HERE
 router.post('/', validate({ body: createBody }), async (req, res) => {
   const { currentPassword, ...input } = req.body as z.infer<typeof createBody>;
-  await ApiTokenService.assertActorPassword(req.user!.id, currentPassword);
-  res.status(201).json(await ApiTokenService.createService(req.user!.id, input));
+  await ApiTokenService.assertActorPassword(requireUser(req).id, currentPassword);
+  res.status(201).json(await ApiTokenService.createService(requireUser(req).id, input));
 });
 
 // DELETE /api/admin/service-tokens/:id — immediate revocation
 router.delete('/:id', validate({ params: z.object({ id: z.coerce.number().int() }) }), async (req, res) => {
-  await ApiTokenService.revokeService(req.user!.id, Number(req.params.id));
+  await ApiTokenService.revokeService(requireUser(req).id, Number(req.params.id));
   res.status(204).end();
 });
 

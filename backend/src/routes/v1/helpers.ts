@@ -16,6 +16,7 @@ import {
 } from '../../lib/pipeline';
 import { notFound } from '../../lib/errors';
 import * as Resolve from '../../services/PipelineResolveService';
+import { requireUser } from '../../middleware/auth';
 
 /**
  * Access guard shared by the v1 routes.
@@ -92,7 +93,7 @@ export const requireMediaProject = (req: Request, id: number) =>
   requireOwningProject(req, id, resolveProjectIdForMedia, 'Média');
 
 /** Actor of the write, as the business services expect it. */
-export const actorOf = (req: Request) => ({ id: req.user!.id, role: req.user!.role });
+export const actorOf = (req: Request) => ({ id: requireUser(req).id, role: requireUser(req).role });
 
 /** Pagination and sort query shared by v1 collections; extend with filters. */
 export const listQuery = z.object({

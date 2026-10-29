@@ -5,7 +5,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { EntityType } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import {
@@ -38,11 +38,11 @@ async function projectIdFor(type: EntityType, entityId: number): Promise<number 
 // not keep naming the shots of a film one has left.
 router.get('/', async (req, res) => {
   const favorites = await prisma.favorite.findMany({
-    where: { userId: req.user!.id },
+    where: { userId: requireUser(req).id },
     orderBy: { createdAt: 'desc' },
     select: { id: true, type: true, entityId: true },
   });
-  res.json({ favorites: await resolveFavorites(req.user!.id, req.user!.role, favorites) });
+  res.json({ favorites: await resolveFavorites(requireUser(req).id, requireUser(req).role, favorites) });
 });
 
 // POST /api/favorites — adds a favorite
@@ -55,9 +55,9 @@ router.post(
     if (!projectId) throw notFound('Entity not found');
     await assertProjectAccess(req, projectId);
     const favorite = await prisma.favorite.upsert({
-      where: { userId_type_entityId: { userId: req.user!.id, type, entityId } },
+      where: { userId_type_entityId: { userId: requireUser(req).id, type, entityId } },
       update: {},
-      create: { userId: req.user!.id, type, entityId },
+      create: { userId: requireUser(req).id, type, entityId },
     });
     res.status(201).json({ favorite });
   },
@@ -70,7 +70,7 @@ router.delete(
   async (req, res) => {
     const type = req.params.type as EntityType;
     const entityId = Number(req.params.entityId);
-    await prisma.favorite.deleteMany({ where: { userId: req.user!.id, type, entityId } });
+    await prisma.favorite.deleteMany({ where: { userId: requireUser(req).id, type, entityId } });
     res.status(204).end();
   },
 );

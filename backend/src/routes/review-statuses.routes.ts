@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { assertProjectAccess, requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import * as ReviewDecisionService from '../services/ReviewDecisionService';
@@ -49,7 +49,7 @@ router.get(
 
 // POST /api/review-statuses — ADMIN
 router.post('/', requireRole(Role.ADMIN), validate({ body: statusBody }), async (req, res) => {
-  res.status(201).json({ status: await ReviewDecisionService.createStatus(req.user!, req.body) });
+  res.status(201).json({ status: await ReviewDecisionService.createStatus(requireUser(req), req.body) });
 });
 
 // PATCH /api/review-statuses/:id — ADMIN
@@ -59,14 +59,14 @@ router.patch(
   validate({ params: idParam, body: statusBody.partial() }),
   async (req, res) => {
     res.json({
-      status: await ReviewDecisionService.updateStatus(req.user!, Number(req.params.id), req.body),
+      status: await ReviewDecisionService.updateStatus(requireUser(req), Number(req.params.id), req.body),
     });
   },
 );
 
 // DELETE /api/review-statuses/:id — ADMIN (409 if used by decisions)
 router.delete('/:id', requireRole(Role.ADMIN), validate({ params: idParam }), async (req, res) => {
-  await ReviewDecisionService.deleteStatus(req.user!, Number(req.params.id));
+  await ReviewDecisionService.deleteStatus(requireUser(req), Number(req.params.id));
   res.status(204).end();
 });
 

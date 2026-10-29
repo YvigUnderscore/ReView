@@ -3,7 +3,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { badRequest } from '../lib/errors';
 import * as UserService from '../services/UserService';
@@ -33,7 +33,11 @@ const ownsAvatarKey = (key: string, userId: number): boolean =>
 
 // GET /api/users/:id/profile — public record of a member (any authenticated account)
 router.get('/:id/profile', validate({ params: idParam }), async (req, res) => {
-  const profile = await UserService.getProfile(req.user!.id, req.user!.role, Number(req.params.id));
+  const profile = await UserService.getProfile(
+    requireUser(req).id,
+    requireUser(req).role,
+    Number(req.params.id),
+  );
   res.json({ user: profile });
 });
 
@@ -42,7 +46,7 @@ router.post(
   '/me/avatar/presign',
   validate({ body: z.object({ contentType: z.string().regex(/^image\/(png|jpe?g|webp)$/) }) }),
   async (req, res) => {
-    res.json(await UserService.presignAvatar(req.user!.id, req.body.contentType));
+    res.json(await UserService.presignAvatar(requireUser(req).id, req.body.contentType));
   },
 );
 
@@ -52,8 +56,9 @@ router.put(
   validate({ body: z.object({ key: z.string().max(256).nullable() }) }),
   async (req, res) => {
     const key = req.body.key as string | null;
-    if (key !== null && !ownsAvatarKey(key, req.user!.id)) throw badRequest('Invalid avatar key', 'BAD_KEY');
-    res.json({ user: await UserService.setAvatar(req.user!.id, key) });
+    if (key !== null && !ownsAvatarKey(key, requireUser(req).id))
+      throw badRequest('Invalid avatar key', 'BAD_KEY');
+    res.json({ user: await UserService.setAvatar(requireUser(req).id, key) });
   },
 );
 

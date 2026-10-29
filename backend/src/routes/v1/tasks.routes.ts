@@ -15,6 +15,7 @@ import * as Ensure from '../../services/PipelineEnsureService';
 import * as ApiEventService from '../../services/ApiEventService';
 import * as TaskService from '../../services/TaskService';
 import { idParam, actorOf, requireShotProject, requireAssetProject, requireTaskProject } from './helpers';
+import { requireUser } from '../../middleware/auth';
 
 /**
  * Tasks in API v1: those of a shot or asset owner, then the task itself and its versions. A shot and
@@ -62,7 +63,7 @@ const ensureTaskOn =
         projectId,
         entityType: 'task',
         entityId: entity.id,
-        actorId: req.user!.id,
+        actorId: requireUser(req).id,
         payload: { task: toTask(entity) },
       });
     }
@@ -121,9 +122,9 @@ router.patch(
     const id = Number(req.params.id);
     const projectId = await requireTaskProject(req, id);
     await assertProjectWritable(projectId);
-    await assertCanContribute(req.user!.id, req.user!.role, projectId);
+    await assertCanContribute(requireUser(req).id, requireUser(req).role, projectId);
     const body = req.body as TaskService.ApiPatchInput;
-    res.json({ task: await TaskService.applyApiPatch(req.user!.id, projectId, id, body) });
+    res.json({ task: await TaskService.applyApiPatch(requireUser(req).id, projectId, id, body) });
   },
 );
 
@@ -167,7 +168,7 @@ router.post(
         projectId,
         entityType: 'version',
         entityId: entity.id,
-        actorId: req.user!.id,
+        actorId: requireUser(req).id,
         payload: { version: toVersion(entity) },
       });
     }

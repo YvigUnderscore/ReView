@@ -3,7 +3,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { rateLimit, identityRateKey } from '../middleware/rateLimit';
 import { searchEntities } from '../lib/search';
@@ -35,7 +35,7 @@ router.get(
     // Without this trim, a query of two spaces plus "v012" searched `ILIKE '%  v012%'`, which never
     // returns anything.
     const q = String(req.query.q).trim();
-    const { id, role } = req.user!;
+    const { id, role } = requireUser(req);
     res.json(await searchEntities(q, id, role));
   },
 );

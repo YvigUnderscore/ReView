@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { VisitTargetType } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import {
@@ -71,7 +71,7 @@ router.post(
     const projectId = resolve ? await resolve(targetId) : null;
     if (!projectId) throw notFound('Target not found');
     await assertProjectAccess(req, projectId);
-    const visitedAt = await EntityVisitService.markVisited(req.user!.id, targetType, targetId);
+    const visitedAt = await EntityVisitService.markVisited(requireUser(req).id, targetType, targetId);
     res.json({ visitedAt: visitedAt.toISOString() });
   },
 );
@@ -93,7 +93,7 @@ router.post(
     await assertProjectAccess(req, projectId);
     // The ids come from the database, never from the request body (see the service).
     const ids = await EntityVisitService.visitableIdsOfProject(projectId, targetType);
-    res.json({ marked: await EntityVisitService.markManyVisited(req.user!.id, targetType, ids) });
+    res.json({ marked: await EntityVisitService.markManyVisited(requireUser(req).id, targetType, ids) });
   },
 );
 

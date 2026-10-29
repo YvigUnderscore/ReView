@@ -14,7 +14,8 @@ const { setAvatar, presignAvatar } = vi.hoisted(() => ({
   presignAvatar: vi.fn(),
 }));
 
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: { user?: unknown }, _res: unknown, next: () => void) => {
     req.user = { id: 9, role: 'ARTIST', email: 'a@b.c' };
     next();

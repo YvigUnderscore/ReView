@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole, assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { notFound } from '../lib/errors';
@@ -69,7 +69,7 @@ router.put(
     await assertProjectWritable(projectId);
     const settings = await EpisodeService.setEnabled(projectId, enabled);
     logAudit({
-      userId: req.user!.id,
+      userId: requireUser(req).id,
       action: enabled ? 'EPISODES_ENABLE' : 'EPISODES_DISABLE',
       entityType: 'Project',
       entityId: projectId,

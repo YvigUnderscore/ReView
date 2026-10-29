@@ -10,7 +10,8 @@ import type { Request, Response, NextFunction } from 'express';
  * numbers (orientation + scale).
  */
 
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: Request, _res: Response, next: NextFunction) => {
     req.user = { id: 7, role: 'ARTIST' } as Request['user'];
     next();

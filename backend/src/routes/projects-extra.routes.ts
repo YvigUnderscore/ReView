@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole, requireProjectAccess, requireProjectManage } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { projectSettingsPatchSchema, type ProjectSettingsPatch } from '../lib/projectSettings';
@@ -40,7 +40,7 @@ router.post(
   async (req, res) => {
     const { name, includeTasks } = req.body as { name: string; includeTasks?: boolean };
     const project = await ProjectService.duplicateProject(
-      req.user!,
+      requireUser(req),
       Number(req.params.projectId),
       name,
       includeTasks ?? false,
@@ -93,7 +93,7 @@ router.post(
     const projectId = Number(req.params.projectId);
     res.json(
       commit
-        ? await ProjectImportService.commit(req.user!, projectId, csv, mapping ?? [])
+        ? await ProjectImportService.commit(requireUser(req), projectId, csv, mapping ?? [])
         : await ProjectImportService.preview(projectId, csv, mapping ?? []),
     );
   },
@@ -119,7 +119,7 @@ router.patch(
   async (req, res) => {
     res.json(
       await ProjectService.patchSettings(
-        req.user!,
+        requireUser(req),
         Number(req.params.projectId),
         req.body as ProjectSettingsPatch,
       ),
@@ -142,7 +142,7 @@ router.patch(
   requireProjectManage,
   async (req, res) => {
     const departments = await DepartmentService.setMemberDepartments(
-      req.user!,
+      requireUser(req),
       Number(req.params.projectId),
       Number(req.params.userId),
       req.body as { add?: number[]; remove?: number[] },

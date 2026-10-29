@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { Role } from '@prisma/client';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import * as AuditService from '../services/AuditService';
@@ -41,7 +41,7 @@ router.put(
     const { role, layout } = req.body as { role: Role; layout: z.infer<typeof overviewLayoutSchema> | null };
     const defaults = await OverviewLayoutService.setRoleDefault(role, layout);
     AuditService.logAudit({
-      userId: req.user!.id,
+      userId: requireUser(req).id,
       action: 'OVERVIEW_LAYOUT_UPDATE',
       entityType: 'Setting',
       metadata: { role, cleared: layout === null },

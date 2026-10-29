@@ -3,7 +3,7 @@
 
 import { Router, type Request, type Response } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { resolveProjectIdForAsset } from '../lib/pipeline';
@@ -43,7 +43,7 @@ async function guard(req: Request, scope: BoardScope, write: boolean): Promise<n
     await assertProjectWritable(projectId); // 38.B: archived project = read-only
     // 38.E: EFFECTIVE role on THIS project. The global role let an ARTIST demoted to CLIENT write here,
     // their membership being enough to pass `assertProjectAccess`.
-    await assertCanContribute(req.user!.id, req.user!.role, projectId);
+    await assertCanContribute(requireUser(req).id, requireUser(req).role, projectId);
   }
   return projectId;
 }
@@ -60,7 +60,7 @@ async function handleWrite(req: Request, res: Response, scope: BoardScope): Prom
     baseUpdatedAt: string | null;
   };
   const board = await writeBoard(scope, document, baseUpdatedAt);
-  emitToProject(projectId, 'board:update', { ...scope, updatedAt: board.updatedAt, by: req.user!.id });
+  emitToProject(projectId, 'board:update', { ...scope, updatedAt: board.updatedAt, by: requireUser(req).id });
   res.json({ board });
 }
 

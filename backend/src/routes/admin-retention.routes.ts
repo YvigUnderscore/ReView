@@ -12,6 +12,7 @@ import {
   setRetentionPolicy,
   sweepRetention,
 } from '../lib/retention';
+import { requireUser } from '../middleware/auth';
 
 /**
  * Log retention: reading and setting retention durations, manual triggering of the sweep. The policy
@@ -45,7 +46,7 @@ router.put('/retention', validate({ body: retentionPolicySchema }), async (req, 
   const previous = await getRetentionPolicy();
   const policy = await setRetentionPolicy(req.body);
   logAudit({
-    userId: req.user!.id,
+    userId: requireUser(req).id,
     action: 'RETENTION_CONFIG',
     entityType: 'Setting',
     metadata: { previous, policy },
@@ -61,7 +62,7 @@ router.put('/retention', validate({ body: retentionPolicySchema }), async (req, 
 router.post('/retention/run', async (req, res) => {
   const { families, total, truncated } = await sweepRetention({ maxBatches: MANUAL_MAX_BATCHES });
   logAudit({
-    userId: req.user!.id,
+    userId: requireUser(req).id,
     action: 'RETENTION_RUN',
     entityType: 'Setting',
     metadata: { families, total, truncated },

@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role, UserStatus } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import * as UserService from '../services/UserService';
@@ -62,14 +62,14 @@ router.patch(
   async (req, res) => {
     // Changing the login identifier re-authenticates and remains forbidden to an API token: the rule lives in
     // the service, and the route only triggers it (10.D8).
-    await UserService.assertCredentialChange(req.user!.id, req.body, Boolean(req.apiToken));
-    res.json({ user: await UserService.updateMe(req.user!.id, req.body, req.sessionId) });
+    await UserService.assertCredentialChange(requireUser(req).id, req.body, Boolean(req.apiToken));
+    res.json({ user: await UserService.updateMe(requireUser(req).id, req.body, req.sessionId) });
   },
 );
 
 // GET /api/users/me/preferences — UI preferences (saved kanban views, etc.)
 router.get('/me/preferences', async (req, res) => {
-  res.json({ preferences: await UserService.getPreferences(req.user!.id) });
+  res.json({ preferences: await UserService.getPreferences(requireUser(req).id) });
 });
 
 // PATCH /api/users/me/preferences — shallow merge (a key set to null means deletion)
@@ -78,7 +78,7 @@ router.patch(
   // Value bounded in shape, depth and volume: the service handles the rest (A2-04).
   validate({ body: UserService.preferencesPatchSchema }),
   async (req, res) => {
-    res.json({ preferences: await UserService.updatePreferences(req.user!.id, req.body) });
+    res.json({ preferences: await UserService.updatePreferences(requireUser(req).id, req.body) });
   },
 );
 
@@ -87,7 +87,7 @@ router.patch(
   '/me/status',
   validate({ body: z.object({ status: z.nativeEnum(UserStatus) }) }),
   async (req, res) => {
-    res.json({ user: await UserService.setStatus(req.user!.id, req.body.status as UserStatus) });
+    res.json({ user: await UserService.setStatus(requireUser(req).id, req.body.status as UserStatus) });
   },
 );
 
@@ -111,15 +111,15 @@ router.post(
     }),
   }),
   async (req, res) => {
-    res.status(201).json({ user: await UserService.createUser(req.user!.id, req.body) });
+    res.status(201).json({ user: await UserService.createUser(requireUser(req).id, req.body) });
   },
 );
 
 // POST /api/users/:id/invite — (re)sends an account's invitation (admin)
 router.post('/:id/invite', requireRole(Role.ADMIN), validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
-  await InvitationService.sendInvitation(id, req.user!.id);
-  logAudit({ userId: req.user!.id, action: 'USER_INVITE', entityType: 'User', entityId: id });
+  await InvitationService.sendInvitation(id, requireUser(req).id);
+  logAudit({ userId: requireUser(req).id, action: 'USER_INVITE', entityType: 'User', entityId: id });
   res.json({ sent: true });
 });
 
@@ -129,7 +129,11 @@ router.patch(
   requireRole(Role.ADMIN),
   validate({ params: idParam, body: z.object({ role: z.nativeEnum(Role) }) }),
   async (req, res) => {
-    const user = await UserService.changeRole(req.user!.id, Number(req.params.id), req.body.role as Role);
+    const user = await UserService.changeRole(
+      requireUser(req).id,
+      Number(req.params.id),
+      req.body.role as Role,
+    );
     res.json({ user });
   },
 );
@@ -154,7 +158,7 @@ router.patch(
     }),
   }),
   async (req, res) => {
-    res.json({ user: await UserService.updateUser(req.user!.id, Number(req.params.id), req.body) });
+    res.json({ user: await UserService.updateUser(requireUser(req).id, Number(req.params.id), req.body) });
   },
 );
 
@@ -162,7 +166,7 @@ router.patch(
 router.delete('/:id/sessions', requireRole(Role.ADMIN), validate({ params: idParam }), async (req, res) => {
   const count = await revokeAllSessions(Number(req.params.id));
   logAudit({
-    userId: req.user!.id,
+    userId: requireUser(req).id,
     action: 'SESSION_REVOKE_ALL',
     entityType: 'User',
     entityId: Number(req.params.id),
@@ -181,8 +185,8 @@ router.delete(
   validate({ params: idParam, query: z.object({ hard: z.enum(['true', 'false']).optional() }) }),
   async (req, res) => {
     const id = Number(req.params.id);
-    if (req.query.hard === 'true') await UserService.deleteUser(req.user!.id, id);
-    else await UserService.setDisabled(req.user!.id, id, true);
+    if (req.query.hard === 'true') await UserService.deleteUser(requireUser(req).id, id);
+    else await UserService.setDisabled(requireUser(req).id, id, true);
     res.status(204).end();
   },
 );

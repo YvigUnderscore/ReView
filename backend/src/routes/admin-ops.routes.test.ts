@@ -23,7 +23,8 @@ vi.mock('../services/OpsService', () => ops);
 vi.mock('../services/ReleaseService', () => releases);
 vi.mock('../services/BackupCatalogService', () => backups);
 vi.mock('../lib/prisma', () => ({ prisma: {} }));
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: Request, _res: Response, next: NextFunction) => {
     req.user = actor.current as Request['user'];
     req.apiToken = actor.apiToken as Request['apiToken'];

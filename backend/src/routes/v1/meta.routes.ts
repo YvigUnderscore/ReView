@@ -23,6 +23,7 @@ import { API_EVENTS } from '../../lib/webhooks';
 import { formatPipelinePath, parsePipelinePath } from '../../lib/pipelinePath';
 import { toProject } from '../../lib/v1Resources';
 import * as Resolve from '../../services/PipelineResolveService';
+import { requireUser } from '../../middleware/auth';
 
 /**
  * Discovery entry points of API v1.
@@ -55,7 +56,7 @@ router.get('/', (_req, res) => {
 
 // GET /api/v1/me: effective identity and real powers of the presented token
 router.get('/me', async (req, res) => {
-  const user = req.user!;
+  const user = requireUser(req);
   const memberships = await prisma.projectMembership.findMany({
     where: { userId: user.id },
     select: { projectId: true, role: true },

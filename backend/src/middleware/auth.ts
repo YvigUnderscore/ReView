@@ -82,3 +82,5 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
   req.sessionId = payload.sid;
   next();
 };
+
+export { requireUser, isAuthed, type AuthUser, type AuthedRequest } from './authUser';

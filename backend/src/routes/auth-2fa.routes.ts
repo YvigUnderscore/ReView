@@ -5,7 +5,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { rateLimit } from '../middleware/rateLimit';
 import { encryptSecret, decryptSecret } from '../lib/crypto';
@@ -60,7 +60,7 @@ const twoFaAccountLimiter = rateLimit({
 
 // POST /api/auth/2fa/setup — generates the secret (encrypted) and the otpauth URI (QR code on the client side)
 router.post('/setup', authenticate, async (req, res) => {
-  const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+  const user = await prisma.user.findUnique({ where: { id: requireUser(req).id } });
   if (!user) throw unauthorized();
   if (user.totpEnabledAt)
     throw badRequest('Two-factor authentication is already on', 'TWOFA_ALREADY_ENABLED');
@@ -75,7 +75,7 @@ router.post('/setup', authenticate, async (req, res) => {
 
 // POST /api/auth/2fa/enable — confirms enrolment with a code; returns the backup codes
 router.post('/enable', authenticate, validate({ body: z.object({ code: codeSchema }) }), async (req, res) => {
-  const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+  const user = await prisma.user.findUnique({ where: { id: requireUser(req).id } });
   if (!user?.totpSecret) throw badRequest('No enrolment in progress — call /setup first');
   if (user.totpEnabledAt)
     throw badRequest('Two-factor authentication is already on', 'TWOFA_ALREADY_ENABLED');
@@ -98,7 +98,7 @@ router.post(
   authenticate,
   validate({ body: z.object({ password: z.string().min(1).max(128) }) }),
   async (req, res) => {
-    const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+    const user = await prisma.user.findUnique({ where: { id: requireUser(req).id } });
     if (!user) throw unauthorized();
     if (!(await bcrypt.compare((req.body as { password: string }).password, user.password))) {
       throw unauthorized('Wrong password');

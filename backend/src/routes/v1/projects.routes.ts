@@ -21,6 +21,7 @@ import {
 import * as Ensure from '../../services/PipelineEnsureService';
 import * as Resolve from '../../services/PipelineResolveService';
 import { requireProject, refParam, actorOf, listQuery } from './helpers';
+import { requireUser } from '../../middleware/auth';
 
 /**
  * Projects and the shooting hierarchy (API v1): the project, its sequences, its shots.
@@ -38,7 +39,7 @@ router.get(
   validate({ query: listQuery.extend({ status: z.nativeEnum(ProjectStatus).optional() }) }),
   async (req, res) => {
     const p = readPagination(req.query);
-    const user = req.user!;
+    const user = requireUser(req);
     // Cross-cutting scope (no target project): the only case where the global role decides.
     const manager = isGlobalManager(user.role);
     const where = {

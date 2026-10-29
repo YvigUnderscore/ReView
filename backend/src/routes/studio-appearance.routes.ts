@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import * as AuditService from '../services/AuditService';
@@ -79,7 +79,7 @@ router.put(
     // The login page is the instance's showcase: changing it is traced like the other configuration
     // changes visible from outside.
     AuditService.logAudit({
-      userId: req.user!.id,
+      userId: requireUser(req).id,
       action: 'SETTING_UPDATE',
       entityType: 'Setting',
       metadata: { key: 'login_appearance' },

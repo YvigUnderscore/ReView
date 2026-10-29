@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import * as OcioService from '../services/OcioService';
@@ -60,7 +60,7 @@ router.post(
     const id = req.params.id as string;
     const { force } = req.body as { force?: boolean };
     await enqueueOcioBake({ configId: id, force });
-    logAudit({ userId: req.user!.id, action: 'OCIO_BAKE', entityType: 'Setting', metadata: { id } });
+    logAudit({ userId: requireUser(req).id, action: 'OCIO_BAKE', entityType: 'Setting', metadata: { id } });
     res.status(202).json({ queued: true });
   },
 );
@@ -79,7 +79,7 @@ router.post(
     const { tag, assetName } = req.body as { tag: string; assetName: string };
     const config = await OcioService.install(tag, assetName);
     logAudit({
-      userId: req.user!.id,
+      userId: requireUser(req).id,
       action: 'OCIO_INSTALL',
       entityType: 'Setting',
       metadata: { id: config.id, assetName },
@@ -96,7 +96,12 @@ router.put(
   async (req, res) => {
     const id = req.params.id as string;
     const config = await OcioService.setDefault(id);
-    logAudit({ userId: req.user!.id, action: 'OCIO_DEFAULT', entityType: 'Setting', metadata: { id } });
+    logAudit({
+      userId: requireUser(req).id,
+      action: 'OCIO_DEFAULT',
+      entityType: 'Setting',
+      metadata: { id },
+    });
     res.json({ config });
   },
 );
@@ -109,7 +114,7 @@ router.delete(
   async (req, res) => {
     const id = req.params.id as string;
     await OcioService.remove(id);
-    logAudit({ userId: req.user!.id, action: 'OCIO_DELETE', entityType: 'Setting', metadata: { id } });
+    logAudit({ userId: requireUser(req).id, action: 'OCIO_DELETE', entityType: 'Setting', metadata: { id } });
     res.status(204).end();
   },
 );

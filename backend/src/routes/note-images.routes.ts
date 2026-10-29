@@ -3,7 +3,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { assertProjectWritable } from '../lib/projectGuard';
@@ -47,7 +47,7 @@ for (const [segment, kind] of Object.entries(SEGMENTS) as [keyof typeof SEGMENTS
       await assertProjectAccess(req, projectId);
       // Uploading an image is writing the sheet: same right, same archive guard.
       await assertProjectWritable(projectId);
-      await assertProjectManage(req.user!.id, req.user!.role, projectId);
+      await assertProjectManage(requireUser(req).id, requireUser(req).role, projectId);
       res.json(await NoteImages.presign(kind, id, req.body.filename, req.body.contentType));
     },
   );
@@ -68,7 +68,7 @@ router.post(
     }),
   }),
   async (req, res) => {
-    res.json({ urls: await NoteImages.resolveMany(req.user!, req.body.keys) });
+    res.json({ urls: await NoteImages.resolveMany(requireUser(req), req.body.keys) });
   },
 );
 

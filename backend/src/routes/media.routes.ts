@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { MediaKind } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { paginationQuery, readPagination } from '../lib/pagination';
 import { reviewNoteSchema } from '../lib/projectSettings';
@@ -24,7 +24,7 @@ const idParam = z.object({ id: z.coerce.number().int() });
  */
 const finalizeBody = z.object({ note: reviewNoteSchema }).prefault({});
 router.post('/:id/finalize', validate({ params: idParam, body: finalizeBody }), async (req, res) => {
-  res.json(await MediaService.finalize(req.user!, Number(req.params.id), req.body.note));
+  res.json(await MediaService.finalize(requireUser(req), Number(req.params.id), req.body.note));
 });
 
 /**
@@ -41,7 +41,7 @@ router.get(
   async (req, res) => {
     res.json(
       await MediaService.listPublished(
-        req.user!,
+        requireUser(req),
         Number(req.query.projectId),
         req.query.kind as MediaKind | undefined,
         readPagination(req.query),
@@ -73,7 +73,7 @@ router.get(
     const q = req.query;
     res.json(
       await MediaService.listReviews(
-        req.user!,
+        requireUser(req),
         {
           projectId: q.projectId ? Number(q.projectId) : undefined,
           kind: q.kind as MediaKind | undefined,
@@ -95,7 +95,7 @@ router.post(
   // as before: without `.prefault({})`, a POST without a body would be refused.
   validate({ params: idParam, body: z.object({ reviewers: reviewersSchema.optional() }).prefault({}) }),
   async (req, res) => {
-    res.json(await MediaService.publish(req.user!, Number(req.params.id), req.body.reviewers));
+    res.json(await MediaService.publish(requireUser(req), Number(req.params.id), req.body.reviewers));
   },
 );
 
@@ -103,14 +103,14 @@ router.post(
  * GET /api/media/drafts: drafts (unpublished) of the current user.
  */
 router.get('/drafts', async (req, res) => {
-  res.json({ drafts: await MediaService.listDrafts(req.user!.id) });
+  res.json({ drafts: await MediaService.listDrafts(requireUser(req).id) });
 });
 
 /**
  * POST /api/media/:id/reprocess: re-runs the processing job of a failed or blocked media.
  */
 router.post('/:id/reprocess', validate({ params: idParam }), async (req, res) => {
-  res.json(await MediaService.reprocess(req.user!, Number(req.params.id)));
+  res.json(await MediaService.reprocess(requireUser(req), Number(req.params.id)));
 });
 
 /**
@@ -121,7 +121,7 @@ router.post(
   '/:id/thumbnail',
   validate({ params: idParam, body: z.object({ dataUrl: z.string().min(1).max(1_600_000) }) }),
   async (req, res) => {
-    res.json(await MediaService.setThumbnail(req.user!, Number(req.params.id), req.body.dataUrl));
+    res.json(await MediaService.setThumbnail(requireUser(req), Number(req.params.id), req.body.dataUrl));
   },
 );
 
@@ -133,7 +133,7 @@ router.post(
   '/:id/auto-thumbnail',
   validate({ params: idParam, body: z.object({ dataUrl: z.string().min(1).max(1_600_000) }) }),
   async (req, res) => {
-    res.json(await MediaService.setAutoThumbnail(req.user!, Number(req.params.id), req.body.dataUrl));
+    res.json(await MediaService.setAutoThumbnail(requireUser(req), Number(req.params.id), req.body.dataUrl));
   },
 );
 
@@ -142,14 +142,14 @@ router.post(
  * Splat edits (transform, volumes, mask) live in media-splat.routes.ts (10.G).
  */
 router.get('/:id', validate({ params: idParam }), async (req, res) => {
-  res.json(await MediaService.getDetail(req.user!, Number(req.params.id), req.ip));
+  res.json(await MediaService.getDetail(requireUser(req), Number(req.params.id), req.ip));
 });
 
 /**
  * GET /api/media/:id/url: presigned GET URL for direct serving from MinIO.
  */
 router.get('/:id/url', validate({ params: idParam }), async (req, res) => {
-  res.json({ url: await MediaService.getUrl(req.user!, Number(req.params.id)) });
+  res.json({ url: await MediaService.getUrl(requireUser(req), Number(req.params.id)) });
 });
 
 /**
@@ -166,7 +166,8 @@ router.get(
     query: z.object({ pt: z.string().max(2048).optional() }),
   }),
   async (req, res) => {
-    const out = await MediaService.getHlsFile(req.user!, Number(req.params.id), String(req.params.file), {
+    const user = requireUser(req);
+    const out = await MediaService.getHlsFile(user, Number(req.params.id), String(req.params.file), {
       playbackToken: req.query.pt as string | undefined,
       ip: req.ip,
     });
@@ -183,19 +184,19 @@ router.get(
 
 // DELETE /api/media/:id — trash (soft delete, uploader or supervisor and above)
 router.delete('/:id', validate({ params: idParam }), async (req, res) => {
-  await MediaService.trash(req.user!, Number(req.params.id));
+  await MediaService.trash(requireUser(req), Number(req.params.id));
   res.status(204).end();
 });
 
 // POST /api/media/:id/restore (uploader or supervisor and above)
 router.post('/:id/restore', validate({ params: idParam }), async (req, res) => {
-  await MediaService.restore(req.user!, Number(req.params.id));
+  await MediaService.restore(requireUser(req), Number(req.params.id));
   res.status(204).end();
 });
 
 // DELETE /api/media/:id/purge — permanent deletion from DB + MinIO (supervisor and above)
 router.delete('/:id/purge', validate({ params: idParam }), async (req, res) => {
-  await MediaService.purge(req.user!, Number(req.params.id));
+  await MediaService.purge(requireUser(req), Number(req.params.id));
   res.status(204).end();
 });
 

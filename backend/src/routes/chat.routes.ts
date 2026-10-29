@@ -3,7 +3,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import * as ChatService from '../services/ChatService';
 
@@ -19,12 +19,12 @@ const idParam = z.object({ id: z.coerce.number().int() });
 
 // GET /api/chat/conversations — the user's threads, most active first
 router.get('/conversations', async (req, res) => {
-  res.json({ conversations: await ChatService.listConversations(req.user!.id) });
+  res.json({ conversations: await ChatService.listConversations(requireUser(req).id) });
 });
 
 // GET /api/chat/unread — total unread count (sidebar badge)
 router.get('/unread', async (req, res) => {
-  res.json({ unread: await ChatService.countUnread(req.user!.id) });
+  res.json({ unread: await ChatService.countUnread(requireUser(req).id) });
 });
 
 // POST /api/chat/conversations — DM (one recipient) or group (title or 2+ recipients)
@@ -38,13 +38,13 @@ router.post(
   }),
   async (req, res) => {
     const body = req.body as { userIds: number[]; title?: string | null };
-    res.status(201).json({ conversation: await ChatService.createConversation(req.user!.id, body) });
+    res.status(201).json({ conversation: await ChatService.createConversation(requireUser(req).id, body) });
   },
 );
 
 // GET /api/chat/conversations/:id — a thread (members, unread count, last message)
 router.get('/conversations/:id', validate({ params: idParam }), async (req, res) => {
-  const conversation = await ChatService.conversationViewFor(Number(req.params.id), req.user!.id);
+  const conversation = await ChatService.conversationViewFor(Number(req.params.id), requireUser(req).id);
   res.json({ conversation });
 });
 
@@ -61,7 +61,7 @@ router.get(
   async (req, res) => {
     // Express 5: `req.query` is a getter, the middleware's coercion does not persist on it.
     const q = req.query as { before?: string; limit?: string };
-    const messages = await ChatService.listMessages(Number(req.params.id), req.user!.id, {
+    const messages = await ChatService.listMessages(Number(req.params.id), requireUser(req).id, {
       before: q.before ? Number(q.before) : undefined,
       limit: q.limit ? Number(q.limit) : undefined,
     });
@@ -79,7 +79,7 @@ router.post(
   async (req, res) => {
     const message = await ChatService.sendMessage(
       Number(req.params.id),
-      req.user!.id,
+      requireUser(req).id,
       (req.body as { body: string }).body,
     );
     res.status(201).json({ message });
@@ -88,7 +88,7 @@ router.post(
 
 // POST /api/chat/conversations/:id/read — marks the thread as read
 router.post('/conversations/:id/read', validate({ params: idParam }), async (req, res) => {
-  res.json(await ChatService.markRead(Number(req.params.id), req.user!.id));
+  res.json(await ChatService.markRead(Number(req.params.id), requireUser(req).id));
 });
 
 // PATCH /api/chat/conversations/:id — rename the group and/or mute it
@@ -101,12 +101,12 @@ router.patch(
   async (req, res) => {
     const id = Number(req.params.id);
     const body = req.body as { title?: string; muted?: boolean };
-    if (body.muted !== undefined) await ChatService.setMuted(id, req.user!.id, body.muted);
+    if (body.muted !== undefined) await ChatService.setMuted(id, requireUser(req).id, body.muted);
     if (body.title !== undefined) {
-      res.json({ conversation: await ChatService.renameConversation(id, req.user!.id, body.title) });
+      res.json({ conversation: await ChatService.renameConversation(id, requireUser(req).id, body.title) });
       return;
     }
-    res.json({ conversation: await ChatService.conversationViewFor(id, req.user!.id) });
+    res.json({ conversation: await ChatService.conversationViewFor(id, requireUser(req).id) });
   },
 );
 
@@ -117,7 +117,7 @@ router.post(
   async (req, res) => {
     const conversation = await ChatService.addMembers(
       Number(req.params.id),
-      req.user!.id,
+      requireUser(req).id,
       (req.body as { userIds: number[] }).userIds,
     );
     res.json({ conversation });
@@ -129,14 +129,14 @@ router.delete(
   '/conversations/:id/members/:userId',
   validate({ params: idParam.extend({ userId: z.coerce.number().int() }) }),
   async (req, res) => {
-    await ChatService.removeMember(Number(req.params.id), req.user!.id, Number(req.params.userId));
+    await ChatService.removeMember(Number(req.params.id), requireUser(req).id, Number(req.params.userId));
     res.status(204).end();
   },
 );
 
 // DELETE /api/chat/messages/:id — soft delete by the author
 router.delete('/messages/:id', validate({ params: idParam }), async (req, res) => {
-  await ChatService.deleteMessage(Number(req.params.id), req.user!.id);
+  await ChatService.deleteMessage(Number(req.params.id), requireUser(req).id);
   res.status(204).end();
 });
 

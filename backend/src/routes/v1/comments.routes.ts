@@ -11,6 +11,7 @@ import { commentSelect, toComment } from '../../lib/v1Resources';
 import * as CommentService from '../../services/CommentService';
 import * as ApiEventService from '../../services/ApiEventService';
 import { idParam, requireMediaProject, requireVersionProject, readQuery } from './helpers';
+import { requireUser } from '../../middleware/auth';
 
 /**
  * Review comments (API v1): read and post.
@@ -76,7 +77,7 @@ router.post(
     const mediaId = Number(req.params.id);
     const projectId = await requireMediaProject(req, mediaId);
     const body = req.body as Omit<CommentService.CreateCommentInput, 'mediaObjectId'>;
-    const comment = await CommentService.create(req.user!, projectId, {
+    const comment = await CommentService.create(requireUser(req), projectId, {
       ...body,
       mediaObjectId: mediaId,
     });
@@ -125,7 +126,7 @@ router.post(
       where: { id },
       data: {
         isResolved: resolved,
-        resolvedById: resolved ? req.user!.id : null,
+        resolvedById: resolved ? requireUser(req).id : null,
         resolvedAt: resolved ? new Date() : null,
       },
       select: commentSelect,
@@ -135,7 +136,7 @@ router.post(
         projectId,
         entityType: 'comment',
         entityId: id,
-        actorId: req.user!.id,
+        actorId: requireUser(req).id,
         payload: { comment: toComment(updated) },
       });
     }

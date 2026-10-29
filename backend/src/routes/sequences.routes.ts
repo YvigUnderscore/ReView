@@ -5,7 +5,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole, assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { resolveProjectIdForSequence } from '../lib/pipeline';
@@ -84,7 +84,7 @@ router.get(
       awaitingReviewBySequence(sequences.map((s) => s.id)),
       // "Not viewed" (batch 9): a sequence lights up on the activity of its shots. Publishing a media
       // writes nothing on the sequence: that is the whole trap of the batch.
-      EntityVisitService.unseenBySequence(req.user!.id, sequences),
+      EntityVisitService.unseenBySequence(requireUser(req).id, sequences),
     ]);
     // Effective thumbnail: the one chosen by hand, otherwise that of the first published media of one of
     // its shots, without which the card of a sequence stays empty even once the work has started.
@@ -154,7 +154,7 @@ router.post(
 
 // GET /api/sequences/:id — full record, the one served by the sequence page (C3).
 router.get('/:id', validate({ params: z.object({ id: z.coerce.number().int() }) }), async (req, res) => {
-  const sequence = await SequenceService.getDetail(Number(req.params.id), req.user!.id);
+  const sequence = await SequenceService.getDetail(Number(req.params.id), requireUser(req).id);
   await assertProjectAccess(req, sequence.projectId);
   res.json({ sequence });
 });
@@ -173,7 +173,7 @@ router.patch(
     if (!projectId) throw notFound('Sequence not found');
     await assertProjectAccess(req, projectId);
     const body = req.body as z.infer<typeof sequencePatchBody>;
-    res.json({ sequence: await SequenceService.update(id, projectId, body, req.user!.id) });
+    res.json({ sequence: await SequenceService.update(id, projectId, body, requireUser(req).id) });
   },
 );
 

@@ -15,7 +15,7 @@ import {
   derivedPurgeSchema,
   purgeObsoleteDerived,
 } from '../lib/derivedPurge';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { logAudit } from '../services/AuditService';
@@ -43,7 +43,7 @@ router.get('/project-defaults', async (_req, res) => {
 // PUT /api/admin/project-defaults — departments + naming convention + default pipeline
 router.put('/project-defaults', validate({ body: projectSettingsSchema }), async (req, res) => {
   const settings = await setStudioProjectDefaults(req.body);
-  logAudit({ userId: req.user!.id, action: 'PROJECT_DEFAULTS_UPDATE', entityType: 'Setting' });
+  logAudit({ userId: requireUser(req).id, action: 'PROJECT_DEFAULTS_UPDATE', entityType: 'Setting' });
   res.json({ settings });
 });
 
@@ -55,7 +55,7 @@ router.get('/transcode', async (_req, res) => {
 // PUT /api/admin/transcode — records the transcoding config (read by the HLS worker)
 router.put('/transcode', validate({ body: transcodeConfigSchema }), async (req, res) => {
   const config = await setTranscodeConfig(req.body);
-  logAudit({ userId: req.user!.id, action: 'TRANSCODE_CONFIG_UPDATE', entityType: 'Setting' });
+  logAudit({ userId: requireUser(req).id, action: 'TRANSCODE_CONFIG_UPDATE', entityType: 'Setting' });
   res.json({ config });
 });
 
@@ -67,7 +67,7 @@ router.get('/burnin', async (_req, res) => {
 // PUT /api/admin/burnin — records the template (applied to the next transcodes)
 router.put('/burnin', validate({ body: burninConfigSchema }), async (req, res) => {
   const config = await setStudioBurninConfig(req.body);
-  logAudit({ userId: req.user!.id, action: 'BURNIN_CONFIG_UPDATE', entityType: 'Setting' });
+  logAudit({ userId: requireUser(req).id, action: 'BURNIN_CONFIG_UPDATE', entityType: 'Setting' });
   res.json({ config });
 });
 
@@ -77,13 +77,13 @@ router.get('/derived-purge', async (_req, res) => {
 });
 router.put('/derived-purge', validate({ body: derivedPurgeSchema }), async (req, res) => {
   const config = await setDerivedPurgeConfig(req.body);
-  logAudit({ userId: req.user!.id, action: 'DERIVED_PURGE_CONFIG', entityType: 'Setting' });
+  logAudit({ userId: requireUser(req).id, action: 'DERIVED_PURGE_CONFIG', entityType: 'Setting' });
   res.json({ config });
 });
 router.post('/derived-purge/run', async (req, res) => {
   const result = await purgeObsoleteDerived();
   logAudit({
-    userId: req.user!.id,
+    userId: requireUser(req).id,
     action: 'DERIVED_PURGE_RUN',
     entityType: 'Setting',
     metadata: result,
@@ -100,7 +100,7 @@ router.get('/oidc', async (_req, res) => {
 // guard lives in lib/oidcConfig: it is what prevents the instance from locking itself out.
 router.put('/oidc', validate({ body: oidcConfigSchema }), async (req, res) => {
   await updateOidcConfig(req.body as Record<string, unknown>);
-  logAudit({ userId: req.user!.id, action: 'OIDC_CONFIG_UPDATE', entityType: 'Setting' });
+  logAudit({ userId: requireUser(req).id, action: 'OIDC_CONFIG_UPDATE', entityType: 'Setting' });
   res.json({ oidc: await getPublicOidcConfig() });
 });
 
@@ -138,7 +138,7 @@ router.delete(
     });
     if (r.count === 0) throw notFound('Token not found');
     logAudit({
-      userId: req.user!.id,
+      userId: requireUser(req).id,
       action: 'API_TOKEN_REVOKE',
       entityType: 'ApiToken',
       entityId: Number(req.params.id),
@@ -175,7 +175,7 @@ router.get('/trash', async (_req, res) => {
 
 // POST /api/admin/jobs/retry — re-runs all failed media jobs (admin)
 router.post('/jobs/retry', async (req, res) => {
-  res.json({ retried: await AdminService.retryFailedJobs(req.user!.id) });
+  res.json({ retried: await AdminService.retryFailedJobs(requireUser(req).id) });
 });
 
 export default router;

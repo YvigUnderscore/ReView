@@ -4,7 +4,7 @@
 import { Router, type Request } from 'express';
 import { z } from 'zod';
 import { Role, AssetType } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole, assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { resolveProjectIdForShot } from '../lib/pipeline';
@@ -66,7 +66,7 @@ router.get(
     await assertProjectAccess(req, projectId);
     const q = req.query as unknown as { sequenceId?: number | 'none'; episodeId?: number | 'none' };
     const p = readPagination(req.query);
-    res.json(await ShotService.list(projectId, q.sequenceId, p, q.episodeId, req.user!.id));
+    res.json(await ShotService.list(projectId, q.sequenceId, p, q.episodeId, requireUser(req).id));
   },
 );
 
@@ -124,7 +124,7 @@ router.patch(
   async (req, res) => {
     const id = Number(req.params.id);
     const projectId = await resolveShotAccess(req, id);
-    res.json({ shot: await ShotService.update(id, projectId, req.body, req.user!.id) });
+    res.json({ shot: await ShotService.update(id, projectId, req.body, requireUser(req).id) });
   },
 );
 
@@ -182,7 +182,7 @@ router.get('/:id/tree', validate({ params: idParam }), async (req, res) => {
   const projectId = await resolveProjectIdForShot(id);
   if (!projectId) throw notFound('Shot not found');
   await assertProjectAccess(req, projectId);
-  res.json(await PipelineLatestService.shotOverview(id, req.user!.id));
+  res.json(await PipelineLatestService.shotOverview(id, requireUser(req).id));
 });
 
 /**
@@ -195,7 +195,7 @@ router.get('/:id/tree', validate({ params: idParam }), async (req, res) => {
 router.get('/:id/latest', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   await resolveShotAccess(req, id);
-  const { latest } = await PipelineLatestService.shotOverview(id, req.user!.id);
+  const { latest } = await PipelineLatestService.shotOverview(id, requireUser(req).id);
   if (!latest) throw notFound('No published version for this shot', 'NO_PUBLISHED_VERSION');
   res.json({ latest });
 });

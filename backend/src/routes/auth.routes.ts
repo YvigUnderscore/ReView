@@ -8,7 +8,7 @@ import { prisma } from '../lib/prisma';
 import { signAccessToken, signRefreshToken, signTwoFaToken, verifyToken } from '../lib/jwt';
 import { createSession, isSessionActive, touchSession } from '../lib/sessions';
 import { validate } from '../middleware/validate';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { rateLimit, targetAccountRateKey } from '../middleware/rateLimit';
 import { toSessionUser, type RawSessionUser } from '../lib/userView';
 import { normalizeEmail } from '../lib/email';
@@ -191,7 +191,7 @@ router.post(
 
 // GET /api/auth/me
 router.get('/me', authenticate, async (req, res) => {
-  const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+  const user = await prisma.user.findUnique({ where: { id: requireUser(req).id } });
   if (!user) throw unauthorized('User not found');
   res.json({ user: { ...(await toSessionUser(user)), twoFaEnabled: user.totpEnabledAt != null } });
 });

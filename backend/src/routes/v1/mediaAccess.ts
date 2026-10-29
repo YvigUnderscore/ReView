@@ -10,6 +10,7 @@ import { mediaSelect, toMedia } from '../../lib/v1Resources';
 import { storage } from '../../services/StorageService';
 import { mediaSourceKey } from '../../services/MediaService';
 import { requireMediaProject } from './helpers';
+import { requireUser } from '../../middleware/auth';
 
 /**
  * File reads from API v1: the half of the contract that was missing.
@@ -56,7 +57,7 @@ export async function loadReadableMedia(req: Request, id: number): Promise<Reada
   await requireMediaProject(req, id);
   const media = await prisma.mediaObject.findUnique({ where: { id }, select: readableSelect });
   if (!media || media.deletedAt) throw notFound('Media not found');
-  if (!media.published && media.uploaderId !== req.user!.id) throw notFound('Media not found');
+  if (!media.published && media.uploaderId !== requireUser(req).id) throw notFound('Media not found');
   return media;
 }
 

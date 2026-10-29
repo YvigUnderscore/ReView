@@ -3,7 +3,7 @@
 
 import { Router, type Request } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { resolveProjectIdForVersion } from '../lib/pipeline';
@@ -48,7 +48,7 @@ for (const [segment, holder] of [
     auth,
     validate({ params: idParam, body: assignBody }),
     async (req, res) => {
-      const result = await AssignmentService.assignEntity(req.user!, {
+      const result = await AssignmentService.assignEntity(requireUser(req), {
         holder,
         id: Number(req.params.id),
         userId: req.body.userId,
@@ -90,7 +90,7 @@ router.put(
     const id = Number(req.params.id);
     const projectId = await resolveVersionAccess(req, id);
     const reviewers = await ReviewAssignmentService.setReviewers(
-      req.user!,
+      requireUser(req),
       projectId,
       id,
       req.body.reviewers,
@@ -117,7 +117,7 @@ router.patch(
     const id = Number(req.params.id);
     const projectId = await resolveVersionAccess(req, id);
     const reviewers = await ReviewAssignmentService.updateNote(
-      req.user!,
+      requireUser(req),
       projectId,
       id,
       Number(req.params.userId),

@@ -10,6 +10,7 @@ import { pickMostAdvanced } from '../../lib/pipelineOrder';
 import { resolveProjectSettingsById } from '../../lib/projectSettings';
 import { versionSelect, mediaSelect, toVersion, toMedia } from '../../lib/v1Resources';
 import { DEFAULT_URL_TTL, toMediaWithUrl } from './mediaAccess';
+import { requireUser } from '../../middleware/auth';
 
 /**
  * "What is the latest version?": the question every DCC script asks before opening a shot, which
@@ -126,5 +127,5 @@ export async function respondLatest(target: LatestTarget, opts: LatestOptions) {
 export const latestOptions = (req: Request, projectId: number): LatestOptions => ({
   ...latestQuery.parse(req.query),
   projectId,
-  viewerId: req.user!.id,
+  viewerId: requireUser(req).id,
 });

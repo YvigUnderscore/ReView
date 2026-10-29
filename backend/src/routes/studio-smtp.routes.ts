@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { badRequest } from '../lib/errors';
@@ -52,13 +52,13 @@ router.put('/smtp', validate({ body: smtpSchema }), async (req, res) => {
   // for its part, is always found.
   if (smtp.allowInsecure)
     logger.warn(
-      { host: smtp.host, userId: req.user!.id },
+      { host: smtp.host, userId: requireUser(req).id },
       '[smtp] dialogue en clair autorisé pour ce relais : identifiants et liens d’invitation circuleront sans chiffrement.',
     );
   // The outgoing SMTP relay is a pivot: whoever changes it can divert all the instance's mail.
   // Never the password in the log, only the fact of the change.
   AuditService.logAudit({
-    userId: req.user!.id,
+    userId: requireUser(req).id,
     action: 'SMTP_UPDATE',
     entityType: 'Setting',
     // `allowInsecure` puts the SMTP credentials and the invitation links back in clear on the network: the
@@ -75,7 +75,7 @@ router.put('/smtp', validate({ body: smtpSchema }), async (req, res) => {
 // POST /api/studio/smtp/test — sends a test email (admin)
 router.post('/smtp/test', validate({ body: z.object({ to: z.string().email() }) }), async (req, res) => {
   // The email goes out in the language of the admin who triggers the test: it is they who read it.
-  const locale = await resolveUserLocale(await UserService.getPreferences(req.user!.id));
+  const locale = await resolveUserLocale(await UserService.getPreferences(requireUser(req).id));
   const ok = await sendMail(
     req.body.to,
     t(locale, 'smtp.test.subject'),

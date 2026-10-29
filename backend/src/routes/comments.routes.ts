@@ -4,7 +4,7 @@
 import { Router, type Request } from 'express';
 import { CommentState } from '@prisma/client';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { resolveProjectIdForMedia, resolveProjectIdForComment } from '../lib/pipeline';
@@ -40,7 +40,8 @@ router.get(
     const projectId = await resolveProjectIdForMedia(mediaObjectId);
     if (!projectId) throw notFound('Media not found');
     await assertProjectAccess(req, projectId);
-    res.json(await CommentService.listThread(mediaObjectId, readPagination(req.query), req.user!.role));
+    const { role } = requireUser(req);
+    res.json(await CommentService.listThread(mediaObjectId, readPagination(req.query), role));
   },
 );
 
@@ -63,7 +64,7 @@ router.get(
     const projectId = await CommentExportService.resolveScopeProject(scope, id);
     if (projectId === null) throw notFound('Nothing to export here');
     await assertProjectAccess(req, projectId);
-    const file = await CommentExportService.exportNotes({ scope, id, format, viewer: req.user! });
+    const file = await CommentExportService.exportNotes({ scope, id, format, viewer: requireUser(req) });
     res.setHeader('Content-Type', file.contentType);
     res.setHeader('Content-Disposition', `attachment; filename="${file.filename}"`);
     if (file.truncated) res.setHeader('X-Notes-Truncated', '1');
@@ -88,7 +89,7 @@ router.post(
   }),
   async (req, res) => {
     const { filename, contentType } = req.body as { filename: string; contentType: string };
-    res.json(await CommentService.presignAttachment(req.user!.id, filename, contentType));
+    res.json(await CommentService.presignAttachment(requireUser(req).id, filename, contentType));
   },
 );
 
@@ -115,7 +116,7 @@ router.post(
     const projectId = await resolveProjectIdForMedia(req.body.mediaObjectId);
     if (!projectId) throw notFound('Media not found');
     await assertProjectAccess(req, projectId);
-    res.status(201).json({ comment: await CommentService.create(req.user!, projectId, req.body) });
+    res.status(201).json({ comment: await CommentService.create(requireUser(req), projectId, req.body) });
   },
 );
 
@@ -123,7 +124,7 @@ router.post(
 router.post('/:id/share', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   const projectId = await resolveCommentAccess(req, id);
-  const comment = await CommentService.share(req.user!, projectId, id);
+  const comment = await CommentService.share(requireUser(req), projectId, id);
   if (!comment) throw notFound('Comment not found');
   res.json({ comment });
 });
@@ -151,7 +152,7 @@ router.patch(
   async (req, res) => {
     const id = Number(req.params.id);
     const projectId = await resolveCommentAccess(req, id);
-    const comment = await CommentService.update(req.user!, projectId, id, req.body);
+    const comment = await CommentService.update(requireUser(req), projectId, id, req.body);
     if (!comment) throw notFound('Comment not found');
     res.json({ comment });
   },
@@ -161,18 +162,18 @@ router.patch(
 router.delete('/:id', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   const projectId = await resolveCommentAccess(req, id);
-  if (!(await CommentService.remove(req.user!, projectId, id))) throw notFound('Comment not found');
+  if (!(await CommentService.remove(requireUser(req), projectId, id))) throw notFound('Comment not found');
   res.status(204).end();
 });
 
-// POST /api/comments/:id/task — kanban task from the comment (32.D): name and brief come from the
-// creation dialog. The rights are asserted by the service, on the project's EFFECTIVE role: they were
-// read here on the GLOBAL role, which refused a supervisor named on THIS project a creation that the
-// service grants them.
+// POST /api/comments/:id/task — kanban task from the comment (32.D), named in the creation dialog. Rights
+// are asserted by the service on the project's EFFECTIVE role (reading the GLOBAL role here refused a
+// supervisor named on THIS project a creation that the service grants them).
 router.post('/:id/task', validate({ params: idParam, body: commentTaskBody }), async (req, res) => {
   const id = Number(req.params.id);
   const projectId = await resolveCommentAccess(req, id);
-  res.status(201).json({ task: await TaskService.createFromComment(req.user!, projectId, id, req.body) });
+  const task = await TaskService.createFromComment(requireUser(req), projectId, id, req.body);
+  res.status(201).json({ task });
 });
 
 // POST /api/comments/:id/reactions — add or update an emoji reaction
@@ -182,7 +183,7 @@ router.post(
   async (req, res) => {
     const id = Number(req.params.id);
     const projectId = await resolveCommentAccess(req, id);
-    const reaction = await CommentService.addReaction(req.user!, projectId, id, req.body.emoji);
+    const reaction = await CommentService.addReaction(requireUser(req), projectId, id, req.body.emoji);
     res.status(201).json({ reaction });
   },
 );
@@ -194,7 +195,7 @@ router.delete(
   async (req, res) => {
     const id = Number(req.params.id);
     const projectId = await resolveCommentAccess(req, id);
-    await CommentService.removeReaction(req.user!.id, projectId, id, String(req.params.emoji));
+    await CommentService.removeReaction(requireUser(req).id, projectId, id, String(req.params.emoji));
     res.status(204).end();
   },
 );

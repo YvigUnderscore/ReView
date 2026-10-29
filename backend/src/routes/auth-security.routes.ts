@@ -5,7 +5,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import bcrypt from 'bcryptjs';
 import { prisma } from '../lib/prisma';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { revokeSession } from '../lib/sessions';
 import { API_SCOPES } from '../lib/apiTokens';
@@ -24,7 +24,7 @@ router.use(authenticate);
 // GET /api/auth/sessions — active sessions of the account (the current one marked `current`)
 router.get('/sessions', async (req, res) => {
   const sessions = await prisma.userSession.findMany({
-    where: { userId: req.user!.id, revokedAt: null, expiresAt: { gt: new Date() } },
+    where: { userId: requireUser(req).id, revokedAt: null, expiresAt: { gt: new Date() } },
     orderBy: { lastSeenAt: 'desc' },
     select: { id: true, userAgent: true, ip: true, createdAt: true, lastSeenAt: true },
   });
@@ -38,16 +38,16 @@ router.delete(
   '/sessions/:sid',
   validate({ params: z.object({ sid: z.string().length(32) }) }),
   async (req, res) => {
-    const ok = await revokeSession(String(req.params.sid), req.user!.id);
+    const ok = await revokeSession(String(req.params.sid), requireUser(req).id);
     if (!ok) throw notFound('Session not found');
-    logAudit({ userId: req.user!.id, action: 'SESSION_REVOKE', entityType: 'UserSession' });
+    logAudit({ userId: requireUser(req).id, action: 'SESSION_REVOKE', entityType: 'UserSession' });
     res.status(204).end();
   },
 );
 
 // POST /api/auth/logout — revokes the current session (the associated JWTs die with it)
 router.post('/logout', async (req, res) => {
-  if (req.sessionId) await revokeSession(req.sessionId, req.user!.id);
+  if (req.sessionId) await revokeSession(req.sessionId, requireUser(req).id);
   res.status(204).end();
 });
 
@@ -56,7 +56,7 @@ router.post('/logout', async (req, res) => {
 // GET /api/auth/tokens — active tokens of the account (never the secret)
 router.get('/tokens', async (req, res) => {
   const tokens = await prisma.apiToken.findMany({
-    where: { userId: req.user!.id, revokedAt: null },
+    where: { userId: requireUser(req).id, revokedAt: null },
     orderBy: { createdAt: 'desc' },
     select: ApiTokenService.tokenSelect,
   });
@@ -87,13 +87,13 @@ router.post(
     // Re-authentication: a `rvk_` lives for up to 3650 days and survives closing the tab. Forged from a
     // stolen access token, it turns a passing session theft into durable access, which "log out
     // everywhere" does not even suspect. The password is the only thing the attacker does not have.
-    const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+    const user = await prisma.user.findUnique({ where: { id: requireUser(req).id } });
     if (!user) throw unauthorized();
     if (!body.currentPassword || !(await bcrypt.compare(body.currentPassword, user.password))) {
       throw unauthorized('The current password is required', 'CURRENT_PASSWORD_REQUIRED');
     }
 
-    res.status(201).json(await ApiTokenService.createPersonal(req.user!.id, body));
+    res.status(201).json(await ApiTokenService.createPersonal(requireUser(req).id, body));
   },
 );
 
@@ -108,12 +108,12 @@ router.delete(
   validate({ params: z.object({ id: z.coerce.number().int() }) }),
   async (req, res) => {
     const r = await prisma.apiToken.updateMany({
-      where: { id: Number(req.params.id), userId: req.user!.id, revokedAt: null },
+      where: { id: Number(req.params.id), userId: requireUser(req).id, revokedAt: null },
       data: { revokedAt: new Date() },
     });
     if (r.count === 0) throw notFound('Token not found');
     logAudit({
-      userId: req.user!.id,
+      userId: requireUser(req).id,
       action: 'API_TOKEN_REVOKE',
       entityType: 'ApiToken',
       entityId: Number(req.params.id),

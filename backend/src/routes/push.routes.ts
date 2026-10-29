@@ -3,7 +3,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import * as PushService from '../services/PushService';
 
@@ -38,7 +38,7 @@ const subscriptionSchema = z.object({
 // POST /api/push/subscribe — registers the current browser's subscription (400 if the target is not a
 // public push service: see the service's anti-SSRF guard).
 router.post('/subscribe', validate({ body: subscriptionSchema }), async (req, res) => {
-  await PushService.saveSubscription(req.user!.id, req.body);
+  await PushService.saveSubscription(requireUser(req).id, req.body);
   res.status(204).end();
 });
 
@@ -49,7 +49,7 @@ router.post(
   async (req, res) => {
     // Bound to the owner: otherwise the endpoint alone would suffice to unsubscribe another user's browser
     // (and therefore to deprive them of their notifications).
-    await PushService.removeSubscription(req.body.endpoint, req.user!.id);
+    await PushService.removeSubscription(req.body.endpoint, requireUser(req).id);
     res.status(204).end();
   },
 );

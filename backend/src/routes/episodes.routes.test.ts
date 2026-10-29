@@ -26,7 +26,8 @@ const { episodes, guard, trash } = vi.hoisted(() => ({
   trash: { softDeleteEpisode: vi.fn(), restoreEpisode: vi.fn(), purgeEpisode: vi.fn() },
 }));
 
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: Request, _res: Response, next: NextFunction) => {
     req.user = { id: 1, role: 'ADMIN' } as Request['user'];
     next();

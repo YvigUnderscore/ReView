@@ -3,7 +3,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import * as ReviewReferenceService from '../services/ReviewReferenceService';
 
@@ -45,13 +45,19 @@ const referenceBody = z.object({
 router.post('/:id/references', validate({ params: idParam, body: referenceBody }), async (req, res) => {
   const { dataUrl, commentId, ...pos } = req.body;
   res.status(201).json({
-    reference: await ReviewReferenceService.add(req.user!, Number(req.params.id), dataUrl, commentId, pos),
+    reference: await ReviewReferenceService.add(
+      requireUser(req),
+      Number(req.params.id),
+      dataUrl,
+      commentId,
+      pos,
+    ),
   });
 });
 
 // DELETE /api/media/:id/references/:refId — removes a reference image
 router.delete('/:id/references/:refId', validate({ params: refParams }), async (req, res) => {
-  await ReviewReferenceService.remove(req.user!, Number(req.params.id), Number(req.params.refId));
+  await ReviewReferenceService.remove(requireUser(req), Number(req.params.id), Number(req.params.refId));
   res.status(204).end();
 });
 

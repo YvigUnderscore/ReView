@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role, ProjectStatus } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole, requireProjectAccess, requireProjectManage } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { effectiveProjectRole } from '../lib/projectRoles';
@@ -24,7 +24,7 @@ router.get(
   validate({ query: paginationQuery.extend({ archived: z.enum(['0', '1']).optional() }) }),
   async (req, res) => {
     const onlyArchived = req.query.archived === '1';
-    res.json(await ProjectService.listProjects(req.user!, readPagination(req.query), onlyArchived));
+    res.json(await ProjectService.listProjects(requireUser(req), readPagination(req.query), onlyArchived));
   },
 );
 
@@ -40,7 +40,7 @@ router.post(
     }),
   }),
   async (req, res) => {
-    res.status(201).json({ project: await ProjectService.createProject(req.user!, req.body) });
+    res.status(201).json({ project: await ProjectService.createProject(requireUser(req), req.body) });
   },
 );
 
@@ -49,7 +49,7 @@ router.get('/:projectId', validate({ params: projectIdParam }), requireProjectAc
   const projectId = Number(req.params.projectId);
   const [project, myRole] = await Promise.all([
     ProjectService.getProject(projectId),
-    effectiveProjectRole(req.user!.id, req.user!.role, projectId),
+    effectiveProjectRole(requireUser(req).id, requireUser(req).role, projectId),
   ]);
   res.json({ project: { ...project, myRole } });
 });
@@ -84,7 +84,7 @@ router.delete(
   validate({ params: projectIdParam }),
   requireRole(Role.ADMIN, Role.SUPERVISOR),
   async (req, res) => {
-    await ProjectService.softDelete(req.user!, Number(req.params.projectId));
+    await ProjectService.softDelete(requireUser(req), Number(req.params.projectId));
     res.status(204).end();
   },
 );
@@ -105,7 +105,7 @@ router.post(
   validate({ params: projectIdParam }),
   requireRole(Role.ADMIN, Role.SUPERVISOR),
   async (req, res) => {
-    await ProjectService.restore(req.user!, Number(req.params.projectId));
+    await ProjectService.restore(requireUser(req), Number(req.params.projectId));
     res.status(204).end();
   },
 );
@@ -116,7 +116,7 @@ router.delete(
   validate({ params: projectIdParam }),
   requireRole(Role.ADMIN),
   async (req, res) => {
-    await ProjectService.purge(req.user!, Number(req.params.projectId));
+    await ProjectService.purge(requireUser(req), Number(req.params.projectId));
     res.status(204).end();
   },
 );
@@ -131,7 +131,7 @@ router.post(
   requireProjectManage, // 38.E: local supervisor allowed
   async (req, res) => {
     const { userId, role } = req.body as { userId: number; role?: Role };
-    const actor = req.user!;
+    const actor = requireUser(req);
     const membership = await ProjectService.addMember(Number(req.params.projectId), userId, role, actor);
     res.status(201).json({ membership });
   },
@@ -157,7 +157,7 @@ router.put(
   requireProjectManage, // 38.E: local supervisor allowed
   async (req, res) => {
     res.json(
-      await ProjectService.updateSettings(req.user!, Number(req.params.projectId), req.body as object),
+      await ProjectService.updateSettings(requireUser(req), Number(req.params.projectId), req.body as object),
     );
   },
 );

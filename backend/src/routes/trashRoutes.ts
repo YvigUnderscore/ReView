@@ -8,6 +8,7 @@ import { requireRole, assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { notFound } from '../lib/errors';
 import { logAudit } from '../services/AuditService';
+import { requireUser } from '../middleware/auth';
 
 /**
  * The trash triplet of a pipeline entity: move to trash, restore, purge.
@@ -43,9 +44,9 @@ export function mountTrashRoutes(router: Router, options: TrashRoutesOptions) {
   router.delete('/:id', manage, validate({ params: idParam }), async (req, res) => {
     const id = Number(req.params.id);
     await access(req, id);
-    await options.softDelete(req.user!.id, id);
+    await options.softDelete(requireUser(req).id, id);
     logAudit({
-      userId: req.user!.id,
+      userId: requireUser(req).id,
       action: `${options.auditPrefix}_DELETE`,
       entityType: options.entityType,
       entityId: id,
@@ -63,9 +64,9 @@ export function mountTrashRoutes(router: Router, options: TrashRoutesOptions) {
   router.delete('/:id/purge', manage, validate({ params: idParam }), async (req, res) => {
     const id = Number(req.params.id);
     await access(req, id);
-    await options.purge(req.user!.id, id);
+    await options.purge(requireUser(req).id, id);
     logAudit({
-      userId: req.user!.id,
+      userId: requireUser(req).id,
       action: `${options.auditPrefix}_PURGE`,
       entityType: options.entityType,
       entityId: id,

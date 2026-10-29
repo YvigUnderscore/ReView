@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { env } from '../config/env';
@@ -74,7 +74,7 @@ router.get(
   '/sites/:id/projects',
   validate({ params: idParam, query: z.object({ query: z.string().max(120).optional() }) }),
   async (req, res) => {
-    if (req.user!.role !== Role.ADMIN && req.user!.role !== Role.SUPERVISOR)
+    if (requireUser(req).role !== Role.ADMIN && requireUser(req).role !== Role.SUPERVISOR)
       return res.status(403).json({ error: 'Supervisors and administrators only' });
     res.json({
       projects: await Config.listRemoteProjects(Number(req.params.id), req.query.query as string | undefined),
@@ -97,7 +97,7 @@ router.post(
   validate({ params: projectParam, body: connectionBody }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId);
+    await assertProjectManager(requireUser(req), projectId);
     const conn = await Config.createConnection(projectId, req.body);
     res.status(201).json({ connection: Config.connectionView(conn, publicUrl(req)) });
   },
@@ -105,7 +105,7 @@ router.post(
 
 router.get('/projects/:projectId/connection', validate({ params: projectParam }), async (req, res) => {
   const projectId = Number(req.params.projectId);
-  await assertProjectManager(req.user!, projectId, { allowMembers: true });
+  await assertProjectManager(requireUser(req), projectId, { allowMembers: true });
   const conn = await Config.getConnection(projectId);
   res.json({ connection: conn ? Config.connectionView(conn, publicUrl(req)) : null });
 });
@@ -122,7 +122,7 @@ router.patch(
   }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId);
+    await assertProjectManager(requireUser(req), projectId);
     const current = await Config.getConnectionOrThrow(projectId);
     // Merge: the UI only sends the section that changed, the rest must survive. It is done one level deep,
     // and from the **normalized** settings: a flat merge let `shotgridSettingsSchema.partial()` re-parse
@@ -151,7 +151,7 @@ router.patch(
 
 router.delete('/projects/:projectId/connection', validate({ params: projectParam }), async (req, res) => {
   const projectId = Number(req.params.projectId);
-  await assertProjectManager(req.user!, projectId, { adminOnly: true });
+  await assertProjectManager(requireUser(req), projectId, { adminOnly: true });
   await Config.deleteConnection(projectId);
   res.status(204).end();
 });
@@ -162,7 +162,7 @@ router.get(
   validate({ params: projectParam }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId);
+    await assertProjectManager(requireUser(req), projectId);
     res.setHeader('Cache-Control', 'no-store');
     res.json({ secret: await Config.revealWebhookSecret(projectId) });
   },
@@ -174,7 +174,7 @@ router.post(
   validate({ params: projectParam }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId);
+    await assertProjectManager(requireUser(req), projectId);
     res.setHeader('Cache-Control', 'no-store');
     res.json({ secret: await Config.rotateWebhookSecret(projectId) });
   },
@@ -186,7 +186,7 @@ router.post(
   validate({ params: projectParam }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId);
+    await assertProjectManager(requireUser(req), projectId);
     const conn = await Config.rotateWebhookToken(projectId);
     res.json({ connection: Config.connectionView(conn, publicUrl(req)) });
   },

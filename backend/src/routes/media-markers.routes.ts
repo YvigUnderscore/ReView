@@ -3,7 +3,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import * as TimelineMarkerService from '../services/TimelineMarkerService';
 
@@ -25,7 +25,7 @@ const frame = z.number().int().min(0).max(10_000_000);
 
 // GET /api/media/:id/markers — markers of the media (ordered by frame)
 router.get('/:id/markers', validate({ params: idParam }), async (req, res) => {
-  res.json({ markers: await TimelineMarkerService.list(req.user!, Number(req.params.id)) });
+  res.json({ markers: await TimelineMarkerService.list(requireUser(req), Number(req.params.id)) });
 });
 
 // POST /api/media/:id/markers — places a named, colored marker
@@ -36,7 +36,7 @@ router.post(
     const body = req.body as { frame: number; name: string; color: string };
     res
       .status(201)
-      .json({ marker: await TimelineMarkerService.create(req.user!, Number(req.params.id), body) });
+      .json({ marker: await TimelineMarkerService.create(requireUser(req), Number(req.params.id), body) });
   },
 );
 
@@ -53,7 +53,7 @@ router.patch(
     const body = req.body as { frame?: number; name?: string; color?: string };
     res.json({
       marker: await TimelineMarkerService.update(
-        req.user!,
+        requireUser(req),
         Number(req.params.id),
         Number(req.params.markerId),
         body,
@@ -64,7 +64,7 @@ router.patch(
 
 // DELETE /api/media/:id/markers/:markerId
 router.delete('/:id/markers/:markerId', validate({ params: markerParams }), async (req, res) => {
-  await TimelineMarkerService.remove(req.user!, Number(req.params.id), Number(req.params.markerId));
+  await TimelineMarkerService.remove(requireUser(req), Number(req.params.id), Number(req.params.markerId));
   res.status(204).end();
 });
 

@@ -3,7 +3,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { usdRequestSchema } from '../lib/usdRequest';
 import { sceneOverrideSchema, type SceneOverride } from '../lib/sceneOverride';
@@ -28,7 +28,7 @@ const idParam = z.object({ id: z.coerce.number().int() });
 router.post('/:id/usd/recompose', validate({ params: idParam, body: usdRequestSchema }), async (req, res) => {
   res.json(
     await UsdRecomposeService.recomposeUsd(
-      req.user!,
+      requireUser(req),
       Number(req.params.id),
       req.body as UsdRecomposeService.RecomposeInput,
     ),
@@ -48,7 +48,7 @@ router.put(
   async (req, res) => {
     res.json(
       await UsdOverrideService.setSceneOverride(
-        req.user!,
+        requireUser(req),
         Number(req.params.id),
         (req.body as { override: SceneOverride | null }).override,
       ),

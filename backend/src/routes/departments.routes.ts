@@ -6,7 +6,7 @@ import { z } from 'zod';
 import { Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { notFound } from '../lib/errors';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { assertProjectAccess, requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import * as DepartmentService from '../services/DepartmentService';
@@ -55,7 +55,7 @@ const departmentBody = z.object({
 router.get('/projects/:projectId/departments', auth, validate({ params: projectParam }), async (req, res) => {
   const projectId = Number(req.params.projectId);
   await assertProjectAccess(req, projectId);
-  res.json({ departments: await DepartmentService.listForProjectWithRights(projectId, req.user!) });
+  res.json({ departments: await DepartmentService.listForProjectWithRights(projectId, requireUser(req)) });
 });
 
 /** Studio catalog: the one that projects inherit by default. */
@@ -91,7 +91,9 @@ router.patch(
   manage,
   validate({ params: idParam, body: departmentBody.partial() }),
   async (req, res) => {
-    res.json({ department: await DepartmentService.update(req.user!, Number(req.params.id), req.body) });
+    res.json({
+      department: await DepartmentService.update(requireUser(req), Number(req.params.id), req.body),
+    });
   },
 );
 
@@ -123,12 +125,12 @@ router.put(
 );
 
 router.delete('/departments/:id', auth, manage, validate({ params: idParam }), async (req, res) => {
-  await DepartmentService.remove(req.user!, Number(req.params.id));
+  await DepartmentService.remove(requireUser(req), Number(req.params.id));
   res.status(204).end();
 });
 
 router.put('/departments/order', auth, manage, validate({ body: idsBody }), async (req, res) => {
-  await DepartmentService.reorder(req.user!, req.body.ids);
+  await DepartmentService.reorder(requireUser(req), req.body.ids);
   res.status(204).end();
 });
 

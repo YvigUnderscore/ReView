@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role, SharePermission, ShareScope } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole, assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import * as ShareLinkService from '../services/ShareLinkService';
@@ -66,7 +66,7 @@ router.post(
   async (req, res) => {
     const body = req.body as ShareLinkService.CreateShareInput;
     await assertProjectAccess(req, body.projectId);
-    res.status(201).json({ link: await ShareLinkService.create(req.user!.id, body) });
+    res.status(201).json({ link: await ShareLinkService.create(requireUser(req).id, body) });
   },
 );
 
@@ -85,7 +85,7 @@ router.post(
     const id = Number(req.params.id);
     await assertProjectAccess(req, await ShareLinkService.projectOf(id));
     const body = req.body as { recipients: string[]; note?: string };
-    res.json(await sendShareMail(req.user!.id, id, body.recipients, body.note ?? null));
+    res.json(await sendShareMail(requireUser(req).id, id, body.recipients, body.note ?? null));
   },
 );
 
@@ -94,7 +94,7 @@ router.delete('/:id', manager, validate({ params: idParam }), async (req, res) =
   const id = Number(req.params.id);
   const projectId = await ShareLinkService.projectOf(id);
   await assertProjectAccess(req, projectId);
-  await ShareLinkService.revoke(req.user!.id, id, projectId);
+  await ShareLinkService.revoke(requireUser(req).id, id, projectId);
   res.status(204).end();
 });
 

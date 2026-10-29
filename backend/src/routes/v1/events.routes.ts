@@ -13,6 +13,7 @@ import * as Resolve from '../../services/PipelineResolveService';
 import { assertProjectAccess } from '../../middleware/rbac';
 import { assertTokenProject } from '../../middleware/scope';
 import { readQuery } from './helpers';
+import { requireUser } from '../../middleware/auth';
 
 /**
  * Event log (API v1): pull consumption.
@@ -76,7 +77,7 @@ async function visibleProjectIds(
   const bound = req.apiToken?.projectId;
   if (bound !== undefined) return [bound];
 
-  const user = req.user!;
+  const user = requireUser(req);
   if (user.role === Role.ADMIN || user.role === Role.SUPERVISOR) return undefined;
   const memberships = await prisma.projectMembership.findMany({
     where: { userId: user.id },
