@@ -19,7 +19,7 @@ describe('findRawColorClasses — palette brute', () => {
     ]);
   });
 
-  it("reports the opacity variant along with it", () => {
+  it('reports the opacity variant along with it', () => {
     expect(matches('"border-rose-200/50"')).toEqual(['border-rose-200/50']);
   });
 

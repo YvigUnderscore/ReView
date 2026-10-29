@@ -31,7 +31,9 @@ describe('isMessageKeyType', () => {
   });
 
   it('lets through a union where only one branch is a key', () => {
-    expect(isMessageKeyType(union(literal('task.status.todo'), literal('already translated')), KEYS)).toBe(false);
+    expect(isMessageKeyType(union(literal('task.status.todo'), literal('already translated')), KEYS)).toBe(
+      false,
+    );
   });
 
   it('lets through a widened `string` type — it may already carry the translation', () => {

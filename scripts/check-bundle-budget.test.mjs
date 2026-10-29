@@ -75,7 +75,7 @@ describe('stylesheetsFrom', () => {
     expect(stylesheetsFrom(html)).toEqual(['assets/index-Bn0z7Js3.css']);
   });
 
-  it('does not depend on the generator\'s attribute order', () => {
+  it("does not depend on the generator's attribute order", () => {
     expect(stylesheetsFrom('<link href="/a.css" rel="stylesheet">')).toEqual(['a.css']);
   });
 
