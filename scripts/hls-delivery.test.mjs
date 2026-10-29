@@ -21,7 +21,10 @@ const read = (...parts) => readFileSync(join(ROOT, ...parts), 'utf8');
 const prodNginx = read('nginx', 'nginx.conf');
 const frontNginx = read('frontend', 'nginx.conf');
 const mediaRoutes = read('backend', 'src', 'routes', 'media.routes.ts');
-const mediaService = read('backend', 'src', 'services', 'MediaService.ts');
+// HLS delivery moved out of MediaService.ts into MediaHlsService.ts: both are read as one surface.
+const mediaService =
+  read('backend', 'src', 'services', 'MediaService.ts') +
+  read('backend', 'src', 'services', 'MediaHlsService.ts');
 
 describe('playlists HLS — compression', () => {
   for (const [name, conf] of Object.entries({
