@@ -86,6 +86,57 @@ export default defineConfig([
       ],
     },
   },
+  // Routes validate, call a service and respond: data access lives in services/. A ratchet rather than a
+  // warning (the lint runs with --max-warnings 0): new route files may not import Prisma, and the files
+  // below — 28 files, 79 direct calls when the rule was introduced — leave the list as they are migrated.
+  // Never add to it.
+  {
+    files: ['src/routes/**/*.ts'],
+    ignores: [
+      'src/routes/**/*.test.ts',
+      'src/routes/admin.routes.ts',
+      'src/routes/auth-2fa.routes.ts',
+      'src/routes/auth-oidc.routes.ts',
+      'src/routes/auth.routes.ts',
+      'src/routes/client.routes.ts',
+      'src/routes/departments.routes.ts',
+      'src/routes/entity-extras.routes.ts',
+      'src/routes/sequences.routes.ts',
+      'src/routes/setup.routes.ts',
+      'src/routes/shotgrid-entity.routes.ts',
+      'src/routes/shotgrid-sync.routes.ts',
+      'src/routes/shotgrid-webhook.routes.ts',
+      'src/routes/studio-appearance.routes.ts',
+      'src/routes/studio.routes.ts',
+      'src/routes/timelines.routes.ts',
+      'src/routes/unsubscribe.routes.ts',
+      'src/routes/v1/comments.routes.ts',
+      'src/routes/v1/entities.routes.ts',
+      'src/routes/v1/episodes.routes.ts',
+      'src/routes/v1/events.routes.ts',
+      'src/routes/v1/latestPick.ts',
+      'src/routes/v1/mediaAccess.ts',
+      'src/routes/v1/meta.routes.ts',
+      'src/routes/v1/project-content.routes.ts',
+      'src/routes/v1/projects.routes.ts',
+      'src/routes/v1/tasks.routes.ts',
+      'src/routes/v1/versions.routes.ts',
+      'src/routes/visibility.routes.ts',
+    ],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/lib/prisma'],
+              message: 'Routes do not query the database: move the data access into a service.',
+            },
+          ],
+        },
+      ],
+    },
+  },
   // CLI scripts (seed, smoke): console is their legitimate output channel.
   {
     files: ['prisma/seed.ts', 'scripts/**/*.ts'],
