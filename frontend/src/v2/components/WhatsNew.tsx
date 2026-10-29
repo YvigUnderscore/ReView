@@ -1,15 +1,13 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Sparkles } from 'lucide-react';
 import { qk } from '../lib/query';
 import { parseChangelog } from '../lib/changelog';
-import { useCalloutLabels } from '../pages/docs/useCalloutLabels';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from './ui/dialog';
 import { useT } from '../i18n';
-import { sanitizeHtml } from '@/v2/lib/sanitizeHtml';
 
 /**
  * "What's new" in-app (42.B, №68): changelog fed by `DOCUMENTATION/CHANGELOG.md`
@@ -22,12 +20,12 @@ const CHANGELOG_URL = '/docs/CHANGELOG.md';
 /**
  * Markdown rendering, loaded when the dialog opens and not before (F6).
  *
- * `docsRender` pulls in `marked`: imported at the top, it entered the **first load**
- * through the chain App → Shell → SidebarFooter → WhatsNew, i.e. 13.5 kB gzipped paid by everyone,
- * on every page, for a panel opened once a quarter. `parseChangelog`
- * is enough to decide the dot and needs nothing else.
+ * `docsRender` pulls in `marked`, and the rendered HTML goes through DOMPurify: imported at the top,
+ * both entered the **first load** through the chain App → Shell → SidebarFooter → WhatsNew, paid by
+ * everyone, on every page, for a panel opened once a quarter. `parseChangelog` is enough to decide
+ * the dot and needs nothing else.
  */
-type RenderDocHtml = typeof import('../pages/docs/docsRender').renderDocHtml;
+const WhatsNewEntries = lazy(() => import('./WhatsNewEntries'));
 
 /**
  * Bytes read to decide the dot (F6, second move).
@@ -77,9 +75,7 @@ function parseChangelogHead(text: string, partial: boolean): string | null {
 
 export default function WhatsNew({ collapsed }: { collapsed?: boolean }) {
   const t = useT();
-  const calloutLabels = useCalloutLabels();
   const [open, setOpen] = useState(false);
-  const [renderDocHtml, setRenderDocHtml] = useState<RenderDocHtml | null>(null);
   const [idle, setIdle] = useState(false);
   const [seen, setSeen] = useState<string | null>(() => {
     try {
@@ -143,8 +139,6 @@ export default function WhatsNew({ collapsed }: { collapsed?: boolean }) {
   // Opening: marks the latest entry as seen (the button only exists if we know it).
   const openPanel = () => {
     setOpen(true);
-    // `setState(() => fn)`: the functional form, otherwise React would call the render.
-    void import('../pages/docs/docsRender').then((m) => setRenderDocHtml(() => m.renderDocHtml));
     if (!latestId) return;
     try {
       localStorage.setItem(SEEN_KEY, latestId);
@@ -180,21 +174,12 @@ export default function WhatsNew({ collapsed }: { collapsed?: boolean }) {
           <div className="space-y-6">
             {fullError ? (
               <p className="text-sm text-muted-foreground">{fullError.message}</p>
-            ) : renderDocHtml === null || entries.length === 0 ? (
+            ) : entries.length === 0 ? (
               <p className="text-sm text-muted-foreground">{t('common.loading')}</p>
             ) : (
-              entries.map((e) => (
-                <div key={e.id}>
-                  <p className="mb-2 text-xs font-semibold section-label text-primary">{e.id}</p>
-                  <article
-                    className="prose-doc max-w-none text-sm text-card-foreground"
-                    // Repo markdown (CHANGELOG.md); raw HTML is escaped by renderDocHtml.
-                    dangerouslySetInnerHTML={{
-                      __html: sanitizeHtml(renderDocHtml(e.body, 'CHANGELOG.md', calloutLabels)),
-                    }}
-                  />
-                </div>
-              ))
+              <Suspense fallback={<p className="text-sm text-muted-foreground">{t('common.loading')}</p>}>
+                <WhatsNewEntries entries={entries} />
+              </Suspense>
             )}
           </div>
         </DialogContent>
