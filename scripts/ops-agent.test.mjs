@@ -155,7 +155,7 @@ describe('ops/agent.sh — ce que l’agent accepte d’exécuter', () => {
 describe('ops/Dockerfile', () => {
   it('n’embarque rien du produit, et épingle sa base', () => {
     // This image holds the docker socket: the less it contains, the less there is to audit.
-    expect(DOCKERFILE).toMatch(/^FROM docker:\d+\.\d+\.\d+-cli$/m);
+    expect(DOCKERFILE).toMatch(/^FROM docker:\d+\.\d+\.\d+-cli@sha256:[0-9a-f]{64}$/m);
     expect(dockerInstructions).not.toMatch(/:latest/);
     expect(dockerInstructions).not.toMatch(/npm|node_modules/);
   });

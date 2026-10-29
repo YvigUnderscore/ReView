@@ -7,7 +7,7 @@ WORKDIR /app/frontend
 
 # Dependencies (cached layer)
 COPY frontend/package*.json ./
-RUN npm install
+RUN npm ci
 
 # Frontend sources + product documentation (served in-app on /docs)
 COPY frontend/ ./
@@ -19,7 +19,7 @@ RUN npm run build
 # Pinned version, aligned with the TLS proxy in docker-compose.prod.yml: plain `alpine`
 # follows the mainline branch, and a new nginx major can change the `location`/`add_header`
 # behaviour that frontend/nginx.conf relies on.
-FROM nginx:1.27-alpine
+FROM nginx:1.27.5-alpine@sha256:65645c7bb6a0661892a8b03b89d0743208a18dd2f3f17a54ef4b76fb8e2f2a10
 
 # Same build-args as the backend image: `release.yml` passes them to all three images, and an
 # undeclared build-arg is silently ignored. Here they only label the image, so that a running

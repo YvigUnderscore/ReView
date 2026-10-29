@@ -17,3 +17,10 @@ assets_for_testing/
 # Tesseract (documentation animation renders): proprietary tool, never in a ReView image.
 motion/
 frontend/public/docs/
+
+# Secrets and local data: never part of a build context
+.env
+.env.*
+!.env.example
+backups/
+nginx/certs/
