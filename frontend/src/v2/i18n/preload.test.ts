@@ -89,7 +89,7 @@ describe('catalogue chunk table', () => {
     'assets/index-a.js': {
       type: 'chunk',
       fileName: 'assets/index-a.js',
-      moduleIds: ['/app/frontend/src/main.jsx'],
+      moduleIds: ['/app/frontend/src/main.tsx'],
     },
     'assets/fr-b.js': {
       type: 'chunk',

@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 // Shim for `process`, for libs that reference it on the browser side (e.g. Excalidraw)
-globalThis.process = globalThis.process || { env: { NODE_ENV: import.meta.env.MODE } };
+(globalThis as unknown as { process?: unknown }).process ??= { env: { NODE_ENV: import.meta.env.MODE } };
 
 import React from 'react';
 import ReactDOM from 'react-dom/client';
@@ -15,7 +15,7 @@ import './index.css';
 // Last-resort safety net: above the router there is nothing left to catch a
 // render exception, and the user was left facing a blank screen.
 const render = () =>
-  ReactDOM.createRoot(document.getElementById('root')).render(
+  ReactDOM.createRoot(document.getElementById('root') as HTMLElement).render(
     <React.StrictMode>
       <ErrorBoundary scope="root">
         <App />
@@ -31,4 +31,4 @@ const render = () =>
 // the bytes are already there when this line runs.
 // `finally`: an unreadable catalog must not prevent the application from starting, so
 // the English fallback is enough.
-initLocale().finally(render);
+void initLocale().finally(render);

@@ -31,7 +31,7 @@ export default defineConfig({
         'src/setupTests.ts',
         'src/test/**',
         'src/**/*.d.ts',
-        // Entry point and declarations: neither carries any logic.
+        // Entry point (main.tsx) and declarations: neither carries any logic.
         'src/main.tsx',
         'src/vite-env.d.ts',
       ],

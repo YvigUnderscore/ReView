@@ -16,13 +16,13 @@ import path from 'node:path';
  * in the next commit, on an unrelated change, and nobody makes the link.
  *
  * This test walks exactly what the browser downloads before running anything:
- * `main.jsx` and the closure of its **static** imports. The dynamic `import()`s are
+ * `main.tsx` and the closure of its **static** imports. The dynamic `import()`s are
  * separate chunks and so end the walk. Each prohibition
  * carries the gzip weight it cost, measured on a real build.
  */
 
 const SRC = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const ENTRY = path.join(SRC, 'main.jsx');
+const ENTRY = path.join(SRC, 'main.tsx');
 
 /** Extensions tried in order, the way Vite's resolver does. */
 const CANDIDATES = ['', '.ts', '.tsx', '.js', '.jsx', '.json', '/index.ts', '/index.tsx', '/index.js'];
@@ -94,7 +94,7 @@ function walkEntryGraph(): EntryGraph {
 describe('first-load graph', () => {
   const graph = walkEntryGraph();
 
-  it('starts from main.jsx and reaches the shell', () => {
+  it('starts from main.tsx and reaches the shell', () => {
     // Guard against the guard: a walk that found nothing would pass all the
     // prohibitions below without checking anything.
     expect(graph.files.has('v2/App.tsx')).toBe(true);
