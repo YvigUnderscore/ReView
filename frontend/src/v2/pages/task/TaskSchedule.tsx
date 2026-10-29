@@ -9,13 +9,13 @@ import { qk } from '../../lib/query';
 import { useT } from '../../i18n';
 import { intlLocale } from '../../i18n';
 
-/** Valeur ISO → `YYYY-MM-DD` pour un <input type="date"> (chaîne vide si absente). */
+/** ISO value → `YYYY-MM-DD` for an <input type="date"> (empty string if absent). */
 const toInput = (iso: string | null | undefined) => (iso ? iso.slice(0, 10) : '');
 const fmt = (iso: string) => new Date(iso).toLocaleDateString(intlLocale());
 
 /**
- * Planning d'une tâche (43.C) : début planifié + échéance. Édition réservée aux superviseurs ;
- * les autres voient les dates en lecture seule (rien si aucune date). Alimente calendrier/Gantt.
+ * Schedule of a task (43.C): planned start + due date. Editing is reserved for supervisors; the
+ * others see the dates read-only (nothing if there is no date). Feeds the calendar/Gantt.
  */
 export default function TaskSchedule({
   taskId,

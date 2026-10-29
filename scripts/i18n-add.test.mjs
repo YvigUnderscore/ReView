@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { mergeCatalog, render } from './i18n-add.mjs';
 
-/** Catalogue minimal au format Prettier : une clé par ligne, saut de ligne final. */
+/** Minimal catalogue in Prettier format: one key per line, final newline. */
 const catalog = (...entries) => `{\n${entries.join('\n')}\n}\n`;
 
 const BASE = catalog('  "admin.title": "Admin",', '  "upload.hint": "Drop here"');
@@ -110,7 +110,7 @@ describe('mergeCatalog', () => {
       'admin.new': 'New',
       'upload.hint': 'Drop here',
     });
-    // L'insertion vise la fermeture `},`, pas l'intérieur de la valeur.
+    // The insertion targets the closing `},`, not the inside of the value.
     expect(content.indexOf('"admin.new"')).toBeGreaterThan(content.indexOf('  },'));
   });
 
@@ -135,7 +135,7 @@ describe('mergeCatalog', () => {
 });
 
 describe('un préfixe qui n’existe pas encore', () => {
-  /** Catalogue dont la DERNIÈRE entrée est plurielle : sa fermeture est `  }`, sans virgule. */
+  /** Catalogue whose LAST entry is plural: its closing is `  }`, with no comma. */
   const ENDS_WITH_PLURAL = [
     '{',
     '  "admin.title": "Administration",',
@@ -148,10 +148,10 @@ describe('un préfixe qui n’existe pas encore', () => {
   ].join('\n');
 
   it('pose la clé APRÈS la dernière valeur, jamais dedans', () => {
-    // Le défaut que ce contrôle ferme : la recherche visait « la dernière ligne qui
-    // commence par une clé », qui est ici l'accolade OUVRANTE de la valeur plurielle
-    // finale. La clé nouvelle atterrissait au milieu d'elle et rendait les quatorze
-    // catalogues illisibles — donc l'application entière, dans toutes les langues.
+    // The defect this check closes: the search targeted "the last line that
+    // starts with a key", which here is the OPENING brace of the plural value
+    // at the end. The new key landed in the middle of it and made the fourteen
+    // catalogues unreadable — hence the whole application, in every language.
     const { content, written } = mergeCatalog(ENDS_WITH_PLURAL, { 'ops.title': { en: 'Updates' } }, 'en');
     expect(written).toBe(1);
     expect(JSON.parse(content)).toEqual({

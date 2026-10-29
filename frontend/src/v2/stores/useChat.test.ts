@@ -20,15 +20,15 @@ const conversation = (over: Partial<ChatConversation> = {}): ChatConversation =>
 });
 
 describe('conversationLabel', () => {
-  it('nomme un tête-à-tête par la personne en face', () => {
+  it('names a one-to-one thread after the other person', () => {
     expect(conversationLabel(conversation(), 1, 'Vous')).toBe('Ana');
   });
 
-  it('préfère le titre du groupe quand il y en a un', () => {
+  it('prefers the group title when there is one', () => {
     expect(conversationLabel(conversation({ isGroup: true, title: 'Lighting' }), 1, 'Vous')).toBe('Lighting');
   });
 
-  it('énumère les participants d’un groupe sans titre', () => {
+  it('lists the participants of an untitled group', () => {
     const c = conversation({
       isGroup: true,
       members: [user(1, 'Moi'), user(2, 'Ana'), user(3, 'Bo')],
@@ -36,13 +36,13 @@ describe('conversationLabel', () => {
     expect(conversationLabel(c, 1, 'Vous')).toBe('Ana, Bo');
   });
 
-  it('retombe sur le libellé fourni si l’on est seul dans le fil', () => {
+  it('falls back to the provided label when we are alone in the thread', () => {
     expect(conversationLabel(conversation({ members: [user(1, 'Moi')] }), 1, 'Vous')).toBe('Vous');
   });
 });
 
 describe('selectUnreadTotal', () => {
-  it('additionne les non-lus de tous les fils', () => {
+  it('adds up the unread counts of all threads', () => {
     const state = {
       conversations: [conversation({ id: 1, unread: 2 }), conversation({ id: 2, unread: 3 })],
     } as Parameters<typeof selectUnreadTotal>[0];

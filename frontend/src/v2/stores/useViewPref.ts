@@ -4,28 +4,27 @@
 import { create } from 'zustand';
 
 /**
- * Préférence d'affichage des listes : cartes ou compact.
+ * Display preference of lists: cards or compact.
  *
- * Deux niveaux, et c'est tout l'intérêt :
+ * Two levels, and that is the whole point:
  *
- *  - un **réglage de compte**, qui vaut pour toutes les listes — quelqu'un qui préfère les
- *    lignes denses les préfère partout ;
- *  - un **écart par page** (`shots:12`, `assets:12`, `sequence-shots:12`…), posé
- *    seulement quand on bascule explicitement sur cette liste-là. Une grille de plans se
- *    lit en vignettes, une liste de tâches en lignes : la préférence globale ne peut pas
- *    répondre pour les deux.
+ *  - an **account setting**, which applies to all lists — someone who prefers dense rows prefers
+ *    them everywhere;
+ *  - a **per-page override** (`shots:12`, `assets:12`, `sequence-shots:12`…), set only when one
+ *    explicitly toggles that particular list. A grid of shots is read as thumbnails, a list of
+ *    tasks as rows: the global preference cannot answer for both.
  *
- * Sans écart, la liste suit le compte : c'est ce que « de base, on conserve le réglage
- * global » veut dire. Le store garde le miroir local (localStorage) pour que l'affichage
- * soit juste au premier rendu, avant que les préférences du compte ne soient chargées —
- * mais le compte reste la source de vérité, et c'est lui qui suit d'un poste à l'autre.
+ * Without an override, the list follows the account: that is what "by default, we keep the global
+ * setting" means. The store keeps a local mirror (localStorage) so that the display is right on the
+ * first render, before the account preferences are loaded — but the account remains the source of
+ * truth, and it is what follows the user from one workstation to another.
  */
 export type ViewMode = 'cards' | 'compact';
 
 const STORAGE_PREFIX = 'review:view:';
 const GLOBAL_KEY = 'review:view:__global';
 
-/** Le repli du repli : sans rien de mémorisé nulle part, on montre des vignettes. */
+/** The fallback of the fallback: with nothing remembered anywhere, thumbnails are shown. */
 const FALLBACK: ViewMode = 'cards';
 
 const parse = (raw: string | null): ViewMode | null =>
@@ -35,19 +34,19 @@ const readLocal = (key: string): ViewMode | null => parse(localStorage.getItem(S
 const readGlobalLocal = (): ViewMode | null => parse(localStorage.getItem(GLOBAL_KEY));
 
 interface ViewPrefState {
-  /** Écarts par liste, tels que le compte les porte (hydratés au chargement). */
+  /** Overrides per list, as the account carries them (hydrated on load). */
   modes: Record<string, ViewMode>;
-  /** Réglage de compte, appliqué à toute liste sans écart. */
+  /** Account setting, applied to every list without an override. */
   global: ViewMode | null;
-  /** Ce que le store enverra au serveur — posé par `useViewSync`. */
+  /** What the store will send to the server — set by `useViewSync`. */
   persist: ((patch: { viewMode?: ViewMode; viewModes?: Record<string, ViewMode> }) => void) | null;
   get: (key: string) => ViewMode;
   set: (key: string, mode: ViewMode) => void;
-  /** Retire l'écart : la liste retourne au réglage du compte. */
+  /** Removes the override: the list returns to the account setting. */
   clear: (key: string) => void;
   setGlobal: (mode: ViewMode) => void;
   toggle: (key: string) => void;
-  /** Reprend l'état du compte au chargement des préférences. */
+  /** Takes over the account state when the preferences load. */
   hydrate: (prefs: { viewMode?: ViewMode; viewModes?: Record<string, ViewMode> }) => void;
   setPersist: (fn: ViewPrefState['persist']) => void;
 }
@@ -85,7 +84,7 @@ export const useViewPref = create<ViewPrefState>((set, store) => ({
   },
 
   hydrate: (prefs) => {
-    // Le compte gagne sur le miroir local : c'est lui qui a suivi l'utilisateur.
+    // The account wins over the local mirror: it is what followed the user.
     set({ global: prefs.viewMode ?? null, modes: { ...(prefs.viewModes ?? {}) } });
     if (prefs.viewMode) localStorage.setItem(GLOBAL_KEY, prefs.viewMode);
   },
@@ -94,10 +93,10 @@ export const useViewPref = create<ViewPrefState>((set, store) => ({
 }));
 
 /**
- * Hook utilitaire : la vue courante d'une liste, écart compris.
+ * Utility hook: the current view of a list, override included.
  *
- * Il s'abonne aux deux niveaux — sans lire `global`, basculer le réglage de compte ne
- * rafraîchissait aucune liste tant qu'on ne changeait pas de page.
+ * It subscribes to both levels — without reading `global`, toggling the account setting refreshed
+ * no list until the user changed page.
  */
 export function useViewMode(contextKey: string): ViewMode {
   return useViewPref(
@@ -105,7 +104,7 @@ export function useViewMode(contextKey: string): ViewMode {
   );
 }
 
-/** Cette liste a-t-elle son propre réglage, ou suit-elle le compte ? */
+/** Does this list have its own setting, or does it follow the account? */
 export function useHasOverride(contextKey: string): boolean {
   return useViewPref((s) => s.modes[contextKey] !== undefined || readLocal(contextKey) !== null);
 }

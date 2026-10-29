@@ -10,21 +10,21 @@ import type { TimelineSnapshotSummary, TimelineView } from '../../types/api';
 import { useT } from '../../i18n';
 
 /**
- * Données et actions d'un montage automatique (Phase 45).
+ * Data and actions of an automatic montage (Phase 45).
  *
- * Le montage est résolu au premier accès : aucun écran n'a à le « créer ». Les mutations
- * se limitent à ce qu'un humain décide — renommer, viser une étape, figer une révision.
+ * The montage is resolved on first access: no screen has to "create" it. Mutations are limited to
+ * what a human decides — renaming, targeting a step, freezing a revision.
  *
- * **Annulation.** Le CUT lui-même n'est pas monté à la main : il se déduit des versions et de
- * l'étape visée, il n'y a donc aucun geste de montage à défaire — ni Ctrl+Z, ni pile. Restent
- * deux réglages, nom et étape visée, dont l'inverse est tenu exactement : ils se confirment avec
- * « Annuler ». Changer l'étape visée rebâtit le cut entier, et rien ne le disait ; c'est le
- * geste le plus impressionnant de l'écran et le plus facile à déclencher par erreur.
+ * **Undo.** The CUT itself is not assembled by hand: it is derived from the versions and the targeted
+ * step, so there is no montage gesture to undo — no Ctrl+Z, no stack. Two settings remain, name and
+ * targeted step, whose inverse is kept exactly: they are confirmed with "Undo". Changing the targeted
+ * step rebuilds the whole cut, and nothing said so; it is the most impressive gesture on the screen
+ * and the easiest to trigger by mistake.
  *
- * La révision figée, elle, ne s'annule pas : c'est une pièce d'audit, aucune route ne la
- * supprime, et en promettre le retrait serait mentir.
+ * The frozen revision, on the other hand, cannot be undone: it is an audit record, no route deletes
+ * it, and promising its removal would be a lie.
  */
-/** Les deux réglages qu'un humain pose sur un montage. */
+/** The two settings a human sets on a montage. */
 type TimelinePatch = { name?: string | null; department?: string | null };
 
 export function useTimelineData(projectId: number, sequenceId: number | null, enabled = true) {
@@ -48,18 +48,18 @@ export function useTimelineData(projectId: number, sequenceId: number | null, en
     await qc.invalidateQueries({ queryKey: ['timeline'] });
   };
 
-  /** L'écriture nue : elle laisse remonter son échec, pour que l'annulation puisse le dire. */
+  /** The bare write: it lets its failure propagate, so that the undo can report it. */
   const write = async (id: number, body: TimelinePatch): Promise<void> => {
     await api.patch(`/api/timelines/${id}`, body);
     await refresh();
   };
 
-  /** Écrit un réglage du montage, et propose de remettre celui d'avant. */
+  /** Writes a montage setting, and offers to restore the previous one. */
   const patch = async (body: TimelinePatch) => {
     if (!timeline) return;
     const id = timeline.id;
-    // L'état d'avant, restreint aux champs touchés : réenvoyer les deux figerait dans le
-    // montage une étape qu'il ne faisait qu'hériter du défaut « la plus avancée ».
+    // The previous state, restricted to the fields touched: sending both would freeze in the
+    // montage a step it was merely inheriting from the "most advanced" default.
     const previous: TimelinePatch = {
       ...('name' in body ? { name: timeline.name } : {}),
       ...('department' in body ? { department: timeline.department } : {}),

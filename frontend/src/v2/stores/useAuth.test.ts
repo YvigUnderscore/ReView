@@ -3,8 +3,8 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Le canal temps réel est doublé : on vérifie qu'il est fermé à chaque changement de
-// compte, pas le comportement de socket.io (couvert par lib/socket.test.ts).
+// The real-time channel is doubled: we check that it is closed on every account change, not the
+// socket.io behaviour (covered by lib/socket.test.ts).
 vi.mock('../../lib/socket', () => ({
   getSocket: vi.fn(),
   disconnectSocket: vi.fn(),
@@ -39,14 +39,14 @@ beforeEach(() => {
 });
 
 describe('useAuth', () => {
-  it('login : stocke le token et l’utilisateur', async () => {
+  it('login: stores the token and the user', async () => {
     mockFetch.mockResolvedValue(jsonResponse({ token: 'jwt-1', user }));
     await useAuth.getState().login('a@b.c', 'pw');
     expect(localStorage.getItem('token')).toBe('jwt-1');
     expect(useAuth.getState().user?.email).toBe('a@b.c');
   });
 
-  it('login avec 2FA : renvoie le tmpToken sans connecter (36.A)', async () => {
+  it('login with 2FA: returns the tmpToken without signing in (36.A)', async () => {
     mockFetch.mockResolvedValue(jsonResponse({ requires2fa: true, tmpToken: 'tmp-1' }));
     const r = await useAuth.getState().login('a@b.c', 'pw');
     expect(r.tmpToken).toBe('tmp-1');
@@ -54,7 +54,7 @@ describe('useAuth', () => {
     expect(useAuth.getState().user).toBeNull();
   });
 
-  it('verify2fa : échange le code contre la session', async () => {
+  it('verify2fa: exchanges the code for the session', async () => {
     mockFetch.mockResolvedValue(jsonResponse({ token: 'jwt-2', refreshToken: 'r-2', user }));
     await useAuth.getState().verify2fa('tmp-1', '123456');
     expect(localStorage.getItem('token')).toBe('jwt-2');
@@ -62,7 +62,7 @@ describe('useAuth', () => {
     expect(useAuth.getState().user?.id).toBe(1);
   });
 
-  it('ssoLogin : stocke les tokens puis restaure le profil via /me', async () => {
+  it('ssoLogin: stores the tokens then restores the profile via /me', async () => {
     mockFetch.mockResolvedValue(jsonResponse({ user }));
     await useAuth.getState().ssoLogin('jwt-sso', 'r-sso');
     expect(localStorage.getItem('token')).toBe('jwt-sso');
@@ -70,7 +70,7 @@ describe('useAuth', () => {
     expect(useAuth.getState().user?.email).toBe('a@b.c');
   });
 
-  it('logout : purge token et utilisateur', () => {
+  it('logout: purges token and user', () => {
     localStorage.setItem('token', 'jwt-1');
     useAuth.setState({ user });
     useAuth.getState().logout();
@@ -78,13 +78,13 @@ describe('useAuth', () => {
     expect(useAuth.getState().user).toBeNull();
   });
 
-  it('init sans token : ready sans appel réseau', async () => {
+  it('init without token: ready without a network call', async () => {
     await useAuth.getState().init();
     expect(useAuth.getState().ready).toBe(true);
     expect(mockFetch).not.toHaveBeenCalled();
   });
 
-  it('init avec token valide : restaure la session', async () => {
+  it('init with a valid token: restores the session', async () => {
     localStorage.setItem('token', 'jwt-1');
     mockFetch.mockResolvedValue(jsonResponse({ user }));
     await useAuth.getState().init();
@@ -92,7 +92,7 @@ describe('useAuth', () => {
     expect(useAuth.getState().ready).toBe(true);
   });
 
-  it('init avec token invalide : purge le token, ready quand même', async () => {
+  it('init with an invalid token: purges the token, still ready', async () => {
     localStorage.setItem('token', 'périmé');
     mockFetch.mockResolvedValue(jsonResponse({ error: 'Token invalide' }, 401));
     await useAuth.getState().init();
@@ -103,7 +103,7 @@ describe('useAuth', () => {
 });
 
 describe('useAuth — canal temps réel', () => {
-  it('logout : ferme le socket du compte qui part', () => {
+  it('logout: closes the socket of the account that leaves', () => {
     localStorage.setItem('token', 'jwt-1');
     mockFetch.mockResolvedValue(jsonResponse({}));
     useAuth.setState({ user });
@@ -111,14 +111,14 @@ describe('useAuth — canal temps réel', () => {
     expect(disconnectSocket).toHaveBeenCalledTimes(1);
   });
 
-  it('login : repart d’un socket neuf (poste de salle de review partagé)', async () => {
+  it('login: starts from a fresh socket (shared review-room workstation)', async () => {
     mockFetch.mockResolvedValue(jsonResponse({ token: 'jwt-2', refreshToken: 'r-2', user }));
     await useAuth.getState().login('a@b.c', 'pw');
     expect(disconnectSocket).toHaveBeenCalledTimes(1);
     expect(localStorage.getItem('refreshToken')).toBe('r-2');
   });
 
-  it('setAuth : ferme aussi le socket précédent', () => {
+  it('setAuth: also closes the previous socket', () => {
     useAuth.getState().setAuth('jwt-3', user);
     expect(localStorage.getItem('token')).toBe('jwt-3');
     expect(disconnectSocket).toHaveBeenCalledTimes(1);
@@ -126,11 +126,11 @@ describe('useAuth — canal temps réel', () => {
 });
 
 describe('useAuth — session expirée', () => {
-  it('401 non rattrapable : purge la session, vide l’état et ferme le socket', async () => {
+  it('unrecoverable 401: purges the session, clears the state and closes the socket', async () => {
     localStorage.setItem('token', 'jwt-mort');
     localStorage.setItem('refreshToken', 'r-mort');
     useAuth.setState({ user, ready: true });
-    // Tout répond 401, renouvellement compris : la session est morte.
+    // Everything answers 401, token renewal included: the session is dead.
     mockFetch.mockResolvedValue(jsonResponse({ error: 'Non authentifié' }, 401));
 
     await expect(api.get('/api/projects')).rejects.toThrow(/session/i);

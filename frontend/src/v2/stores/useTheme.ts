@@ -5,12 +5,12 @@ import { create } from 'zustand';
 import { applyAccent } from '../lib/branding';
 
 /**
- * Thème de l'interface (42.A1 — étend le socle clair/sombre).
- * - `mode` = choix de l'utilisateur : `dark` | `light` | `system` (suit l'OS).
- * - `theme` = thème **effectif** appliqué (`dark`|`light`), dérivé de `mode`.
- * La classe `dark` est posée sur <html> dès l'import du module (avant le premier rendu)
- * pour éviter un flash au chargement. En mode `system`, on écoute `prefers-color-scheme`
- * et on réapplique le thème effectif à chaque changement de l'OS.
+ * Interface theme (42.A1 — extends the light/dark base).
+ * - `mode` = the user's choice: `dark` | `light` | `system` (follows the OS).
+ * - `theme` = the **effective** theme applied (`dark`|`light`), derived from `mode`.
+ * The `dark` class is set on <html> as soon as the module is imported (before the first render)
+ * to avoid a flash at load. In `system` mode, `prefers-color-scheme` is listened to and the
+ * effective theme is re-applied on every OS change.
  */
 export type Theme = 'dark' | 'light';
 export type ThemeMode = Theme | 'system';
@@ -20,7 +20,7 @@ const STORAGE_KEY = 'review:theme';
 function systemPrefersDark(): boolean {
   return typeof window !== 'undefined' && typeof window.matchMedia === 'function'
     ? window.matchMedia('(prefers-color-scheme: dark)').matches
-    : true; // défaut studio = sombre
+    : true; // studio default = dark
 }
 
 function effective(mode: ThemeMode): Theme {
@@ -30,14 +30,14 @@ function effective(mode: ThemeMode): Theme {
 
 function applyTheme(theme: Theme) {
   document.documentElement.classList.toggle('dark', theme === 'dark');
-  // L'accent studio est borné différemment selon le thème (cf. `readableAccent`) : sans ce
-  // rappel, passer en clair gardait l'accent vif du sombre, et l'anneau de focus s'effaçait.
+  // The studio accent is clamped differently per theme (see `readableAccent`): without this
+  // re-apply, switching to light kept the vivid dark-theme accent and the focus ring vanished.
   applyAccent(localStorage.getItem('review:accent'));
 }
 
 function readMode(): ThemeMode {
   const stored = localStorage.getItem(STORAGE_KEY);
-  // Valeurs héritées `dark`/`light` restent des modes valides (migration transparente).
+  // Legacy `dark`/`light` values remain valid modes (transparent migration).
   if (stored === 'light' || stored === 'dark' || stored === 'system') return stored;
   return 'dark';
 }
@@ -51,7 +51,7 @@ export const useTheme = create<{
   setMode: (mode: ThemeMode) => void;
   toggle: () => void;
 }>((set, get) => {
-  // En mode `system`, réagir aux changements de préférence de l'OS.
+  // In `system` mode, react to OS preference changes.
   if (typeof window !== 'undefined' && typeof window.matchMedia === 'function') {
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     const onChange = () => {
@@ -74,7 +74,7 @@ export const useTheme = create<{
     mode: initialMode,
     theme: effective(initialMode),
     setMode,
-    // Bascule rapide (bouton sidebar) : inverse le thème **effectif** en le figeant explicitement.
+    // Quick toggle (sidebar button): inverts the **effective** theme by pinning it explicitly.
     toggle: () => setMode(get().theme === 'dark' ? 'light' : 'dark'),
   };
 });

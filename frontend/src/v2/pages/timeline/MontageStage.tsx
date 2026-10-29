@@ -9,15 +9,14 @@ import type { TimelineClip } from '../../types/api';
 import { useT } from '../../i18n';
 
 /**
- * L'image du montage (Phase 46), dans le même cadre que le viewer de review.
+ * The montage image (Phase 46), in the same frame as the review viewer.
  *
- * Deux lecteurs se relaient : pendant qu'un plan joue, le suivant se charge dans le second,
- * hors écran, et la bascule n'est qu'un échange de visibilité. Les deux restent montés en
- * permanence — démonter celui qui sort annulerait le préchargement et ramènerait le noir
- * entre les plans, ce qu'un montage doit précisément éviter.
+ * Two players take turns: while one shot plays, the next one loads in the second, off-screen, and
+ * switching is only a visibility swap. Both stay mounted permanently — unmounting the outgoing one
+ * would cancel the preload and bring back black between shots, which a montage must precisely avoid.
  *
- * L'annotation partage exactement la boîte de l'image, calculée à son ratio réel : un
- * dessin qui ne tombe pas sur le pixel visé ne vaut pas mieux que pas de dessin.
+ * The annotation shares exactly the image's box, computed at its real ratio: a drawing that does
+ * not land on the targeted pixel is no better than no drawing.
  */
 export default function MontageStage({
   clip,
@@ -33,12 +32,12 @@ export default function MontageStage({
   active: 'A' | 'B';
   videoA: RefObject<HTMLVideoElement | null>;
   videoB: RefObject<HTMLVideoElement | null>;
-  /** Calque d'annotation, rendu à la taille de l'image. */
+  /** Annotation layer, rendered at the size of the image. */
   overlay?: ReactNode;
   onClick?: () => void;
-  /** Zone d'image — cible du plein écran « vidéo seule » du transport. */
+  /** Image zone — target of the transport's "video only" fullscreen. */
   zoneRef?: RefObject<HTMLDivElement | null>;
-  /** Source pleine résolution quand le plan courant est une image fixe. */
+  /** Full-resolution source when the current shot is a still image. */
   stillUrl?: string | null;
 }) {
   const t = useT();
@@ -47,14 +46,14 @@ export default function MontageStage({
   const [aspect, setAspect] = useState(16 / 9);
   const [box, setBox] = useState<{ w: number; h: number } | null>(null);
   const card = clip !== null && clip.mediaId === null;
-  // Un plan dont la version publiée est une image : il occupe sa place dans le montage, mais
-  // ne passe PAS par l'élément vidéo — un JPEG confié à `<video>` échoue au démultiplexage
-  // et bloquait la lecture de tout le montage dès que le premier plan en portait une.
+  // A shot whose published version is an image: it takes its place in the montage, but does NOT
+  // go through the video element — a JPEG handed to `<video>` fails demuxing and blocked playback
+  // of the whole montage as soon as the first shot carried one.
   const still = isStillClip(clip);
   const stillSrc = stillUrl ?? clip?.thumbnailUrl ?? null;
 
-  // Boîte d'affichage : l'image occupe tout l'espace disponible à son ratio, et l'overlay
-  // partage la même boîte — même calcul que le lecteur de review.
+  // Display box: the image fills all the available space at its ratio, and the overlay shares
+  // the same box — same computation as the review player.
   useEffect(() => {
     const el = zone.current;
     if (!el) return;
@@ -96,8 +95,8 @@ export default function MontageStage({
           crossOrigin="anonymous"
         />
         {still && stillSrc && (
-          // Bouton plutôt qu'`<img onClick>` : l'image occupe la place du lecteur, et
-          // « cliquer pour lire/mettre en pause » doit répondre au clavier comme au pointeur.
+          // A button rather than `<img onClick>`: the image takes the player's place, and
+          // "click to play/pause" must respond to the keyboard as well as the pointer.
           <button
             type="button"
             onClick={onClick}

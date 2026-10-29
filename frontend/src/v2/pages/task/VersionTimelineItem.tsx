@@ -40,8 +40,8 @@ import type { MediaSummary, VersionDetail, VersionListItem } from '../../types/a
 import type { ViewMode } from '../../stores/useViewPref';
 import { useT } from '../../i18n';
 
-/** Nœud de la timeline : une version (rail + en-tête + médias dépliables + actions).
- *  Clic droit sur la carte → décision de review (Phase 31, SUPERVISOR+). */
+/** Timeline node: a version (rail + header + expandable media + actions).
+ *  Right click on the card → review decision (Phase 31, SUPERVISOR+). */
 export default function VersionTimelineItem({
   version,
   isLast,
@@ -63,10 +63,10 @@ export default function VersionTimelineItem({
   view: ViewMode;
   canCreate: boolean;
   canPublish: boolean;
-  /** Projet porteur — active « Ajouter à la playlist » (retours CP-HUMAIN 33). */
+  /** Owning project — enables "Add to playlist" (CP-HUMAIN feedback 33). */
   projectId?: number | null;
   onUpload: (versionId: number) => void;
-  /** Fichiers lâchés sur la carte : ils rejoignent cette version (Phase 46). */
+  /** Files dropped on the card: they join this version (Phase 46). */
   onDropFiles: (versionId: number, files: File[]) => void;
   onPublishVersion: (versionId: number) => void;
   onDeleteVersion: (version: VersionListItem) => void;
@@ -80,12 +80,12 @@ export default function VersionTimelineItem({
   const [playlistOpen, setPlaylistOpen] = useState(false);
   const navigate = useNavigate();
   const role = useAuth((s) => s.user?.role);
-  // Session live en cours sur un média de cette version → badge LIVE cliquable (retours 33).
+  // Live session in progress on a media of this version → clickable LIVE badge (feedback 33).
   const liveQ = useLiveSessionsQuery(projectId);
   const liveSession = (liveQ.data ?? []).find((s) => s.versionId === version.id && s.mediaId != null) ?? null;
   const canDecide = role === 'ADMIN' || role === 'SUPERVISOR';
   const canPlaylist = projectId !== null && role !== 'CLIENT';
-  // Suivi de notifications de la version (32.G).
+  // Notification follow state of the version (32.G).
   const watch = useWatch();
   const watching = watch.isWatching('VERSION', version.id);
   const mediaQ = useQuery({
@@ -106,8 +106,8 @@ export default function VersionTimelineItem({
 
       <ContextMenu>
         <ContextMenuTrigger asChild>
-          {/* La carte est elle-même une cible de dépôt : lâcher un fichier dessus le verse
-              dans CETTE version, là où la zone du haut en crée une nouvelle (Phase 46). */}
+          {/* The card is itself a drop target: dropping a file on it fills THIS version, whereas
+              the zone at the top creates a new one (Phase 46). */}
           <div
             {...(canCreate ? dropProps : {})}
             className={`min-w-0 flex-1 rounded-lg border bg-card transition-colors ${
@@ -157,8 +157,8 @@ export default function VersionTimelineItem({
                     <Upload size={13} /> {t('review.export.media')}
                   </Button>
                 )}
-                {/* Publication en un geste (Phase 46) : proposée dès qu'il reste un
-                    brouillon à soi, ou à un superviseur sur une version encore privée. */}
+                {/* Publish in one gesture (Phase 46): offered as soon as a draft of one's own
+                    remains, or to a supervisor on a version still private. */}
                 {!version.published && (version.draftCount > 0 || canPublish) && (
                   <Button size="sm" variant="outline" onClick={() => onPublishVersion(version.id)}>
                     {version.draftCount > 0
@@ -222,7 +222,7 @@ export default function VersionTimelineItem({
             <ClipboardCheck size={14} />
             {canDecide ? t('version.decisionEllipsis') : t('version.historyEllipsis')}
           </ContextMenuItem>
-          {/* Suivi (32.G) : notifications sur commentaires/publications/décisions. */}
+          {/* Follow (32.G): notifications on comments/publications/decisions. */}
           <ContextMenuItem onClick={() => watch.toggle('VERSION', version.id)}>
             {watching ? <BellOff size={14} /> : <Bell size={14} />}
             {watching ? t('watch.unfollowVersion') : t('watch.followVersion')}

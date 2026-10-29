@@ -10,7 +10,7 @@ import { SETS, catalogKeys, citations, unusedKeys } from './check-unused-keys.mj
 const dir = mkdtempSync(join(tmpdir(), 'review-unused-keys-'));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
-/** Jeu jetable : un catalogue et un dossier de sources, comme en vrai. */
+/** Throwaway set: a catalogue and a folder of sources, as in real life. */
 function fixture(name, catalog, files) {
   const root = join(dir, name);
   mkdirSync(join(root, 'src'), { recursive: true });
@@ -21,25 +21,25 @@ function fixture(name, catalog, files) {
 }
 
 describe('citations', () => {
-  it('relève une clé citée telle quelle', () => {
+  it('reports a key cited as is', () => {
     expect(citations("t('shots.add');").exact.has('shots.add')).toBe(true);
   });
 
-  it('relève le préfixe d’une clé construite par gabarit', () => {
+  it('reports the prefix of a key built by template', () => {
     expect([...citations('t(`shotgrid.entity.${kind}`);').prefixes]).toEqual(['shotgrid.entity.']);
   });
 
-  it('relève le préfixe d’une clé construite par concaténation', () => {
+  it('reports the prefix of a key built by concatenation', () => {
     expect([...citations("t('admin.group.' + name);").prefixes]).toEqual(['admin.group.']);
   });
 
-  it('ne prend pas un gabarit d’URL pour un préfixe de clé', () => {
+  it('does not take a URL template for a key prefix', () => {
     expect([...citations('fetch(`/api/projects/${id}`);').prefixes]).toEqual([]);
   });
 });
 
 describe('unusedKeys', () => {
-  it('ne rend que les clés qu’aucune source ne cite', () => {
+  it('returns only the keys that no source cites', () => {
     const set = fixture(
       'simple',
       { 'shots.add': 'Add', 'shots.remove': 'Remove', 'common.save': 'Save' },
@@ -51,7 +51,7 @@ describe('unusedKeys', () => {
     expect(unusedKeys(set)).toEqual(['shots.remove']);
   });
 
-  it('tient pour employée toute clé descendant d’un préfixe construit', () => {
+  it('treats as used any key descending from a built prefix', () => {
     const set = fixture(
       'prefix',
       { 'onboarding.step1': 'One', 'onboarding.step2': 'Two', 'dead.key': 'Dead' },
@@ -60,7 +60,7 @@ describe('unusedKeys', () => {
     expect(unusedKeys(set)).toEqual(['dead.key']);
   });
 
-  it('compte les clés citées depuis un second dossier de sources', () => {
+  it('counts keys cited from a second folder of sources', () => {
     const front = fixture('cross-front', { 'notification.mentioned': 'You were mentioned' }, {});
     const back = fixture(
       'cross-back',
@@ -72,17 +72,17 @@ describe('unusedKeys', () => {
   });
 });
 
-describe('jeux du dépôt', () => {
-  it('déclare les deux catalogues, le front citant aussi les sources backend', () => {
+describe('repository sets', () => {
+  it('declares both catalogues, the frontend also citing the backend sources', () => {
     const frontend = SETS.find((s) => s.name === 'frontend');
     const roots = frontend.roots.map((r) => r.split(/[\\/]/).slice(-2).join('/'));
     expect(roots).toEqual(['frontend/src', 'backend/src']);
     expect(catalogKeys(frontend.catalog).length).toBeGreaterThan(1000);
   });
 
-  // Ce cas relit l'intégralité de `backend/src` à la recherche de citations : quelques
-  // dizaines de millisecondes sur une machine de développement, plusieurs secondes sur un
-  // runner partagé — le plafond de cinq secondes de vitest y était atteint.
+  // This case re-reads all of `backend/src` looking for citations: a few
+  // tens of milliseconds on a development machine, several seconds on a
+  // shared runner — vitest's five-second ceiling was reached there.
   it('ne trouve aucune clé morte côté backend', () => {
     expect(unusedKeys(SETS.find((s) => s.name === 'backend'))).toEqual([]);
   }, 30_000);

@@ -5,10 +5,19 @@ import type * as THREE from 'three';
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 /**
- * Cadre la caméra sur une sphère englobante en conservant la direction de vue courante
- * (raccourci `F` : cadrer la sélection ou l'objet sans réorienter). Ajuste near/far et la
- * cible OrbitControls. Renvoie `false` si la sphère est dégénérée. Commun 3D/splat (Phase 17,
- * extrait de `splat/scene/frameCamera`).
+ * Frames the camera on a bounding sphere while keeping the current view direction (shortcut
+ * `F`: frame the selection or object without reorienting). Adjusts near/far and the
+ * OrbitControls target. Returns `false` if the sphere is degenerate. Shared 3D/splat (Phase 17,
+ * extracted from `splat/scene/frameCamera`).
+ *
+ * Args:
+ *     camera: Camera to reposition.
+ *     controls: OrbitControls whose target is re-centred.
+ *     center: Centre of the bounding sphere.
+ *     radius: Radius of the bounding sphere.
+ *
+ * Returns:
+ *     Whether the camera was framed.
  */
 export function frameCameraToSphere(
   camera: THREE.PerspectiveCamera,
@@ -32,7 +41,7 @@ export function frameCameraToSphere(
   return true;
 }
 
-/** Sphère englobante monde d'un objet (bbox → sphère), ou null si dégénérée. */
+/** World bounding sphere of an object (bbox → sphere), or null if degenerate. */
 export function objectBoundingSphere(
   three: typeof import('three'),
   object: THREE.Object3D,
@@ -44,7 +53,7 @@ export function objectBoundingSphere(
   return { center: sphere.center, radius: sphere.radius };
 }
 
-/** Sphère englobante monde de plusieurs objets — cadrage `F` d'un prim multi-meshes (46.I). */
+/** World bounding sphere of several objects — `F` framing of a multi-mesh prim (46.I). */
 export function objectsBoundingSphere(
   three: typeof import('three'),
   objects: readonly THREE.Object3D[],

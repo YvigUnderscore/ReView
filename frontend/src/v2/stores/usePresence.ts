@@ -7,25 +7,24 @@ import { t, intlLocale } from '../i18n';
 
 export type { PresenceUser };
 
-/** Repli stable : un littéral recréé à chaque rendu ferait retravailler les `useMemo` des appelants. */
+/** Stable fallback: a literal recreated on every render would make callers' `useMemo` recompute. */
 const NO_ONE: PresenceUser[] = [];
 
 /**
- * Présence des utilisateurs du studio.
+ * Presence of the studio's users.
  *
- * Simple lecture du cache TanStack Query (clé partagée, `staleTime` d'une minute) :
- * l'annuaire ne repart sur le réseau ni parce qu'un second panneau s'ouvre, ni parce
- * qu'un composant se démonte et se remonte. La fraîcheur de « qui est en ligne » vient
- * de la poussée socket `presence:update`, branchée une seule fois par le pont temps réel
- * (`usePresenceBridge`, lib/socketBridge) qui écrit dans ce même cache — et non d'un
- * magasin parallèle, ni d'un rechargement.
+ * A plain read of the TanStack Query cache (shared key, one-minute `staleTime`): the directory
+ * does not go back to the network because a second panel opens, nor because a component unmounts
+ * and remounts. The freshness of "who is online" comes from the `presence:update` socket push,
+ * wired up once by the real-time bridge (`usePresenceBridge`, lib/socketBridge) which writes into
+ * that same cache — not from a parallel store, nor from a reload.
  */
 export function usePresence(): { users: PresenceUser[] } {
   const { data } = usePresenceQuery();
   return { users: data ?? NO_ONE };
 }
 
-/** Format « actif il y a X » à partir d'un timestamp ISO. */
+/** "Active X ago" format from an ISO timestamp. */
 export function lastSeenLabel(iso: string | null, online: boolean): string {
   if (online) return t('shell.online');
   if (!iso) return t('presence.neverSeen');

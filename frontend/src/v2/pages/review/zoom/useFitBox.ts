@@ -10,24 +10,24 @@ import {
   type Size,
 } from '../compare/compareFit';
 
-/** Boîte d'affichage du média (pixels) — l'overlay d'annotation partage exactement la même. */
+/** Display box of the media (pixels) — the annotation overlay shares exactly the same box. */
 export type FitBox = Size;
 
 /**
- * Ajustement « contain » calculé à la main : le média remplit tout l'espace disponible,
- * même en basse résolution, et l'overlay d'annotation peut se caler sur la même boîte.
+ * "Contain" fit computed by hand: the media fills all the available space, even at low resolution,
+ * and the annotation overlay can align itself on the same box.
  *
- * `remeasureKey` force une nouvelle mesure quand la taille du conteneur change sans que
- * le conteneur lui-même change (entrée/sortie du plein écran) : sans elle, la vidéo
- * gardait sa taille d'avant, minuscule au centre de l'écran noir.
+ * `remeasureKey` forces a new measurement when the container size changes without the container
+ * itself changing (entering/leaving fullscreen): without it, the video kept its previous size,
+ * tiny in the middle of the black screen.
  *
- * Dans une comparaison (`CompareFitProvider`), la zone mesurée est **inscrite** et le média
- * s'ajuste dans la zone commune à tous les panes : deux médias de résolutions différentes
- * s'affichent alors à la même taille, alors que le pane maître (timeline + transport sous
- * l'image) et les panes B (en-tête) n'ont jamais la même hauteur disponible.
+ * In a comparison (`CompareFitProvider`), the measured zone is **registered** and the media fits
+ * within the zone common to all panes: two media of different resolutions are then displayed at
+ * the same size, even though the master pane (timeline + transport under the image) and the B
+ * panes (header) never have the same available height.
  *
- * `grouped` faux sort le pane de ce partage : un pane passé seul en plein écran n'a plus à
- * tenir dans la zone des autres, restés à leur taille de mise en page derrière lui.
+ * `grouped` false takes the pane out of this sharing: a pane shown alone in fullscreen no longer
+ * has to fit within the zone of the others, which stay at their layout size behind it.
  */
 export function useFitBox(
   containerRef: RefObject<HTMLElement | null>,
@@ -46,8 +46,8 @@ export function useFitBox(
     const measure = () => {
       const w = el.clientWidth;
       const h = el.clientHeight;
-      // Même mesure : on rend l'objet d'origine, sinon chaque impulsion de l'observateur
-      // provoquerait un rendu du lecteur pour rien.
+      // Same measurement: keep the original object, otherwise every observer tick would
+      // re-render the player for nothing.
       setZone((prev) => (prev && prev.w === w && prev.h === h ? prev : { w, h }));
     };
     measure();
@@ -56,8 +56,8 @@ export function useFitBox(
     return () => ro.disconnect();
   }, [containerRef, remeasureKey]);
 
-  // Inscription au groupe de comparaison — retirée au démontage du pane, sinon la zone d'un
-  // pane fermé continuerait de rapetisser celle des autres.
+  // Registration in the comparison group — removed on pane unmount, otherwise the zone of a
+  // closed pane would keep shrinking the others.
   useEffect(() => {
     if (!publish || !zone || !grouped) return;
     publish(paneId, zone);
@@ -65,8 +65,8 @@ export function useFitBox(
   }, [publish, paneId, zone, grouped]);
 
   const box = useMemo(() => {
-    // La zone commune compte l'inscription de ce pane, mais pas encore au premier rendu :
-    // on la recroise avec la mesure locale pour ne jamais déborder de sa propre zone.
+    // The common zone counts this pane's registration, but not yet on the first render:
+    // intersect it with the local measurement so as never to overflow its own zone.
     const z = commonZone([zone, grouped ? groupZone : null].filter((s): s is Size => s != null));
     if (!z || !aspect) return null;
     return containBox(z, aspect);

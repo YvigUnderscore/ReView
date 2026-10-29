@@ -5,14 +5,14 @@ import Hls from 'hls.js';
 import { api } from '../../../lib/apiClient';
 
 /**
- * Source d'un média du montage — la même que celle de la review : le master HLS servi par le
- * proxy authentifié quand des renditions existent, le fichier web sinon.
+ * Source of a montage media — the same as the review's: the HLS master served by the authenticated
+ * proxy when renditions exist, the web file otherwise.
  *
- * Aligner les deux n'est pas cosmétique : le montage doit lire ce que la review lit, faute de
- * quoi un plan visible en review resterait noir dans le film sans qu'on sache pourquoi.
+ * Aligning the two is not cosmetic: the montage must read what the review reads, otherwise a shot
+ * visible in review would stay black in the film without anyone knowing why.
  *
- * Partagé entre la lecture vidéo (`useContinuousPlayback`) et les plans-image
- * (`useStillSource`) : ces derniers ne prennent que `file`, qu'ils posent dans une `<img>`.
+ * Shared between video playback (`useContinuousPlayback`) and still shots (`useStillSource`): the
+ * latter only take `file`, which they set in an `<img>`.
  */
 export async function playbackSource(
   mediaId: number,

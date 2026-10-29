@@ -10,16 +10,16 @@ export default {
       fontFamily: {
         sans: ['"Inter Variable"', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
       },
-      // Plus petit cran de la grille typographique (A1/A2). Exprimé en rem via le token,
-      // donc sensible au réglage de densité — contrairement aux `text-[10px]` en dur, qui
-      // restaient figés et aplatissaient la hiérarchie en mode compact.
+      // Smallest step of the type scale (A1/A2). Expressed in rem via the token, so it responds
+      // to the density setting — unlike hard-coded `text-[10px]`, which stayed fixed and flattened
+      // the hierarchy in compact mode.
       fontSize: {
         '2xs': ['var(--text-2xs)', { lineHeight: '1rem' }],
       },
       colors: {
         border: 'hsl(var(--border))',
-        // Limite d'un contrôle actionnable (bouton `outline`, bouton à icône bordé) : tient
-        // 3:1 avec sa surface, là où `border` n'est qu'un séparateur décoratif.
+        // Edge of an actionable control (`outline` button, bordered icon button): holds
+        // 3:1 against its surface, whereas `border` is only a decorative separator.
         'border-strong': 'hsl(var(--border-strong))',
         input: 'hsl(var(--input))',
         ring: 'hsl(var(--ring))',
@@ -45,12 +45,12 @@ export default {
           DEFAULT: 'hsl(var(--accent))',
           foreground: 'hsl(var(--accent-foreground))',
         },
-        // Magenta (Phase 12) : notifications/badges, avatars, data-viz, actions secondaires.
+        // Magenta (Phase 12): notifications/badges, avatars, data viz, secondary actions.
         accent2: {
           DEFAULT: 'hsl(var(--accent-2))',
           foreground: 'hsl(var(--accent-2-foreground))',
         },
-        // Tokens sémantiques de statut (badges, jauges, pastilles).
+        // Semantic status tokens (badges, gauges, dots).
         success: 'hsl(var(--success))',
         warning: 'hsl(var(--warning))',
         info: 'hsl(var(--info))',

@@ -4,9 +4,9 @@
 import { create } from 'zustand';
 
 /**
- * Guides de composition du viewer (34.G) : règle des tiers, croix centrale, safe areas
- * action (90 %) et titre (80 %). Préférence locale au navigateur (localStorage), activée
- * par le menu clic droit de la review — s'applique au cadre du média affiché.
+ * Composition guides of the viewer (34.G): rule of thirds, centre cross, action (90 %) and title
+ * (80 %) safe areas. Browser-local preference (localStorage), enabled from the review's right-click
+ * menu — applies to the frame of the displayed media.
  */
 export type GuideKey = 'thirds' | 'center' | 'actionSafe' | 'titleSafe';
 

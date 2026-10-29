@@ -5,7 +5,7 @@ import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { useFitBox } from './useFitBox';
 
-/** Conteneur de taille fixée : happy-dom ne met en page rien du tout. */
+/** Container with a fixed size: happy-dom does no layout at all. */
 const container = (w: number, h: number) => {
   const el = document.createElement('div');
   Object.defineProperty(el, 'clientWidth', { value: w, configurable: true });
@@ -14,13 +14,13 @@ const container = (w: number, h: number) => {
 };
 
 describe('useFitBox', () => {
-  it('sans ratio connu, aucune boîte : le média n’est pas encore chargé', () => {
+  it('with no known ratio, no box: the media is not loaded yet', () => {
     const ref = container(800, 600);
     const { result } = renderHook(() => useFitBox(ref));
     expect(result.current.box).toBeNull();
   });
 
-  it('conteneur plus large que le média : la hauteur commande', () => {
+  it('container wider than the media: the height drives', () => {
     const ref = container(800, 300);
     const { result } = renderHook(() => useFitBox(ref));
     act(() => result.current.setAspect(16 / 9));
@@ -28,14 +28,14 @@ describe('useFitBox', () => {
     expect(result.current.box?.w).toBeCloseTo((300 * 16) / 9, 6);
   });
 
-  it('conteneur plus haut que le média : la largeur commande', () => {
+  it('container taller than the media: the width drives', () => {
     const ref = container(320, 600);
     const { result } = renderHook(() => useFitBox(ref));
     act(() => result.current.setAspect(16 / 9));
     expect(result.current.box).toEqual({ w: 320, h: 320 / (16 / 9) });
   });
 
-  it('re-mesure quand la clé change (entrée/sortie du plein écran)', () => {
+  it('re-measures when the key changes (entering/leaving fullscreen)', () => {
     const ref = container(800, 300);
     const { result, rerender } = renderHook(({ full }: { full: boolean }) => useFitBox(ref, full), {
       initialProps: { full: false },

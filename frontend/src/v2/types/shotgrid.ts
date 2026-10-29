@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { Role, TaskStatus } from './api';
-/** Types de l'intégration ShotGrid (Phase 48) — miroir des vues renvoyées par l'API. */
+/** ShotGrid integration types (Phase 48) — mirror of the views returned by the API. */
 
 export type SgAuthMode = 'script' | 'user';
 
@@ -29,9 +29,9 @@ export type SgDomain = 'hierarchy' | 'tasks' | 'statuses' | 'versions' | 'notes'
 export interface SgSettings {
   domains: Record<SgDomain, SgAccess>;
   lockLocalCreation: boolean;
-  /** Étapes de pipeline retenues pour ce projet, par identifiant ShotGrid. */
+  /** Pipeline steps kept for this project, by ShotGrid identifier. */
   steps: { asset: number[]; shot: number[] };
-  /** Statuts retenus pour ce projet, par périmètre et par code ShotGrid ; vide = tous. */
+  /** Statuses kept for this project, by scope and by ShotGrid code; empty = all. */
   visibleStatuses: Record<StatusScope, string[]>;
   eventMode: 'webhook' | 'polling' | 'manual';
   pollingIntervalSec: number;
@@ -41,18 +41,18 @@ export interface SgSettings {
     autoImport: boolean;
     statusFilter: string[];
     maxSizeMo: number | null;
-    /** `sgCode` : le média porte le code de la Version ShotGrid. `filename` : son nom de fichier. */
+    /** `sgCode`: the media carries the ShotGrid Version code. `filename`: its file name. */
     naming: 'sgCode' | 'filename';
-    /** Rapatrier la vignette que le site porte sur une séquence, un plan ou un asset. */
+    /** Bring back the thumbnail the site holds for a sequence, a shot or an asset. */
     thumbnails: boolean;
   };
   push: { publishMode: 'link' | 'upload' | 'off'; attributeToUser: boolean; attachAnnotations: boolean };
   /**
-   * Qui écrit la description d'une séquence, d'un plan ou d'un asset.
+   * Who writes the description of a sequence, a shot or an asset.
    *
-   * `shotgrid` (le défaut) : le site fait foi, et le champ est **en lecture seule** dans
-   * ReView — l'y modifier produirait une divergence que la synchronisation suivante
-   * écraserait sans le dire. `writeBack` ouvre l'aller-retour.
+   * `shotgrid` (the default): the site is authoritative, and the field is **read-only** in ReView —
+   * editing it there would create a divergence that the next sync would silently overwrite.
+   * `writeBack` opens the round trip.
    */
   descriptions: { source: 'shotgrid' | 'review'; writeBack: boolean };
   versionStatusMap: Record<string, number>;
@@ -74,7 +74,7 @@ export interface SgConnection {
   settings: SgSettings;
   lastSyncAt: string | null;
   lastEventAt: string | null;
-  /** Domaines dont des écritures vers le site ont été refusées par la matrice de droits. */
+  /** Domains for which writes to the site were refused by the rights matrix. */
   pushBlocked: Record<string, { count: number; at: string }>;
   webhookUrl: string;
   hasWebhookSecret: boolean;
@@ -153,12 +153,11 @@ export interface SgImportableVersion {
 }
 
 /**
- * Les quatre périmètres qui portent un statut de pipeline.
+ * The four scopes that carry a pipeline status.
  *
- * ShotGrid tient une liste par entité (`sg_status_list` sur Task, Shot, Sequence et Asset),
- * et elles ne coïncident pas : quatre valeurs sur une séquence, quinze sur un plan. Les
- * confondre proposait à l'écran des états que le site refuse à l'écriture — et l'asset
- * empruntait le vocabulaire des tâches faute d'en avoir un.
+ * ShotGrid keeps one list per entity (`sg_status_list` on Task, Shot, Sequence and Asset), and they
+ * do not coincide: four values on a sequence, fifteen on a shot. Mixing them up offered the screen
+ * states the site refuses on write — and the asset borrowed the task vocabulary for lack of its own.
  */
 export type StatusScope = 'task' | 'shot' | 'sequence' | 'asset';
 
@@ -171,11 +170,11 @@ export interface PipelineStatus {
   order: number;
   isDone: boolean;
   isDefault: boolean;
-  /** Valeur de l'énumération que ce statut représente — c'est elle qui porte la famille. */
+  /** The enum value this status represents — it is what carries the family. */
   legacyStatus: TaskStatus | null;
 }
 
-/** Ce que ReView sait déjà d'une personne de l'équipe ShotGrid. */
+/** What ReView already knows about a ShotGrid crew member. */
 export type SgCrewState = 'member' | 'account' | 'none' | 'ineligible';
 
 export interface SgCrewPerson {
@@ -186,21 +185,21 @@ export interface SgCrewPerson {
   sgStatus: string | null;
   state: SgCrewState;
   userId: number | null;
-  /** Vrai quand le rapprochement vient d'un lien posé à la main, pas de l'adresse. */
+  /** True when the match comes from a link set by hand, not from the address. */
   linkedByHand: boolean;
   projectRole: Role | null;
   userRole: Role | null;
-  /** Département tel que le site le nomme, même sans correspondance locale (lot 10). */
+  /** Department as the site names it, even without a local match (lot 10). */
   sgDepartment: string | null;
-  /** Département ReView correspondant, quand le studio en a déjà un sous ce nom. */
+  /** Matching ReView department, when the studio already has one under this name. */
   department: { id: number; name: string } | null;
 }
 
 export interface SgCrewResponse {
   crew: SgCrewPerson[];
-  /** Faux pour un superviseur de projet : il peut ajouter, pas créer de compte. */
+  /** False for a project supervisor: they can add people, not create accounts. */
   canCreateAccounts: boolean;
-  /** Sans relais courriel configuré, aucune invitation ne partira. */
+  /** Without a configured email relay, no invitation will be sent. */
   smtpReady: boolean;
 }
 

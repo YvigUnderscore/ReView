@@ -4,23 +4,22 @@
 import { EMPTY_FILTERS, type ReviewsFilterState } from './reviewsTypes';
 
 /**
- * Les filtres de la page Reviews, dans l'URL.
+ * The Reviews page filters, in the URL.
  *
- * Ils vivaient dans un `useState` : la page ignorait complètement la query-string, à la
- * lecture comme à l'écriture. Conséquences en cascade — aucune carte de l'Accueil ne pouvait
- * ouvrir une vue filtrée (le seul lien possible était « tout »), un état de recherche ne se
- * partageait ni ne se mettait en favori, et le retour arrière du navigateur quittait la page
- * au lieu de défaire le dernier filtre.
+ * They used to live in a `useState`: the page completely ignored the query string, both when
+ * reading and when writing. Cascading consequences — no Home card could open a filtered view (the
+ * only possible link was "all"), a search state could be neither shared nor bookmarked, and the
+ * browser's back button left the page instead of undoing the last filter.
  *
- * L'URL devient donc la seule source : plus d'état local à synchroniser, donc aucune
- * divergence possible entre ce que dit l'adresse et ce que montre la liste.
+ * The URL therefore becomes the only source: no local state to keep in sync, so no possible
+ * divergence between what the address says and what the list shows.
  *
- * Les clés sont dérivées de `EMPTY_FILTERS` : un filtre ajouté à la page est porté par l'URL
- * sans qu'on ait à y penser — une liste recopiée ici aurait fini par en oublier un.
+ * The keys are derived from `EMPTY_FILTERS`: a filter added to the page is carried by the URL
+ * without anyone having to think about it — a list copied here would sooner or later have missed one.
  */
 const FILTER_KEYS = Object.keys(EMPTY_FILTERS) as (keyof ReviewsFilterState)[];
 
-/** Les filtres tels que l'adresse les décrit ; tout paramètre absent revient à vide. */
+/** The filters as the address describes them; any missing parameter returns to empty. */
 export function filtersFromSearch(search: URLSearchParams): ReviewsFilterState {
   const out = { ...EMPTY_FILTERS };
   for (const key of FILTER_KEYS) out[key] = search.get(key) ?? '';
@@ -28,8 +27,8 @@ export function filtersFromSearch(search: URLSearchParams): ReviewsFilterState {
 }
 
 /**
- * L'adresse mise à jour par un jeu de filtres. Les paramètres étrangers à la page sont
- * conservés : ils appartiennent à l'appelant, pas aux filtres.
+ * The address updated by a set of filters. Parameters foreign to the page are kept: they belong
+ * to the caller, not to the filters.
  */
 export function searchWithFilters(search: URLSearchParams, filters: ReviewsFilterState): URLSearchParams {
   const next = new URLSearchParams(search);
@@ -42,9 +41,8 @@ export function searchWithFilters(search: URLSearchParams, filters: ReviewsFilte
 }
 
 /**
- * La query-string envoyée au serveur : les filtres actifs seulement, dans un ordre stable
- * — c'est aussi la clé de cache de la liste, qui ne doit pas changer de forme selon la
- * manière dont l'adresse a été écrite.
+ * The query string sent to the server: active filters only, in a stable order — it is also the
+ * list's cache key, which must not change shape depending on how the address was written.
  */
 export function apiQuery(filters: ReviewsFilterState): string {
   return searchWithFilters(new URLSearchParams(), filters).toString();

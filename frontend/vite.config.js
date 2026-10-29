@@ -12,17 +12,16 @@ const I18N_DIR = path.join(path.dirname(fileURLToPath(import.meta.url)), 'src/v2
 const MESSAGES_DIR = path.join(I18N_DIR, 'messages');
 
 /**
- * Langues dont le catalogue couvre TOUTES les clés de l'anglais, langue de base.
+ * Locales whose catalogue covers ALL the keys of English, the base language.
  *
- * Aucun catalogue n'est inliné dans le chunk d'entrée (F1) : l'anglais y pesait 51,5 ko
- * gzip que tout lecteur non anglophone téléchargeait avant sa propre langue, pour ne
- * jamais en lire une phrase. Le socle i18n ne va chercher l'anglais que lorsqu'il sert
- * réellement de repli ; encore faut-il le savoir sans l'avoir téléchargé, d'où cette
- * liste calculée ici, sur les fichiers-mêmes qui partent dans le bundle.
+ * No catalogue is inlined in the entry chunk (F1): English weighed 51.5 KB gzip, which every
+ * non-English reader downloaded before their own language, only to never read a sentence of it.
+ * The i18n core only fetches English when it is really needed as a fallback; one still has to know
+ * that without having downloaded it, hence this list computed here, from the very files that ship
+ * in the bundle.
  *
- * Une traduction partielle reste servable : sa langue sort simplement de la liste et
- * l'anglais repart avec elle, en parallèle. La lecture échoue-t-elle ? On rend une liste
- * vide — tout le monde charge l'anglais, comme avant.
+ * A partial translation remains servable: its language simply leaves the list and English goes back
+ * in alongside it. If the read fails, we return an empty list — everyone loads English, as before.
  */
 export function localesCoveringBaseCatalog() {
   try {
@@ -41,29 +40,28 @@ export function localesCoveringBaseCatalog() {
 }
 
 /**
- * Clé de `localStorage` où le socle i18n range la langue choisie. Doit rester égale à
- * `LOCALE_STORAGE_KEY` (`src/v2/i18n/index.ts`) — le préchargement lit la même case que
- * le runtime, sinon il précharge la mauvaise langue. Vérifié par `preload.test.ts`.
+ * `localStorage` key where the i18n core stores the chosen language. Must stay equal to
+ * `LOCALE_STORAGE_KEY` (`src/v2/i18n/index.ts`) — the preload reads the same slot as the runtime,
+ * otherwise it preloads the wrong language. Checked by `preload.test.ts`.
  */
 export const LOCALE_STORAGE_KEY = 'locale';
 
-/** Registre des langues, lu au build : ordre de priorité de la négociation et langue de base. */
+/** Language registry, read at build time: negotiation priority order and base language. */
 function localeRegistry() {
   const registry = JSON.parse(readFileSync(path.join(I18N_DIR, 'locales.json'), 'utf8'));
   return { base: registry.base, codes: registry.locales.map((l) => l.code) };
 }
 
-/** Repère un chunk de catalogue : `…/src/v2/i18n/messages/<code>.json`, et rien d'autre. */
+/** Identifies a catalogue chunk: `…/src/v2/i18n/messages/<code>.json`, and nothing else. */
 const CATALOG_MODULE = /\/src\/v2\/i18n\/messages\/([A-Za-z-]+)\.json$/;
 
 /**
- * Table « code de langue → fichier du chunk », relevée sur le bundle réellement produit.
+ * Table "language code → chunk file", read from the bundle actually produced.
  *
- * Les catalogues sont importés par `import.meta.glob`, donc leur nom de fichier n'est connu
- * qu'à la fin du build — c'est précisément pourquoi `index.html` ne pouvait pas les
- * précharger. On ne se fie ni au nom du chunk ni à son ordre : seuls comptent les modules
- * qu'il contient. Le catalogue Excalidraw `fr-FR-*.js` porte un nom très ressemblant et ne
- * doit surtout pas être pris pour le nôtre.
+ * The catalogues are imported through `import.meta.glob`, so their file name is only known at the
+ * end of the build — which is precisely why `index.html` could not preload them. We rely neither on
+ * the chunk name nor on its order: only the modules it contains count. The Excalidraw catalogue
+ * `fr-FR-*.js` has a very similar name and must certainly not be mistaken for ours.
  *
  * @returns {Record<string, string>} table code de langue → chemin servi du chunk.
  */
@@ -81,17 +79,16 @@ export function catalogChunkMap(bundle, base = '/') {
 }
 
 /**
- * Source du script de préchargement des catalogues (F13).
+ * Source of the catalogue preload script (F13).
  *
- * Il rejoue la négociation de `negotiateLocale()` — choix enregistré sur l'appareil, sinon
- * `navigator.languages` — puis injecte le `<link rel="modulepreload">` du catalogue retenu.
- * La parité avec la version TypeScript est vérifiée tag par tag dans `preload.test.ts` :
- * c'est une duplication assumée, aucun module applicatif ne pouvant être exécuté avant le
- * bundle lui-même.
+ * It replays the negotiation of `negotiateLocale()` — choice saved on the device, otherwise
+ * `navigator.languages` — then injects the `<link rel="modulepreload">` of the selected catalogue.
+ * Parity with the TypeScript version is checked tag by tag in `preload.test.ts`: this is a deliberate
+ * duplication, since no application module can run before the bundle itself.
  *
- * `crossorigin` est obligatoire : Vite écrit `<script type="module" crossorigin>`, donc les
- * imports dynamiques partent en mode CORS anonyme. Une précharge sans l'attribut serait une
- * requête distincte — le catalogue serait téléchargé deux fois au lieu de zéro.
+ * `crossorigin` is mandatory: Vite writes `<script type="module" crossorigin>`, so dynamic imports go
+ * out in anonymous CORS mode. A preload without the attribute would be a separate request — the
+ * catalogue would be downloaded twice instead of zero times.
  */
 export function i18nPreloadSnippet({ map, fullLocales, codes, base, storageKey }) {
   const data = [
@@ -111,9 +108,9 @@ export function i18nPreloadSnippet({ map, fullLocales, codes, base, storageKey }
     `for(var k=0;k<C.length;k++)if(C[k].toLowerCase().split('-')[0]===p)return C[k];}` +
     `return B;}` +
     `var code=null;try{var s=localStorage.getItem(K);if(C.indexOf(s)>=0)code=s;}catch(e){}` +
-    // Lien de partage : anglais d'emblée, sans négocier — même règle que `isSharePath`
-    // dans le socle i18n. Les deux doivent s'accorder, sinon le document précharge une
-    // langue et le bundle en télécharge une autre (parité tenue par `preload.test.ts`).
+    // Share link: English straight away, without negotiating — same rule as `isSharePath`
+    // in the i18n core. The two must agree, otherwise the document preloads one
+    // language and the bundle downloads another (parity held by `preload.test.ts`).
     `if(!code&&location.pathname.indexOf('/client/')>=0)code=B;` +
     `if(!code){var L=navigator.languages;code=pick(L?L:[navigator.language]);}` +
     `function pre(href){if(!href)return;var l=document.createElement('link');` +
@@ -123,41 +120,41 @@ export function i18nPreloadSnippet({ map, fullLocales, codes, base, storageKey }
 }
 
 /**
- * Insère le script de préchargement dans `<head>`, **avant** le module d'entrée.
+ * Inserts the preload script into `<head>`, **before** the entry module.
  *
- * L'ordre n'est pas cosmétique : scripts différés et modules s'exécutent dans l'ordre du
- * document. Posé après l'entrée — ce qu'on a mesuré — le script n'était exécuté qu'une fois
- * les 122 ko du bundle téléchargés ET évalués, et la requête du catalogue repartait au même
- * instant qu'avant le correctif : zéro gain. Posé avant, il s'exécute dès son arrivée
- * (1,1 ko), pendant que le bundle est encore en vol.
+ * The order is not cosmetic: deferred scripts and modules execute in document order. Placed after
+ * the entry — which is what we measured — the script only ran once the 122 KB bundle had been
+ * downloaded AND evaluated, and the catalogue request left at the same moment as before the fix:
+ * zero gain. Placed before, it runs as soon as it arrives (1.1 KB), while the bundle is still in
+ * flight.
  *
- * Script **classique** et non module : `scripts/check-bundle-budget.mjs` identifie l'entrée
- * par la première balise `type="module"`, et un module placé ici lui ferait mesurer ce
- * fichier-ci — quelques centaines d'octets — au lieu du vrai premier chargement.
+ * A **classic** script, not a module: `scripts/check-bundle-budget.mjs` identifies the entry by the
+ * first `type="module"` tag, and a module placed here would make it measure this file — a few hundred
+ * bytes — instead of the real first load.
  */
 export function injectPreloadScript(html, href) {
   const tag = `<script defer src="${href}"></script>`;
   const entry = html.search(/<script[^>]+type="module"/);
-  // Repli sur la fin de l'en-tête si Vite change sa façon d'injecter l'entrée : le
-  // préchargement y perd son avance, mais le document reste valide.
+  // Fallback to the end of the head if Vite changes how it injects the entry: the
+  // preload loses its head start, but the document stays valid.
   if (entry < 0) return html.replace('</head>', `  ${tag}\n  </head>`);
   return `${html.slice(0, entry)}${tag}\n    ${html.slice(entry)}`;
 }
 
 /**
- * Précharge le catalogue de langue dès l'analyse du document (F13).
+ * Preloads the language catalogue as soon as the document is parsed (F13).
  *
- * Sans lui, la requête du catalogue ne part qu'une fois le chunk d'entrée téléchargé,
- * analysé et exécuté — et le premier rendu l'attend. Mesuré à 80 ms de latence : le
- * catalogue français démarrait à t+197 ms là où le bundle démarrait à t+96 ms, soit un
- * aller-retour entièrement sérialisé derrière 414 ko de JavaScript.
+ * Without it, the catalogue request only leaves once the entry chunk has been downloaded, parsed
+ * and executed — and the first render waits for it. Measured at 80 ms latency: the French catalogue
+ * started at t+197 ms where the bundle started at t+96 ms, i.e. a fully serialised round trip behind
+ * 414 KB of JavaScript.
  *
- * Le document ne peut pas deviner la langue : elle vient de `localStorage` puis de
- * `navigator.languages`, deux sources que seul du JavaScript atteint. L'auditeur proposait
- * un script **inline** avec nonce CSP ; la CSP de production (`script-src 'self'`) n'a ni
- * `unsafe-inline` ni nonce sur cette page, et l'y rouvrir défairait le lot sécurité. Un
- * fichier externe de quelques centaines d'octets passe par `'self'` sans toucher à la CSP :
- * son aller-retour se recouvre avec celui du bundle, cent fois plus gros.
+ * The document cannot guess the language: it comes from `localStorage` then `navigator.languages`,
+ * two sources only JavaScript can reach. The auditor proposed an **inline** script with a CSP nonce;
+ * the production CSP (`script-src 'self'`) has neither `unsafe-inline` nor a nonce on this page, and
+ * reopening it would undo the security batch. An external file of a few hundred bytes goes through
+ * `'self'` without touching the CSP: its round trip overlaps with the bundle's, which is a hundred
+ * times bigger.
  */
 function i18nCatalogPreload() {
   let base = '/';
@@ -174,8 +171,8 @@ function i18nCatalogPreload() {
       const html = bundle['index.html'];
       if (!html || html.type !== 'asset' || typeof html.source !== 'string') return;
       const map = catalogChunkMap(bundle, base);
-      // Aucun catalogue repéré : on ne touche pas au document plutôt que d'y poser un
-      // script qui ne préchargerait rien.
+      // No catalogue found: leave the document alone rather than adding a script that
+      // would preload nothing.
       if (Object.keys(map).length === 0) return;
       const { base: baseLocale, codes } = localeRegistry();
       const source = i18nPreloadSnippet({
@@ -185,8 +182,8 @@ function i18nCatalogPreload() {
         base: baseLocale,
         storageKey: LOCALE_STORAGE_KEY,
       });
-      // Nom haché comme les autres assets : le contenu change avec les empreintes des
-      // catalogues, et nginx sert `/assets/` en `immutable`.
+      // Hashed name like the other assets: the content changes with the catalogue
+      // fingerprints, and nginx serves `/assets/` as `immutable`.
       const hash = createHash('sha256').update(source).digest('base64url').slice(0, 8);
       const fileName = `${assetsDir}/i18n-preload-${hash}.js`;
       this.emitFile({ type: 'asset', fileName, source });
@@ -199,14 +196,14 @@ function i18nCatalogPreload() {
 export default defineConfig({
   plugins: [react(), i18nCatalogPreload()],
   define: {
-    // Lue par `src/v2/i18n/index.ts`. Chaîne littérale plutôt que tableau : le
-    // remplacement est textuel, et une virgule est plus courte qu'un JSON de tableau.
+    // Read by `src/v2/i18n/index.ts`. A string literal rather than an array: the
+    // replacement is textual, and a comma is shorter than a JSON array.
     'import.meta.env.I18N_FULL_LOCALES': JSON.stringify(localesCoveringBaseCatalog().join(',')),
   },
-  // Conservation des bannières de licence des dépendances dans le bundle livré au
-  // navigateur : MIT, BSD et ISC exigent que leur notice accompagne toute redistribution,
-  // or esbuild les supprime par défaut à la minification. L'attribution complète reste
-  // dans THIRD-PARTY-NOTICES.md ; ceci garantit qu'elle voyage aussi avec le code servi.
+  // Keep the dependencies' licence banners in the bundle shipped to the browser: MIT, BSD and ISC
+  // require their notice to accompany any redistribution, yet esbuild strips them by default during
+  // minification. The full attribution remains in THIRD-PARTY-NOTICES.md; this ensures it also travels
+  // with the code served.
   esbuild: {
     legalComments: 'inline',
   },
@@ -214,14 +211,13 @@ export default defineConfig({
     rollupOptions: {
       output: {
         /**
-         * Socle applicatif dans son propre fichier (D3) : React, le routeur, la couche de
-         * données. Le moindre correctif invalidait tout, et le navigateur retéléchargeait
-         * ces bibliothèques inchangées à chaque déploiement.
+         * Application core in its own file (D3): React, the router, the data layer. The slightest fix
+         * used to invalidate everything, and the browser re-downloaded these unchanged libraries on
+         * every deployment.
          *
-         * On ne groupe QUE ce qui est de toute façon chargé au démarrage. Nommer un chunk
-         * pour three, Spark ou Excalidraw les ferait remonter en import statique du point
-         * d'entrée — ils sont chargés à la demande, et le resteraient sur le papier tout
-         * en étant téléchargés d'emblée.
+         * ONLY what is loaded at startup anyway is grouped. Naming a chunk for three, Spark or
+         * Excalidraw would pull them up into static imports of the entry point — they are loaded on
+         * demand, and would remain so on paper while being downloaded straight away.
          */
         manualChunks: (id) => {
           if (!id.includes('node_modules')) return undefined;
@@ -250,12 +246,12 @@ export default defineConfig({
   },
   preview: {
     proxy: {
-      // Preview testé contre le backend conteneurisé (port hôte 3430)
+      // Preview tested against the containerised backend (host port 3430)
       '/api': {
         target: 'http://localhost:3430',
         changeOrigin: true,
       },
-      // Sans lui, aucun événement temps réel (présence, hls:changed, markers…) en preview.
+      // Without it, no real-time event (presence, hls:changed, markers…) reaches the preview.
       '/socket.io': {
         target: 'ws://localhost:3430',
         ws: true,

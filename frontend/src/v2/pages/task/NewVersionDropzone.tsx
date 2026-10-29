@@ -7,11 +7,11 @@ import { useFileDrop } from '../../lib/useFileDrop';
 import { useT } from '../../i18n';
 
 /**
- * Zone « déposer pour créer la version suivante » (Phase 46).
+ * "Drop to create the next version" zone (Phase 46).
  *
- * Livrer un travail se faisait en trois temps — créer la version, viser son bouton
- * d'upload, traverser un sélecteur de fichiers — pour une seule intention. Ici le dépôt
- * crée la version et la remplit ; le clic reste disponible pour qui préfère parcourir.
+ * Delivering work used to take three steps — create the version, aim at its upload button, go
+ * through a file picker — for a single intention. Here, dropping creates the version and fills it;
+ * clicking remains available for whoever prefers to browse.
  */
 export default function NewVersionDropzone({ onFiles }: { onFiles: (files: File[]) => void }) {
   const t = useT();

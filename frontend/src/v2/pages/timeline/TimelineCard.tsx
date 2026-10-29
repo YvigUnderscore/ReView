@@ -12,17 +12,16 @@ import EntityContextMenu from '../../components/ui/entity-menu';
 import { useT } from '../../i18n';
 
 /**
- * Le montage, en une ligne.
+ * The montage, in one line.
  *
- * La carte occupait le haut de chaque page de séquence et de l'onglet Séquences avec une
- * bande de plans, un sélecteur d'étape, un bouton d'instantané, un export et un champ de
- * renommage — plus de place que la liste qu'on venait consulter. Or on ne monte pas depuis
- * cette carte : on va **voir le film**, et le montage se regarde sur sa propre page avec
- * l'outillage de review complet.
+ * The card used to take the top of each sequence page and of the Sequences tab with a strip of
+ * shots, a stage selector, a snapshot button, an export and a rename field — more room than the
+ * list it was there to consult. Yet one does not edit from this card: one goes to **watch the
+ * film**, and the montage is viewed on its own page with the full review tooling.
  *
- * Il reste donc un bouton — « Jouer le film » ou « Jouer la sequence » selon le contexte —
- * et une ligne de repères. Tout le reste (renommer, choisir l'étape, prendre une révision,
- * exporter) passe au clic droit, comme partout ailleurs dans ReView.
+ * It therefore keeps a single button — "Play the film" or "Play the sequence" depending on the
+ * context — and a line of markers. Everything else (rename, pick the stage, take a revision,
+ * export) goes to the right-click menu, as everywhere else in ReView.
  */
 export default function TimelineCard({
   projectId,
@@ -37,12 +36,12 @@ export default function TimelineCard({
   const canManage = role === 'ADMIN' || role === 'SUPERVISOR';
   const data = useTimelineData(projectId, sequenceId);
   const { timeline, isLoading } = data;
-  // Le hook est appelé sans condition (règle des hooks) : il rend une liste vide tant
-  // qu'aucun montage n'est résolu.
+  // The hook is called unconditionally (rules of hooks): it returns an empty list until a
+  // montage has been resolved.
   const { entries, dialog } = useTimelineCardMenu(data, canManage);
 
-  // Rien à jouer, rien à dire : une carte vide en tête de page coûterait la place qu'on
-  // cherche précisément à rendre.
+  // Nothing to play, nothing to say: an empty card at the top of the page would cost the very
+  // room we are trying to give back.
   if (isLoading || !timeline) return null;
   const firstPlayable = timeline.items.find((it) => it.mediaId !== null);
   const open = () => navigate(`/timelines/${timeline.id}/play`);
@@ -65,8 +64,8 @@ export default function TimelineCard({
             {t('timeline.shotCount', { count: timeline.items.length })} ·{' '}
             {formatDuration(timeline.totalDuration)}
           </span>
-          {/* Les deux seuls signaux qui demandent une décision : un trou dans le montage, et
-            la révision courante. Le reste vit dans le menu. */}
+          {/* The only two signals that call for a decision: a gap in the montage, and the current
+            revision. The rest lives in the menu. */}
           {timeline.gapCount > 0 && (
             <span className="rounded bg-warning/15 px-1.5 py-0.5 text-2xs text-warning">
               {t('timeline.gapCount', { count: timeline.gapCount })}
@@ -84,7 +83,7 @@ export default function TimelineCard({
               disabled={!firstPlayable}
               icon={<Download size={13} />}
             />
-            {/* Rappel discret : tout le reste du montage vit au clic droit. */}
+            {/* Discreet reminder: everything else about the montage lives in the right click. */}
             <span className="flex items-center gap-1 text-2xs text-muted-foreground">
               <MoreHorizontal size={14} />
               {t('timeline.moreHint')}

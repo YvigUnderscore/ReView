@@ -15,9 +15,9 @@ import type { MediaSummary, VersionListItem } from '../../types/api';
 import { useT } from '../../i18n';
 
 /**
- * Timeline de versions partagée par TaskPage et AssetPage (Phase 20) : liste dépliable
- * (dernière version ouverte par défaut), vraies miniatures, bascule cartes/compact,
- * upload de média, suppression version/média (corbeille). Handlers fournis par `useVersions`.
+ * Version timeline shared by TaskPage and AssetPage (Phase 20): an expandable list (latest version
+ * open by default), real thumbnails, cards/compact toggle, media upload, version/media deletion
+ * (trash). Handlers provided by `useVersions`.
  */
 export default function VersionTimeline({
   versions,
@@ -39,11 +39,11 @@ export default function VersionTimeline({
   canCreate: boolean;
   canPublish: boolean;
   contextKey: string;
-  /** Projet porteur — active « Ajouter à la playlist » sur les cartes de version. */
+  /** Owning project — enables "Add to playlist" on the version cards. */
   projectId?: number | null;
   emptyDescription: string;
   onCreateVersion: () => void;
-  /** Dépôt sur la zone dédiée : crée la version suivante et y verse les fichiers. */
+  /** Drop on the dedicated zone: creates the next version and fills it with the files. */
   onDropNewVersion: (files: File[]) => void;
   publishVersion: (versionId: number) => void;
   publishMedia: (versionId: number, mediaId: number) => void;
@@ -62,9 +62,9 @@ export default function VersionTimeline({
     fileRef.current?.click();
   };
   /**
-   * Verse les fichiers dans une version — séquences d'images regroupées, consigne demandée
-   * quand le projet l'exige (Phase 50). `deliverFiles` retient le geste entier : sans
-   * décision ni message, rien ne part.
+   * Fills a version with files — image sequences grouped, brief requested when the project
+   * requires it (Phase 50). `deliverFiles` holds the whole gesture: without a decision or a
+   * message, nothing is sent.
    */
   const fill = (versionId: number, files: File[]) =>
     void deliverFiles(projectId, files, (send) => send(versionId));
@@ -73,7 +73,7 @@ export default function VersionTimeline({
     if (files.length > 0 && target != null) fill(target, files);
     if (fileRef.current) fileRef.current.value = '';
   };
-  /** Dépôt sur une version existante : les fichiers la rejoignent (Phase 46). */
+  /** Drop onto an existing version: the files join it (Phase 46). */
   const dropInto = (versionId: number, files: File[]) => fill(versionId, files);
 
   if (isLoading) {
@@ -106,7 +106,7 @@ export default function VersionTimeline({
       <div className="mb-2 flex items-center justify-end">
         <ViewToggle contextKey={`versions:${contextKey}`} />
       </div>
-      {/* Déposer ici crée la version suivante ; déposer sur une carte alimente celle-ci. */}
+      {/* Dropping here creates the next version; dropping on a card feeds that one. */}
       {canCreate && (
         <div className="mb-3">
           <NewVersionDropzone onFiles={onDropNewVersion} />

@@ -4,9 +4,9 @@
 import type { TaskStatus } from './api';
 
 /**
- * Pilotage de production (C6) — miroir de `ProductionService`.
+ * Production steering (C6) — mirror of `ProductionService`.
  *
- * Quatre réponses : où en est le projet, ce qui bloque, qui fait quoi, à quel rythme.
+ * Four answers: where the project stands, what is blocking, who does what, at what pace.
  */
 
 export type Family = 'todo' | 'progress' | 'review' | 'done' | 'blocked';

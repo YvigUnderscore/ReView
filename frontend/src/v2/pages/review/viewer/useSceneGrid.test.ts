@@ -7,34 +7,33 @@ import { EXCLUDE_FROM_CAPTURE, hideCaptureMarkers } from './viewCapture';
 import { GRID_RENDER_ORDER, createSceneGrid, type SceneGridTarget } from './useSceneGrid';
 
 /**
- * WebGL est absent des tests : on ne peut pas constater un pixel, mais tout ce qui DÉCIDE de
- * l'image l'est — les propriétés de matériau et la clé de tri que Three lit sur l'objet. Le nuage
- * de Spark est remplacé par ce que Three voit de lui : un `Mesh` transparent d'ordre 0, de quad
- * centré sur l'origine, qui n'écrit pas la profondeur (`SparkRenderer`).
+ * WebGL is absent from the tests: a pixel cannot be checked, but everything that DECIDES the image
+ * can — the material properties and the sort key Three reads on the object. Spark's cloud is
+ * replaced by what Three sees of it: a transparent `Mesh` of order 0, a quad centred on the
+ * origin, which does not write depth (`SparkRenderer`).
  */
 function fakeSpark(): THREE.Mesh {
-  // Le quad de `SplatGeometry` : -1..1 sur XY, donc de sphère englobante centrée sur l'origine.
+  // The quad of `SplatGeometry`: -1..1 on XY, so its bounding sphere is centred on the origin.
   const geometry = new THREE.PlaneGeometry(2, 2);
   const material = new THREE.MeshBasicMaterial({ transparent: true, depthWrite: false });
   return new THREE.Mesh(geometry, material);
 }
 
 /**
- * Point que Three projette pour trier un objet transparent : le centre de la sphère englobante de
- * sa géométrie, passé en monde (`WebGLRenderer.projectObject`). Deux objets qui partagent ce point
- * partagent leur distance de tri, quelle que soit la caméra — c'est là que la grille et le nuage
- * se retrouvaient à égalité.
+ * Point Three projects to sort a transparent object: the centre of its geometry's bounding sphere,
+ * brought to world space (`WebGLRenderer.projectObject`). Two objects that share this point share
+ * their sort distance whatever the camera — this is where the grid and the cloud were tied.
  */
 function sortCenter(object: THREE.Mesh | THREE.LineSegments): THREE.Vector3 {
   object.updateMatrixWorld(true);
   const geometry = object.geometry;
   if (geometry.boundingSphere === null) geometry.computeBoundingSphere();
   const sphere = geometry.boundingSphere;
-  if (!sphere) throw new Error('géométrie sans sphère englobante');
+  if (!sphere) throw new Error('geometry without bounding sphere');
   return sphere.center.clone().applyMatrix4(object.matrixWorld);
 }
 
-/** Scène de viewer : le nuage est monté d'abord, comme `createScene` avant l'effet de la grille. */
+/** Viewer scene: the cloud is mounted first, as `createScene` does before the grid effect. */
 function mountScene(): { target: SceneGridTarget; spark: THREE.Mesh; scene: THREE.Scene } {
   const scene = new THREE.Scene();
   const spark = fakeSpark();
@@ -42,35 +41,35 @@ function mountScene(): { target: SceneGridTarget; spark: THREE.Mesh; scene: THRE
   return { target: { THREE, scene }, spark, scene };
 }
 
-describe('useSceneGrid — la grille de sol ne traverse plus le nuage (lot 15)', () => {
-  it('passe avant le nuage dans la passe transparente', () => {
+describe('useSceneGrid — the floor grid no longer shows through the cloud (lot 15)', () => {
+  it('draws before the cloud in the transparent pass', () => {
     const { target, spark } = mountScene();
     const { grid } = createSceneGrid(target);
 
-    // Les trois clés de `reversePainterSortStable`, dans son ordre : l'ordre de rendu tranche…
+    // The three keys of `reversePainterSortStable`, in order: render order decides…
     expect(grid.renderOrder).toBe(GRID_RENDER_ORDER);
     expect(grid.renderOrder).toBeLessThan(spark.renderOrder);
-    // …parce que les deux suivantes ne tranchaient pas : même distance de tri…
+    // …because the next two did not decide: same sort distance…
     expect(sortCenter(grid).equals(sortCenter(spark))).toBe(true);
-    // …et un `id` plus grand pour la grille, née après le renderer Spark, qui la faisait passer
-    // en DERNIER — le quadrillage par-dessus les splats que l'utilisateur voit.
+    // …and a larger `id` for the grid, created after the Spark renderer, which made it draw
+    // LAST — the grid over the splats the user sees.
     expect(grid.id).toBeGreaterThan(spark.id);
   });
 
-  it('garde son aspect : transparente à 0,25, sans écriture de profondeur, testée en profondeur', () => {
+  it('keeps its look: transparent at 0.25, no depth write, depth-tested', () => {
     const { target } = mountScene();
     const { grid } = createSceneGrid(target);
     const mat = grid.material;
 
-    // Le viewer 3D partage ce hook : la grille doit y rester exactement ce qu'elle était.
+    // The 3D viewer shares this hook: the grid must stay exactly what it was there.
     expect(mat.transparent).toBe(true);
     expect(mat.opacity).toBe(0.25);
     expect(mat.depthWrite).toBe(false);
-    // Le test de profondeur reste actif : un maillage opaque du viewer 3D masque la grille.
+    // The depth test stays active: an opaque mesh of the 3D viewer hides the grid.
     expect(mat.depthTest).toBe(true);
   });
 
-  it('reste un repère d’écran : la capture de vue la retire, puis la remet', () => {
+  it('stays a screen-space marker: the view capture removes it, then restores it', () => {
     const { target, scene } = mountScene();
     const { grid } = createSceneGrid(target);
     expect(grid.userData[EXCLUDE_FROM_CAPTURE]).toBe(true);
@@ -81,7 +80,7 @@ describe('useSceneGrid — la grille de sol ne traverse plus le nuage (lot 15)',
     expect(grid.visible).toBe(true);
   });
 
-  it('se démonte sans laisser la grille dans la scène', () => {
+  it('unmounts without leaving the grid in the scene', () => {
     const { target, scene, spark } = mountScene();
     const { grid, dispose } = createSceneGrid(target);
     expect(scene.children).toContain(grid);

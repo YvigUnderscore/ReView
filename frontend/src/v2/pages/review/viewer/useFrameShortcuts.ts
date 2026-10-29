@@ -5,9 +5,9 @@ import { useEffect } from 'react';
 import { isEditable } from '../../../lib/shortcuts';
 
 /**
- * Raccourcis de cadrage communs aux viewers 3D/splat (Phase 17) : `F` cadre la sélection ou
- * l'objet, `H` rétablit la vue d'origine. Inertes pendant un vol (clic droit + ZQSD), dans les
- * champs de saisie, les dialogues, ou avec un modificateur enfoncé — même garde que le splat.
+ * Framing shortcuts shared by the 3D/splat viewers (Phase 17): `F` frames the selection or the
+ * object, `H` restores the original view. Inert during a flight (right click + ZQSD), in input
+ * fields, in dialogs, or while a modifier is held — same guard as the splat viewer.
  */
 export function useFrameShortcuts(opts: {
   active: boolean;

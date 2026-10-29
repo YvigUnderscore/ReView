@@ -16,36 +16,36 @@ import {
 } from './check-bundle-budget.mjs';
 
 describe('entryScriptFrom', () => {
-  it('extrait le module d’entrée et retire la barre initiale', () => {
+  it('extracts the entry module and strips the leading slash', () => {
     const html = '<html><body><script type="module" crossorigin src="/assets/index-abc.js"></script>';
     expect(entryScriptFrom(html)).toBe('assets/index-abc.js');
   });
 
-  it('ignore les scripts non modulaires', () => {
+  it('ignores non-module scripts', () => {
     expect(entryScriptFrom('<script src="/legacy.js"></script>')).toBeNull();
   });
 
-  it('renvoie null quand il n’y a pas de script', () => {
+  it('returns null when there is no script', () => {
     expect(entryScriptFrom('<html><body></body></html>')).toBeNull();
   });
 
-  it('retient le premier module déclaré', () => {
+  it('keeps the first declared module', () => {
     const html = '<script type="module" src="/a.js"></script><script type="module" src="/b.js"></script>';
     expect(entryScriptFrom(html)).toBe('a.js');
   });
 });
 
 describe('ENTRY_BUDGET_GZIP', () => {
-  it('reste un plafond plausible, pas une valeur neutralisée', () => {
+  it('remains a plausible ceiling, not a neutralised value', () => {
     expect(ENTRY_BUDGET_GZIP).toBeGreaterThan(100_000);
     expect(ENTRY_BUDGET_GZIP).toBeLessThan(2_000_000);
   });
 });
 
 describe('preloadedScriptsFrom', () => {
-  it('compte l’entrée et ses modules préchargés', () => {
-    // Ne mesurer que le fichier d'entrée serait trompeur depuis le découpage : sortir
-    // React dans un chunk ferait « baisser » le chiffre sans rien changer pour le lecteur.
+  it('counts the entry and its preloaded modules', () => {
+    // Measuring only the entry file would be misleading since the split: moving
+    // React into a chunk would make the figure "drop" without changing anything for the reader.
     const html = [
       '<link rel="modulepreload" href="/assets/vendor-react.js">',
       '<link rel="modulepreload" crossorigin href="/assets/vendor-data.js">',
@@ -58,28 +58,28 @@ describe('preloadedScriptsFrom', () => {
     ]);
   });
 
-  it('ne compte pas deux fois un fichier préchargé et référencé', () => {
+  it('does not count a file that is both preloaded and referenced twice', () => {
     const html =
       '<link rel="modulepreload" href="/assets/index.js"><script type="module" src="/assets/index.js"></script>';
     expect(preloadedScriptsFrom(html)).toEqual(['assets/index.js']);
   });
 
-  it('rend une liste vide quand la page ne charge aucun module', () => {
+  it('returns an empty list when the page loads no module', () => {
     expect(preloadedScriptsFrom('<html><body>rien</body></html>')).toEqual([]);
   });
 });
 
 describe('stylesheetsFrom', () => {
-  it('retient la feuille de style, qui bloque le rendu du premier écran', () => {
+  it('keeps the stylesheet, which blocks the first screen from rendering', () => {
     const html = '<link rel="stylesheet" crossorigin href="/assets/index-Bn0z7Js3.css">';
     expect(stylesheetsFrom(html)).toEqual(['assets/index-Bn0z7Js3.css']);
   });
 
-  it('ne dépend pas de l’ordre des attributs du générateur', () => {
+  it('does not depend on the generator\'s attribute order', () => {
     expect(stylesheetsFrom('<link href="/a.css" rel="stylesheet">')).toEqual(['a.css']);
   });
 
-  it('laisse de côté les liens qui ne chargent pas de style', () => {
+  it('leaves aside the links that load no style', () => {
     const html = [
       '<link rel="icon" type="image/png" href="/logo_banner.png" />',
       '<link rel="manifest" href="/manifest.json" />',
@@ -89,7 +89,7 @@ describe('stylesheetsFrom', () => {
   });
 });
 
-/** `index.html` tel que Vite l'écrit aujourd'hui : trois scripts et une feuille de style. */
+/** `index.html` as Vite writes it today: three scripts and a stylesheet. */
 const REAL_INDEX = [
   '<!doctype html>',
   '<html lang="en" class="dark"><head>',
@@ -104,9 +104,9 @@ const REAL_INDEX = [
 ].join('\n');
 
 describe('firstLoadAssetsFrom', () => {
-  it('compte les quatre fichiers que nginx sert avant le premier écran', () => {
-    // Le garde-fou n'en comptait que trois : la feuille de style était exclue alors
-    // qu'elle bloque le rendu au même titre que le script d'entrée.
+  it('counts the four files nginx serves before the first screen', () => {
+    // The safeguard only counted three: the stylesheet was excluded although
+    // it blocks rendering just like the entry script.
     expect(firstLoadAssetsFrom(REAL_INDEX)).toEqual([
       'assets/index-CenkDGFE.js',
       'assets/vendor-react-kGgTSL4I.js',
@@ -115,7 +115,7 @@ describe('firstLoadAssetsFrom', () => {
     ]);
   });
 
-  it('inclut toujours au moins ce que comptait le décompte précédent', () => {
+  it('always includes at least what the previous count included', () => {
     for (const file of preloadedScriptsFrom(REAL_INDEX)) {
       expect(firstLoadAssetsFrom(REAL_INDEX)).toContain(file);
     }
@@ -136,8 +136,8 @@ describe('measureFirstLoad', () => {
     for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
   });
 
-  // Contenus peu compressibles (xorshift32) : le gzip d'un texte répétitif tiendrait en
-  // quelques octets et la mesure ne prouverait rien.
+  // Hardly compressible contents (xorshift32): the gzip of a repetitive text would fit in
+  // a few bytes and the measure would prove nothing.
   const noise = (seed, size) => {
     let x = seed | 0 || 1;
     let s = '';
@@ -157,7 +157,7 @@ describe('measureFirstLoad', () => {
     'assets/index-Bn0z7Js3.css': css,
   };
 
-  it('pèse les quatre fichiers, feuille de style comprise', () => {
+  it('weighs the four files, stylesheet included', () => {
     const dist = makeDist(REAL_INDEX, files);
     const measured = measureFirstLoad(dist);
     const expected = Object.values(files).reduce((n, c) => n + gzipSync(Buffer.from(c)).length, 0);
@@ -165,7 +165,7 @@ describe('measureFirstLoad', () => {
     expect(measured.bytes).toBe(expected);
   });
 
-  it('les octets de la CSS manquaient au décompte : ils pèsent, et ils sont comptés', () => {
+  it('the CSS bytes were missing from the count: they weigh something, and they are counted', () => {
     const dist = makeDist(REAL_INDEX, files);
     const cssBytes = gzipSync(Buffer.from(css)).length;
     const scriptsOnly = preloadedScriptsFrom(REAL_INDEX).reduce(
@@ -176,7 +176,7 @@ describe('measureFirstLoad', () => {
     expect(measureFirstLoad(dist).bytes).toBe(scriptsOnly + cssBytes);
   });
 
-  it('signale une ressource externe au lieu de l’escamoter du décompte', () => {
+  it('reports an external resource instead of dropping it from the count', () => {
     const html = `${REAL_INDEX.replace(
       '</head>',
       '<link rel="stylesheet" href="https://cdn.example/x.css"></head>',

@@ -2,18 +2,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Messages d'erreur du backend : anglais, et rien d'autre (D2).
+ * Backend error messages: English, and nothing else (D2).
  *
- * Ils étaient écrits en français — cent-soixante-quatorze occurrences dans soixante-dix
- * fichiers — et arrivaient tels quels à l'écran, y compris sur la page publique d'un
- * partage client. L'arbitrage est de les réécrire en anglais plutôt que de les traduire :
- * ce contrôle empêche le français de revenir par la porte du prochain correctif.
+ * They were written in French — a hundred and seventy-four occurrences across seventy
+ * files — and reached the screen as they were, including on the public page of a client
+ * share. The decision was to rewrite them in English rather than translate them: this check
+ * stops French from creeping back in through the next fix.
  *
- * Le repérage se fait sur les mots-outils du français, pas sur les accents : « Media
- * introuvable » n'en porte aucun et reste du français. À l'inverse « déjà » dans un
- * commentaire ne concerne personne — seuls les messages levés sont lus.
+ * Detection relies on French function words, not on accents: "Media introuvable" carries none
+ * and is still French. Conversely, "déjà" in a comment concerns nobody — only the thrown
+ * messages are read.
  *
- * Usage : node scripts/check-backend-english.mjs [--list]
+ * Usage: node scripts/check-backend-english.mjs [--list]
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -22,46 +22,46 @@ import { fileURLToPath } from 'node:url';
 
 const ROOT = 'backend/src';
 
-/** Les fonctions dont le premier argument atterrit dans une réponse HTTP. */
+/** The functions whose first argument ends up in an HTTP response. */
 const THROWING = /\b(badRequest|notFound|forbidden|conflict|unauthorized|tooManyRequests|new Error)\s*\(/;
 
 /**
- * Mots qui ne laissent aucun doute : ils n'existent pas en anglais technique. Un seul
- * suffit à conclure.
+ * Words that leave no doubt: they do not exist in technical English. One alone is enough to
+ * conclude.
  */
 const FRENCH_STRONG =
   /\b(introuvable|invalide|réservé|réservée|impossible|déjà|aucun|aucune|inconnu|inconnue|échoué|échouée|volumineux|volumineuse|corbeille|séquence|tâche|fichier|attendu|attendue|requis|requise|vide|trop)\b/i;
 
 /**
- * Mots-outils du français. Isolés, ils se rencontrent en anglais technique — « non-HTTP »,
- * « par » dans une URL — donc il en faut **deux distincts** pour conclure. Sans cette
- * règle, un message anglais parfaitement correct serait signalé.
+ * French function words. On their own they also turn up in technical English — "non-HTTP",
+ * "par" in a URL — so **two distinct ones** are needed to conclude. Without this rule, a
+ * perfectly correct English message would be flagged.
  */
 const FRENCH_WEAK =
   /\b(le|la|les|un|une|des|du|de|au|aux|ce|cet|cette|ces|est|sont|pas|non|pour|avec|sans|sur|dans|par|vers|votre|vos|ne|se|qui|que|encore|doit|doivent|peut|peuvent)\b/gi;
 
-/** Ce que le message contient de toute façon : accents typiquement français. */
+/** What the message contains regardless: accents typical of French. */
 const FRENCH_LETTERS = /[àâäçéèêëîïôöùûüœ]/i;
 
-/** Les littéraux passés à une fonction de levée, ligne par ligne. */
+/** The literals passed to a throwing function, line by line. */
 export function messagesOf(source) {
   const out = [];
   for (const [index, line] of source.split(/\r?\n/).entries()) {
     if (!THROWING.test(line)) continue;
-    // Le premier littéral de la ligne : c'est le message, le second est le code d'erreur.
+    // The first literal on the line is the message, the second is the error code.
     const literal = /['`]([^'`]{4,})['`]/.exec(line);
     if (literal) out.push({ line: index + 1, text: literal[1] });
   }
   return out;
 }
 
-/** Ce message est-il écrit en français ? */
+/** Is this message written in French? */
 export function looksFrench(text) {
   const weak = new Set((text.match(FRENCH_WEAK) ?? []).map((w) => w.toLowerCase()));
   return FRENCH_STRONG.test(text) || FRENCH_LETTERS.test(text) || weak.size >= 2;
 }
 
-/** Messages français d'un fichier — l'unité que le contrôle rapporte. */
+/** French messages of a file — the unit the check reports. */
 export function offendersOf(source) {
   return messagesOf(source).filter((m) => looksFrench(m.text));
 }
@@ -102,5 +102,5 @@ function main() {
   process.exitCode = 1;
 }
 
-// Importé par son test : on ne parcourt le dépôt que lorsqu'on est la commande lancée.
+// Imported by its test: the repository is only walked when this is the command being run.
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();

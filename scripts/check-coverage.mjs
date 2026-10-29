@@ -2,25 +2,24 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Couverture de test — planchers par dossier, à cliquet.
+ * Test coverage — per-folder floors, with a ratchet.
  *
- * La suite savait tout de la *forme* du code et rien de ce qu'elle n'exécutait pas : aucun
- * provider de couverture n'était installé, donc aucun chiffre. Le manque n'était pas la
- * mesure elle-même mais son absence de conséquence — un service pouvait arriver sans un
- * test sans que rien ne l'empêche.
+ * The suite knew everything about the *shape* of the code and nothing about what it did not run: no
+ * coverage provider was installed, so there was no figure. The gap was not the measurement itself but
+ * its lack of consequence — a service could land without a test and nothing would stop it.
  *
- * Le dispositif est celui qui a déjà fait tomber `check-untranslated` à zéro : un plancher
- * écrit dans un fichier suivi par git, une comparaison à chaque validation, et une seule
- * direction autorisée. `--update` relève les planchers atteints ; il **refuse** de les
- * baisser. Descendre exige donc une modification manuelle, visible en revue.
+ * The mechanism is the one that already brought `check-untranslated` down to zero: a floor written in
+ * a git-tracked file, a comparison on every validation, and only one direction allowed. `--update`
+ * raises the floors reached; it **refuses** to lower them. Going down therefore requires a manual
+ * change, visible in review.
  *
- * Les planchers sont par dossier parce qu'un chiffre global se laisse gonfler par les
- * fichiers faciles : `lib/` est du calcul pur et doit être très couvert, `routes/` traverse
- * la base et l'est beaucoup moins. Un seuil unique les moyennerait jusqu'à ne plus rien dire.
+ * The floors are per folder because a global figure can be inflated by the easy files: `lib/` is pure
+ * computation and must be very well covered, `routes/` goes through the database and is much less so.
+ * A single threshold would average them out until it meant nothing.
  *
- * Usage :
- *   node scripts/check-coverage.mjs backend            # contrôle
- *   node scripts/check-coverage.mjs backend --update   # relève les planchers atteints
+ * Usage:
+ *   node scripts/check-coverage.mjs backend            # check
+ *   node scripts/check-coverage.mjs backend --update   # raises the floors reached
  */
 
 import { readFileSync, writeFileSync, existsSync } from 'node:fs';
@@ -30,27 +29,27 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const FLOORS_FILE = path.join(repoRoot, 'scripts/coverage-floors.json');
 
-/** Les deux métriques suivies. Le reste (functions, lines) suit l'une ou l'autre. */
+/** The two tracked metrics. The rest (functions, lines) follows one or the other. */
 export const METRICS = ['statements', 'branches'];
 
 /**
- * Dossiers mesurés, par paquet. Un fichier compte pour le **préfixe le plus long** qui le
- * contient ; ceux qui ne tombent dans aucun dossier sont regroupés sous `autres`.
+ * Measured folders, per package. A file counts for the **longest prefix** that contains it; those
+ * that fall in no folder are grouped under `autres`.
  */
 export const BUCKETS = {
   backend: ['src/lib', 'src/middleware', 'src/services', 'src/routes', 'src/workers'],
   frontend: ['src/lib', 'src/stores', 'src/v2/lib', 'src/v2/hooks', 'src/v2/components', 'src/v2/pages'],
 };
 
-/** Dossier de repli des fichiers hors des seaux déclarés. */
+/** Fallback folder for files outside the declared buckets. */
 export const OTHER_BUCKET = 'autres';
 
-/** Chemin relatif au paquet, en séparateurs POSIX — la clé du rapport est absolue. */
+/** Path relative to the package, with POSIX separators — the report key is absolute. */
 export function relativeToPackage(absolutePath, packageRoot) {
   return path.relative(packageRoot, absolutePath).split(path.sep).join('/');
 }
 
-/** Seau d'un fichier : le préfixe déclaré le plus long qui le contient. */
+/** Bucket of a file: the longest declared prefix that contains it. */
 export function bucketOf(relativePath, buckets) {
   let best = null;
   for (const bucket of buckets) {
@@ -62,10 +61,10 @@ export function bucketOf(relativePath, buckets) {
 }
 
 /**
- * Agrège un `coverage-summary.json` par dossier.
+ * Aggregates a `coverage-summary.json` per folder.
  *
- * On additionne les compteurs bruts (couvert / total) plutôt que de moyenner des
- * pourcentages : un fichier de dix lignes ne doit pas peser autant qu'un service de mille.
+ * Raw counters (covered / total) are summed rather than averaging percentages: a ten-line file must
+ * not weigh as much as a thousand-line service.
  */
 export function aggregate(summary, { packageRoot, buckets }) {
   const totals = {};
@@ -89,17 +88,17 @@ export function aggregate(summary, { packageRoot, buckets }) {
   return out;
 }
 
-/** Un dossier sans une seule instruction est couvert à 100 % : il n'y a rien à couvrir. */
+/** A folder without a single statement is 100% covered: there is nothing to cover. */
 export function percentage(covered, total) {
   if (total === 0) return 100;
   return Math.floor((covered / total) * 1000) / 10;
 }
 
 /**
- * Confronte le mesuré aux planchers.
+ * Compares the measured figures against the floors.
  *
- * Trois issues par dossier : `below` (rouge), `unmeasured` (plancher jamais posé, on
- * l'annonce sans bloquer) et `raised` (le mesuré dépasse le plancher — de quoi le relever).
+ * Three outcomes per folder: `below` (red), `unmeasured` (floor never set, announced without
+ * blocking) and `raised` (the measured figure exceeds the floor — enough to raise it).
  */
 export function compare(measured, floors, { slack = 2 } = {}) {
   const below = [];
@@ -121,7 +120,7 @@ export function compare(measured, floors, { slack = 2 } = {}) {
   return { below, unmeasured, raised };
 }
 
-/** Nouveaux planchers : le maximum du plancher connu et du mesuré. Jamais moins. */
+/** New floors: the maximum of the known floor and the measured figure. Never less. */
 export function ratchet(measured, floors) {
   const next = {};
   for (const [bucket, metrics] of Object.entries(measured)) {
@@ -131,7 +130,7 @@ export function ratchet(measured, floors) {
       next[bucket][metric] = current == null ? metrics[metric] : Math.max(current, metrics[metric]);
     }
   }
-  // Un dossier disparu du rapport garde son plancher : il reviendra, ou sera retiré à la main.
+  // A folder that disappeared from the report keeps its floor: it will come back, or be removed by hand.
   for (const [bucket, metrics] of Object.entries(floors ?? {})) {
     next[bucket] ??= metrics;
   }

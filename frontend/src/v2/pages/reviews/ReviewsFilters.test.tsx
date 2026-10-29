@@ -9,12 +9,12 @@ import { filtersFrom } from './reviewsTypes';
 import { t } from '../../i18n';
 
 /**
- * Le filtre de publication de la page Reviews, devenu conditionnel (Phase 50).
+ * The publication filter of the Reviews page, now conditional (Phase 50).
  *
- * Ce qui se vérifie : « Mes brouillons » ne s'offre plus quand le studio publie d'office —
- * le filtre ne pourrait rapporter que des restes. Le sélecteur revient dès que le réglage
- * `draftMode` est allumé, ET quand une vue enregistrée a posé un filtre : une vue doit
- * pouvoir se défaire, même si le réglage a changé depuis.
+ * What is verified: "My drafts" is no longer offered when the studio publishes automatically — the
+ * filter could only ever return leftovers. The selector comes back as soon as the `draftMode`
+ * setting is on, AND when a saved view has set a filter: a view must be able to undo it, even if
+ * the setting has changed since.
  */
 
 const branding = (draftMode: boolean) => ({
@@ -32,20 +32,20 @@ const mount = (draftMode: boolean, status = '') =>
     api: { ...API, 'GET /api/studio/branding': branding(draftMode) },
   });
 
-describe('ReviewsFilters — filtre de publication', () => {
-  it('n’offre pas « Mes brouillons » quand le studio publie d’office', async () => {
+describe('ReviewsFilters — publication filter', () => {
+  it('does not offer "My drafts" when the studio publishes automatically', async () => {
     mount(false);
     await waitFor(() => expect(screen.getByText(t('reviews.filter.allTypes'))).toBeTruthy());
     expect(screen.queryByText(t('reviews.filter.myDrafts'))).toBeNull();
     expect(screen.queryByText(t('reviews.filter.publishedAndDrafts'))).toBeNull();
   });
 
-  it('l’offre quand le studio garde le parcours en deux temps', async () => {
+  it('offers it when the studio keeps the two-step workflow', async () => {
     mount(true);
     expect(await screen.findByText(t('reviews.filter.myDrafts'))).toBeTruthy();
   });
 
-  it('laisse défaire une vue enregistrée qui filtrait sur les brouillons', async () => {
+  it('lets a saved view that filtered on drafts be undone', async () => {
     mount(false, 'draft');
     expect(await screen.findByText(t('reviews.filter.myDrafts'))).toBeTruthy();
   });

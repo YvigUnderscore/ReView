@@ -15,7 +15,7 @@ import type { MediaSummary } from '../../types/api';
 import type { ViewMode } from '../../stores/useViewPref';
 import { useT } from '../../i18n';
 
-/** Miniature d'un média (vraie vignette ou icône selon le type). */
+/** Thumbnail of a media (real thumbnail or icon depending on the type). */
 function MediaThumb({ media, size }: { media: MediaSummary; size: number }) {
   const Icon = MEDIA_KIND_ICON[media.kind];
   return media.thumbnailUrl ? (
@@ -30,7 +30,7 @@ function MediaThumb({ media, size }: { media: MediaSummary; size: number }) {
   );
 }
 
-/** Bouton discret « Modifier la miniature » : fichier image → réduit → POST /thumbnail. */
+/** Discreet "Edit thumbnail" button: image file → downscaled → POST /thumbnail. */
 function ThumbEditButton({
   mediaId,
   versionId,
@@ -80,7 +80,7 @@ function ThumbEditButton({
   );
 }
 
-/** Vignette d'un média → review au clic ; actions publier/supprimer/miniature. Cartes ou ligne compacte. */
+/** Media tile → review on click; actions publish/delete/thumbnail. Cards or compact row. */
 export default function MediaTile({
   media,
   versionId,

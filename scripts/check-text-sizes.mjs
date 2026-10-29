@@ -2,22 +2,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Contrôle « pas de taille de texte en pixels » (A2).
+ * "No text size in pixels" check (A2).
  *
- * La densité d'affichage agit sur la taille de police racine : tout ce qui est dimensionné
- * en `rem` la suit, ce qui est écrit en `px` reste figé. Avec 160 `text-[10px]`/`text-[11px]`
- * disséminés, passer en compact aplatissait la hiérarchie au lieu de la resserrer — le
- * `text-xs` descendait à 10,9 px pendant que le `text-[10px]` d'à côté ne bougeait pas.
+ * The display density acts on the root font size: everything sized in `rem` follows it, whereas what is
+ * written in `px` stays fixed. With 160 `text-[10px]`/`text-[11px]` scattered around, switching to compact
+ * flattened the hierarchy instead of tightening it — `text-xs` dropped to 10.9 px while the `text-[10px]`
+ * next to it did not move.
  *
- * La rampe à utiliser : `text-2xs` (0.625rem), `text-xs`, `text-sm`, `text-base`, `text-lg`…
- * — tous adossés aux tokens de `index.css`.
+ * The scale to use: `text-2xs` (0.625rem), `text-xs`, `text-sm`, `text-base`, `text-lg`… — all backed by
+ * the tokens of `index.css`.
  *
- * Contrôle textuel ligne à ligne, comme `check-color-tokens.mjs` : le motif n'a aucune
- * raison d'exister ailleurs que dans une classe utilitaire. Les autres valeurs arbitraires
- * (`w-[72px]`, `min-w-[1440px]`) ne sont pas concernées : seule la typographie suit la
- * densité.
+ * Line-by-line textual check, like `check-color-tokens.mjs`: the pattern has no reason to exist anywhere
+ * but in a utility class. The other arbitrary values (`w-[72px]`, `min-w-[1440px]`) are not concerned:
+ * only typography follows the density.
  *
- * Usage : node scripts/check-text-sizes.mjs
+ * Usage: node scripts/check-text-sizes.mjs
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -27,7 +26,7 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ROOT = 'frontend/src';
 
-/** `text-[13px]`, `text-[0.8rem]` — toute taille de police écrite à la main. */
+/** `text-[13px]`, `text-[0.8rem]` — any font size written by hand. */
 const SIZE_RE = /\btext-\[(\d+(?:\.\d+)?)(px|pt)\]/g;
 
 export function findPixelTextSizes(source) {

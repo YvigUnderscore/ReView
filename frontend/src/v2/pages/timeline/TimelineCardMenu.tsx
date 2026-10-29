@@ -12,17 +12,17 @@ import type { useTimelineData } from './useTimelineData';
 import { useT } from '../../i18n';
 
 /**
- * Ce que le montage sait faire, au clic droit.
+ * What the montage can do, on right click.
  *
- * Renommer, viser une étape du pipe et figer une révision occupaient une barre d'outils
- * permanente en tête de chaque page de séquence. Ce sont trois gestes de production, rares
- * et réfléchis : ils appartiennent au menu contextuel, pas au chemin de lecture (UI simple).
+ * Renaming, targeting a pipeline step and freezing a revision used to occupy a permanent toolbar
+ * at the top of each sequence page. They are three production gestures, rare and deliberate: they
+ * belong to the context menu, not to the playback path (simple UI).
  *
- * Le hook rend les entrées **et** le dialogue de renommage : un champ de saisie ne peut pas
- * vivre dans un menu qui se ferme au premier clic.
+ * The hook returns the entries **and** the rename dialog: an input field cannot live in a menu
+ * that closes on the first click.
  */
 
-/** Le montage vise « l'étape la plus avancée » par défaut — c'est ce que `null` signifie. */
+/** The montage targets "the most advanced step" by default — this is what `null` means. */
 const AUTO = 'auto';
 
 export function useTimelineCardMenu(
@@ -43,9 +43,9 @@ export function useTimelineCardMenu(
           icon: <Pencil size={14} />,
           onSelect: () => setRenaming(timeline.name ?? ''),
         },
-        // L'étape visée décide quelle version de chaque plan monte au cut : c'est un choix
-        // de production, énoncé une fois et rarement repris. Un groupe radio plutôt qu'une
-        // liste d'actions — c'est ce qui fait apparaître l'étape courante *cochée*.
+        // The targeted step decides which version of each shot goes into the cut: it is a
+        // production choice, stated once and rarely revisited. A radio group rather than a list of
+        // actions — that is what makes the current step appear *ticked*.
         {
           kind: 'submenu' as const,
           id: 'department',

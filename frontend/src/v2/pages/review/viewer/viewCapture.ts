@@ -7,33 +7,32 @@ import { resizeRendererCamera } from '../three/sceneConfig';
 import { VIEWER_BACKDROP } from './thumbnail';
 
 /**
- * Capture de vue des viewers spatiaux (3D, splat) — le bouton « Capture the view » du panneau
- * Export.
+ * View capture of spatial viewers (3D, splat) — the "Capture the view" button of the Export
+ * panel.
  *
- * POURQUOI. Le bouton servait la MINIATURE : `toThumbnail` réduit le canvas à 480 px de large et
- * l'encode en JPEG 0.72. C'est le bon gabarit pour une vignette de carte, pas pour une image
- * qu'on emporte dans une compo — d'où une capture « de très mauvaise qualité ». La capture prend
- * désormais un rendu **dédié** :
+ * WHY. The button used to serve the THUMBNAIL: `toThumbnail` shrinks the canvas to 480 px wide
+ * and encodes it as JPEG 0.72. That is the right template for a card thumbnail, not for an image
+ * taken into a composition — hence a "very poor quality" capture. The capture now takes a
+ * **dedicated** render:
  *
- * - **au cadre de livraison**, pas au conteneur : `setViewOffset` étend la vue du cadre à tout
- *   l'écran (viewer plein espace, cf. `frameRect`) ; la capture efface cet offset et rend donc
- *   exactement ce que le guide letterbox délimite — le cadre annoté, sans les bandes ;
- * - **à la résolution de livraison plutôt qu'à celle de la fenêtre** : au moins
- *   `CAPTURE_MIN_WIDTH` de large (le rendu est suréchantillonné quand la fenêtre est plus
- *   petite), plafonnée par ce que le GPU sait allouer ;
- * - **en PNG**, sans perte ;
- * - **sans les repères d'écran** : la grille de sol se retire le temps de la pose (`userData`
- *   marqué `EXCLUDE_FROM_CAPTURE`). Elle est remise dans un `finally` — une capture qui échoue
- *   ne laisse pas la scène sans sa grille.
+ * - **at the delivery frame**, not the container: `setViewOffset` extends the frame's view to the
+ *   whole screen (full-space viewer, see `frameRect`); the capture clears this offset and thus
+ *   renders exactly what the letterbox guide delimits — the annotated frame, without the bars;
+ * - **at the delivery resolution rather than the window's**: at least `CAPTURE_MIN_WIDTH` wide
+ *   (the render is supersampled when the window is smaller), capped by what the GPU can allocate;
+ * - **as PNG**, lossless;
+ * - **without the screen markers**: the floor grid is removed for the duration of the pose
+ *   (`userData` marked `EXCLUDE_FROM_CAPTURE`). It is restored in a `finally` — a failed capture
+ *   does not leave the scene without its grid.
  *
- * La pièce logique (`captureSize`, `hideCaptureMarkers`, `renderViewCapture`) ne connaît ni
- * Three ni WebGL et se teste telle quelle ; `captureSceneView` n'est que le branchement.
+ * The logical part (`captureSize`, `hideCaptureMarkers`, `renderViewCapture`) knows neither
+ * Three nor WebGL and is tested as is; `captureSceneView` is only the wiring.
  */
 
-/** Largeur visée : en deçà, la capture suréchantillonne le rendu d'écran plutôt que de l'étirer. */
+/** Target width: below it, the capture supersamples the screen render rather than stretching it. */
 export const CAPTURE_MIN_WIDTH = 1920;
 
-/** Plafond de sûreté : au-delà, l'allocation du tampon de dessin devient hasardeuse. */
+/** Safety ceiling: beyond it, allocating the drawing buffer becomes risky. */
 export const CAPTURE_MAX_WIDTH = 4096;
 
 export interface CaptureSize {
@@ -45,8 +44,8 @@ const usable = (v: number | null | undefined): v is number =>
   typeof v === 'number' && Number.isFinite(v) && v > 0;
 
 /**
- * Résolution d'une capture : l'aspect du cadre de livraison, au moins `CAPTURE_MIN_WIDTH` de
- * large, plafonné par `maxWidth` (limite GPU). Pur.
+ * Resolution of a capture: the delivery frame's aspect, at least `CAPTURE_MIN_WIDTH` wide, capped
+ * by `maxWidth` (GPU limit). Pure.
  */
 export function captureSize(frameWidth: number, aspect: number, maxWidth?: number): CaptureSize {
   const a = usable(aspect) ? aspect : DEFAULT_REVIEW_ASPECT;
@@ -54,7 +53,7 @@ export function captureSize(frameWidth: number, aspect: number, maxWidth?: numbe
   const cap = Math.max(1, Math.floor(ceiling));
   let width = Math.min(Math.max(usable(frameWidth) ? Math.round(frameWidth) : 0, CAPTURE_MIN_WIDTH), cap);
   let height = Math.max(1, Math.round(width / a));
-  // Format très haut (aspect < 1) : c'est la HAUTEUR qui touche le plafond, pas la largeur.
+  // Very tall format (aspect < 1): it is the HEIGHT that hits the ceiling, not the width.
   if (height > cap) {
     height = cap;
     width = Math.max(1, Math.round(cap * a));
@@ -62,7 +61,7 @@ export function captureSize(frameWidth: number, aspect: number, maxWidth?: numbe
   return { width: Math.max(1, width), height };
 }
 
-/** Clé `userData` d'un repère d'écran : visible dans le viewer, absent des captures. */
+/** `userData` key of a screen marker: visible in the viewer, absent from captures. */
 export const EXCLUDE_FROM_CAPTURE = 'rvExcludeFromCapture';
 
 export interface CaptureObject {
@@ -75,8 +74,9 @@ export interface CaptureScene {
 }
 
 /**
- * Retire les repères marqués de la scène le temps d'une pose. Renvoie de quoi les remettre — à
- * jouer dans un `finally`, sinon une capture en échec laisserait le viewer sans sa grille.
+ * Removes the marked markers from the scene for the duration of a pose. Returns what is needed to
+ * put them back — to be run in a `finally`, otherwise a failed capture would leave the viewer
+ * without its grid.
  */
 export function hideCaptureMarkers(scene: CaptureScene): () => void {
   const hidden: CaptureObject[] = [];
@@ -92,23 +92,23 @@ export function hideCaptureMarkers(scene: CaptureScene): () => void {
 }
 
 export interface ViewCaptureDeps {
-  /** Tampon de dessin courant (px) — mesure le cadre de livraison tel qu'il est à l'écran. */
+  /** Current drawing buffer (px) — measures the delivery frame as it is on screen. */
   buffer: { width: number; height: number };
   scene: CaptureScene;
   aspect: number;
-  /** Largeur maximale allouable (limite GPU) — repli `CAPTURE_MAX_WIDTH`. */
+  /** Maximum allocatable width (GPU limit) — fallback `CAPTURE_MAX_WIDTH`. */
   maxWidth?: number;
-  /** Rend une frame à la résolution demandée (renderer et caméra recalés par l'appelant). */
+  /** Renders a frame at the requested resolution (renderer and camera re-set by the caller). */
   renderAt: (size: CaptureSize) => void;
-  /** Encode la frame rendue. */
+  /** Encodes the rendered frame. */
   encode: () => string | null;
-  /** Remet le rendu d'écran — TOUJOURS joué, que la capture ait abouti ou non. */
+  /** Restores the screen render — ALWAYS run, whether the capture succeeded or not. */
   restore: () => void;
 }
 
 /**
- * Pose une capture : masque les repères, rend à la résolution voulue, encode, puis remet la
- * scène et le rendu d'écran. Testable sans WebGL.
+ * Performs a capture: hides the markers, renders at the wanted resolution, encodes, then restores
+ * the scene and the screen render. Testable without WebGL.
  */
 export function renderViewCapture(deps: ViewCaptureDeps): string | null {
   const aspect = usable(deps.aspect) ? deps.aspect : DEFAULT_REVIEW_ASPECT;
@@ -119,7 +119,7 @@ export function renderViewCapture(deps: ViewCaptureDeps): string | null {
     deps.renderAt(size);
     return deps.encode();
   } catch {
-    // Tampon non alloué, canvas « tainted », contexte perdu : pas d'image, mais scène intacte.
+    // Buffer not allocated, tainted canvas, lost context: no image, but the scene is intact.
     return null;
   } finally {
     showMarkers();
@@ -128,8 +128,8 @@ export function renderViewCapture(deps: ViewCaptureDeps): string | null {
 }
 
 /**
- * PNG de la frame rendue, aplatie sur le fond du viewer : le renderer splat est en `alpha: true`
- * et une capture transparente ne montrerait pas ce que le spectateur a sous les yeux.
+ * PNG of the rendered frame, flattened onto the viewer background: the splat renderer uses
+ * `alpha: true`, and a transparent capture would not show what the viewer is looking at.
  */
 export function toCapturePng(canvas: HTMLCanvasElement): string | null {
   const flat = document.createElement('canvas');
@@ -144,7 +144,7 @@ export function toCapturePng(canvas: HTMLCanvasElement): string | null {
   return url.startsWith('data:image/png') ? url : null;
 }
 
-/** Ce qu'il faut d'un viewer spatial pour capturer sa vue — satisfait par les deux scènes. */
+/** What a spatial viewer must provide to capture its view — satisfied by both scenes. */
 export interface ViewCaptureScene {
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
@@ -152,8 +152,8 @@ export interface ViewCaptureScene {
 }
 
 /**
- * Capture la vue d'une scène montée. `onRestored` redemande une frame d'écran quand le viewer
- * rend à la demande : la remise en place repasse par `setSize`, qui vide le tampon de dessin.
+ * Captures the view of a mounted scene. `onRestored` requests a screen frame again when the viewer
+ * renders on demand: restoring goes back through `setSize`, which empties the drawing buffer.
  */
 export function captureSceneView(
   s: ViewCaptureScene | null | undefined,
@@ -163,11 +163,11 @@ export function captureSceneView(
   if (!s) return null;
   const { renderer, scene, camera } = s;
   const canvas = renderer.domElement;
-  // Un aspect aberrant ferait rendre `resizeRendererCamera` sans cadre au retour : on assainit
-  // une fois, et la remise en place voit exactement l'aspect qui a servi à capturer.
+  // An aberrant aspect would make `resizeRendererCamera` render without framing on return: we
+  // sanitise it once, and the restoration sees exactly the aspect used for the capture.
   const a = usable(aspect) ? aspect : DEFAULT_REVIEW_ASPECT;
-  // Taille logique du rendu d'écran, relevée AVANT de toucher au renderer : elle sert à le
-  // remettre en place sans mesurer le DOM (le canvas est étiré en CSS, pas dimensionné par lui).
+  // Logical size of the screen render, read BEFORE touching the renderer: it is used to put it
+  // back without measuring the DOM (the canvas is stretched by CSS, not sized by it).
   const ratio = renderer.getPixelRatio();
   const screen = { w: Math.round(canvas.width / ratio), h: Math.round(canvas.height / ratio) };
   return renderViewCapture({
@@ -176,11 +176,11 @@ export function captureSceneView(
     aspect: a,
     maxWidth: renderer.capabilities?.maxTextureSize,
     renderAt: ({ width, height }) => {
-      // `setSize` multiplie par le rapport de pixels : on le neutralise pour obtenir exactement
-      // la résolution demandée, et on le rend dans `restore`.
+      // `setSize` multiplies by the pixel ratio: we neutralise it to get exactly the requested
+      // resolution, and restore it in `restore`.
       renderer.setPixelRatio(1);
       renderer.setSize(width, height, false);
-      // Plus de sous-vue élargie : la capture rend le cadre de livraison, pas le conteneur.
+      // No more enlarged sub-view: the capture renders the delivery frame, not the container.
       if (camera.view?.enabled) camera.clearViewOffset();
       camera.aspect = a;
       camera.updateProjectionMatrix();
@@ -190,15 +190,15 @@ export function captureSceneView(
     restore: () => {
       renderer.setPixelRatio(ratio);
       resizeRendererCamera(renderer, camera, screen.w, screen.h, a);
-      renderer.render(scene, camera); // `setSize` a vidé le tampon : on redessine tout de suite
+      renderer.render(scene, camera); // `setSize` emptied the buffer: redraw straight away
       onRestored?.();
     },
   });
 }
 
 /**
- * Capture prête à brancher sur le bouton du panneau Export. Les accès sont paresseux : la scène
- * n'existe qu'après le montage asynchrone de Three, et l'aspect de livraison peut changer.
+ * Capture ready to wire to the Export panel button. Accesses are lazy: the scene only exists after
+ * Three's asynchronous mount, and the delivery aspect may change.
  */
 export function viewCapturer(
   getScene: () => ViewCaptureScene | null | undefined,

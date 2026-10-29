@@ -13,23 +13,23 @@ import { mediaKindLabels, type ReviewItem } from './reviewsTypes';
 import { useT } from '../../i18n';
 
 /**
- * Une carte de la page Reviews — et la **frontière de mémoïsation** de cette page.
+ * One card of the Reviews page — and the **memoisation boundary** of this page.
  *
- * La page en affiche cent d'un coup, chacune portant un menu contextuel Radix, une case
- * cochable et un aperçu animé. Tant que la grille était écrite en ligne dans la page,
- * cocher une seule case recréait les cent descripteurs de menu et re-rendait les cent
- * cartes. Ici, seules les props d'une carte changent quand son état de sélection change :
- * `memo` arrête la re-render aux quatre-vingt-dix-neuf autres.
+ * The page shows a hundred at once, each carrying a Radix context menu, a tick box and an
+ * animated preview. While the grid was written inline in the page, ticking a single box rebuilt
+ * the hundred menu descriptors and re-rendered the hundred cards. Here, only the props of one
+ * card change when its selection state changes: `memo` stops the re-render of the other
+ * ninety-nine.
  *
- * Le contrat tient à une condition, et c'est la page qui la tient : les rappels reçus
- * doivent être stables d'un rendu à l'autre (cf. `ReviewsPage`, qui lit la sélection au
- * moment du clic plutôt qu'au rendu).
+ * The contract holds under one condition, which the page enforces: the callbacks received must be
+ * stable from one render to the next (see `ReviewsPage`, which reads the selection at click time
+ * rather than at render time).
  */
 export interface ReviewCardProps {
   item: ReviewItem;
   view: ViewMode;
   selected: boolean;
-  /** Droits qui ouvrent une entrée de menu supplémentaire. */
+  /** Rights that open an extra menu entry. */
   canDecide: boolean;
   canPlaylist: boolean;
   onSelect: (id: number, mods?: SelectModifiers) => void;
@@ -69,8 +69,8 @@ function ReviewCard({
           label: t('common.open'),
           onClick: () => onOpen(item),
         },
-        // Le clic droit est la porte d'entrée des actions (UI simple) : la décision s'y
-        // pose pour une carte comme pour toute la sélection.
+        // The right click is the entry point for actions (simple UI): the decision is set there
+        // for a card as well as for the whole selection.
         ...(canDecide
           ? [
               {

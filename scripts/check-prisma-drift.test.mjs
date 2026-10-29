@@ -14,8 +14,8 @@ import {
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
-describe('check-prisma-drift — lecture du script de différence', () => {
-  it('découpe le SQL en instructions et jette commentaires et mise en page', () => {
+describe('check-prisma-drift — reading the diff script', () => {
+  it('splits the SQL into statements and drops comments and layout', () => {
     const sql = [
       '-- DropIndex',
       'DROP INDEX "MediaObject_originalName_trgm_idx";',
@@ -30,44 +30,44 @@ describe('check-prisma-drift — lecture du script de différence', () => {
     ]);
   });
 
-  it('un script vide ne produit aucune instruction (cas nominal : pas de dérive)', () => {
+  it('an empty script produces no statement (nominal case: no drift)', () => {
     expect(normalizeStatements('')).toEqual([]);
     expect(normalizeStatements('-- rien à faire\n\n')).toEqual([]);
   });
 });
 
-describe('check-prisma-drift — confrontation à la liste des divergences admises', () => {
+describe('check-prisma-drift — comparison with the list of accepted divergences', () => {
   const allowed = ['DROP INDEX "a_trgm_idx"', 'DROP INDEX "b_trgm_idx"'];
 
-  it('accepte exactement les divergences déclarées', () => {
+  it('accepts exactly the declared divergences', () => {
     expect(compareStatements(allowed, allowed)).toEqual({ unexpected: [], stale: [] });
   });
 
-  it('relève une instruction inattendue — le `migrate dev` oublié', () => {
+  it('reports an unexpected statement — the forgotten `migrate dev`', () => {
     const observed = [...allowed, 'ALTER TABLE "Shot" ADD COLUMN "note" TEXT'];
     expect(compareStatements(observed, allowed).unexpected).toEqual([
       'ALTER TABLE "Shot" ADD COLUMN "note" TEXT',
     ]);
   });
 
-  it('relève une divergence déclarée qui ne se produit plus — la liste devenue mensongère', () => {
+  it('reports a declared divergence that no longer occurs — the list has become misleading', () => {
     expect(compareStatements([allowed[0]], allowed).stale).toEqual([allowed[1]]);
   });
 
-  it('une liste vide refuse toute divergence', () => {
+  it('an empty list refuses any divergence', () => {
     expect(compareStatements(['DROP INDEX "x"'], []).unexpected).toEqual(['DROP INDEX "x"']);
   });
 });
 
-describe('check-prisma-drift — base fantôme', () => {
-  it('dérive une URL fantôme sans toucher aux identifiants ni au port', () => {
+describe('check-prisma-drift — shadow database', () => {
+  it('derives a shadow URL without touching the credentials or the port', () => {
     const url = shadowUrlFrom('postgresql://review:pw@localhost:5432/review?schema=public');
     expect(new URL(url).pathname).toBe(`/${SHADOW_DATABASE_NAME}`);
     expect(new URL(url).username).toBe('review');
     expect(new URL(url).searchParams.get('schema')).toBe('public');
   });
 
-  it('la base fantôme n’est jamais une base de travail', () => {
+  it('the shadow database is never a working database', () => {
     expect(SHADOW_DATABASE_NAME).not.toBe('review');
     expect(SHADOW_DATABASE_NAME).not.toBe('review_itest');
   });
@@ -76,17 +76,17 @@ describe('check-prisma-drift — base fantôme', () => {
 describe('prisma-drift-allowed.json', () => {
   const file = JSON.parse(readFileSync(path.join(here, 'prisma-drift-allowed.json'), 'utf8'));
 
-  it('chaque divergence admise porte son instruction et sa justification', () => {
+  it('each accepted divergence carries its statement and its justification', () => {
     expect(Array.isArray(file.allowed)).toBe(true);
     for (const entry of file.allowed) {
       expect(typeof entry.statement).toBe('string');
       expect(entry.statement.length).toBeGreaterThan(0);
-      // Sans motif écrit, une entrée devient un tapis sous lequel glisser n'importe quoi.
+      // Without a written reason, an entry becomes a rug under which anything can be swept.
       expect(entry.why.length).toBeGreaterThan(40);
     }
   });
 
-  it('aucune instruction n’est déclarée deux fois', () => {
+  it('no statement is declared twice', () => {
     const statements = file.allowed.map((e) => e.statement);
     expect(new Set(statements).size).toBe(statements.length);
   });

@@ -10,12 +10,12 @@ import { useUploadStore } from '../../../stores/useUploadStore';
 import type { Version, VersionListItem } from '../../types/api';
 import { useT } from '../../i18n';
 
-/** Portée d'une timeline de versions : rattachée à une tâche OU à un asset. */
+/** Scope of a version timeline: attached to a task OR to an asset. */
 export type VersionScope = { taskId: number } | { assetId: number };
 
 /**
- * Données + mutations d'une timeline de versions, **partagées par TaskPage et AssetPage**
- * (Phase 20). Lectures via Query ; chaque mutation invalide les clés concernées + toast.
+ * Data + mutations of a version timeline, **shared by TaskPage and AssetPage** (Phase 20). Reads
+ * go through Query; each mutation invalidates the relevant keys and shows a toast.
  */
 export function useVersions(scope: VersionScope) {
   const t = useT();
@@ -31,14 +31,14 @@ export function useVersions(scope: VersionScope) {
       api.get<{ versions: VersionListItem[] }>(`/api/versions?${filter}`).then((d) => d.versions),
   });
 
-  // L'arbre d'un asset (Phase 45) dépend des versions de ses tâches : publier depuis une
-  // tâche doit rafraîchir la page de l'asset, qui n'est pas celle où l'on se trouve.
+  // An asset's tree (Phase 45) depends on the versions of its tasks: publishing from a task must
+  // refresh the asset page, which is not the one we are on.
   const invalidateVersions = async () => {
     await qc.invalidateQueries({ queryKey: versionsKey });
     void qc.invalidateQueries({ queryKey: ['asset'] });
   };
 
-  // Un upload terminé rafraîchit la liste des versions + les médias de chaque version.
+  // A finished upload refreshes the list of versions + the media of each version.
   useEffect(() => {
     if (uploads.some((u) => u.status === 'done')) {
       void qc.invalidateQueries({ queryKey: qk.versions(filter) });
@@ -48,11 +48,11 @@ export function useVersions(scope: VersionScope) {
   }, [uploads, qc, filter]);
 
   /**
-   * Crée la version suivante.
+   * Creates the next version.
    *
-   * `destination` permet de ranger la version sous une tâche précise plutôt que sous le
-   * parent où l'on se trouve : c'est ce que demande un pipe découpé en étapes, où un
-   * rendu appartient au texturing, pas « à l'asset » en général.
+   * `destination` lets the version be filed under a specific task rather than under the parent we
+   * are on: this is what a pipeline split into steps requires, where a render belongs to texturing,
+   * not "to the asset" in general.
    */
   const createVersion = async (destination?: { taskId: number }): Promise<Version | null> => {
     try {
@@ -67,9 +67,9 @@ export function useVersions(scope: VersionScope) {
     }
   };
   /**
-   * Publie la version ET tous ses brouillons d'un geste (Phase 46) : c'était quatre clics
-   * pour une seule intention. La version bascule publiée dès qu'il ne lui reste plus un
-   * brouillon — le serveur s'en charge.
+   * Publishes the version AND all its drafts in one gesture (Phase 46): it used to take four clicks
+   * for a single intention. The version switches to published as soon as no draft is left — the
+   * server handles it.
    */
   const publishVersion = async (vid: number) => {
     try {

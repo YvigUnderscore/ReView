@@ -4,7 +4,7 @@
 import type { MediaKind, ProjectRef, ReviewStatus } from '../../types/api';
 import { t } from '../../i18n';
 
-/** Sprite de miniatures (grille count = cols×rows) pour le scrub au survol (42.A — №78). */
+/** Thumbnail sprite (grid count = cols×rows) for hover scrubbing (42.A — №78). */
 export interface HoverSprite {
   url: string;
   count: number;
@@ -12,7 +12,7 @@ export interface HoverSprite {
   rows: number;
 }
 
-/** Item de la page Reviews globale (12.C) — construit par MediaService.listReviews. */
+/** Item of the global Reviews page (12.C) — built by MediaService.listReviews. */
 export interface ReviewItem {
   id: number;
   kind: MediaKind;
@@ -20,22 +20,22 @@ export interface ReviewItem {
   published: boolean;
   createdAt: string;
   thumbnailUrl: string | null;
-  /** Sprite de miniatures pour l'aperçu animé au survol (42.A — №78, vidéo uniquement). */
+  /** Thumbnail sprite for the animated hover preview (42.A — №78, video only). */
   hoverSprite: HoverSprite | null;
   location: string;
-  /** Version portant le média : c'est elle qui reçoit la décision de review. */
+  /** Version carrying the media: it is the one that receives the review decision. */
   versionId: number;
   versionName: string;
-  /** Décision de review courante de la version (Phase 31), null si aucune. */
+  /** Current review decision of the version (Phase 31), null if none. */
   reviewStatus: Pick<ReviewStatus, 'id' | 'name' | 'color'> | null;
   project: ProjectRef | null;
   uploader: string | null;
 }
 
 /**
- * Libellés des types de média (filtre + badge), en fonction et non en constante : une table
- * évaluée au chargement du module fige la langue à l'import, avant l'arrivée du catalogue.
- * « Splat » appartient au vocabulaire de production : il ne se traduit pas.
+ * Media type labels (filter + badge), as a function rather than a constant: a table evaluated at
+ * module load would freeze the language at import, before the catalogue arrives.
+ * "Splat" belongs to the production vocabulary: it is not translated.
  */
 export function mediaKindLabels(tr: typeof t): Record<MediaKind, string> {
   return {
@@ -46,10 +46,9 @@ export function mediaKindLabels(tr: typeof t): Record<MediaKind, string> {
   };
 }
 
-/** Les cinq filtres de la page Reviews (« » = inactif), tels qu'ils vont dans l'URL. */
-// Un alias de type, non une interface : les vues enregistrées les manipulent comme un
-// simple sac de chaînes (`Record<string, string>`), auquel une interface n'est pas
-// assignable faute d'index implicite.
+/** The five filters of the Reviews page ("" = inactive), as they go into the URL. */
+// A type alias, not an interface: saved views handle it as a plain bag of strings
+// (`Record<string, string>`), which an interface is not assignable to for lack of an implicit index.
 export type ReviewsFilterState = {
   projectId: string;
   kind: string;
@@ -67,11 +66,11 @@ export const EMPTY_FILTERS: ReviewsFilterState = {
 };
 
 /**
- * Filtres restitués depuis une vue enregistrée.
+ * Filters restored from a saved view.
  *
- * Une vue est un sac de chaînes écrit par une version antérieure de la page : on n'en
- * retient que les filtres qui existent encore, et tout filtre absent revient à vide —
- * sans quoi un filtre disparu resterait actif sans être affiché nulle part.
+ * A view is a bag of strings written by an earlier version of the page: only the filters that
+ * still exist are kept, and any missing filter returns to empty — otherwise a vanished filter
+ * would stay active without being displayed anywhere.
  */
 export function filtersFrom(saved: Record<string, string>): ReviewsFilterState {
   return {

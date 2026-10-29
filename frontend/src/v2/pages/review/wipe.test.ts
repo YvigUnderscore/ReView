@@ -15,51 +15,51 @@ const area = (pts: [number, number][]) => {
 };
 
 describe('wipeClipPoints', () => {
-  it('barre verticale au centre → moitié droite', () => {
+  it('vertical bar at the centre → right half', () => {
     const pts = wipeClipPoints(0.5, 0, 1000, 500);
     expect(area(pts)).toBeCloseTo(0.5, 6);
-    // Tous les points sont dans la moitié droite.
+    // All points are in the right half.
     expect(pts.every(([x]) => x >= 0.5 - 1e-9)).toBe(true);
   });
 
-  it('barre horizontale (90°) au centre → moitié basse', () => {
+  it('horizontal bar (90°) at the centre → bottom half', () => {
     const pts = wipeClipPoints(0.5, 90, 800, 600);
     expect(area(pts)).toBeCloseTo(0.5, 6);
     expect(pts.every(([, y]) => y >= 0.5 - 1e-9)).toBe(true);
   });
 
-  it('pos 0 → tout visible, pos 1 → rien', () => {
+  it('pos 0 → everything visible, pos 1 → nothing', () => {
     expect(area(wipeClipPoints(0, 0, 640, 480))).toBeCloseTo(1, 6);
     expect(area(wipeClipPoints(1, 0, 640, 480))).toBeCloseTo(0, 6);
   });
 
-  it('barre diagonale : polygone valide couvrant environ la moitié', () => {
+  it('diagonal bar: valid polygon covering about half', () => {
     const pts = wipeClipPoints(0.5, 45, 1000, 1000);
     expect(pts.length).toBeGreaterThanOrEqual(3);
     expect(area(pts)).toBeCloseTo(0.5, 3);
   });
 });
 
-describe('wipePosFromPoint / wipeCenter (aller-retour)', () => {
-  it('projection cohérente avec le centre', () => {
+describe('wipePosFromPoint / wipeCenter (round trip)', () => {
+  it('projection consistent with the centre', () => {
     for (const angle of [0, 30, 90, -60]) {
       const [cx, cy] = wipeCenter(0.7, angle, 1200, 700);
       expect(wipePosFromPoint(cx, cy, angle, 1200, 700)).toBeCloseTo(0.7, 6);
     }
   });
-  it('borne le résultat dans [0,1]', () => {
+  it('clamps the result to [0,1]', () => {
     expect(wipePosFromPoint(-5000, 0, 0, 800, 600)).toBe(0);
     expect(wipePosFromPoint(5000, 0, 0, 800, 600)).toBe(1);
   });
 });
 
 describe('wipeAngleFromPoint', () => {
-  it('poignée au-dessus du centre → 0° (barre verticale), aimanté', () => {
+  it('handle above the centre → 0° (vertical bar), snapped', () => {
     expect(wipeAngleFromPoint(500, 200, 500, 400)).toBe(0);
-    // Légèrement décalé (< 3°) → aimanté à 0.
+    // Slightly offset (< 3°) → snapped to 0.
     expect(wipeAngleFromPoint(505, 200, 500, 400)).toBe(0);
   });
-  it('poignée à droite du centre → 90° (barre horizontale)', () => {
+  it('handle to the right of the centre → 90° (horizontal bar)', () => {
     expect(wipeAngleFromPoint(700, 400, 500, 400)).toBe(90);
   });
 });

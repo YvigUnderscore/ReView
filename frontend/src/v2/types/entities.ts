@@ -4,19 +4,19 @@
 import type { AssetType, PipelineOverride, ProjectStatus } from './api';
 
 /**
- * Entités du pipe : projet, séquence, plan, asset.
+ * Pipeline entities: project, sequence, shot, asset.
  *
- * Extraites de `api.ts` en C3, quand la fiche de séquence et celle d'asset ont grossi :
- * le module d'entrée dépassait son budget de lignes. La règle ne change pas — une entité,
- * une définition, composée par `Pick`/intersection et jamais redéclarée.
+ * Extracted from `api.ts` in C3, when the sequence and asset sheets had grown: the entry module
+ * exceeded its line budget. The rule does not change — one entity, one definition, composed with
+ * `Pick`/intersection and never redeclared.
  */
 
 /**
- * Une personne assignée, telle que les cartes la reçoivent.
+ * An assigned person, as the cards receive them.
  *
- * `avatarUrl` est déjà signée par le serveur : une grille de deux cents plans porte deux
- * cents fois les mêmes dix visages, et les signer côté client aurait demandé deux cents
- * allers-retours pour dix objets distincts.
+ * `avatarUrl` is already signed by the server: a grid of two hundred shots carries two hundred
+ * copies of the same ten faces, and signing them client-side would have required two hundred round
+ * trips for ten distinct objects.
  */
 export interface AssigneeRef {
   id: number;
@@ -28,36 +28,36 @@ export interface AssigneeRef {
 }
 
 /**
- * Une personne à qui la review d'une version est confiée.
+ * A person to whom the review of a version is assigned.
  *
- * C'est un `AssigneeRef` plus la **consigne** écrite pour elle : savoir qu'on est attendu
- * sans savoir sur quoi ne fait gagner du temps qu'à celui qui assigne. `null` = confiée
- * sans consigne, ce que le projet peut interdire (`settings.reviewRequest`).
+ * It is an `AssigneeRef` plus the **brief** written for them: knowing one is expected without
+ * knowing what for only saves time for the one doing the assigning. `null` = assigned without a
+ * brief, which the project may forbid (`settings.reviewRequest`).
  */
 export interface ReviewAssignee extends AssigneeRef {
   note: string | null;
 }
 
 /**
- * Ce qu'une carte de séquence, de plan ou d'asset affiche en plus de son nom.
+ * What a sequence, shot or asset card displays in addition to its name.
  *
- * Les trois listes partagent exactement ces champs : les définir une fois est ce qui
- * garantit qu'une carte de plan et une carte d'asset ne divergeront pas d'un écran à
- * l'autre — c'était le cas jusqu'ici, faute de type commun.
+ * The three lists share exactly these fields: defining them once is what guarantees that a shot
+ * card and an asset card will not diverge from one screen to another — they did until now, for lack
+ * of a common type.
  */
 export interface EntityCardExtras {
-  /** Personnes responsables de l'entité elle-même (distinctes des assignés de tâche). */
+  /** People responsible for the entity itself (distinct from task assignees). */
   assignees?: AssigneeRef[];
-  /** Livraisons publiées qu'aucune décision de review n'a tranchées. */
+  /** Published deliveries that no review decision has settled. */
   awaitingReview?: number;
-  /** Dernière modification (ISO) — « ça n'a pas bougé depuis trois semaines ». */
+  /** Last modification (ISO) — "nothing has moved for three weeks". */
   updatedAt?: string;
   /**
-   * A bougé depuis que **je** l'ai ouvert (lot 9) — ou jamais ouvert.
+   * Has changed since **I** last opened it (lot 9) — or never opened.
    *
-   * Calculé par le serveur, et pour moi seul : deux personnes lisant la même liste n'y
-   * voient pas les mêmes cartes allumées. Le serveur compare l'activité de l'entité, sa
-   * descendance comprise, à ma dernière visite ; le client n'a rien à recalculer.
+   * Computed by the server, and for me alone: two people reading the same list do not see the same
+   * lit cards. The server compares the entity's activity, descendants included, with my last visit;
+   * the client has nothing to recompute.
    */
   unseen?: boolean;
 }
@@ -77,15 +77,15 @@ export interface Sequence {
   name: string;
   order: number;
   projectId?: number;
-  /** Fiche de la séquence (C3) — un plan et un asset en avaient une, pas elle. */
+  /** Sequence sheet (C3) — a shot and an asset had one, the sequence did not. */
   description?: string | null;
   thumbnailUrl?: string | null;
   pipelineStatusId?: number | null;
-  /** Override pipeline (résolution/fps) hérité du projet — Phase 18/19. */
+  /** Pipeline override (resolution/fps) inherited from the project — Phase 18/19. */
   settings?: PipelineOverride;
   /**
-   * Épisode d'appartenance (niveau facultatif par projet, éteint par défaut).
-   * `null`/absent = séquence hors épisode — l'état normal d'un long-métrage.
+   * Owning episode (optional per-project level, off by default).
+   * `null`/absent = sequence outside any episode — the normal state of a feature film.
    */
   episodeId?: number | null;
 }
@@ -100,18 +100,18 @@ export interface Shot {
   sequenceId: number | null;
   startFrame?: number | null;
   endFrame?: number | null;
-  /** Fiche du plan (C3) : un asset en avait une, pas un plan. */
+  /** Shot sheet (C3): an asset had one, a shot did not. */
   description?: string | null;
   pipelineStatusId?: number | null;
   thumbnailUrl?: string | null;
-  /** Override pipeline (résolution/fps) hérité séquence→projet — Phase 18/19. */
+  /** Pipeline override (resolution/fps) inherited sequence → project — Phase 18/19. */
   settings?: PipelineOverride;
-  /** Coupé au montage (Phase 45) : sauté par les timelines, conservé partout ailleurs. */
+  /** Omitted from the montage (Phase 45): skipped by timelines, kept everywhere else. */
   omitted?: boolean;
 }
 export type ShotRef = Pick<Shot, 'id' | 'code' | 'name'>;
 /** GET /api/shots?projectId= */
-/** Étape du pipe, telle que les listes la renvoient. */
+/** Pipeline step, as the lists return it. */
 export interface DepartmentRef {
   id: number;
   key: string;
@@ -123,7 +123,7 @@ export type ShotSummary = Shot &
   EntityCardExtras & {
     _count?: { tasks: number };
     assets?: AssetRef[];
-    /** Étapes que le plan traverse — le filtre par département s'appuie dessus. */
+    /** Steps the shot goes through — the department filter relies on it. */
     departments?: DepartmentRef[];
   };
 
@@ -131,17 +131,17 @@ export interface Asset {
   id: number;
   name: string;
   type: AssetType;
-  /** Statut d'asset (Phase 48 : le site en tient une liste propre, distincte des tâches). */
+  /** Asset status (Phase 48: the site keeps its own list, distinct from tasks). */
   pipelineStatusId?: number | null;
-  /** Libellé du type tel que le studio le nomme (Phase 48, éditable depuis C3). */
+  /** Type label as the studio names it (Phase 48, editable from C3). */
   typeLabel?: string | null;
   description?: string | null;
   thumbnailUrl?: string | null;
 }
 export type AssetRef = Pick<Asset, 'id' | 'name' | 'type'>;
 /**
- * GET /api/assets — la liste porte les étapes et les assignés, pour que le menu
- * contextuel d'une carte sache quoi cocher sans une requête par carte affichée.
+ * GET /api/assets — the list carries the steps and the assignees, so that a card's context menu
+ * knows what to tick without one request per displayed card.
  */
 export type AssetListItem = Asset &
   EntityCardExtras & {
@@ -149,12 +149,12 @@ export type AssetListItem = Asset &
     tasks?: {
       id: number;
       departmentId: number | null;
-      /** Le département de la tâche, nommé — il peut ne pas figurer dans `departments`. */
+      /** The task's department, named — it may be missing from `departments`. */
       departmentRef?: { id: number; name: string } | null;
       assignee: { id: number; name: string } | null;
     }[];
   };
-/** GET /api/assets/:id — liens N-N vers shots/séquences, plus la fiche (C3). */
+/** GET /api/assets/:id — N-N links to shots/sequences, plus the sheet (C3). */
 export type AssetDetail = Asset & {
   projectId: number;
   shots: (ShotRef & { sequenceId: number | null })[];

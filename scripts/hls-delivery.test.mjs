@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Invariants de la diffusion HLS (vague 2 — servir la vidéo sans traverser Node).
+ * Invariants of HLS delivery (wave 2 — serve the video without going through Node).
  *
- * Le chemin de la vidéo traverse trois fichiers qu'aucun compilateur ne relit ensemble : la
- * route Express, le service qui réécrit les manifestes, et la configuration nginx qui sert
- * les segments. Une régression y est invisible jusqu'au jour où une salle de dailies fait
- * tomber l'API. Les contrôles ci-dessous verrouillent ce qui a été corrigé, et rien de plus.
+ * The path of the video crosses three files that no compiler reads together: the
+ * Express route, the service that rewrites the manifests, and the nginx configuration that serves
+ * the segments. A regression there is invisible until the day a dailies room brings
+ * the API down. The checks below lock down what was fixed, and nothing more.
  */
 
 import { readFileSync } from 'node:fs';
@@ -29,10 +29,10 @@ describe('playlists HLS — compression', () => {
     'frontend/nginx.conf': frontNginx,
   })) {
     it(`compresse les manifestes, jamais les segments (${name})`, () => {
-      // Une playlist réécrite pèse ~130 ko de texte très répétitif (une URL présignée par
-      // segment) : sans gzip, elle coûte plus cher que les segments qu'elle annonce.
+      // A rewritten playlist weighs ~130 KB of very repetitive text (a presigned URL per
+      // segment): without gzip, it costs more than the segments it announces.
       expect(conf).toContain('application/vnd.apple.mpegurl');
-      // Les segments sont du binaire déjà compressé.
+      // The segments are already-compressed binary.
       expect(conf).not.toContain('video/mp2t');
     });
   }
@@ -51,9 +51,9 @@ describe('segments HLS — servis par le stockage, mis en cache par le frontal',
     const block = /location ~ \^\/review\/derived[\s\S]*?\n {4}\}/.exec(prodNginx)?.[0] ?? '';
     expect(block).toContain('proxy_buffering on;');
     expect(block).toContain('proxy_cache review_hls;');
-    // Vingt spectateurs qui démarrent ensemble = une seule lecture au stockage.
+    // Twenty viewers starting together = a single read from storage.
     expect(block).toContain('proxy_cache_lock on;');
-    // La signature fait partie de la clé : un chemin deviné ne touche aucune entrée.
+    // The signature is part of the key: a guessed path touches no entry.
     expect(block).toMatch(/proxy_cache_key\s+"\$scheme\$request_method\$host\$request_uri";/);
   });
 

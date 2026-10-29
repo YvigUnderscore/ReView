@@ -36,7 +36,7 @@ const clip = (over: Partial<TimelineClip> & { order: number; startTime: number }
   ...over,
 });
 
-// Trois plans de 2 s : [0-2[ , [2-4[ , [4-6[
+// Three shots of 2 s: [0-2[ , [2-4[ , [4-6[
 const items = [
   clip({ order: 0, startTime: 0 }),
   clip({ order: 1, startTime: 2 }),
@@ -44,44 +44,44 @@ const items = [
 ];
 
 describe('clipIndexAt', () => {
-  it('trouve le plan qui occupe un instant donné', () => {
+  it('finds the shot occupying a given instant', () => {
     expect(clipIndexAt(items, 0)).toBe(0);
     expect(clipIndexAt(items, 1.9)).toBe(0);
     expect(clipIndexAt(items, 2)).toBe(1);
     expect(clipIndexAt(items, 5.5)).toBe(2);
   });
 
-  it('reste sur le dernier plan au-delà de la fin', () => {
+  it('stays on the last shot beyond the end', () => {
     expect(clipIndexAt(items, 99)).toBe(2);
   });
 
-  it('rend -1 sur un montage vide', () => {
+  it('returns -1 on an empty montage', () => {
     expect(clipIndexAt([], 3)).toBe(-1);
   });
 });
 
 describe('localTimeAt / globalTimeOf', () => {
-  it('convertit le temps global en position dans le plan', () => {
+  it('converts global time into a position within the shot', () => {
     expect(localTimeAt(items[1], 3.5)).toBe(1.5);
   });
 
-  it('borne la position aux limites du plan', () => {
+  it('clamps the position to the shot boundaries', () => {
     expect(localTimeAt(items[1], 0)).toBe(0);
     expect(localTimeAt(items[1], 99)).toBe(2);
   });
 
-  it('fait l’aller-retour sans dérive', () => {
+  it('round-trips without drift', () => {
     expect(globalTimeOf(items[2], localTimeAt(items[2], 4.75))).toBe(4.75);
   });
 });
 
 describe('sequenceSpans', () => {
-  it('fusionne les plans consécutifs d’une même séquence', () => {
+  it('merges consecutive shots of the same sequence', () => {
     const spans = sequenceSpans(items);
     expect(spans).toEqual([{ sequenceId: 1, sequenceCode: 'SQ010', startTime: 0, duration: 6 }]);
   });
 
-  it('ouvre une bande à chaque changement de séquence', () => {
+  it('opens a band at each sequence change', () => {
     const spans = sequenceSpans([
       clip({ order: 0, startTime: 0 }),
       clip({ order: 1, startTime: 2, sequenceId: 2, sequenceCode: 'SQ020' }),
@@ -91,7 +91,7 @@ describe('sequenceSpans', () => {
     expect(spans[1]).toMatchObject({ startTime: 2, duration: 4 });
   });
 
-  it('ne fusionne jamais deux plans hors séquence', () => {
+  it('never merges two shots outside a sequence', () => {
     const spans = sequenceSpans([
       clip({ order: 0, startTime: 0, sequenceId: null, sequenceCode: null }),
       clip({ order: 1, startTime: 2, sequenceId: null, sequenceCode: null }),
@@ -99,13 +99,13 @@ describe('sequenceSpans', () => {
     expect(spans).toHaveLength(2);
   });
 
-  it('rend une liste vide pour un montage vide', () => {
+  it('returns an empty list for an empty montage', () => {
     expect(sequenceSpans([])).toEqual([]);
   });
 });
 
 describe('sequenceStarts', () => {
-  it('marque le premier plan de chaque séquence', () => {
+  it('marks the first shot of each sequence', () => {
     const mixed = [
       clip({ order: 0, startTime: 0 }),
       clip({ order: 1, startTime: 2 }),
@@ -114,7 +114,7 @@ describe('sequenceStarts', () => {
     expect(sequenceStarts(mixed)).toEqual([0, 2]);
   });
 
-  it('donne sa frontière à chaque plan hors séquence', () => {
+  it('gives each shot outside a sequence its own boundary', () => {
     const orphans = [
       clip({ order: 0, startTime: 0, sequenceId: null, sequenceCode: null }),
       clip({ order: 1, startTime: 2, sequenceId: null, sequenceCode: null }),
@@ -122,13 +122,13 @@ describe('sequenceStarts', () => {
     expect(sequenceStarts(orphans)).toEqual([0, 1]);
   });
 
-  it('rend une liste vide pour un montage vide', () => {
+  it('returns an empty list for an empty montage', () => {
     expect(sequenceStarts([])).toEqual([]);
   });
 });
 
 describe('trackLayout', () => {
-  it('donne à chaque plan la largeur de sa durée', () => {
+  it('gives each shot a width matching its duration', () => {
     expect(trackLayout(items, 6)).toEqual([
       { index: 0, leftPct: 0, widthPct: (2 / 6) * 100 },
       { index: 1, leftPct: (2 / 6) * 100, widthPct: (2 / 6) * 100 },
@@ -136,23 +136,23 @@ describe('trackLayout', () => {
     ]);
   });
 
-  it('couvre la bande de bout en bout', () => {
+  it('covers the band from end to end', () => {
     const slots = trackLayout(items, 6);
     const last = slots[slots.length - 1];
     expect(last.leftPct + last.widthPct).toBeCloseTo(100, 6);
   });
 
-  it('partage la bande à parts égales quand aucune durée n’est connue', () => {
+  it('shares the band equally when no duration is known', () => {
     expect(trackLayout(items, 0).map((s) => s.widthPct)).toEqual([100 / 3, 100 / 3, 100 / 3]);
   });
 
-  it('rend une liste vide pour un montage vide', () => {
+  it('returns an empty list for an empty montage', () => {
     expect(trackLayout([], 6)).toEqual([]);
   });
 });
 
 describe('nextPlayableIndex', () => {
-  it('saute les cartons', () => {
+  it('skips placeholders', () => {
     const withGap = [
       clip({ order: 0, startTime: 0 }),
       clip({ order: 1, startTime: 2, mediaId: null, placeholder: true }),
@@ -161,7 +161,7 @@ describe('nextPlayableIndex', () => {
     expect(nextPlayableIndex(withGap, 0)).toBe(2);
   });
 
-  it('saute aussi les plans-image : rien à précharger dans un élément vidéo', () => {
+  it('also skips still shots: nothing to preload in a video element', () => {
     const withStill = [
       clip({ order: 0, startTime: 0 }),
       clip({ order: 1, startTime: 2, mediaKind: 'IMAGE', mediaName: 'still.jpg' }),
@@ -170,36 +170,36 @@ describe('nextPlayableIndex', () => {
     expect(nextPlayableIndex(withStill, 0)).toBe(2);
   });
 
-  it('rend -1 en fin de montage', () => {
+  it('returns -1 at the end of the montage', () => {
     expect(nextPlayableIndex(items, 2)).toBe(-1);
   });
 });
 
 describe('holdsOnClock', () => {
-  // Le montage restait bloqué à 00:00 quand son premier plan portait une image : servie à
-  // une balise `<video>`, elle échoue au démultiplexage et la lecture ne démarre jamais.
-  it('tient sur l’horloge un carton comme une image', () => {
+  // The montage stayed stuck at 00:00 when its first shot carried an image: served to a
+  // `<video>` tag, it fails demuxing and playback never starts.
+  it('holds a placeholder on the clock like an image', () => {
     expect(holdsOnClock(clip({ order: 0, startTime: 0, mediaId: null, placeholder: true }))).toBe(true);
     expect(holdsOnClock(clip({ order: 0, startTime: 0, mediaKind: 'IMAGE' }))).toBe(true);
   });
 
-  it('laisse la vidéo mener sa propre horloge', () => {
+  it('lets the video drive its own clock', () => {
     expect(holdsOnClock(clip({ order: 0, startTime: 0 }))).toBe(false);
   });
 
-  it('traite 3D et splat comme des plans vidéo (le montage les encode en proxy)', () => {
+  it('treats 3D and splat like video shots (the montage encodes them as a proxy)', () => {
     expect(holdsOnClock(clip({ order: 0, startTime: 0, mediaKind: 'MODEL_3D' }))).toBe(false);
     expect(holdsOnClock(clip({ order: 0, startTime: 0, mediaKind: 'SPLAT' }))).toBe(false);
   });
 
-  it('ne se prononce pas sur un plan absent', () => {
+  it('does not rule on a missing shot', () => {
     expect(holdsOnClock(null)).toBe(false);
     expect(holdsOnClock(undefined)).toBe(false);
   });
 });
 
 describe('isStillClip', () => {
-  it('distingue l’image fixe du carton vide', () => {
+  it('tells a still image apart from an empty placeholder', () => {
     expect(isStillClip(clip({ order: 0, startTime: 0, mediaKind: 'IMAGE' }))).toBe(true);
     expect(isStillClip(clip({ order: 0, startTime: 0, mediaId: null, placeholder: true }))).toBe(false);
     expect(isStillClip(clip({ order: 0, startTime: 0 }))).toBe(false);
@@ -207,12 +207,12 @@ describe('isStillClip', () => {
 });
 
 describe('formatTimecode', () => {
-  it('met en forme la position courante', () => {
+  it('formats the current position', () => {
     expect(formatTimecode(0)).toBe('0:00');
     expect(formatTimecode(75.9)).toBe('1:15');
   });
 
-  it('encaisse les valeurs aberrantes', () => {
+  it('handles aberrant values', () => {
     expect(formatTimecode(Number.NaN)).toBe('0:00');
     expect(formatTimecode(-2)).toBe('0:00');
   });

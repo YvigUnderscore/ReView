@@ -5,12 +5,12 @@ import { describe, expect, it } from 'vitest';
 import { looksFrench, messagesOf, offendersOf } from './check-backend-english.mjs';
 
 describe('messagesOf', () => {
-  it('relève le message, pas le code d’erreur qui le suit', () => {
+  it('extracts the message, not the error code that follows it', () => {
     const found = messagesOf(`throw badRequest('Filename is invalid', 'BAD_NAME');`);
     expect(found).toEqual([{ line: 1, text: 'Filename is invalid' }]);
   });
 
-  it('couvre toutes les façons de lever une erreur lue par un humain', () => {
+  it('covers every way of throwing an error read by a human', () => {
     const source = [
       `throw notFound('Shot not found');`,
       `throw forbidden('Administrators only');`,
@@ -20,36 +20,36 @@ describe('messagesOf', () => {
     expect(messagesOf(source)).toHaveLength(4);
   });
 
-  it('ignore une ligne qui ne lève rien', () => {
+  it('ignores a line that throws nothing', () => {
     expect(messagesOf(`const label = 'Séquence introuvable';`)).toEqual([]);
   });
 });
 
 describe('looksFrench', () => {
-  it('reconnaît le français à ses accents', () => {
+  it('recognises French by its accents', () => {
     expect(looksFrench('Séquence non trouvée')).toBe(true);
   });
 
-  it('le reconnaît aussi sans accent — c’est là qu’il se cache', () => {
-    // « Media introuvable » n'a pas un seul accent et reste du français.
+  it('also recognises it without accents — that is where it hides', () => {
+    // "Media introuvable" has not a single accent and is still French.
     expect(looksFrench('Media introuvable')).toBe(true);
     expect(looksFrench('Chemin trop long')).toBe(true);
   });
 
-  it('laisse passer l’anglais technique, mot-outil isolé compris', () => {
-    // « non-HTTP » contient « non » : un seul mot faible ne suffit pas à conclure.
+  it('lets technical English through, isolated function word included', () => {
+    // "non-HTTP" contains "non": a single weak word is not enough to conclude.
     expect(looksFrench('Webhook URL refused (private host, or a non-HTTP scheme)')).toBe(false);
     expect(looksFrench('Only a supervisor can publish a version')).toBe(false);
     expect(looksFrench('Path is too deep')).toBe(false);
   });
 
-  it('conclut sur deux mots-outils français, même sans accent', () => {
+  it('concludes on two French function words, even without accents', () => {
     expect(looksFrench('Le shot est dans la corbeille')).toBe(true);
   });
 });
 
 describe('offendersOf', () => {
-  it('ne rapporte que les messages français levés', () => {
+  it('only reports the French messages that are thrown', () => {
     const source = [
       `throw notFound('Shot not found');`,
       `// Séquence introuvable : commentaire, personne ne le lit à l'écran`,

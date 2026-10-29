@@ -2,22 +2,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Budget de poids du premier chargement (A2, corrigé en D3, complété en F-lot8).
+ * First-load weight budget (A2, corrected in D3, extended in F-lot8).
  *
- * Mesure la taille **gzip** de tout ce que le navigateur télécharge avant le premier
- * écran : le script d'entrée, les modules qu'il précharge (`modulepreload`) **et** la
- * feuille de style liée depuis `index.html`.
+ * Measures the **gzip** size of everything the browser downloads before the first screen: the
+ * entry script, the modules it preloads (`modulepreload`) **and** the stylesheet linked from
+ * `index.html`.
  *
- * Ne compter que le fichier d'entrée serait trompeur depuis le découpage en chunks : sortir
- * React dans un fichier séparé ferait « baisser » la mesure sans que rien n'ait changé pour
- * le lecteur, qui télécharge les deux avant de voir quoi que ce soit.
+ * Counting only the entry file would be misleading since the split into chunks: moving React
+ * into a separate file would make the measure "drop" without anything changing for the reader,
+ * who downloads both before seeing anything.
  *
- * Même raisonnement pour la CSS, longtemps oubliée du décompte : `<link rel="stylesheet">`
- * **bloque le rendu**. La page reste blanche tant qu'elle n'est pas arrivée, exactement
- * comme pour un script d'entrée. L'exclure faisait annoncer « 427 ko » là où nginx servait
- * 442 ko — un garde-fou qui mesurait à côté de ce qu'il prétendait protéger.
+ * Same reasoning for CSS, long forgotten in the count: `<link rel="stylesheet">` **blocks
+ * rendering**. The page stays blank until it has arrived, exactly as for an entry script. Excluding
+ * it made the check announce "427 KB" where nginx served 442 KB — a safeguard that measured beside
+ * what it claimed to protect.
  *
- * Usage : node scripts/check-bundle-budget.mjs
+ * Usage: node scripts/check-bundle-budget.mjs
  */
 
 import { gzipSync } from 'node:zlib';
@@ -29,42 +29,40 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const DIST = path.join(repoRoot, 'frontend/dist');
 
 /**
- * Plafond du premier chargement, en octets gzip. Posé à 430 ko après le découpage par
- * route (D3), qui avait ramené les scripts de 724 à 401 ko. La marge absorbe les
- * variations de minification sans laisser passer une vraie régression.
+ * First-load ceiling, in gzip bytes. Set at 430 KB after the per-route split (D3), which had brought
+ * the scripts down from 724 to 401 KB. The margin absorbs minification variations without letting a
+ * real regression through.
  *
- * **Il n'a pas été relevé** quand la feuille de style est entrée dans le décompte : le premier
- * chargement réel pesait alors 441,6 ko et le contrôle échouait, ce qui était l'état exact du
- * dépôt. Relever le plafond pour faire taire la mesure aurait refait l'erreur qu'on venait de
- * corriger.
+ * **It was not raised** when the stylesheet entered the count: the real first load then weighed
+ * 441.6 KB and the check failed, which was the exact state of the repository. Raising the ceiling to
+ * silence the measure would have repeated the mistake we had just corrected.
  *
- * 2026-09-16 : 430 -> 280 ko. Le premier chargement mesuré est tombé à **258,6 ko gzip sur
- * quatre fichiers, feuille de style comprise** — catalogue anglais sorti du chunk d'entrée,
- * ProjectPage et ses douze onglets chargés à la demande, page de partage client détachée,
- * framer-motion, @dnd-kit, marked et hash-wasm sortis du premier chargement. Le plafond se
- * baisse au chiffre réellement atteint quand on descend — jamais l'inverse. La marge de 21 ko
- * absorbe les variations de minification, pas une régression.
+ * 2026-09-16: 430 -> 280 KB. The measured first load fell to **258.6 KB gzip across four files,
+ * stylesheet included** — English catalogue moved out of the entry chunk, ProjectPage and its twelve
+ * tabs loaded on demand, client share page split off, framer-motion, @dnd-kit, marked and hash-wasm
+ * taken out of the first load. The ceiling is lowered to the figure actually reached when we go down —
+ * never the other way round. The 21 KB margin absorbs minification variations, not a regression.
  */
 export const ENTRY_BUDGET_GZIP = 280_000;
 
-/** Chemin du script d'entrée déclaré dans index.html (`<script type="module" src=…>`). */
+/** Path of the entry script declared in index.html (`<script type="module" src=…>`). */
 export function entryScriptFrom(html) {
   const match = /<script[^>]+type="module"[^>]+src="([^"]+)"/.exec(html);
   return match ? match[1].replace(/^\//, '') : null;
 }
 
 /**
- * `href` des balises `<link>` portant le `rel` demandé, quel que soit l'ordre des
- * attributs : Vite écrit `rel` avant `href`, mais rien ne le garantit et un garde-fou qui
- * dépend de l'ordre d'attributs d'un générateur finit par mesurer zéro sans le dire.
+ * `href` of the `<link>` tags carrying the requested `rel`, whatever the order of the
+ * attributes: Vite writes `rel` before `href`, but nothing guarantees it, and a safeguard that
+ * depends on a generator's attribute order ends up silently measuring zero.
  */
 function linkHrefs(html, rel) {
   const wanted = new RegExp(`\\brel=["']${rel}["']`);
   const out = [];
   for (const [tag] of html.matchAll(/<link\b[^>]*>/g)) {
     if (!wanted.test(tag)) continue;
-    // Une seule barre initiale est retirée (chemin absolu du site) ; `//cdn/…` reste
-    // une URL externe, qu'on veut pouvoir reconnaître comme telle plus bas.
+    // A single leading slash is stripped (absolute site path); `//cdn/…` stays
+    // an external URL, which we want to be able to recognise as such further down.
     const href = /\bhref=["']([^"']+)["']/.exec(tag);
     if (href) out.push(href[1].replace(/^\/(?!\/)/, ''));
   }
@@ -72,9 +70,9 @@ function linkHrefs(html, rel) {
 }
 
 /**
- * Scripts que la page charge d'emblée : l'entrée et ses `modulepreload`. Vite en émet un
- * par import statique du point d'entrée — ce sont exactement les fichiers que le
- * navigateur va chercher avant d'exécuter quoi que ce soit.
+ * Scripts the page loads straight away: the entry and its `modulepreload`s. Vite emits one per
+ * static import of the entry point — these are exactly the files the browser fetches before
+ * running anything.
  */
 export function preloadedScriptsFrom(html) {
   const out = [];
@@ -84,23 +82,23 @@ export function preloadedScriptsFrom(html) {
   return [...new Set(out)];
 }
 
-/** Feuilles de style liées depuis `index.html` : elles bloquent le rendu du premier écran. */
+/** Stylesheets linked from `index.html`: they block the rendering of the first screen. */
 export function stylesheetsFrom(html) {
   return [...new Set(linkHrefs(html, 'stylesheet'))];
 }
 
-/** Tout ce que la page charge d'emblée : scripts d'entrée, préchargements et styles. */
+/** Everything the page loads straight away: entry scripts, preloads and styles. */
 export function firstLoadAssetsFrom(html) {
   return [...new Set([...preloadedScriptsFrom(html), ...stylesheetsFrom(html)])];
 }
 
-/** Une ressource hors du dossier `dist` (CDN, data:) : on ne peut pas la peser ici. */
+/** A resource outside the `dist` folder (CDN, data:): it cannot be weighed here. */
 const isExternal = (href) => /^(?:[a-z][a-z0-9+.-]*:|\/\/)/i.test(href);
 
 /**
- * Pèse le premier chargement d'un dossier `dist` : rend la liste des fichiers mesurés, le
- * total gzip, et les ressources externes qu'on n'a pas pu peser (pour les dire plutôt que
- * de les escamoter — c'est précisément l'oubli qu'on corrige ici).
+ * Weighs the first load of a `dist` folder: returns the list of measured files, the gzip total,
+ * and the external resources that could not be weighed (to report them rather than hide them — this
+ * is precisely the oversight we correct here).
  */
 export function measureFirstLoad(distDir) {
   const html = readFileSync(path.join(distDir, 'index.html'), 'utf8');

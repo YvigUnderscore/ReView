@@ -20,85 +20,85 @@ import {
 const here = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(here, '..', 'backend');
 
-/** Une entrée de `coverage-summary.json` telle que vitest l'écrit. */
+/** An entry of `coverage-summary.json` as vitest writes it. */
 const entry = (statements, branches) => ({
   statements: { covered: statements[0], total: statements[1] },
   branches: { covered: branches[0], total: branches[1] },
 });
 
-describe('check-coverage — rattachement d’un fichier à son dossier', () => {
-  it('rattache au préfixe déclaré le plus long', () => {
+describe('check-coverage — attaching a file to its folder', () => {
+  it('attaches to the longest declared prefix', () => {
     expect(bucketOf('src/v2/pages/Home.tsx', BUCKETS.frontend)).toBe('src/v2/pages');
     expect(bucketOf('src/lib/apiClient.ts', BUCKETS.frontend)).toBe('src/lib');
-    // `src/v2/lib` est plus précis que rien : il ne doit pas tomber dans `src/lib`.
+    // `src/v2/lib` is more precise than nothing: it must not fall into `src/lib`.
     expect(bucketOf('src/v2/lib/queries.ts', BUCKETS.frontend)).toBe('src/v2/lib');
   });
 
-  it('range hors seau ce qui ne tombe dans aucun dossier déclaré', () => {
+  it('puts out of bucket whatever falls in no declared folder', () => {
     expect(bucketOf('src/app.ts', BUCKETS.backend)).toBe(OTHER_BUCKET);
-    // Un préfixe ne vaut que sur une frontière de dossier : `src/libraries` n'est pas `src/lib`.
+    // A prefix only holds on a folder boundary: `src/libraries` is not `src/lib`.
     expect(bucketOf('src/libraries/x.ts', BUCKETS.backend)).toBe(OTHER_BUCKET);
   });
 
-  it('normalise les chemins absolus du rapport en chemins relatifs POSIX', () => {
+  it('normalises absolute report paths to relative POSIX paths', () => {
     const abs = path.join(ROOT, 'src', 'lib', 'hls.ts');
     expect(relativeToPackage(abs, ROOT)).toBe('src/lib/hls.ts');
   });
 });
 
-describe('check-coverage — agrégation', () => {
-  it('additionne les compteurs bruts : un gros fichier pèse plus qu’un petit', () => {
+describe('check-coverage — aggregation', () => {
+  it('sums the raw counters: a large file weighs more than a small one', () => {
     const summary = {
       total: entry([0, 0], [0, 0]),
       [path.join(ROOT, 'src/lib/a.ts')]: entry([90, 100], [5, 10]),
       [path.join(ROOT, 'src/lib/b.ts')]: entry([0, 900], [0, 90]),
     };
     const out = aggregate(summary, { packageRoot: ROOT, buckets: BUCKETS.backend });
-    // 90 / 1000 = 9 % — et non la moyenne des pourcentages (45 %).
+    // 90 / 1000 = 9 % — and not the average of the percentages (45 %).
     expect(out['src/lib'].statements).toBe(9);
     expect(out['src/lib'].branches).toBe(5);
   });
 
-  it('un dossier sans instruction est couvert : il n’y a rien à couvrir', () => {
+  it('a folder without statements is covered: there is nothing to cover', () => {
     expect(percentage(0, 0)).toBe(100);
     expect(percentage(1, 3)).toBe(33.3);
   });
 
-  it('ignore la ligne « total » du rapport', () => {
+  it('ignores the "total" line of the report', () => {
     const summary = { total: entry([1000, 1000], [1000, 1000]) };
     expect(aggregate(summary, { packageRoot: ROOT, buckets: BUCKETS.backend })).toEqual({});
   });
 });
 
-describe('check-coverage — cliquet', () => {
+describe('check-coverage — ratchet', () => {
   const measured = { 'src/lib': { statements: 80, branches: 70 } };
 
-  it('échoue dès qu’une métrique passe sous son plancher', () => {
+  it('fails as soon as a metric drops below its floor', () => {
     const floors = { 'src/lib': { statements: 85, branches: 70 } };
     const { below } = compare(measured, floors);
     expect(below).toEqual([{ bucket: 'src/lib', metric: 'statements', value: 80, floor: 85 }]);
   });
 
-  it('signale sans bloquer un dossier dont le plancher n’a jamais été posé', () => {
+  it('reports without blocking a folder whose floor was never set', () => {
     const { below, unmeasured } = compare(measured, {});
     expect(below).toEqual([]);
     expect(unmeasured.map((u) => u.metric)).toEqual(METRICS);
   });
 
-  it('signale les dossiers assez au-dessus pour que le plancher monte', () => {
+  it('reports the folders far enough above for the floor to rise', () => {
     const { raised } = compare(measured, { 'src/lib': { statements: 60, branches: 70 } });
     expect(raised).toEqual([{ bucket: 'src/lib', metric: 'statements', value: 80, floor: 60 }]);
   });
 
-  it('--update relève les planchers et refuse de les baisser', () => {
+  it('--update raises the floors and refuses to lower them', () => {
     const floors = { 'src/lib': { statements: 85, branches: 10 } };
     expect(ratchet(measured, floors)).toEqual({
-      // 85 était acquis : le mesuré à 80 ne le fait pas redescendre.
+      // 85 was already reached: the measured 80 does not bring it back down.
       'src/lib': { statements: 85, branches: 70 },
     });
   });
 
-  it('--update conserve le plancher d’un dossier absent du rapport', () => {
+  it('--update keeps the floor of a folder absent from the report', () => {
     const floors = { 'src/workers': { statements: 40, branches: 30 } };
     expect(ratchet(measured, floors)['src/workers']).toEqual({ statements: 40, branches: 30 });
   });
@@ -107,11 +107,11 @@ describe('check-coverage — cliquet', () => {
 describe('coverage-floors.json', () => {
   const file = JSON.parse(readFileSync(path.join(here, 'coverage-floors.json'), 'utf8'));
 
-  it('déclare un bloc par paquet mesuré', () => {
+  it('declares one block per measured package', () => {
     for (const pkg of Object.keys(BUCKETS)) expect(file[pkg]).toBeDefined();
   });
 
-  it('tout plancher posé est un pourcentage', () => {
+  it('every floor set is a percentage', () => {
     for (const pkg of Object.keys(BUCKETS)) {
       for (const metrics of Object.values(file[pkg])) {
         for (const metric of METRICS) {

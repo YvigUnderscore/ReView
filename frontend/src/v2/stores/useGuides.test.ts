@@ -4,8 +4,8 @@
 import { describe, expect, it } from 'vitest';
 import { useGuides } from './useGuides';
 
-describe('useGuides — guides de composition (34.G)', () => {
-  it('tout éteint par défaut ; toggle bascule et persiste', () => {
+describe('useGuides — composition guides (34.G)', () => {
+  it('all off by default; toggle switches and persists', () => {
     expect(useGuides.getState().guides).toEqual({
       thirds: false,
       center: false,

@@ -1,13 +1,13 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-// Pipe ordonné, espace asset et montages automatiques (Phase 45) — module séparé du
-// budget de lignes d'api.ts. Miroir des sorties de `PipelineLatestService` et
-// `TimelineService` côté backend.
+// Ordered pipeline, asset space and automatic montages (Phase 45) — separate module from the
+// line budget of api.ts. Mirror of the outputs of `PipelineLatestService` and `TimelineService`
+// on the backend.
 import type { DepartmentSummary, MediaKind, ReviewStatus, UserRef, VersionStatus } from './api';
 import type { AssigneeRef } from './entities';
 
-/** Média tel que l'API le renvoie : URL signée, jamais de clé de stockage. */
+/** Media as the API returns it: signed URL, never a storage key. */
 export interface PipelineMedia {
   id: number;
   kind: MediaKind;
@@ -17,7 +17,7 @@ export interface PipelineMedia {
   thumbnailUrl: string | null;
 }
 
-/** Groupe d'affichage ordonné par le pipe ; `key` null = fourre-tout de fin de liste. */
+/** Display group ordered by the pipeline; `key` null = catch-all at the end of the list. */
 export interface DepartmentGroup<T> {
   key: string | null;
   name: string;
@@ -36,24 +36,24 @@ export interface AssetTreeVersion {
   media: PipelineMedia[];
 }
 
-/** Une tâche de l'arbre ; `id` null = versions rattachées directement à l'asset. */
+/** A task of the tree; `id` null = versions attached directly to the asset. */
 export interface AssetTreeTask {
   id: number | null;
   name: string;
   type: string | null;
   status: string | null;
-  /** Statut personnalisable (Phase 48) — celui du site ShotGrid sur un projet relié. */
+  /** Customisable status (Phase 48) — the one from the ShotGrid site on a linked project. */
   pipelineStatusId?: number | null;
-  /** Planification (Phase 48) — reprise de ShotGrid quand le projet y est relié. */
+  /** Scheduling (Phase 48) — taken over from ShotGrid when the project is linked to it. */
   startDate?: string | null;
   dueDate?: string | null;
   department: string | null;
-  /** Qui en répond — affiché sur la carte, et réglé au clic droit. */
+  /** Who is responsible for it — shown on the card, and set on right click. */
   assignee: AssigneeRef | null;
   versions: AssetTreeVersion[];
 }
 
-/** La version qui fait foi : étape la plus avancée du pipe, puis la plus récente. */
+/** The authoritative version: most advanced pipeline step, then the most recent. */
 export interface AssetLatest {
   versionId: number;
   versionName: string;
@@ -72,9 +72,9 @@ export interface AssetOverview {
   latest: AssetLatest | null;
 }
 
-// ── Montages automatiques (Phase 45) ─────────────────────────────────────────
+// ── Automatic montages (Phase 45) ────────────────────────────────────────────
 
-/** Un plan du montage. `placeholder` = aucun média publié : la place est tenue par un carton. */
+/** A shot of the montage. `placeholder` = no published media: the slot is held by a placeholder card. */
 export interface TimelineClip {
   order: number;
   startTime: number;
@@ -91,9 +91,9 @@ export interface TimelineClip {
   mediaId: number | null;
   mediaName: string | null;
   /**
-   * Nature du média retenu. Un plan dont la seule version publiée est une image est
-   * parfaitement légitime dans un montage : le lecteur doit le tenir sur son horloge plutôt
-   * que de le confier à une balise `<video>`, qui ne sait pas démultiplexer un JPEG.
+   * Kind of the selected media. A shot whose only published version is an image is perfectly
+   * legitimate in a montage: the player must hold it on its clock rather than hand it to a
+   * `<video>` tag, which cannot demux a JPEG.
    */
   mediaKind: 'VIDEO' | 'IMAGE' | 'MODEL_3D' | 'SPLAT' | null;
   thumbnailUrl: string | null;
@@ -101,7 +101,7 @@ export interface TimelineClip {
   durationMismatch: boolean;
 }
 
-/** GET /api/timelines — le montage recalculé. `name` null = jamais renommé. */
+/** GET /api/timelines — the recomputed montage. `name` null = never renamed. */
 export interface TimelineView {
   id: number;
   projectId: number;
@@ -118,7 +118,7 @@ export interface TimelineView {
   latestRevision: number | null;
 }
 
-/** Ligne figée d'une révision : libellés recopiés à la prise. */
+/** Frozen line of a revision: labels copied at capture time. */
 export interface TimelineSnapshotItem {
   id: number;
   order: number;
@@ -141,7 +141,7 @@ export interface TimelineSnapshotSummary {
   _count: { items: number };
 }
 
-/** Écart entre deux révisions : plans ajoutés, retirés, re-versionnés. */
+/** Difference between two revisions: shots added, removed, re-versioned. */
 export interface TimelineDiff {
   added: string[];
   removed: string[];

@@ -7,8 +7,8 @@ import type { MediaKind, VersionStatus } from '../../types/api';
 import { t } from '../../i18n';
 
 /**
- * Libellés de statut de version, en fonction et non en constante : une table évaluée au
- * chargement du module fige la langue à l'import, avant même l'arrivée du catalogue.
+ * Version status labels, as a function rather than a constant: a table evaluated at module load
+ * would freeze the language at import, before the catalogue even arrives.
  */
 export function versionStatusLabels(tr: typeof t): Record<VersionStatus, string> {
   return {
@@ -28,7 +28,7 @@ export const VERSION_STATUS_DOT: Record<VersionStatus, string> = {
   PUBLISHED: 'bg-success',
 };
 
-/** Icône représentant le type de média (vignette de repli). */
+/** Icon representing the media type (fallback thumbnail). */
 export const MEDIA_KIND_ICON: Record<
   MediaKind,
   ComponentType<{ size?: number | string; className?: string }>

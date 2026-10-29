@@ -12,10 +12,10 @@ import type { TimelineClip, TimelineView } from '../../types/api';
 import { useT } from '../../i18n';
 
 /**
- * Identité du montage dans l'en-tête du chrome : le film, puis le plan à l'écran (Phase 46).
+ * Identity of the montage in the chrome header: the film, then the shot on screen (Phase 46).
  *
- * Le libellé du plan est permanent : sur une seule timeline, c'est la seule chose qui dit
- * en continu où l'on se trouve dans le film.
+ * The shot label is permanent: on a single timeline, it is the only thing that continuously says
+ * where we are in the film.
  */
 export default function MontageHeader({
   name,
@@ -53,10 +53,10 @@ export default function MontageHeader({
 }
 
 /**
- * Entrée de clic droit d'un retour de montage : le renvoyer sur la review du plan.
+ * Right-click entry of a montage note: send it back to the shot's review.
  *
- * Rien n'est recopié — le retour porte déjà sa frame dans le plan, calculée à l'écriture.
- * Il apparaît donc là-bas sur l'image exacte, et reste ici.
+ * Nothing is copied — the note already carries its frame within the shot, computed when it was
+ * written. It therefore appears there on the exact image, and stays here.
  */
 export function ShareToShotItem({
   comment,

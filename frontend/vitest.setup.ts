@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Setup des tests unitaires frontend.
+ * Setup for the frontend unit tests.
  *
- * Spark (`@sparkjsdev/spark`) initialise un module WebAssembly via
- * `WebAssembly.instantiateStreaming(fetch(...))`. Sous Node/happy-dom, l'objet `Response` de
- * happy-dom n'est pas accepté par l'implémentation streaming de Node → rejet non capturé qui
- * ferait échouer la suite (bien que nos tests SPZ, purs, réussissent). On bascule sur le chemin
- * non-streaming (`instantiate` sur un `ArrayBuffer`), universellement compatible. Aucun test
- * n'est affaibli : c'est un contournement d'incompatibilité d'environnement, pas d'assertion.
+ * Spark (`@sparkjsdev/spark`) initialises a WebAssembly module via
+ * `WebAssembly.instantiateStreaming(fetch(...))`. Under Node/happy-dom, happy-dom's `Response` object
+ * is not accepted by Node's streaming implementation → an uncaught rejection that would fail the suite
+ * (even though our pure SPZ tests pass). We switch to the non-streaming path (`instantiate` on an
+ * `ArrayBuffer`), which is universally compatible. No test is weakened: this is a workaround for an
+ * environment incompatibility, not an assertion change.
  */
 const streaming = WebAssembly.instantiateStreaming;
 if (typeof streaming === 'function') {

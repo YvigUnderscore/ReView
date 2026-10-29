@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { lintScripts } from './lint-scripts.mjs';
 
-/** Répertoire jetable : ESLint lit sur disque, et `cwd` doit contenir les cibles. */
+/** Throwaway directory: ESLint reads from disk, and `cwd` must contain the targets. */
 const dir = mkdtempSync(join(tmpdir(), 'review-lint-scripts-'));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
@@ -18,9 +18,9 @@ const write = (name, source) => {
 };
 
 /**
- * Chaque cas démarre une instance ESLint, charge sa configuration et lint un fichier réel :
- * rapide sur une machine de développement, bien plus lent sur un runner d'intégration
- * continue, où le plafond de cinq secondes de vitest était atteint.
+ * Each case starts an ESLint instance, loads its configuration and lints a real file:
+ * fast on a development machine, much slower on a continuous-integration runner,
+ * where vitest's five-second ceiling was reached.
  */
 describe('lintScripts', { timeout: 60_000 }, () => {
   it('signale une variable inutilisée', async () => {

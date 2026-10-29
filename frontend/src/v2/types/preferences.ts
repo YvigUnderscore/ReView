@@ -4,72 +4,72 @@
 import type { WidgetsPref } from '../lib/widgetLayout';
 
 /**
- * Préférences UI par compte — GET/PATCH /api/users/me/preferences (merge superficiel,
- * `null` = suppression de la clé). Sac ouvert : chaque feature y ajoute sa clé.
+ * UI preferences per account — GET/PATCH /api/users/me/preferences (shallow merge, `null` =
+ * key removal). Open bag: each feature adds its own key.
  */
 export interface UserPreferences {
-  /** Digest email quotidien (backlog P2). */
+  /** Daily email digest (backlog P2). */
   emailDigest?: boolean;
-  /** Rapport hebdomadaire de production par email (43.B — superviseurs/admins). */
+  /** Weekly production report by email (43.B — supervisors/admins). */
   weeklyReport?: boolean;
   /**
-   * Réglages de notification par type d'événement (lot 9) : genre → canal → activé.
-   * Absent, ou canal absent, vaut **activé** — la forme exacte et la liste des genres
-   * vivent dans `lib/notificationKinds`, recopiée du serveur.
+   * Notification settings per event type (lot 9): kind → channel → enabled.
+   * Absent, or channel absent, means **enabled** — the exact shape and the list of kinds live in
+   * `lib/notificationKinds`, copied from the server.
    */
   notifications?: Record<string, { inApp?: boolean; push?: boolean }>;
-  /** Dernière couleur d'annotation choisie en review. */
+  /** Last annotation colour chosen in review. */
   annotationColor?: string;
-  /** Surcharges de raccourcis clavier globaux (42.A2) : id d'action → touche. */
+  /** Overrides of global keyboard shortcuts (42.A2): action id → key. */
   shortcuts?: Record<string, string>;
   /**
-   * Vues de liste sauvegardées (42.A5 — №73), clé = portée de la liste : « reviews »,
-   * « kanban:12 », « shots:12 »… Mécanisme unique depuis C4 — le kanban avait le sien
-   * (`kanbanViews`), incompatible avec celui du reste de l'application.
+   * Saved list views (42.A5 — №73), key = list scope: "reviews", "kanban:12", "shots:12"…
+   * A single mechanism since C4 — the kanban used to have its own (`kanbanViews`), incompatible
+   * with the rest of the application.
    */
   savedViews?: Record<string, SavedView[]>;
-  /** Tour d'onboarding vu (42.B — №69) : ne plus l'afficher automatiquement. */
+  /** Onboarding tour seen (42.B — №69): stop showing it automatically. */
   onboardingSeen?: boolean;
   /**
-   * Disposition de l'Accueil (C2) : blocs masqués, ordre unique et réglages par bloc.
-   * `null` = disposition par défaut. L'ancienne forme (`order` par colonne) est ignorée
-   * à la lecture — les colonnes figées ont disparu.
+   * Home layout (C2): hidden blocks, a single order and per-block settings.
+   * `null` = default layout. The former shape (`order` per column) is ignored on read — the frozen
+   * columns are gone.
    */
   homeWidgets?: WidgetsPref | null;
   /**
-   * Disposition de la vue d'ensemble d'un projet (lot 10) : même forme que `homeWidgets`,
-   * et **une seule pour tous les projets** — on ne réapprend pas sa page à chaque projet.
-   * `null` supprime la clé : la page repart alors du défaut réglé pour le rôle.
+   * Layout of a project's overview (lot 10): same shape as `homeWidgets`, and **a single one for
+   * all projects** — one does not relearn one's page for every project.
+   * `null` removes the key: the page then restarts from the default set for the role.
    */
   projectOverview?: WidgetsPref | null;
   /**
-   * Langue de l'interface, code du registre i18n. Attachée au compte et non à l'appareil :
-   * le serveur en a besoin pour envoyer les emails dans la bonne langue.
+   * Interface language, i18n registry code. Attached to the account rather than the device: the
+   * server needs it to send emails in the right language.
    */
   locale?: string;
   /**
-   * Densité d'affichage (A2) : suivie par le compte pour qu'un poste neuf reprenne le
-   * réglage. Un choix explicite fait sur l'appareil reste prioritaire.
+   * Display density (A2): tracked by the account so that a new workstation picks up the setting.
+   * An explicit choice made on the device takes precedence.
    */
   density?: 'comfortable' | 'compact';
   /**
-   * Vue par défaut des listes (cartes ou compact), attachée au compte : elle suit d'un
-   * poste à l'autre, là où le miroir localStorage ne sert qu'au premier rendu.
+   * Default list view (cards or compact), attached to the account: it follows from one workstation
+   * to another, whereas the localStorage mirror only serves the first render.
    */
   viewMode?: 'cards' | 'compact';
   /**
-   * Écarts par liste, clé = portée (« shots:12 », « assets:12 »). Absent = la liste suit
-   * `viewMode`. Une grille de plans se lit en vignettes, une liste de tâches en lignes :
-   * un réglage unique ne peut pas répondre pour les deux.
+   * Per-list overrides, key = scope ("shots:12", "assets:12"). Absent = the list follows
+   * `viewMode`. A grid of shots is read as thumbnails, a list of tasks as rows: a single setting
+   * cannot answer for both.
    */
   viewModes?: Record<string, 'cards' | 'compact'>;
   [key: string]: unknown;
 }
 
-/** Une vue de liste nommée : un jeu de filtres à rappeler en un clic. */
+/** A named list view: a set of filters to recall in one click. */
 export interface SavedView {
   id: string;
   name: string;
-  /** Filtres capturés (clé de filtre → valeur), propres à la portée de la liste. */
+  /** Captured filters (filter key → value), specific to the list's scope. */
   filters: Record<string, string>;
 }

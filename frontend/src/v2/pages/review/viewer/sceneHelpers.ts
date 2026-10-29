@@ -4,26 +4,26 @@
 import type * as THREE from 'three';
 
 /**
- * Objets d'**aide** de la scène — caméra-objet, marqueur de cible, trajectoire, gizmo. Ils
- * appartiennent à la vue libre, celle où l'artiste les manipule ; ils n'ont rien à faire dans le
- * **PiP**, qui est la vue du plan, c'est-à-dire l'image qui sera livrée.
+ * Scene **helper** objects — camera object, target marker, trajectory, gizmo. They belong to the
+ * free view, the one where the artist manipulates them; they have no business in the **PiP**,
+ * which is the plan view, i.e. the image that will be delivered.
  *
- * POURQUOI ÇA COMPTE POUR LE RETOUR VISUEL. Ces objets sont **rigides par rapport à la caméra du
- * plan** : le PiP regarde depuis la position de la caméra-objet vers son marqueur de cible, donc
- * le frustum filaire part de devant l'objectif vers les quatre coins du cadre et le marqueur se
- * tient pile au centre — quoi que fasse le plan. Dessinés dans le PiP, ils y forment une image qui
- * ne bouge **jamais** : le PiP paraissait figé alors que la caméra se déplaçait bel et bien.
+ * WHY IT MATTERS FOR VISUAL FEEDBACK. These objects are **rigid relative to the plan camera**:
+ * the PiP looks from the camera object's position towards its target marker, so the wireframe
+ * frustum runs from in front of the lens to the four corners of the frame and the marker sits
+ * dead centre — whatever the plan does. Drawn in the PiP, they form an image that **never**
+ * moves: the PiP looked frozen while the camera was in fact moving.
  *
- * Registre de module plutôt qu'une chaîne de props : la passe PiP du splat est écrite dans la
- * boucle de `useSplat`, celle du 3D dans `useModelLayout` — deux appelants qui n'ont pas accès au
- * rig caméra, lui-même monté par la page de review. Les objets sont masqués puis restaurés dans le
- * **même** tour de boucle, sans rendu intercalé : deux viewers montés en même temps (comparaison
- * A/B) ne peuvent donc pas se gêner.
+ * A module-level registry rather than a prop chain: the splat PiP pass is written in the
+ * `useSplat` loop, the 3D one in `useModelLayout` — two callers that do not have access to the
+ * camera rig, which itself is mounted by the review page. Objects are hidden then restored within
+ * the **same** loop tick, with no render in between: two viewers mounted at the same time (A/B
+ * comparison) therefore cannot interfere with each other.
  */
 
 const helpers = new Set<THREE.Object3D>();
 
-/** Déclare des objets d'aide ; la fonction rendue les retire (démontage du rig). */
+/** Declares helper objects; the returned function removes them (rig unmount). */
 export function registerSceneHelpers(...objects: readonly THREE.Object3D[]): () => void {
   for (const object of objects) helpers.add(object);
   return () => {
@@ -32,8 +32,8 @@ export function registerSceneHelpers(...objects: readonly THREE.Object3D[]): () 
 }
 
 /**
- * Joue `draw` avec les objets d'aide masqués, puis restaure exactement ceux qui étaient visibles —
- * un objet déjà caché pour une autre raison (`setVisible(false)`) le reste.
+ * Runs `draw` with the helper objects hidden, then restores exactly those that were visible — an
+ * object already hidden for another reason (`setVisible(false)`) stays hidden.
  */
 export function renderWithoutHelpers(draw: () => void): void {
   const hidden: THREE.Object3D[] = [];
@@ -49,7 +49,7 @@ export function renderWithoutHelpers(draw: () => void): void {
   }
 }
 
-/** Nombre d'objets d'aide déclarés — sert aux tests (le registre est volontairement privé). */
+/** Number of declared helper objects — used by tests (the registry is deliberately private). */
 export function sceneHelperCount(): number {
   return helpers.size;
 }

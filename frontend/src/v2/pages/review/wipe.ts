@@ -2,21 +2,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Géométrie du wipe de comparaison A/B (14.C, barre **rotative**) : la barre est une
- * droite passant par un centre C, orientée par `angleDeg` (0° = barre verticale,
- * sens horaire). Le média B est rogné au demi-plan « après » la barre. Calculs en
- * espace écran (px du conteneur) pour que l'angle affiché soit l'angle réel.
+ * Geometry of the A/B comparison wipe (14.C, **rotating** bar): the bar is a line through a
+ * centre C, oriented by `angleDeg` (0° = vertical bar, clockwise). Media B is clipped to the
+ * half-plane "after" the bar. Computations are done in screen space (container px) so that the
+ * displayed angle is the real angle.
  */
 
 export type Pt = [number, number];
 
-/** Normale unitaire au wipe (direction de balayage). 0° → (1, 0) : balayage horizontal. */
+/** Unit normal to the wipe (sweep direction). 0° → (1, 0): horizontal sweep. */
 export function wipeNormal(angleDeg: number): Pt {
   const a = (angleDeg * Math.PI) / 180;
   return [Math.cos(a), Math.sin(a)];
 }
 
-/** Centre de la barre en px : `pos` (0..1) balaie tout le conteneur le long de la normale. */
+/** Centre of the bar in px: `pos` (0..1) sweeps the whole container along the normal. */
 export function wipeCenter(pos: number, angleDeg: number, w: number, h: number): Pt {
   const [nx, ny] = wipeNormal(angleDeg);
   const extent = Math.abs(nx) * w + Math.abs(ny) * h;
@@ -24,8 +24,8 @@ export function wipeCenter(pos: number, angleDeg: number, w: number, h: number):
 }
 
 /**
- * Polygone (fractions 0..1 du conteneur) du demi-plan « côté B » : clip du rectangle
- * par la droite du wipe (Sutherland–Hodgman). Vide si la barre est sortie du cadre.
+ * Polygon (fractions 0..1 of the container) of the "B side" half-plane: the rectangle clipped by
+ * the wipe line (Sutherland–Hodgman). Empty if the bar has left the frame.
  */
 export function wipeClipPoints(pos: number, angleDeg: number, w: number, h: number): Pt[] {
   if (w <= 0 || h <= 0) return [];
@@ -60,14 +60,14 @@ export function wipeClipPoints(pos: number, angleDeg: number, w: number, h: numb
   return out.map(([x, y]) => [x / w, y / h]);
 }
 
-/** `clip-path: polygon(...)` CSS à partir des points (fractions 0..1). */
+/** CSS `clip-path: polygon(...)` built from the points (fractions 0..1). */
 export function wipeClipPath(pos: number, angleDeg: number, w: number, h: number): string {
   const pts = wipeClipPoints(pos, angleDeg, w, h);
-  if (pts.length === 0) return 'polygon(0 0, 0 0, 0 0)'; // rien de visible
+  if (pts.length === 0) return 'polygon(0 0, 0 0, 0 0)'; // nothing visible
   return `polygon(${pts.map(([x, y]) => `${(x * 100).toFixed(3)}% ${(y * 100).toFixed(3)}%`).join(', ')})`;
 }
 
-/** Position (0..1) du wipe correspondant à un point écran (projection sur la normale). */
+/** Wipe position (0..1) matching a screen point (projection onto the normal). */
 export function wipePosFromPoint(x: number, y: number, angleDeg: number, w: number, h: number): number {
   const [nx, ny] = wipeNormal(angleDeg);
   const extent = Math.abs(nx) * w + Math.abs(ny) * h;
@@ -76,14 +76,14 @@ export function wipePosFromPoint(x: number, y: number, angleDeg: number, w: numb
   return Math.min(1, Math.max(0, d / extent + 0.5));
 }
 
-/** Angle (deg) de la barre passant par C et pointant vers (x, y) — poignée de rotation
- * placée le long de la barre : direction barre = normale tournée de -90°. */
+/** Angle (deg) of the bar passing through C and pointing towards (x, y) — rotation handle placed
+ * along the bar: bar direction = normal rotated by -90°. */
 export function wipeAngleFromPoint(x: number, y: number, cx: number, cy: number): number {
-  // La poignée est sur la barre, au-dessus du centre : direction (dx,dy) = (sin a, -cos a)·k
+  // The handle is on the bar, above the centre: direction (dx,dy) = (sin a, -cos a)·k
   const deg = (Math.atan2(y - cy, x - cx) * 180) / Math.PI + 90;
-  // Normalise dans [-180, 180).
+  // Normalise to [-180, 180).
   const n = ((((deg + 180) % 360) + 360) % 360) - 180;
-  // Aimante aux angles usuels (±3°).
+  // Snap to common angles (±3°).
   for (const snap of [-180, -135, -90, -45, 0, 45, 90, 135, 180]) {
     if (Math.abs(n - snap) <= 3) return snap === -180 ? 180 : snap;
   }

@@ -6,18 +6,18 @@ import { clampPipRect, defaultPipRect, type PipRect } from './pipWindow';
 import { useT } from '../../../i18n';
 
 /**
- * Fenêtre flottante du PiP (mode layout, Phase 27) : cadre DOM **déplaçable** (drag sur le cadre)
- * et **redimensionnable** (poignée haut-gauche, coin bas-droit ancré, aspect verrouillé = cadre
- * de la caméra). Le rendu WebGL est dessiné dessous en scissor : chaque changement de rect est
- * remonté via `onRect` (px CSS, origine haut-gauche du conteneur ; `null` au démontage).
- * Positionné impérativement (ref) — aucun re-render pendant le drag.
+ * Floating PiP window (layout mode, Phase 27): a **draggable** DOM frame (drag on the frame)
+ * and **resizable** (top-left handle, bottom-right corner anchored, aspect ratio locked to the
+ * camera frame). The WebGL render is drawn underneath using a scissor: every rect change is
+ * reported via `onRect` (CSS px, origin at the container's top-left; `null` on unmount).
+ * Positioned imperatively (ref), so there is no re-render during a drag.
  *
- * Le rect est **retenu pour la session** (variable de module) : rouvrir le PiP le remet où on
- * l'avait laissé. **Double-clic** : agrandit la vue caméra (≈ ¾ du viewport), re-double-clic la
- * ramène à sa taille d'avant.
+ * The rect is **kept for the session** (module variable): reopening the PiP puts it back where
+ * it was left. **Double-click** enlarges the camera view (about 3/4 of the viewport); a second
+ * double-click restores its previous size.
  */
 
-// Dernier rect utilisé (session) — partagé entre montages successifs du PiP.
+// Last rect used (session), shared across successive PiP mounts.
 let sessionRect: PipRect | null = null;
 export default function PipFrame({
   label,
@@ -25,14 +25,14 @@ export default function PipFrame({
   onRect,
 }: {
   label: string;
-  /** Aspect du cadre de la caméra (la fenêtre le conserve en se redimensionnant). */
+  /** Aspect ratio of the camera frame (the window keeps it while resizing). */
   aspect: number;
   onRect: (rect: PipRect | null) => void;
 }) {
   const t = useT();
   const frameRef = useRef<HTMLDivElement>(null);
   const rectRef = useRef<PipRect | null>(null);
-  // Dernières props lues par les listeners (installés une seule fois).
+  // Latest props read by the listeners (installed only once).
   const aspectRef = useRef(aspect);
   const onRectRef = useRef(onRect);
   useEffect(() => {
@@ -60,14 +60,14 @@ export default function PipFrame({
         : defaultPipRect(parent.clientWidth, parent.clientHeight, aspectRef.current),
     );
 
-    // Le conteneur change de taille (fenêtre, plein écran) → la fenêtre reste dans les bords.
+    // The container changes size (window, fullscreen): keep the window within its edges.
     const ro = new ResizeObserver(() => {
       const r = rectRef.current;
       if (r) apply(clampPipRect(r, parent.clientWidth, parent.clientHeight, aspectRef.current));
     });
     ro.observe(parent);
 
-    // Drag : déplacer (cadre) ou redimensionner (poignée — coin bas-droit ancré).
+    // Drag: move (frame) or resize (handle; bottom-right corner anchored).
     let drag: { mode: 'move' | 'resize'; startX: number; startY: number; start: PipRect } | null = null;
     const onPointerDown = (e: PointerEvent) => {
       if (e.button !== 0 || !rectRef.current) return;
@@ -90,7 +90,7 @@ export default function PipFrame({
       const next =
         drag.mode === 'move'
           ? { ...start, x: start.x + dx, y: start.y + dy }
-          : // Poignée haut-gauche : la largeur croît vers la gauche/le haut, coin bas-droit fixe.
+          : // Top-left handle: width grows to the left/top, bottom-right corner fixed.
             (() => {
               const w = start.w + Math.max(-dx, -dy * aspectRef.current);
               const h = w / aspectRef.current;
@@ -102,7 +102,7 @@ export default function PipFrame({
       drag = null;
       if (frame.hasPointerCapture(e.pointerId)) frame.releasePointerCapture(e.pointerId);
     };
-    // Double-clic : agrandir la vue caméra (≈ ¾ du viewport), re-double-clic = taille d'avant.
+    // Double-click: enlarge the camera view (about 3/4 of the viewport); again to restore.
     let beforeMax: PipRect | null = null;
     const onDoubleClick = (e: MouseEvent) => {
       const r = rectRef.current;

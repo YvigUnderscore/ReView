@@ -4,9 +4,9 @@
 import { describe, it, expect } from 'vitest';
 import { readMeshTransform, type TransformableMesh } from './meshTransform';
 
-/** Vérifie le mapping mesh → TRS (position/quaternion/échelle) piloté par le gizmo. */
+/** Checks the mesh → TRS mapping (position/quaternion/scale) driven by the gizmo. */
 describe('readMeshTransform', () => {
-  it('extrait position, quaternion et échelle du mesh', () => {
+  it('extracts position, quaternion and scale from the mesh', () => {
     const mesh: TransformableMesh = {
       position: { toArray: () => [1, 2, 3] },
       quaternion: { x: 0, y: 0.7071, z: 0, w: 0.7071 },
@@ -19,7 +19,7 @@ describe('readMeshTransform', () => {
     });
   });
 
-  it('reflète une transformation identité', () => {
+  it('reflects an identity transform', () => {
     const mesh: TransformableMesh = {
       position: { toArray: () => [0, 0, 0] },
       quaternion: { x: 0, y: 0, z: 0, w: 1 },

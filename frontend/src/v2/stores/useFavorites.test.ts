@@ -27,7 +27,7 @@ beforeEach(() => {
 });
 
 describe('useFavorites', () => {
-  it('load : hydrate la liste et marque loaded', async () => {
+  it('load: hydrates the list and marks it loaded', async () => {
     vi.mocked(apiMock.get).mockResolvedValue({ favorites: [fav] });
     await useFavorites.getState().load();
     expect(useFavorites.getState().favorites).toHaveLength(1);
@@ -36,13 +36,13 @@ describe('useFavorites', () => {
     expect(useFavorites.getState().isFav('SHOT', 6)).toBe(false);
   });
 
-  it('load en échec : loaded quand même (pas de crash)', async () => {
+  it('load failing: still loaded (no crash)', async () => {
     vi.mocked(apiMock.get).mockRejectedValue(new Error('réseau'));
     await useFavorites.getState().load();
     expect(useFavorites.getState().loaded).toBe(true);
   });
 
-  it('toggle retrait : optimiste (retiré avant la réponse serveur)', async () => {
+  it('toggle removal: optimistic (removed before the server response)', async () => {
     useFavorites.setState({ favorites: [fav], loaded: true });
     let resolveDel!: () => void;
     vi.mocked(apiMock.del).mockReturnValue(
@@ -51,21 +51,21 @@ describe('useFavorites', () => {
       }),
     );
     const p = useFavorites.getState().toggle('SHOT', 5);
-    expect(useFavorites.getState().isFav('SHOT', 5)).toBe(false); // déjà retiré
+    expect(useFavorites.getState().isFav('SHOT', 5)).toBe(false); // already removed
     resolveDel();
     await p;
     expect(vi.mocked(apiMock.del)).toHaveBeenCalledWith('/api/favorites/SHOT/5');
   });
 
-  it('toggle retrait en échec : rollback par rechargement', async () => {
+  it('toggle removal failing: rollback by reloading', async () => {
     useFavorites.setState({ favorites: [fav], loaded: true });
     vi.mocked(apiMock.del).mockRejectedValue(new Error('500'));
     vi.mocked(apiMock.get).mockResolvedValue({ favorites: [fav] });
     await useFavorites.getState().toggle('SHOT', 5);
-    expect(useFavorites.getState().isFav('SHOT', 5)).toBe(true); // restauré
+    expect(useFavorites.getState().isFav('SHOT', 5)).toBe(true); // restored
   });
 
-  it('toggle ajout : POST puis rechargement', async () => {
+  it('toggle add: POST then reload', async () => {
     vi.mocked(apiMock.post).mockResolvedValue({});
     vi.mocked(apiMock.get).mockResolvedValue({ favorites: [fav] });
     await useFavorites.getState().toggle('SHOT', 5);

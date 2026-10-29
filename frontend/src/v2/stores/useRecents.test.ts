@@ -17,7 +17,7 @@ beforeEach(() => {
 });
 
 describe('useRecents', () => {
-  it('push : ajoute en tête et persiste en localStorage', () => {
+  it('push: adds to the head and persists in localStorage', () => {
     trackRecent(entry(1));
     trackRecent(entry(2));
     const recents = useRecents.getState().recents;
@@ -26,14 +26,14 @@ describe('useRecents', () => {
     expect(stored).toHaveLength(2);
   });
 
-  it('dédoublonne par clé : une re-visite remonte en tête', () => {
+  it('deduplicates by key: a revisit moves to the head', () => {
     trackRecent(entry(1));
     trackRecent(entry(2));
     trackRecent(entry(1));
     expect(useRecents.getState().recents.map((r) => r.key)).toEqual(['shot:1', 'shot:2']);
   });
 
-  it('borne l’historique à 5 entrées', () => {
+  it('caps the history at 5 entries', () => {
     for (let i = 1; i <= 7; i++) trackRecent(entry(i));
     const keys = useRecents.getState().recents.map((r) => r.key);
     expect(keys).toHaveLength(5);
@@ -42,10 +42,10 @@ describe('useRecents', () => {
     expect(keys).not.toContain('shot:2');
   });
 
-  it('tolère un localStorage corrompu à la lecture initiale', () => {
-    localStorage.setItem('review:recents', '{pas du json[');
-    // read() est appelé à l'init du store : on le rejoue via une nouvelle lecture
-    trackRecent(entry(1)); // ne doit pas jeter
+  it('tolerates a corrupted localStorage on initial read', () => {
+    localStorage.setItem('review:recents', '{not json[');
+    // read() is called when the store is initialised: replay it via a new read
+    trackRecent(entry(1)); // must not throw
     expect(useRecents.getState().recents).toHaveLength(1);
   });
 });

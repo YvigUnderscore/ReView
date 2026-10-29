@@ -2,16 +2,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Simulateur de site ShotGrid / Flow Production Tracking.
+ * ShotGrid / Flow Production Tracking site simulator.
  *
- * Reproduit la surface de l'API REST v1.1 dont ReView se sert : authentification
- * OAuth2, recherche paginée avec filtres, lecture de schéma, écriture, envoi de
- * webhooks signés. Il sert à développer et à tester l'intégration sans site réel.
+ * Reproduces the surface of the REST v1.1 API that ReView uses: authentication
+ * OAuth2, paginated search with filters, schema reading, writes, sending of
+ * signed webhooks. It is used to develop and test the integration without a real site.
  *
- * Le jeu de données contient VOLONTAIREMENT trois projets qui se ressemblent
- * (« Demo Project », « Demo Project 2 », « Demo Archive ») avec des entités portant
- * les mêmes codes : c'est ce qui permet de vérifier qu'une synchronisation ne
- * déborde jamais sur le projet voisin.
+ * The dataset DELIBERATELY contains three projects that look alike
+ * ("Demo Project", "Demo Project 2", "Demo Archive") with entities carrying
+ * the same codes: that is what lets us check that a synchronisation never
+ * spills over into the neighbouring project.
  *
  * Usage :
  *   node scripts/fake-shotgrid.mjs [--port 8890]
@@ -40,19 +40,19 @@ const log = (...args) => {
   if (!values.quiet) console.log('[fake-sg]', ...args);
 };
 
-// ─────────────────────────── Jeu de données ───────────────────────────
+// ─────────────────────────── Dataset ───────────────────────────
 
 /**
- * Vidéo servie pour tous les médias : deux secondes de mire 320×180 encodées en H.264.
- * Un fichier réellement décodable est nécessaire — ReView transcode l'import et en tire
- * une miniature, ce qu'un fichier factice ferait échouer.
+ * Video served for all media: two seconds of test pattern 320×180 encoded in H.264.
+ * A really decodable file is needed — ReView transcodes the import and derives
+ * a thumbnail from it, which a dummy file would make fail.
  */
 const SAMPLE_MP4_BASE64 =
   'AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAQmbW9vdgAAAGxtdmhkAAAAAAAAAAAAAAAAAAAD6AAAB9AAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAA1B0cmFrAAAAXHRraGQAAAADAAAAAAAAAAAAAAABAAAAAAAAB9AAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAUAAAAC0AAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAAfQAAAIAAABAAAAAALIbWRpYQAAACBtZGhkAAAAAAAAAAAAAAAAAAAwAAAAYABVxAAAAAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAACc21pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAAjNzdGJsAAAAw3N0c2QAAAAAAAAAAQAAALNhdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAUAAtABIAAAASAAAAAAAAAABFUxhdmM1OS4zNy4xMDAgbGlieDI2NAAAAAAAAAAAAAAAGP//AAAAOWF2Y0MBZAAV/+EAG2dkABWscgRBQZ+fARAAAAMAEAAAAwGA8WLYRgEAB2joQ4OSyLD9+PgAAAAAEHBhc3AAAAABAAAAAQAAABRidHJ0AAAAAAAAQAgAAEAIAAAAGHN0dHMAAAAAAAAAAQAAABgAAAQAAAAAFHN0c3MAAAAAAAAAAQAAAAEAAACYY3R0cwAAAAAAAAARAAAAAQAACAAAAAABAAAkAAAAAAEAABAAAAAAAwAAAAAAAAADAAAEAAAAAAEAABgAAAAAAQAACAAAAAABAAAAAAAAAAIAAAQAAAAAAQAAGAAAAAABAAAIAAAAAAEAAAAAAAAAAgAABAAAAAABAAAYAAAAAAEAAAgAAAAAAQAAAAAAAAACAAAEAAAAABxzdHNjAAAAAAAAAAEAAAABAAAAGAAAAAEAAAB0c3RzegAAAAAAAAAAAAAAGAAAB6kAAAGWAAAAaQAAADYAAAA9AAAAOAAAACIAAAAuAAAAMAAAAWYAAABFAAAAJgAAACEAAAAqAAABAgAAADgAAAAkAAAAGQAAACAAAADYAAAAOAAAACEAAAAiAAAAKQAAABRzdGNvAAAAAAAAAAEAAARWAAAAYnVkdGEAAABabWV0YQAAAAAAAAAhaGRscgAAAAAAAAAAbWRpcmFwcGwAAAAAAAAAAAAAAAAtaWxzdAAAACWpdG9vAAAAHWRhdGEAAAABAAAAAExhdmY1OS4yNy4xMDAAAAAIZnJlZQAAEAptZGF0AAACsAYF//+s3EXpvebZSLeWLNgg2SPu73gyNjQgLSBjb3JlIDE2NCByMzA5NSBiYWVlNDAwIC0gSC4yNjQvTVBFRy00IEFWQyBjb2RlYyAtIENvcHlsZWZ0IDIwMDMtMjAyMiAtIGh0dHA6Ly93d3cudmlkZW9sYW4ub3JnL3gyNjQuaHRtbCAtIG9wdGlvbnM6IGNhYmFjPTEgcmVmPTE2IGRlYmxvY2s9MTowOjAgYW5hbHlzZT0weDM6MHgxMzMgbWU9dW1oIHN1Ym1lPTEwIHBzeT0xIHBzeV9yZD0xLjAwOjAuMDAgbWl4ZWRfcmVmPTEgbWVfcmFuZ2U9MjQgY2hyb21hX21lPTEgdHJlbGxpcz0yIDh4OGRjdD0xIGNxbT0wIGRlYWR6b25lPTIxLDExIGZhc3RfcHNraXA9MSBjaHJvbWFfcXBfb2Zmc2V0PS0yIHRocmVhZHM9NiBsb29rYWhlYWRfdGhyZWFkcz0xIHNsaWNlZF90aHJlYWRzPTAgbnI9MCBkZWNpbWF0ZT0xIGludGVybGFjZWQ9MCBibHVyYXlfY29tcGF0PTAgY29uc3RyYWluZWRfaW50cmE9MCBiZnJhbWVzPTggYl9weXJhbWlkPTIgYl9hZGFwdD0yIGJfYmlhcz0wIGRpcmVjdD0zIHdlaWdodGI9MSBvcGVuX2dvcD0wIHdlaWdodHA9MiBrZXlpbnQ9MjUwIGtleWludF9taW49MTIgc2NlbmVjdXQ9NDAgaW50cmFfcmVmcmVzaD0wIHJjX2xvb2thaGVhZD02MCByYz1jcmYgbWJ0cmVlPTEgY3JmPTQwLjAgcWNvbXA9MC42MCBxcG1pbj0wIHFwbWF4PTY5IHFwc3RlcD00IGlwX3JhdGlvPTEuNDAgYXE9MToxLjAw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';
 
 const now = () => new Date().toISOString();
 
-/** Statuts globaux du site (entité Status) — bg_color en RGB décimal, comme ShotGrid. */
+/** Global site statuses (Status entity) — bg_color in decimal RGB, as in ShotGrid. */
 const statuses = [
   { id: 1, type: 'Status', code: 'wtg', name: 'Waiting to Start', bg_color: '150,150,150', list_order: 1 },
   { id: 2, type: 'Status', code: 'rdy', name: 'Ready to Start', bg_color: '110,160,220', list_order: 2 },
@@ -65,8 +65,8 @@ const statuses = [
   { id: 9, type: 'Status', code: 'hld', name: 'On Hold', bg_color: '170,140,90', list_order: 9 },
 ];
 
-// Référence d'entité au format ShotGrid. Déclarée avant les projets, qui s'en servent
-// pour porter leur équipe.
+// Entity reference in the ShotGrid format. Declared before the projects, which use it
+// to carry their crew.
 const ref = (type, id, name) => ({ type, id, name });
 
 const projects = [
@@ -76,7 +76,7 @@ const projects = [
     name: 'Demo Project',
     sg_status: 'Active',
     archived: false,
-    // L'équipe du projet : c'est elle que lit le panneau « Équipe ShotGrid ».
+    // The project crew: this is what the "ShotGrid crew" panel reads.
     users: [
       ref('HumanUser', 500, 'Demo User'),
       ref('HumanUser', 501, 'Alice Artist'),
@@ -89,8 +89,8 @@ const projects = [
     name: 'Demo Project 2',
     sg_status: 'Active',
     archived: false,
-    // Équipe volontairement différente : vérifie que la liste est bien celle du projet
-    // lié, et non l'annuaire du site.
+    // Deliberately different crew: checks that the list is that of the linked project
+    // and not the site directory.
     users: [ref('HumanUser', 502, 'Xavier Extern')],
   },
   { id: 72, type: 'Project', name: 'Demo Archive', sg_status: 'Bidding', archived: false },
@@ -132,7 +132,7 @@ const steps = [
   { id: 305, type: 'Step', code: 'Rigging', short_name: 'RIG', entity_type: 'Asset' },
 ];
 
-/** Construit un jeu cohérent pour un projet : mêmes codes d'un projet à l'autre. */
+/** Builds a consistent dataset for a project: same codes from one project to the next. */
 function buildProjectData(projectId, prefix, base) {
   const p = ref('Project', projectId, projects.find((x) => x.id === projectId).name);
   const sequences = [
@@ -392,7 +392,7 @@ const data = {
 
 for (const [projectId, prefix, base] of [
   [70, 'DEMO', 2000],
-  [71, 'DEMO', 3000], // mêmes codes que le projet 70 : piège à cloisonnement
+  [71, 'DEMO', 3000], // same codes as project 70: a segregation trap
   [72, 'ARCH', 4000],
 ]) {
   const built = buildProjectData(projectId, prefix, base);
@@ -409,10 +409,10 @@ for (const [projectId, prefix, base] of [
 let nextEventId = 900000;
 let nextEntityId = 9000;
 
-/** Webhooks enregistrés : { url, secret, projectId } — configurés via l'API du simulateur. */
+/** Registered webhooks: { url, secret, projectId } — configured through the simulator's API. */
 const webhooks = [];
 
-// ─────────────────────────── Schéma ───────────────────────────
+// ─────────────────────────── Schema ───────────────────────────
 
 const statusValues = statuses.map((s) => s.code);
 const displayValues = Object.fromEntries(statuses.map((s) => [s.code, s.name]));
@@ -534,7 +534,7 @@ const schemas = {
 
 function valueOf(record, field) {
   if (field.includes('.')) {
-    // Filtre profond (« entity.Shot.code ») : non utilisé par ReView, ignoré.
+    // Deep filter ("entity.Shot.code"): not used by ReView, ignored.
     return undefined;
   }
   return record[field];
@@ -599,10 +599,10 @@ function send(res, status, payload) {
 }
 
 /**
- * Un site ShotGrid réel refuse `Content-Type: application/json` sur une requête sans
- * corps (« Unsupported Content-Type »). Le simulateur applique la même exigence :
- * un serveur plus permissif que la réalité laisserait passer un défaut jusqu'en
- * production, ce qui est exactement arrivé une fois.
+ * A real ShotGrid site refuses `Content-Type: application/json` on a request without
+ * a body ("Unsupported Content-Type"). The simulator enforces the same requirement:
+ * a server more permissive than reality would let a defect through to
+ * production, which is exactly what happened once.
  */
 function rejectStrayContentType(req, res) {
   const hasBody = ['POST', 'PUT', 'PATCH'].includes(req.method);
@@ -631,7 +631,7 @@ function requireAuth(req, res) {
   return true;
 }
 
-/** Enregistre un EventLogEntry et notifie les webhooks abonnés au projet. */
+/** Records an EventLogEntry and notifies the webhooks subscribed to the project. */
 function recordEvent({
   eventType,
   entity,
@@ -747,7 +747,7 @@ const server = createServer(async (req, res) => {
     return send(res, 200, { ok: true });
   }
   if (path === '/_control/mutate' && req.method === 'POST') {
-    // { entityType, id, field, value } → modifie et émet l'événement correspondant
+    // { entityType, id, field, value } → modifies and emits the matching event
     const list = data[json.entityType] ?? [];
     const record = list.find((r) => r.id === json.id);
     if (!record) return send(res, 404, { error: 'not found' });
@@ -765,8 +765,8 @@ const server = createServer(async (req, res) => {
     log(`mutation ${json.entityType}#${json.id}.${json.field} = ${JSON.stringify(json.value)}`);
     return send(res, 200, { ok: true, record });
   }
-  // Inventaire des plans d'un projet — le scénario de vérification s'en sert pour
-  // connaître l'effectif attendu sans le figer dans le test.
+  // Inventory of a project's shots — the verification scenario uses it to
+  // know the expected headcount without hard-coding it in the test.
   if (path === '/_control/shots' && req.method === 'GET') {
     const pid = Number(url.searchParams.get('projectId'));
     const shots = data.Shot.filter((s) => s.project?.id === pid);
@@ -783,7 +783,7 @@ const server = createServer(async (req, res) => {
     });
   }
 
-  // Contenu d'un média : servi sans jeton, comme une URL S3 signée chez ShotGrid.
+  // Media content: served without a token, like a signed S3 URL at ShotGrid.
   if (path.startsWith('/_media/')) {
     const buf = Buffer.from(SAMPLE_MP4_BASE64, 'base64');
     res.writeHead(200, { 'Content-Type': 'video/mp4', 'Content-Length': buf.length });
@@ -802,7 +802,7 @@ const server = createServer(async (req, res) => {
     return send(res, 200, { data: { shotgun_version: '8.60 (fake)', api_version: 'v1.1' } });
   }
 
-  // ── Schéma
+  // ── Schema
   let m = path.match(/^\/api\/v1\.1\/schema\/([^/]+)\/fields\/([^/]+)$/);
   if (m) {
     const field = schemas[m[1]]?.[m[2]];
@@ -819,8 +819,8 @@ const server = createServer(async (req, res) => {
   // ── Recherche
   m = path.match(/^\/api\/v1\.1\/entity\/([^/]+)\/_search$/);
   if (m && req.method === 'POST') {
-    // Comme un site réel : la recherche exige un type de contenu qui déclare la forme
-    // des filtres, et refuse `application/json`.
+    // Like a real site: the search requires a content type that declares the shape
+    // of the filters, and refuses `application/json`.
     const ct = (req.headers['content-type'] ?? '').split(';')[0].trim();
     const FILTER_TYPES = [
       'application/vnd+shotgun.api3_array+json',
@@ -855,7 +855,7 @@ const server = createServer(async (req, res) => {
     });
   }
 
-  // ── Lecture d'une entité
+  // ── Reading an entity
   m = path.match(/^\/api\/v1\.1\/entity\/([^/]+)\/(\d+)$/);
   if (m && req.method === 'GET') {
     const record = (data[m[1]] ?? []).find((r) => r.id === Number(m[2]));
@@ -864,7 +864,7 @@ const server = createServer(async (req, res) => {
     return send(res, 200, { data: jsonApi(record, fields) });
   }
 
-  // ── Mise à jour
+  // ── Update
   if (m && req.method === 'PUT') {
     const entity = m[1];
     const record = (data[entity] ?? []).find((r) => r.id === Number(m[2]));
@@ -887,7 +887,7 @@ const server = createServer(async (req, res) => {
     return send(res, 200, { data: jsonApi(record) });
   }
 
-  // ── Création
+  // ── Creation
   m = path.match(/^\/api\/v1\.1\/entity\/([^/]+)$/);
   if (m && req.method === 'POST') {
     const entity = m[1];
@@ -906,15 +906,15 @@ const server = createServer(async (req, res) => {
     return send(res, 201, { data: jsonApi(record) });
   }
 
-  // ── Téléchargement d'un média : renvoie une petite vidéo de test.
-  // L'URL est construite depuis l'en-tête Host de l'appelant : un client dans un
-  // conteneur ne joindrait pas « localhost », qui désigne son propre conteneur.
+  // ── Downloading a media: returns a small test video.
+  // The URL is built from the caller's Host header: a client in a
+  // container would not reach "localhost", which points at its own container.
   m = path.match(/^\/api\/v1\.1\/entity\/([^/]+)\/(\d+)\/([^/]+)\/download$/);
   if (m) {
     const host = req.headers.host ?? `localhost:${PORT}`;
     return send(res, 200, { data: { url: `http://${host}/_media/${m[1]}/${m[2]}/${m[3]}` } });
   }
-  // ── Dépôt de fichier
+  // ── File upload
   m = path.match(/^\/api\/v1\.1\/entity\/([^/]+)\/(\d+)\/([^/]+)\/_upload$/);
   if (m) {
     const host = req.headers.host ?? `localhost:${PORT}`;

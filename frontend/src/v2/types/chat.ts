@@ -1,9 +1,9 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-/** Messagerie interne (MP & groupes) — miroir des vues de `backend/services/ChatService`. */
+/** Internal messaging (DMs & groups) — mirror of the views of `backend/services/ChatService`. */
 
-/** Participant tel qu'affiché dans un fil (identité seule, sans coordonnées). */
+/** Participant as shown in a thread (identity only, no contact details). */
 export interface ChatUser {
   id: number;
   displayName: string;
@@ -12,9 +12,9 @@ export interface ChatUser {
 }
 
 /**
- * Phrase d'un message de service : la clé i18n et ses variables, pas du texte. Elle était
- * écrite en français EN BASE, donc figée pour tous les lecteurs ; `body` reste renvoyé, en
- * anglais, et sert de repli aux messages postés avant ce changement.
+ * Sentence of a system message: the i18n key and its variables, not text. It used to be written in
+ * French IN THE DATABASE, hence frozen for every reader; `body` is still returned, in English, and
+ * serves as a fallback for messages posted before this change.
  */
 export interface ChatSystemPhrase {
   body: string;
@@ -25,7 +25,7 @@ export interface ChatSystemPhrase {
 export interface ChatConversation {
   id: number;
   isGroup: boolean;
-  /** Nom du groupe ; `null` pour un tête-à-tête (le nom est alors l'autre participant). */
+  /** Group name; `null` for a one-to-one (the name is then the other participant). */
   title: string | null;
   members: ChatUser[];
   lastMessage: (ChatSystemPhrase & { id: number; authorId: number | null; isSystem: boolean }) | null;
@@ -37,7 +37,7 @@ export interface ChatConversation {
 export interface ChatMessage extends ChatSystemPhrase {
   id: number;
   conversationId: number;
-  /** Message de service (arrivée, départ, renommage) : pas d'auteur, rendu en gris. */
+  /** System message (arrival, departure, rename): no author, rendered in grey. */
   isSystem: boolean;
   createdAt: string;
   editedAt: string | null;

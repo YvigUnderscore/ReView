@@ -4,7 +4,7 @@
 import type * as THREE from 'three';
 import { renderWithoutHelpers } from './sceneHelpers';
 
-/** Rectangle du PiP en pixels CSS, origine **haut-gauche** du conteneur (coords DOM). */
+/** PiP rectangle in CSS pixels, origin at the container's **top-left** (DOM coords). */
 export interface PipRect {
   x: number;
   y: number;
@@ -12,12 +12,12 @@ export interface PipRect {
   h: number;
 }
 
-/** Largeur minimale de la fenêtre PiP (px CSS) — en dessous, le contenu devient illisible. */
+/** Minimum PiP window width (CSS px) — below it the content becomes unreadable. */
 export const PIP_MIN_WIDTH = 120;
 const DEFAULT_FRAC = 0.28;
 const MARGIN = 10;
 
-/** Position par défaut : coin bas-droit, largeur = 28 % du conteneur, hauteur selon l'aspect. */
+/** Default position: bottom-right corner, width = 28 % of the container, height from the aspect ratio. */
 export function defaultPipRect(cw: number, ch: number, aspect: number): PipRect {
   const w = Math.round(cw * DEFAULT_FRAC);
   const rect = clampPipRect({ x: cw, y: ch, w, h: Math.round(w / aspect) }, cw, ch, aspect);
@@ -25,12 +25,12 @@ export function defaultPipRect(cw: number, ch: number, aspect: number): PipRect 
 }
 
 /**
- * Contraint un rect PiP au conteneur : largeur bornée (mini lisible, maxi = conteneur),
- * hauteur asservie à l'aspect (fenêtre = cadre de la caméra), position ramenée à l'intérieur.
+ * Constrains a PiP rect to the container: width clamped (readable minimum, container maximum),
+ * height locked to the aspect ratio (window = camera frame), position brought back inside.
  */
 export function clampPipRect(rect: PipRect, cw: number, ch: number, aspect: number): PipRect {
   let w = Math.min(Math.max(rect.w, PIP_MIN_WIDTH), Math.max(cw - 2 * MARGIN, PIP_MIN_WIDTH));
-  // La hauteur suit l'aspect ; si elle déborde du conteneur, la largeur est réduite d'autant.
+  // Height follows the aspect; if it overflows the container, the width is reduced accordingly.
   if (Math.round(w / aspect) > ch - 2 * MARGIN && ch > 2 * MARGIN)
     w = Math.max(Math.round((ch - 2 * MARGIN) * aspect), 1);
   const h = Math.max(Math.round(w / aspect), 1);
@@ -39,23 +39,32 @@ export function clampPipRect(rect: PipRect, cw: number, ch: number, aspect: numb
   return { x, y, w: Math.round(w), h };
 }
 
-/** Convertit un rect DOM (origine haut-gauche) en rect GL (origine bas-gauche) pour le scissor. */
+/** Converts a DOM rect (top-left origin) to a GL rect (bottom-left origin) for the scissor. */
 export function toGlRect(rect: PipRect, ch: number): PipRect {
   return { x: rect.x, y: ch - rect.y - rect.h, w: rect.w, h: rect.h };
 }
 
 /**
- * 2ᵉ passe de rendu du PiP (vue de la caméra layout) : scissor + viewport sur le rect de la
- * fenêtre, profondeur seule effacée (le fond reste le rendu principal), puis restauration du
- * viewport plein cadre. Partagée par les viewers 3D et splat (Phase 27 — lot F).
+ * Second render pass of the PiP (layout camera view): scissor + viewport on the window rect,
+ * only depth cleared (the background stays the main render), then restoration of the full-frame
+ * viewport. Shared by the 3D and splat viewers (Phase 27 — lot F).
  *
- * Le PiP est **l'image du plan**, pas une seconde vue de travail : les objets d'aide du rig caméra
- * en sont retirés (`viewer/sceneHelpers`), sans quoi le frustum filaire et le marqueur de cible —
- * rigides par rapport à la caméra du plan — y dessinaient une image immobile.
+ * The PiP is **the image of the plan**, not a second working view: the camera rig helper objects
+ * are removed from it (`viewer/sceneHelpers`), otherwise the wireframe frustum and the target
+ * marker — rigid relative to the plan camera — would draw a motionless picture there.
  *
- * `depthFrom` : la caméra dont le PiP reprend near/far. Le cadrage (`F`, « taille réelle », import)
- * recale ces plans sur l'échelle de la scène pour la caméra libre uniquement ; la caméra du PiP
- * restait sur ceux du chargement, et tronquait la vue du plan sur une scène très grande.
+ * `depthFrom`: the camera whose near/far the PiP takes over. Framing (`F`, "real size", import)
+ * resets these planes to the scene scale for the free camera only; the PiP camera used to keep
+ * the ones from loading, and truncated the plan view on a very large scene.
+ *
+ * Args:
+ *     renderer: WebGL renderer to draw with.
+ *     scene: Scene to render.
+ *     camera: Layout camera, whose aspect is set from `rect`.
+ *     rect: PiP rectangle in DOM pixels.
+ *     cw: Container width in pixels.
+ *     ch: Container height in pixels.
+ *     depthFrom: Optional near/far planes to copy onto `camera`.
  */
 export function renderPipPass(
   renderer: THREE.WebGLRenderer,
@@ -78,7 +87,7 @@ export function renderPipPass(
   renderer.setScissor(gl.x, gl.y, gl.w, gl.h);
   renderer.setViewport(gl.x, gl.y, gl.w, gl.h);
   renderer.autoClear = false;
-  renderer.clearDepth(); // scissor actif → n'efface la profondeur que dans le PiP
+  renderer.clearDepth(); // scissor active → only clears the depth inside the PiP
   renderWithoutHelpers(() => renderer.render(scene, camera));
   renderer.autoClear = true;
   renderer.setScissorTest(false);

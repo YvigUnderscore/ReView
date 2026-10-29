@@ -2,28 +2,25 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Détecte les **clés de traduction affichées telles quelles** — `task.status.todo` au lieu
- * de « À faire ».
+ * Detects **translation keys displayed as they are** — `task.status.todo` instead of "To do".
  *
- * C'est le symétrique de `check-untranslated.mjs`, qui traque le texte écrit en dur. Les
- * deux fautes sont opposées et aucun des deux contrôles ne voit celle de l'autre : une clé
- * nue ressemble à un identifiant technique (pas d'espace, pas d'accent, un point au milieu),
- * donc le détecteur de texte en dur l'écarte — à raison — et l'écran affiche la clé sans que
- * rien ne proteste.
+ * This is the counterpart of `check-untranslated.mjs`, which hunts hard-coded text. The two faults are
+ * opposite and neither check sees the other's: a bare key looks like a technical identifier (no space,
+ * no accent, a dot in the middle), so the hard-coded text detector rightly sets it aside, and the screen
+ * shows the key without any complaint.
  *
- * Deux formes existent, et un contrôle purement syntaxique n'attrape que la première :
- *   1. le littéral oublié : `<span>{'task.status.todo'}</span>` ;
- *   2. l'indirection : `<span>{TASK_STATUS_LABEL_KEY[s]}</span>`, où l'expression a le type
- *      `MessageKey`. Rien dans le texte du fichier ne ressemble à une clé — c'est le *type*
- *      qui trahit l'oubli du `t()`.
+ * Two forms exist, and a purely syntactic check only catches the first:
+ *   1. the forgotten literal: `<span>{'task.status.todo'}</span>`;
+ *   2. the indirection: `<span>{TASK_STATUS_LABEL_KEY[s]}</span>`, where the expression has the type
+ *      `MessageKey`. Nothing in the file's text looks like a key — it is the *type* that betrays the
+ *      missing `t()`.
  *
- * D'où l'usage du vérificateur de types plutôt que d'expressions régulières : on demande à
- * TypeScript le type de chaque expression qui atteint l'écran, et on signale celles dont
- * toutes les valeurs possibles sont des clés du catalogue. Une variable déjà traduite a le
- * type `string`, jamais une union de littéraux : elle ne remonte pas.
+ * Hence the use of the type checker rather than regular expressions: TypeScript is asked for the type of
+ * each expression that reaches the screen, and those whose possible values are all catalogue keys are
+ * reported. An already translated variable has the type `string`, never a union of literals: it does not
+ * come up.
  *
- * Le total est comparé à un plafond (`CEILING`). Baisser le plafond quand on descend,
- * jamais l'inverse.
+ * The total is compared to a ceiling (`CEILING`). Lower the ceiling when going down, never the other way.
  */
 
 import { readFileSync } from 'node:fs';
@@ -36,10 +33,10 @@ const ts = createRequire(resolve('frontend/package.json'))('typescript');
 const PROJECT = 'frontend/tsconfig.json';
 const CATALOG = 'frontend/src/v2/i18n/messages/en.json';
 
-/** Reliquat de clés nues toléré — dette à résorber, jamais à relever. */
+/** Tolerated remainder of bare keys — debt to be paid down, never raised. */
 const CEILING = 0;
 
-/** Props dont la valeur atteint l'utilisateur (à l'écran ou via un lecteur d'écran). */
+/** Props whose value reaches the user (on screen or through a screen reader). */
 export const VISIBLE_PROPS = new Set([
   'alt',
   'aria-label',
@@ -58,7 +55,7 @@ export const VISIBLE_PROPS = new Set([
   'tooltip',
 ]);
 
-/** Fonctions qui parlent à l'utilisateur : leur argument texte est affiché. */
+/** Functions that speak to the user: their text argument is displayed. */
 export const SPEAKING_CALLS = new Set([
   'alert',
   'confirm',
@@ -71,13 +68,13 @@ export const SPEAKING_CALLS = new Set([
 ]);
 
 /**
- * Props qui transportent *volontairement* une clé, à charge du composant destinataire de la
- * traduire. Les nommer ainsi est la façon correcte de faire circuler une clé non traduite —
- * le contrôle s'y fie plutôt que de deviner.
+ * Props that *deliberately* carry a key, leaving it to the receiving component to translate it. Naming
+ * them this way is the correct way to pass an untranslated key around — the check relies on it rather
+ * than guessing.
  */
 export const isKeyProp = (name) => /Key$/.test(name);
 
-/** Clés du catalogue de référence (anglais) — l'ensemble auquel les types sont confrontés. */
+/** Keys of the reference catalogue (English) — the set the types are checked against. */
 export const loadCatalogKeys = (catalog = CATALOG) =>
   new Set(Object.keys(JSON.parse(readFileSync(catalog, 'utf8'))));
 
@@ -89,8 +86,8 @@ function loadProgram() {
 }
 
 /**
- * Vrai quand *toutes* les valeurs possibles du type sont des clés du catalogue. Un type
- * `string` élargi ne remonte pas : il peut déjà contenir la traduction.
+ * True when *all* the possible values of the type are catalogue keys. A widened `string` type does not
+ * come up: it may already contain the translation.
  */
 export function isMessageKeyType(type, keys) {
   const parts = type.isUnion() ? type.types : [type];
@@ -112,7 +109,7 @@ function report(findings, node, file, what) {
   });
 }
 
-/** L'expression est-elle déjà l'argument d'un appel — `t(key)`, `tr(key)` ? */
+/** Is the expression already the argument of a call — `t(key)`, `tr(key)`? */
 function insideTranslator(node) {
   const parent = node.parent;
   return parent && ts.isCallExpression(parent) && parent.arguments.includes(node);
@@ -120,7 +117,7 @@ function insideTranslator(node) {
 
 function scan(file, checker, keys, findings) {
   const visit = (node) => {
-    // 1. Texte JSX : <span>{expr}</span>
+    // 1. JSX text: <span>{expr}</span>
     if (
       ts.isJsxExpression(node) &&
       node.expression &&
@@ -135,7 +132,7 @@ function scan(file, checker, keys, findings) {
       }
     }
 
-    // 2. Prop visible : title={expr}, label="task.status.todo"
+    // 2. Visible prop: title={expr}, label="task.status.todo"
     if (ts.isJsxAttribute(node) && node.name && ts.isIdentifier(node.name)) {
       const name = node.name.text;
       if (VISIBLE_PROPS.has(name) && !isKeyProp(name) && node.initializer) {
@@ -146,7 +143,7 @@ function scan(file, checker, keys, findings) {
       }
     }
 
-    // 3. Fonction qui parle à l'utilisateur : toast.error(expr)
+    // 3. Function that speaks to the user: toast.error(expr)
     if (ts.isCallExpression(node)) {
       const callee = node.expression;
       const name = ts.isPropertyAccessExpression(callee)
@@ -163,8 +160,8 @@ function scan(file, checker, keys, findings) {
       }
     }
 
-    // 4. Interpolation : `${key} : ${count}`. Une clé n'a rien à faire dans une phrase
-    //    assemblée — contrairement à une URL ou une classe CSS, où l'on n'en croise jamais.
+    // 4. Interpolation: `${key} : ${count}`. A key has no business in an assembled
+    //    sentence — unlike a URL or a CSS class, where one never meets one.
     if (ts.isTemplateSpan(node)) {
       if (isMessageKeyType(checker.getTypeAtLocation(node.expression), keys)) {
         report(findings, node.expression, file, 'interpolation');
@@ -176,7 +173,7 @@ function scan(file, checker, keys, findings) {
   visit(file);
 }
 
-/** Parcourt le programme TypeScript du frontend et rend les clés nues trouvées. */
+/** Walks the frontend TypeScript program and returns the bare keys found. */
 export function collectRawKeys() {
   const keys = loadCatalogKeys();
   const program = loadProgram();
@@ -206,5 +203,5 @@ function main() {
   process.exit(ok ? 0 : 1);
 }
 
-// Importable pour les tests ; exécuté seulement quand on l'appelle directement.
+// Importable for the tests; only runs when called directly.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

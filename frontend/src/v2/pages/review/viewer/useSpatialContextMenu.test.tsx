@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Le partage du bouton droit des viewers spatiaux : bref → menu, maintenu/glissé → vol.
+ * Right-button sharing on spatial viewers: short → menu, held/dragged → flight.
  *
- * Le menu Radix enveloppe le pane, donc le hook relance un `contextmenu` **neuf** sur le parent
- * du canvas. C'est ce que ces tests observent : ni l'ouverture du menu (Radix n'est pas monté),
- * ni des pixels — l'événement relancé, ou son absence.
+ * The Radix menu wraps the pane, so the hook re-dispatches a **new** `contextmenu` on the canvas's
+ * parent. That is what these tests observe: neither the menu opening (Radix is not mounted) nor
+ * pixels — the re-dispatched event, or its absence.
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
@@ -19,8 +19,8 @@ function setup(prepare: () => boolean = () => true) {
   const dom = document.createElement('div');
   parent.appendChild(dom);
   document.body.appendChild(parent);
-  // Le concurrent : les contrôles de caméra vivent sur le même élément et coupent la chaîne
-  // pour le bouton qu'ils traitent. Seule la phase de capture y échappe.
+  // The competitor: the camera controls live on the same element and cut the chain for the
+  // button they handle. Only the capture phase gets past it.
   dom.addEventListener('pointerdown', (e) => e.stopImmediatePropagation());
   const opened = vi.fn();
   parent.addEventListener('contextmenu', opened);
@@ -29,7 +29,7 @@ function setup(prepare: () => boolean = () => true) {
   return { dom, parent, opened, prepare: prepareSpy };
 }
 
-/** Appui puis relâchement du bouton droit, avec déplacement et durée maîtrisés. */
+/** Right button press then release, with controlled displacement and duration. */
 function rightClick(dom: HTMLElement, opts: { dx?: number; heldMs?: number } = {}) {
   const { dx = 0, heldMs = 0 } = opts;
   const down = new PointerEvent('pointerdown', { button: 2, clientX: 50, clientY: 50, bubbles: true });
@@ -45,40 +45,40 @@ beforeEach(() => {
 });
 
 describe('useSpatialContextMenu', () => {
-  it('ouvre le menu sur un clic droit bref, malgré la propagation coupée', () => {
+  it('opens the menu on a short right click, despite stopped propagation', () => {
     const { dom, opened, prepare } = setup();
     rightClick(dom);
     expect(prepare).toHaveBeenCalledWith({ clientX: 50, clientY: 50, altKey: false });
     expect(opened).toHaveBeenCalledTimes(1);
   });
 
-  it('n’ouvre rien quand le pointeur a glissé — c’était un vol', () => {
+  it('opens nothing when the pointer dragged — it was a flight', () => {
     const { dom, opened, prepare } = setup();
     rightClick(dom, { dx: 40 });
     expect(prepare).not.toHaveBeenCalled();
     expect(opened).not.toHaveBeenCalled();
   });
 
-  it('n’ouvre rien quand le bouton est resté enfoncé — vol immobile, clavier en attente', () => {
+  it('opens nothing when the button stayed down — still flight, keyboard pending', () => {
     const { dom, opened } = setup();
     rightClick(dom, { heldMs: CONTEXT_TAP_MAX_MS + 50 });
     expect(opened).not.toHaveBeenCalled();
   });
 
-  it('respecte le refus du viewer — le 3D ne sert pas de menu dans le vide', () => {
+  it('respects the viewer refusal — 3D does not serve a menu in empty space', () => {
     const { dom, opened, prepare } = setup(() => false);
     rightClick(dom);
     expect(prepare).toHaveBeenCalledTimes(1);
     expect(opened).not.toHaveBeenCalled();
   });
 
-  it('arrête le `contextmenu` natif du canvas : le menu ne s’ouvre que sur le geste mesuré', () => {
+  it('stops the native `contextmenu` of the canvas: the menu only opens on the measured gesture', () => {
     const { dom, opened } = setup();
     dom.dispatchEvent(new MouseEvent('contextmenu', { bubbles: true, cancelable: true }));
     expect(opened).not.toHaveBeenCalled();
   });
 
-  it('ignore le bouton gauche — il appartient à l’orbite et à la sélection', () => {
+  it('ignores the left button — it belongs to the orbit and the selection', () => {
     const { dom, opened } = setup();
     const at = { button: 0, clientX: 50, clientY: 50, bubbles: true };
     dom.dispatchEvent(new PointerEvent('pointerdown', at));

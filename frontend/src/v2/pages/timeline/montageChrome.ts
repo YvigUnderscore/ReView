@@ -6,17 +6,17 @@ import { modesFor, type ModeId, type ReviewMode } from '../review/chrome/modes';
 import { DRAW_TOOLS, type ReviewTool } from '../review/chrome/tools';
 
 /**
- * Ce que la coquille de review propose sur un montage (Phase 46).
+ * What the review shell offers on a montage (Phase 46).
  *
- * Le montage n'a qu'un mode : le regarder. La comparaison A/B et la découpe portent sur un
- * média, pas sur un film assemblé — les offrir ici promettrait des gestes qui n'existent
- * pas. L'annotation, elle, s'arme depuis le composer, comme partout ailleurs.
+ * The montage has only one mode: watching it. A/B comparison and trimming apply to a media, not to
+ * an assembled film — offering them here would promise gestures that do not exist. Annotation, for
+ * its part, is armed from the composer, as everywhere else.
  */
 export const MONTAGE_MODES: ReviewMode[] = modesFor('VIDEO').filter((m) => m.value === 'explore');
 
 /**
- * Outil de repos du montage. Celui de la review promet un panoramique et un zoom sur
- * l'image ; ici le clic lit ou met en pause, et rien d'autre — l'infobulle doit le dire.
+ * Idle tool of the montage. The review's one promises a pan and a zoom on the image; here a click
+ * plays or pauses, and nothing else — the tooltip must say so.
  */
 const MONTAGE_NAV: ReviewTool = {
   id: 'nav',
@@ -26,13 +26,13 @@ const MONTAGE_NAV: ReviewTool = {
   hintKey: 'timeline.navHint',
 };
 
-/** Rail du montage : la navigation, et les tracés dès que l'annotation est armée. */
+/** Montage rail: navigation, plus the drawing tools as soon as annotation is armed. */
 export function montageTools(annotating: boolean): ReviewTool[] {
   return annotating ? [MONTAGE_NAV, ...DRAW_TOOLS] : [MONTAGE_NAV];
 }
 
 /**
- * Le même rail, vu par mode — c'est ce que le clavier doit suivre. Défini au niveau du module
- * pour garder une identité stable : le hook du chrome s'y abonne.
+ * The same rail, seen per mode — this is what the keyboard must follow. Defined at module level to
+ * keep a stable identity: the chrome hook subscribes to it.
  */
 export const montageToolsFor = (mode: ModeId): ReviewTool[] => montageTools(mode === 'annotate');
