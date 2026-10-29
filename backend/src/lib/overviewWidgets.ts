@@ -43,7 +43,7 @@ const spanSchema = z.union([z.literal(3), z.literal(4), z.literal(6), z.literal(
 /**
  * Admitted heights, in **rows** of the overview grid.
  *
- * A copy of the `OVERVIEW_ROWS` ramp (`frontend/…/overview/overviewSizing.ts`), guarded by the same test as the list of
+ * A copy of the `WIDGET_ROWS` ramp (`frontend/…/components/widgets/widgetSizing.ts`), guarded by the same test as the list of
  * blocks: the screen can only render these footprints, and a height off the ramp would be saved only to never be read back.
  * The `height` key remains admitted alongside — it is the one of layouts saved before the rows, which the screen translates
  * on read.

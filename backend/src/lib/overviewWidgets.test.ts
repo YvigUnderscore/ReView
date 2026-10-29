@@ -18,7 +18,8 @@ import {
  */
 const FRONT = path.join(__dirname, '..', '..', '..', 'frontend', 'src', 'v2');
 const FRONT_COPY = path.join(FRONT, 'pages', 'project', 'overview', 'overviewWidgets.ts');
-const FRONT_SIZING = path.join(FRONT, 'pages', 'project', 'overview', 'overviewSizing.ts');
+// The overview uses the shared widget sizing model since the frontend dropped its own copy.
+const FRONT_SIZING = path.join(FRONT, 'components', 'widgets', 'widgetSizing.ts');
 
 /** The identifiers of the `NAME = [ … ] as const` array of a TypeScript source. */
 function listedIn(source: string, name: string): string[] {
@@ -52,7 +53,7 @@ describe('registry of the overview blocks', () => {
   it('offers the same height ramp on both sides', () => {
     // Same guard as for the blocks: a ramp widened on the screen side but not here, and resizing would end in a refusal,
     // the handle in hand.
-    expect(numbersIn(readFileSync(FRONT_SIZING, 'utf8'), 'OVERVIEW_ROWS')).toEqual([...OVERVIEW_ROWS]);
+    expect(numbersIn(readFileSync(FRONT_SIZING, 'utf8'), 'WIDGET_ROWS')).toEqual([...OVERVIEW_ROWS]);
   });
 });
 
