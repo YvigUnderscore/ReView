@@ -315,7 +315,7 @@ limiters that count a different client on every request. The pairing is set out 
   of nesting) and replaced with `[Redacted]`.
 - Production compose makes `POSTGRES_PASSWORD`, `MINIO_ROOT_USER`, `MINIO_ROOT_PASSWORD`,
   `JWT_SECRET`, `CORS_ORIGIN` and `S3_PUBLIC_ENDPOINT` mandatory, and `config/env.ts` re-checks
-  them at boot. `scripts/install.sh` draws six random secrets, so no default password survives a
+  them at boot. `scripts/install.sh` draws seven random secrets, so no default password survives a
   real installation.
 
 ## Transport & headers
