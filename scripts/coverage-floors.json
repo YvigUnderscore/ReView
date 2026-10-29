@@ -26,12 +26,12 @@
       "branches": 42.4
     },
     "src/services": {
-      "statements": 69.4,
-      "branches": 60.9
+      "statements": 69.9,
+      "branches": 61.3
     },
     "src/workers": {
-      "statements": 39,
-      "branches": 32.3
+      "statements": 48.5,
+      "branches": 45.1
     }
   },
   "frontend": {
