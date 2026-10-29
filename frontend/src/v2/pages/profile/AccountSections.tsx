@@ -17,12 +17,12 @@ import { SETTINGS_KEYWORDS } from '../../components/settings/settingsKeywords';
 import { useT } from '../../i18n';
 
 /**
- * Le compte lui-même : portrait, état civil, mot de passe.
+ * The account itself: profile picture, identity details, password.
  *
- * Les trois vivaient dans `ProfilePage`, qui frôlait son budget de lignes et mêlait la
- * composition de la page à trois appels réseau. Ils partagent un état — le mot de passe
- * actuel, que le serveur réclame pour changer l'email **et** pour changer le mot de passe
- * (un jeton volé ne doit pas suffire à verrouiller le compte) — et restent donc ensemble.
+ * All three used to live in `ProfilePage`, which was brushing its line budget and mixed the page
+ * composition with three network calls. They share a state (the current password, which the server
+ * requires to change the email **and** to change the password: a stolen token must not be enough to
+ * lock the account), and so they stay together.
  */
 export default function AccountSections() {
   const t = useT();
@@ -237,7 +237,7 @@ export default function AccountSections() {
         tone="warning"
         keywords={SETTINGS_KEYWORDS.password}
       >
-        {/* Exigé par le serveur pour changer le mot de passe ET pour changer l'email. */}
+        {/* Required by the server to change the password AND to change the email. */}
         <Field label={t('profile.password.current')}>
           <Input
             type="password"

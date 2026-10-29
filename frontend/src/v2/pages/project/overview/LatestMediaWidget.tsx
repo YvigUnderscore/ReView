@@ -14,12 +14,12 @@ import type { WidgetSpan } from '../../../lib/widgetLayout';
 import { useT } from '../../../i18n';
 
 /**
- * Les derniers médias publiés du projet, en vignettes cliquables vers la review.
+ * The project's latest published media, as thumbnails clickable through to the review.
  *
- * C'est le bloc que l'utilisatrice a entouré en premier : huit vignettes sur une ligne, et
- * du vide sous elles quelle que soit la place. La grille de vignettes suit maintenant
- * l'emprise du bloc — la largeur décide du nombre de colonnes, la hauteur du nombre de
- * lignes — et un bloc plus grand montre réellement plus de médias.
+ * This is the block the user circled first: eight thumbnails on one line, and empty space beneath
+ * them whatever the room. The thumbnail grid now follows the footprint of the block: the width
+ * decides the number of columns, the height the number of rows, and a larger block really shows
+ * more media.
  */
 
 type RecentMedia = MediaRef & { thumbnailUrl: string | null };

@@ -5,42 +5,40 @@ import { fold } from '../../components/settings/settingsFilter';
 import type { DocsPage, DocsSection } from './docsManifest';
 
 /**
- * Le moteur de recherche de la documentation — **un seul**, pour les deux surfaces qui la
- * cherchent.
+ * The documentation search engine: **one**, for the two surfaces that search it.
  *
- * Elles ne cherchaient pas la même chose. La palette Ctrl+K exploitait les titres de
- * chapitre du manifest (sa table des matières) ; le filtre du sommaire de `/docs`, lui, ne
- * regardait que le titre, le sous-titre et le chemin de la page. Taper « watermark » dans
- * la page de documentation ne rendait donc rien, alors que la palette ouvrait la bonne page
- * sur le bon chapitre : deux réponses contradictoires à la même question, dans le même
- * produit. Les deux passent désormais par les fonctions ci-dessous.
+ * They did not search the same thing. The Ctrl+K palette exploited the chapter titles of the
+ * manifest (its table of contents); the table-of-contents filter of `/docs`, however, only looked
+ * at the title, subtitle and path of the page. Typing "watermark" in the documentation page
+ * therefore returned nothing, while the palette opened the right page on the right chapter: two
+ * contradictory answers to the same question, in the same product. Both now go through the
+ * functions below.
  *
- * Trois règles communes :
- *   - **casse et accents ignorés** des deux côtés (`fold`), comme pour les réglages ;
- *   - **tous les mots exigés** : « watermark client » ne rend pas la moitié du manuel ;
- *   - le **chapitre trouvé est rendu avec le résultat** — c'est la raison de la
- *     correspondance, et ce qui permet d'ouvrir la page au bon endroit.
+ * Three shared rules:
+ *   - **case and accents ignored** on both sides (`fold`), as for settings;
+ *   - **all words required**: "watermark client" does not return half the manual;
+ *   - the **chapter found is rendered with the result**: it is the reason for the match, and
+ *     what allows opening the page at the right place.
  */
 
 /**
- * Qualité d'une correspondance, du plus net au plus vague. Même raisonnement que
- * `lib/searchRank` côté serveur : le titre identifie, le chapitre situe, le chemin de
- * fichier ne fait qu'attester.
+ * Quality of a match, from the sharpest to the vaguest. Same reasoning as `lib/searchRank` on the
+ * server: the title identifies, the chapter locates, and the file path merely attests.
  */
 export const DOC_SCORE = { title: 40, summary: 30, heading: 20, path: 10, words: 1 } as const;
 
-/** Les mots d'une recherche, repliés. Liste vide = pas de recherche, tout passe. */
+/** The words of a search, folded. An empty list means no search: everything passes. */
 export function docWords(query: string): string[] {
   const needle = fold(query.trim());
   return needle ? needle.split(/\s+/) : [];
 }
 
-/** Tout ce par quoi une page peut être trouvée : titre, sous-titre, chemin, chapitres. */
+/** Everything through which a page can be found: title, subtitle, path, chapters. */
 export function docHaystack(page: DocsPage): string {
   return fold([page.title, page.summary, page.path, ...(page.headings ?? [])].join(' '));
 }
 
-/** La page répond-elle ? Tous les mots doivent être présents, où que ce soit dans la page. */
+/** Does the page answer? All words must be present, wherever they are in the page. */
 export function docMatches(page: DocsPage, words: string[]): boolean {
   if (words.length === 0) return true;
   const hay = docHaystack(page);
@@ -48,11 +46,11 @@ export function docMatches(page: DocsPage, words: string[]): boolean {
 }
 
 /**
- * Chapitres de la page qui portent la recherche — ce qu'on affiche sous le résultat pour
- * dire *pourquoi* la page correspond, et ce sur quoi on l'ouvre.
+ * Chapters of the page that carry the search: what is shown under the result to say *why* the
+ * page matches, and what it is opened on.
  *
- * Un seul mot suffit ici, là où `docMatches` les exige tous : la page a déjà répondu, on
- * cherche maintenant par où y entrer.
+ * A single word is enough here, whereas `docMatches` requires them all: the page has already
+ * answered, and we are now looking for where to enter it.
  */
 export function matchingHeadings(page: DocsPage, words: string[], limit = 3): string[] {
   if (words.length === 0) return [];
@@ -64,7 +62,7 @@ export function matchingHeadings(page: DocsPage, words: string[], limit = 3): st
     .slice(0, limit);
 }
 
-/** Une page trouvée, avec sa section, son rang et le chapitre qui a répondu. */
+/** A page found, with its section, its rank and the chapter that answered. */
 export interface DocsHit {
   section: DocsSection;
   page: DocsPage;
@@ -72,10 +70,10 @@ export interface DocsHit {
   heading: string | null;
 }
 
-/** À quel point cette page est-elle ce qui a été tapé ? Le chapitre trouvé sert de raison. */
+/** How closely this page matches what was typed. The chapter found serves as the reason. */
 function docRank(page: DocsPage, needle: string, words: string[]): { score: number; heading: string | null } {
-  // La saisie entière d'abord (« video review » désigne un chapitre, pas deux mots épars) ;
-  // à défaut, le premier chapitre qui porte l'un des mots.
+  // The whole input first ("video review" designates a chapter, not two scattered words);
+  // failing that, the first chapter carrying one of the words.
   const heading =
     (page.headings ?? []).find((h) => fold(h).includes(needle)) ??
     matchingHeadings(page, words, 1)[0] ??
@@ -85,13 +83,13 @@ function docRank(page: DocsPage, needle: string, words: string[]): { score: numb
   if ((page.headings ?? []).some((h) => fold(h).includes(needle)))
     return { score: DOC_SCORE.heading, heading };
   if (fold(page.path).includes(needle)) return { score: DOC_SCORE.path, heading };
-  // Trouvée mot à mot, la saisie entière n'apparaissant nulle part d'un seul tenant.
+  // Found word by word, since the whole input appears nowhere as one piece.
   return { score: DOC_SCORE.words, heading };
 }
 
 /**
- * Pages répondant à la saisie, **classées** — l'ordre de la palette. Tri stable (ES2019) :
- * à score égal, l'ordre de lecture du sommaire départage.
+ * Pages answering the input, **ranked**: the order of the palette. Stable sort (ES2019): at
+ * equal score, the reading order of the table of contents breaks the tie.
  */
 export function searchDocs(sections: DocsSection[], query: string): DocsHit[] {
   const needle = fold(query.trim());
@@ -108,8 +106,8 @@ export function searchDocs(sections: DocsSection[], query: string): DocsHit[] {
 }
 
 /**
- * Sections filtrées, **dans l'ordre du sommaire** — la vue du panneau latéral, où l'on ne
- * classe pas : on raye ce qui ne répond pas. Les sections vidées disparaissent.
+ * Filtered sections, **in table-of-contents order**: the view of the side panel, where nothing
+ * is ranked: we strike out what does not answer. Emptied sections disappear.
  */
 export function filterSections(sections: DocsSection[], query: string): DocsSection[] {
   const words = docWords(query);

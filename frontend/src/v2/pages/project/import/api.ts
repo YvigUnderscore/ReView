@@ -5,7 +5,7 @@ import { api, getToken } from '../../../../lib/apiClient';
 import { t } from '../../../i18n';
 import type { ColumnOverride, ImportReport } from './types';
 
-/** Appels de l'import CSV. Un export/gabarit est un fichier, pas une donnée à cacher. */
+/** Calls of the CSV import. An export or template is a file, not data to hide. */
 
 export interface ImportRequest {
   csv: string;
@@ -17,22 +17,22 @@ export function runImport(projectId: number, body: ImportRequest): Promise<Impor
   return api.post<ImportReport>(`/api/projects/${projectId}/import-csv`, body);
 }
 
-/** Déclenche le téléchargement d'un texte déjà en mémoire (rapport d'import). */
+/** Triggers the download of a text already in memory (import report). */
 export function saveTextFile(filename: string, text: string, mime = 'text/csv;charset=utf-8'): void {
   const url = URL.createObjectURL(new Blob([text], { type: mime }));
   const link = document.createElement('a');
   link.href = url;
   link.download = filename;
   link.click();
-  // Révoquer dans le même tour de boucle annule le téléchargement sur certains
-  // navigateurs : on laisse le clic partir d'abord.
+  // Revoking within the same loop tick cancels the download in some browsers, so the click is
+  // allowed to go out first.
   setTimeout(() => URL.revokeObjectURL(url), 0);
 }
 
 /**
- * Gabarit d'import servi par le serveur — la route est authentifiée par en-tête, qu'une
- * simple navigation ne porterait pas. Renvoie le texte pour que l'appelant décide s'il le
- * télécharge ou le colle dans la zone de saisie.
+ * Import template served by the server. The route is authenticated by header, which a simple
+ * navigation would not carry. Returns the text, so that the caller decides whether to download it
+ * or paste it into the input area.
  */
 export async function fetchTemplate(projectId: number): Promise<string> {
   const token = getToken();
@@ -43,7 +43,7 @@ export async function fetchTemplate(projectId: number): Promise<string> {
   return res.text();
 }
 
-/** Export CSV des plans du projet (chemin de retour de l'import). */
+/** CSV export of the project's shots (the return path of the import). */
 export async function downloadProjectCsv(projectId: number): Promise<void> {
   const token = getToken();
   const res = await fetch(`/api/projects/${projectId}/export-csv`, {

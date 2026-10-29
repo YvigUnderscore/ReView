@@ -9,15 +9,14 @@ import BulkStatusDialog from '../../components/entity/BulkStatusDialog';
 import { useT } from '../../i18n';
 
 /**
- * Actions groupées d'une sélection de plans : la barre et les dialogues qu'elle ouvre.
+ * Bulk actions for a selection of shots: the bar and the dialogs it opens.
  *
- * Extrait de `ShotsTab`, qui dépassait son budget de trois cents lignes en accueillant le
- * troisième dialogue. Le regroupement a du sens en soi : ces trois actions partagent la
- * même sélection, le même « vider la sélection » et le même rechargement.
+ * Extracted from `ShotsTab`, which exceeded its three-hundred-line budget when the third dialog
+ * arrived. The grouping makes sense in itself: these three actions share the same selection, the
+ * same "clear selection" and the same reload.
  *
- * L'ordre suit la fréquence d'usage en production : le statut d'abord — c'est le geste qui
- * suit chaque session de review — l'assignation ensuite, la suppression en dernier et en
- * rouge.
+ * The order follows frequency of use in production: status first, since it is the gesture that
+ * follows every review session; assignment next; deletion last, and in red.
  */
 export default function ShotBulkBar({
   projectId,
@@ -32,7 +31,7 @@ export default function ShotBulkBar({
   count: number;
   onClear: () => void;
   onReload: () => void;
-  /** La suppression garde sa confirmation dans `ShotDialogs`, avec les autres destructions. */
+  /** Deletion keeps its confirmation in `ShotDialogs`, with the other destructive actions. */
   onDelete: () => void;
 }) {
   const t = useT();
@@ -62,7 +61,7 @@ export default function ShotBulkBar({
             onClick: () => setAssignOpen(true),
           },
           {
-            // Le geste met à la corbeille (`softDelete`) — le dire, comme sur la carte.
+            // The gesture moves to the trash (`softDelete`): say so, as on the card.
             label: t('common.moveToTrash'),
             icon: <Trash2 size={14} />,
             danger: true,

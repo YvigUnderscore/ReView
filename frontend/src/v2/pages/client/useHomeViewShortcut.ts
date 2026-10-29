@@ -5,12 +5,11 @@ import { useEffect } from 'react';
 import { isEditable } from '../../lib/shortcuts';
 
 /**
- * `H` = retour à la vue d'origine, seul raccourci offert au spectateur d'un partage.
+ * `H` returns to the original view, the only shortcut offered to a share viewer.
  *
- * L'invité n'a ni palette ni menu : la règle « UI simple » veut qu'une action passe par un
- * raccourci plutôt que par un bouton, et le clic droit est déjà pris par le vol libre des
- * viewers spatiaux. Inerte pendant la saisie d'un commentaire — écrire « hauteur » ne doit
- * pas recadrer la scène.
+ * The guest has neither palette nor menu: the "simple UI" rule wants an action to go through a
+ * shortcut rather than a button, and right-click is already taken by free fly on spatial
+ * viewers. Inert while a comment is being typed: writing "hauteur" must not reframe the scene.
  */
 export function useHomeViewShortcut(homeView: () => void, enabled: boolean): void {
   useEffect(() => {

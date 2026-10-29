@@ -15,24 +15,23 @@ import {
 import { useT } from '../../../i18n';
 
 /**
- * La poignée de redimensionnement d'un bloc — le geste que l'utilisatrice a demandé.
+ * A block's resize handle: the gesture the user asked for.
  *
- * Elle est l'exception assumée à la règle « clic droit d'abord » : régler une taille au
- * menu, cran par cran, c'est régler une taille sans la voir. On tire donc le coin, et la
- * grille suit sous le curseur. Elle n'apparaît qu'en composition, comme la poignée de
- * déplacement : hors composition, la page reste une page.
+ * It is the acknowledged exception to the "right-click first" rule: setting a size through a menu,
+ * notch by notch, means setting a size without seeing it. So one drags the corner, and the grid
+ * follows under the cursor. It appears only in composition, like the move handle: outside
+ * composition the page remains a page.
  *
- * Ce n'est pas un décor : c'est un bouton, il prend le focus, et les quatre flèches
- * parcourent les mêmes crans que la souris — à droite et à gauche la largeur, en haut et
- * en bas la hauteur. Son nom accessible porte la taille courante, pour que le résultat du
- * geste s'entende autant qu'il se voit.
+ * It is not decoration: it is a button, it takes focus, and the four arrow keys step through the
+ * same notches as the mouse. Left and right set the width, up and down the height. Its accessible
+ * name carries the current size, so the result of the gesture is heard as much as seen.
  *
- * Le glissement ne passe **pas** par `onPreview` → enregistrement à chaque pixel : chaque
- * cran franchi écrirait une préférence, soit une requête par cran. L'aperçu vit dans la
- * grille, et seul le relâchement enregistre.
+ * The drag does **not** go through `onPreview`, which would save on every pixel: each notch crossed
+ * would write a preference, that is one request per notch. The preview lives in the grid, and only
+ * the release saves.
  */
 
-/** Les quatre flèches, et ce qu'elles règlent. */
+/** The four arrows, and what they set. */
 const ARROWS: Record<string, { axis: 'span' | 'rows'; direction: -1 | 1 }> = {
   ArrowRight: { axis: 'span', direction: 1 },
   ArrowLeft: { axis: 'span', direction: -1 },
@@ -41,14 +40,14 @@ const ARROWS: Record<string, { axis: 'span' | 'rows'; direction: -1 | 1 }> = {
 };
 
 export interface WidgetResizeHandleProps {
-  /** Titre du bloc : la poignée s'annonce par ce qu'elle redimensionne. */
+  /** Block title: the handle announces itself by what it resizes. */
   name: string;
   size: WidgetSize;
-  /** Largeurs que ce bloc propose — le bornage est le même à la souris et au clavier. */
+  /** Widths this block offers: the bounds are the same by mouse and by keyboard. */
   spans: WidgetSpan[];
-  /** Taille sous le curseur pendant le glissement ; `null` quand il s'achève. */
+  /** Size under the cursor during a drag; `null` when it ends. */
   onPreview: (size: WidgetSize | null) => void;
-  /** Taille retenue — enregistrée une seule fois, au relâchement ou à la touche. */
+  /** Retained size: saved once, on release or on key press. */
   onCommit: (size: WidgetSize) => void;
 }
 
@@ -69,8 +68,8 @@ export default function WidgetResizeHandle({
     event.preventDefault();
     event.stopPropagation();
     const origin = { x: event.clientX, y: event.clientY };
-    // Le pas de la grille est lu sur le conteneur du bloc, c'est-à-dire la grille
-    // elle-même : elle porte les colonnes calculées et la hauteur de rangée.
+    // The grid step is read from the block's container, that is the grid itself: it carries the
+    // computed columns and the row height.
     const geometry = gridGeometry(handle.current?.closest('section[data-widget]')?.parentElement ?? null);
     let target = size;
 
@@ -120,9 +119,9 @@ export default function WidgetResizeHandle({
 }
 
 /**
- * Le même réglage de hauteur, au panneau : la poignée montre le résultat, la liste montre
- * la rampe. L'une sans l'autre laisserait soit un geste impossible à retrouver, soit un
- * réglage impossible à viser.
+ * The same height setting, in the panel: the handle shows the result, the list shows the scale.
+ * Having only one of the two would leave either a gesture impossible to find, or a setting
+ * impossible to aim at.
  */
 export function WidgetRowsChoice({
   rows,

@@ -8,16 +8,16 @@ import type { DashboardTask } from './homeTypes';
 import { useT } from '../../i18n';
 
 /**
- * Mes tâches assignées (non approuvées), triées par urgence côté serveur.
- * Refonte G : ligne actionnable — clic droit pour changer le statut sans quitter
- * l'Accueil (même mutation que le kanban), échéance visible quand elle existe.
+ * My assigned tasks (not yet approved), sorted by urgency on the server.
+ * Redesign G: an actionable row. Right-click changes the status without leaving the home page
+ * (same mutation as the kanban), and the due date is shown when there is one.
  *
- * Le bloc ne porte plus l'ancre `#my-tasks` : deux compteurs y menaient, et l'ancre
- * disparaissait avec le bloc dès qu'on le retirait de son accueil — le clic ne faisait
- * alors rien. Ils ouvrent maintenant la page `/my-tasks`, qui existe toujours.
+ * The block no longer carries the `#my-tasks` anchor: two counters led there, and the anchor
+ * vanished with the block as soon as it was removed from the home page, so the click then did
+ * nothing. They now open the `/my-tasks` page, which still exists.
  *
- * `limit` est le nombre de lignes que la taille du bloc offre (lot 13) : agrandir la carte
- * montre réellement plus de tâches, et le lien de fin mène au reste.
+ * `limit` is the number of rows the block's size allows (batch 13): enlarging the card really
+ * shows more tasks, and the end link leads to the rest.
  */
 export default function MyTasksCard({ tasks, limit }: { tasks: DashboardTask[]; limit: number }) {
   const tr = useT();

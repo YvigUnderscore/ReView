@@ -7,11 +7,11 @@ import { fieldLabel } from './report';
 import { CSV_FIELDS, type CsvField, type DetectedColumn } from './types';
 
 /**
- * Correspondance des colonnes, assistée.
+ * Assisted column mapping.
  *
- * Le serveur a déjà reconnu ce qu'il pouvait (`sg_sequence`, « Échéance », `cut_in`…) ;
- * cet écran montre son verdict colonne par colonne et laisse le corriger. C'est ce qui
- * évite de renvoyer le studio réécrire l'en-tête de son export.
+ * The server has already recognized what it could (`sg_sequence`, "Échéance", `cut_in`…). This
+ * screen shows its verdict column by column and lets the user correct it. This avoids sending the
+ * studio back to rewrite the header of its export.
  */
 export default function ColumnMapper({
   columns,

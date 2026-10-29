@@ -24,28 +24,27 @@ import { WIDGET_ROW_GRID_CLASS, listCapacity, type WidgetSize } from '../../comp
 import type { DashboardData } from './homeTypes';
 
 /**
- * Grille composable de l'Accueil (C2) : douze colonnes, chaque bloc portant son emprise.
+ * Composable home grid (C2): twelve columns, each block carrying its footprint.
  *
- * Le déplacement se faisait d'un cran par menu contextuel, à l'intérieur d'une colonne
- * qu'un bloc ne pouvait jamais quitter. Ici, tout se déplace partout — à la souris comme
- * au clavier (dnd-kit gère les deux) — et seulement en mode édition : hors édition, la
- * page reste une page, sans poignée ni bordure.
+ * Moving used to be done one notch at a time through a context menu, inside a column that a
+ * block could never leave. Here everything moves anywhere, with the mouse as well as the keyboard
+ * (dnd-kit handles both), and only in edit mode: outside edit mode the page stays a page, with no
+ * handle or border.
  *
- * Lot 13 : la page prend le modèle de taille de la vue d'ensemble, demandé mot pour mot
- * (« les mêmes réglages de redimensionnement, de fenêtres »). Un bloc ne portait qu'une
- * largeur, sa hauteur était celle de son contenu, et la grille alignait tout par le haut :
- * un bloc court ouvrait sous lui un trou que son voisin ne pouvait pas combler. Chaque bloc
- * porte maintenant une **largeur en colonnes et une hauteur en rangées**, réglées d'un seul
- * geste à la poignée de coin, la grille **tasse** (`grid-flow-row-dense`), et le contenu
- * suit la taille — une carte plus haute montre réellement plus de lignes.
+ * Batch 13: the page takes the size model of the overview, requested word for word ("the same
+ * resize settings, window settings"). A block used to carry only a width, its height was that of
+ * its content, and the grid aligned everything to the top: a short block opened a hole beneath it
+ * that its neighbour could not fill. Each block now carries a **width in columns and a height in
+ * rows**, set in a single gesture on the corner handle. The grid **packs** (`grid-flow-row-dense`),
+ * and the content follows the size: a taller card really shows more lines.
  *
- * Le moteur de glisser-déposer suit cette règle jusqu'au bout depuis F5 : il n'est
- * téléchargé qu'à l'entrée en édition. Hors édition, la grille ne charge pas les 16,8 ko
- * gzip de @dnd-kit dans le premier chargement de tout le monde.
+ * The drag-and-drop engine follows this rule all the way from F5: it is only downloaded when
+ * entering edit mode. Outside edit mode the grid does not load the 16.8 kB gzip of @dnd-kit in
+ * everyone's first load.
  */
 const WidgetSortable = lazy(() => import('../../components/widgets/WidgetSortable'));
 
-/** Taille montrée pendant un glissement, avant tout enregistrement. */
+/** Size shown during a drag, before anything is saved. */
 interface Preview extends WidgetSize {
   id: HomeWidgetId;
 }
@@ -66,8 +65,8 @@ export default function HomeGrid({
   onEnterEdit: () => void;
 }) {
   const ids = visibleWidgets(pref);
-  // La taille sous le curseur ne passe pas par les préférences : un cran franchi est un
-  // aperçu, pas une décision. Seul le relâchement enregistre.
+  // The size under the cursor does not go through the preferences: a notch crossed is a preview,
+  // not a decision. Only releasing saves.
   const [preview, setPreview] = useState<Preview | null>(null);
 
   const content = (id: HomeWidgetId, settings: HomeResolvedSettings) => {
@@ -94,12 +93,12 @@ export default function HomeGrid({
 
   const widget = (id: HomeWidgetId, index: number, drag?: WidgetDragHandle) => {
     const saved = widgetSettings(id, pref);
-    // L'aperçu ne vaut que pour le bloc qu'on tire ; les autres gardent leur emprise.
+    // The preview applies only to the block being dragged; the others keep their footprint.
     const settings: HomeResolvedSettings =
       preview?.id === id ? { ...saved, span: preview.span, rows: preview.rows } : saved;
     const apply = (patch: HomeWidgetSettings) => onPref(setWidgetSetting(id, patch, pref));
     const resize = (next: WidgetSize) => onPref(setWidgetSize(id, next, pref));
-    // Déplacement d'une place : le voisin sert de cible, la même fonction que le glisser.
+    // Moving by one place: the neighbour serves as target, through the same function as the drag.
     const move = (direction: -1 | 1) => {
       const neighbour = ids[index + direction];
       if (neighbour) onPref(reorderWidgets(id, neighbour, pref));
@@ -131,16 +130,16 @@ export default function HomeGrid({
 
   if (!editing) return grid;
 
-  // Repli identique à la grille finale : le temps que le module arrive, la page ne bouge
-  // pas — seules les poignées ne répondent pas encore.
+  // Fallback identical to the final grid: while the module arrives, the page does not move. Only
+  // the handles do not respond yet.
   return (
     <Suspense fallback={grid}>
       <WidgetSortable
         ids={ids}
         className={WIDGET_ROW_GRID_CLASS}
         onReorder={(from, to) => {
-          // Le moteur de déplacement ne connaît pas le registre : c'est la page qui écarte
-          // un identifiant qu'elle ne reconnaît plus.
+          // The move engine does not know the registry: it is the page that discards an identifier
+          // it no longer recognizes.
           if (isWidgetId(from) && isWidgetId(to)) onPref(reorderWidgets(from, to, pref));
         }}
         renderWidget={(id, index, drag) => (isWidgetId(id) ? widget(id, index, drag) : null)}

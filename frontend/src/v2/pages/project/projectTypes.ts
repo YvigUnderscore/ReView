@@ -4,9 +4,9 @@
 import type { AssetRef, AssetType, EpisodeRef, SequenceRef, ShotRef, TaskType } from '../../types/api';
 import type { EntityCardExtras } from '../../types/entities';
 
-/** Types et constantes partagés des onglets de ProjectPage (découpage 10.C1). */
+/** Shared types and constants of the ProjectPage tabs (split 10.C1). */
 
-// Entités API : définitions canoniques dans types/api (10.E2) — ré-exports nommés du domaine projet.
+// API entities: canonical definitions in types/api (10.E2), named re-exports of the project domain.
 export type {
   Nomenclature,
   Department,
@@ -21,16 +21,16 @@ export type {
 } from '../../types/api';
 
 /**
- * GET /api/sequences/:id — fiche complète d'une séquence (C3).
+ * GET /api/sequences/:id: full sheet of a sequence (C3).
  *
- * Les plans arrivent avec de quoi les reconnaître (vignette, statut, plage de frames)
- * plutôt qu'en simple liste de codes : c'est ce que sert la page de séquence.
+ * The shots arrive with what is needed to recognize them (thumbnail, status, frame range), rather
+ * than as a bare list of codes: that is what the sequence page serves.
  */
 export type SequenceDetailData = SequenceRef & {
   projectId: number;
   /**
-   * Épisode d'appartenance (niveau facultatif, éteint par défaut) : `null` sur un
-   * long-métrage, et la page n'affiche alors rien de plus.
+   * Episode the sequence belongs to (optional level, off by default): `null` on a feature film, and
+   * the page then shows nothing more.
    */
   episode?: EpisodeRef | null;
   description?: string | null;
@@ -71,7 +71,7 @@ export const TASK_TYPES: readonly TaskType[] = [
   'OTHER',
 ];
 
-/** Tri par ordre puis par code (numérique : SQ001 < SQ002 < SQ010). */
+/** Sort by order, then by code (numeric: SQ001 < SQ002 < SQ010). */
 export function sortByCode<T extends { order: number; code: string }>(items: T[]): T[] {
   return [...items].sort(
     (a, b) => a.order - b.order || a.code.localeCompare(b.code, undefined, { numeric: true }),

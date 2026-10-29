@@ -48,39 +48,39 @@ const render = (props: Partial<Parameters<typeof ClientComments>[0]> = {}) =>
   renderToStaticMarkup(element(props));
 
 /**
- * Le fil client décide de deux choses seulement, mais elles comptent : le lien de permission
- * VIEW ne doit pas offrir de composeur, et un horodatage n'a de sens que sur un média qui
- * porte un temps. Les assertions visent la structure, jamais le texte traduit.
+ * The client thread decides only two things, but they matter: a VIEW link must not
+ * offer a composer, and a timestamp only makes sense on media that carries time.
+ * Assertions target structure, never translated text.
  */
 describe('ClientComments', () => {
-  it('n’offre aucun composeur sur un lien en lecture seule', () => {
+  it('offers no composer on a read-only link', () => {
     const html = render({ canComment: false });
     expect(html).not.toContain('<form');
     expect(html).not.toContain('<textarea');
   });
 
-  it('ouvre le composeur dès que le lien autorise le commentaire', () => {
+  it('opens the composer as soon as the link allows comments', () => {
     const html = render({ canComment: true });
     expect(html).toContain('<form');
     expect(html).toContain('<textarea');
   });
 
-  it('rend l’horodatage cliquable sur une vidéo', () => {
+  it('makes the timestamp clickable on a video', () => {
     expect(render({ timed: true })).toContain('01:05');
   });
 
-  it('n’affiche pas d’horodatage sur un média sans temps', () => {
+  it('shows no timestamp on media without a time axis', () => {
     expect(render({ timed: false })).not.toContain('01:05');
   });
 
-  it('nettoie le balisage résiduel d’un commentaire plutôt que de l’injecter', () => {
+  it('strips leftover markup from a comment instead of injecting it', () => {
     const html = render({ comments: [comment({ content: '<b>gras</b> et <script>x</script>' })] });
     expect(html).not.toContain('<b>');
     expect(html).not.toContain('<script>');
     expect(html).toContain('gras et x');
   });
 
-  it('affiche l’état vide quand le studio n’a rendu aucune note visible', () => {
+  it('shows the empty state when the studio rendered no visible note', () => {
     const html = render({ comments: [] });
     expect(html).not.toContain('Trop sombre');
     expect(html).toContain('<p');
@@ -88,64 +88,64 @@ describe('ClientComments', () => {
 });
 
 /**
- * Les outils de dessin vivent SOUS le champ de commentaire, là où la review interne met les
- * siens — et pas au-dessus de l'image, où ils repoussaient le média qu'ils servent.
+ * Drawing tools sit BELOW the comment field, where the internal review puts its own,
+ * not above the image where they pushed away the media they annotate.
  */
-describe('ClientComments — les outils et le dessin seul', () => {
-  it('pose la barre d’outils dans le composeur, pas ailleurs', () => {
+describe('ClientComments — tools and drawing only', () => {
+  it('places the toolbar in the composer, nowhere else', () => {
     const html = render({ canComment: true, annotationBar: <div data-testid="tools" /> });
     const form = html.slice(html.indexOf('<form'));
     expect(form).toContain('data-testid="tools"');
   });
 
-  it('n’offre aucun outil sur un lien en lecture seule', () => {
+  it('offers no tool on a read-only link', () => {
     expect(render({ canComment: false, annotationBar: <div data-testid="tools" /> })).not.toContain(
       'data-testid="tools"',
     );
   });
 
   /**
-   * Le serveur exige un contenu, mais un dessin en tient lieu : le bouton d'envoi doit
-   * s'ouvrir sur le seul dessin. On vise l'ATTRIBUT `disabled=""` et non le mot — il figure
-   * aussi dans les classes utilitaires (`disabled:opacity-50`), qui sont là en permanence.
+   * The server requires content, but a drawing counts as content: the send button must
+   * enable on a drawing alone. Target the `disabled=""` attribute, not the word, which
+   * also appears in utility classes (`disabled:opacity-50`) that are always present.
    */
-  it('laisse envoyer un dessin sans texte, et refuse le vide', () => {
+  it('lets a drawing be sent without text, and rejects an empty submission', () => {
     expect(render({ canComment: true, hasAnnotation: true })).not.toContain('disabled=""');
     expect(render({ canComment: true, hasAnnotation: false })).toContain('disabled=""');
   });
 });
 
 /**
- * Le portail n'affichait AUCUNE pièce jointe : une image jointe par le studio arrivait
- * invisible chez son destinataire. Les URL sont présignées côté serveur — la clé MinIO ne
- * descend pas, et il n'y a donc rien à reconstruire ici.
+ * The portal showed NO attachments: an image attached by the studio arrived invisible
+ * to its recipient. URLs are presigned server-side, so the MinIO key never leaves the
+ * server and there is nothing to rebuild here.
  */
-describe('ClientComments — pièces jointes du studio', () => {
+describe('ClientComments — studio attachments', () => {
   const withImage = () =>
     comment({
       attachments: [{ name: 'planche.png', contentType: 'image/png', url: 'https://minio/planche' }],
     });
 
-  it('affiche la vignette d’une image jointe', () => {
+  it('shows the thumbnail of an attached image', () => {
     const html = render({ comments: [withImage()] });
     expect(html).toContain('https://minio/planche');
     expect(html).toContain('planche.png');
   });
 
-  it('n’ajoute aucune vignette à une note sans pièce jointe', () => {
+  it('adds no thumbnail to a note without an attachment', () => {
     expect(render()).not.toContain('<img');
   });
 });
 
 /**
- * Une note trop grande s'ouvre repliée — mais son texte reste dans la page, donc trouvable.
+ * An oversized note opens collapsed, but its text stays in the page, so it is findable.
  *
- * L'indicateur, lui, se décide sur ce que la colonne masque VRAIMENT (cf. `CollapsibleText`) :
- * il n'apparaît donc qu'une fois la page mise en page, jamais dans un balisage rendu à plat.
- * Ces deux cas passent par un vrai DOM, à la largeur d'une colonne de partage client, et le
- * balisage plat sert encore à ce qu'il prouve le mieux : le texte entier y est.
+ * The indicator depends on what the column actually hides (cf. `CollapsibleText`), so it
+ * only appears once the page is laid out, never in a flat markup dump. These two cases
+ * run against a real DOM at a client share column width; the flat markup still best
+ * proves that the full text is present.
  */
-describe('ClientComments — note trop grande', () => {
+describe('ClientComments — oversized note', () => {
   const longNote = [comment({ content: wall, timestamp: null })];
 
   let restore: (() => void) | null = null;
@@ -158,26 +158,26 @@ describe('ClientComments — note trop grande', () => {
   };
 
   /**
-   * Seule exception à la règle du fichier : l'indicateur se désigne par son libellé, parce que
-   * la rangée du commentaire est elle aussi un bouton — compter les boutons ne dirait rien.
+   * The only exception to the file's rule: the indicator is located by its label, because
+   * the comment row is itself a button, so counting buttons would tell us nothing.
    */
   const expandName = (text: string) => t('comments.expandComment', { count: text.length });
 
-  it('pose un indicateur de dépliage et conserve le texte entier', () => {
+  it('shows an expand indicator and keeps the full text', () => {
     layout();
     mountInDom(element({ timed: false, comments: longNote }));
     expect(screen.getByText(wall)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: expandName(wall) })).toBeInTheDocument();
   });
 
-  it('ne replie pas une note courte', () => {
+  it('does not collapse a short note', () => {
     layout();
     const short = comment({ timestamp: null });
     mountInDom(element({ timed: false, comments: [short] }));
     expect(screen.queryByRole('button', { name: expandName(short.content) })).not.toBeInTheDocument();
   });
 
-  it('garde le texte entier hors de tout navigateur : rien n’est tronqué à la source', () => {
+  it('keeps the full text out of any browser: nothing is truncated at the source', () => {
     expect(render({ timed: false, comments: longNote })).toContain(wall);
   });
 });

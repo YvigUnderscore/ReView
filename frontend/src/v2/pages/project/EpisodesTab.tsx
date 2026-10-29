@@ -30,14 +30,14 @@ import type { SequenceSummary } from '../../types/api';
 import { useT } from '../../i18n';
 
 /**
- * Onglet Épisodes (niveau facultatif, activé projet par projet).
+ * Episodes tab (optional level, enabled project by project).
  *
- * Il n'existe que sur un projet où le niveau est allumé : la page projet ne le monte pas
- * autrement. Il réutilise le motif de liste des séquences et des plans — même carte,
- * même bascule grille/liste, mêmes gestes — plutôt que d'en inventer un sixième.
+ * It exists only on a project where the level is switched on: the project page does not mount it
+ * otherwise. It reuses the list pattern of sequences and shots (same card, same grid/list toggle,
+ * same gestures) rather than inventing a sixth.
  *
- * Les séquences hors épisode forment un groupe à part entière : « sans » est une réponse,
- * pas une absence, et un découpage en cours en laisse toujours.
+ * Sequences outside any episode form a group in their own right: "none" is an answer, not an
+ * absence, and a cut in progress always has some.
  */
 
 const EPISODE_PREFIX = 'EP';
@@ -123,7 +123,7 @@ export default function EpisodesTab({ projectId, canManage }: { projectId: numbe
       : []),
   ];
 
-  /** Déplacer une séquence d'un épisode à l'autre — au clic droit, jamais par un bouton. */
+  /** Moves a sequence from one episode to another: on right-click, never through a button. */
   const sequenceMenu = (sequence: SequenceSummary): MenuEntry[] => {
     if (!canManage) return [];
     const targets = episodes.filter((e) => e.id !== sequence.episodeId);

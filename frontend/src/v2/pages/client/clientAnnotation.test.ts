@@ -9,18 +9,18 @@ import type { Shape } from '../../components/AnnotationCanvas';
 
 const rect: Shape = { id: 'a', type: 'rect', color: '#ef4444', width: 3, x: 0.1, y: 0.1, w: 0.2, h: 0.2 };
 
-describe('buildGuestAnnotation — ce que l’invité joint à son retour', () => {
-  it('ne joint rien quand il n’y a ni dessin ni point', () => {
+describe('buildGuestAnnotation — what the guest attaches to their feedback', () => {
+  it('attaches nothing when there is neither a drawing nor a point', () => {
     expect(buildGuestAnnotation({ shapes: [] })).toBeUndefined();
     expect(buildGuestAnnotation({ shapes: [], hotspot: null })).toBeUndefined();
   });
 
-  it('joint les formes telles quelles', () => {
+  it('attaches the shapes as they are', () => {
     expect(buildGuestAnnotation({ shapes: [rect] })).toEqual([rect]);
   });
 
-  // `splitAnnotationParts` n'en retient qu'un : l'ordre décide lequel, comme en interne.
-  it('place le point de surface en tête des formes', () => {
+  // `splitAnnotationParts` keeps only one: the order decides which, as internally.
+  it('places the surface point first among the shapes', () => {
     const parts = buildGuestAnnotation({
       shapes: [rect],
       hotspot: { position: '1,2,3', normal: '0,1,0', space: 'object' },
@@ -29,59 +29,59 @@ describe('buildGuestAnnotation — ce que l’invité joint à son retour', () =
     expect(parts?.[1]).toEqual(rect);
   });
 
-  it('omet l’espace quand le hotspot n’en déclare pas', () => {
+  it('omits the space when the hotspot declares none', () => {
     const parts = buildGuestAnnotation({ shapes: [], hotspot: { position: '1,2,3', normal: '0,1,0' } });
     expect(parts?.[0]).toEqual({ type: 'hotspot', position: '1,2,3', normal: '0,1,0' });
   });
 
   /**
-   * Le contrat qui compte vraiment : le retour d'un client se rouvre dans la review de
-   * l'artiste. Ce que l'invité écrit doit donc se relire avec le MÊME lecteur que l'interne.
+   * The contract that really matters: a client's feedback is reopened in the artist's review.
+   * What the guest writes must therefore be read back by the SAME reader as the internal one.
    */
-  it('produit un format que la review interne relit', () => {
+  it('produces a format that the internal review reads back', () => {
     const parts = buildGuestAnnotation({
       shapes: [rect],
       hotspot: { position: '1,2,3', normal: '0,1,0' },
     });
     expect(splitAnnotationParts(parts).shapes).toEqual([rect]);
-    // Le hotspot d'un invité se relit comme un point d'intérêt numéroté « 1 ».
+    // A guest's hotspot is read back as a numbered point of interest "1".
     expect(readPoiPoints(parts)).toEqual([{ position: '1,2,3', normal: '0,1,0' }]);
   });
 });
 
-describe('guestCommentContent — un dessin seul vaut un retour', () => {
-  it('garde le texte de l’invité, débarrassé de ses espaces', () => {
+describe('guestCommentContent — a drawing alone counts as feedback', () => {
+  it('keeps the guest text, trimmed of surrounding spaces', () => {
     expect(guestCommentContent('  trop sombre  ', undefined)).toBe('trop sombre');
   });
 
-  // Le serveur exige un contenu : sans repli, un dessin seul serait refusé en 400.
-  it('remplace un texte vide par un repli dès qu’il y a une annotation', () => {
+  // The server requires content: without a fallback, a drawing alone would be rejected with a 400.
+  it('replaces empty text with a fallback as soon as there is an annotation', () => {
     expect(guestCommentContent('', [rect])).toBe('(annotation)');
     expect(guestCommentContent('   ', [rect])).toBe('(annotation)');
   });
 
-  it('ne renvoie rien quand il n’y a ni texte ni dessin', () => {
+  it('returns nothing when there is neither text nor drawing', () => {
     expect(guestCommentContent('', undefined)).toBeNull();
   });
 });
 
-describe('frameOf — le numéro que l’invité cite au studio', () => {
-  it('compte dans la numérotation du projet, pas depuis zéro', () => {
+describe('frameOf — the frame number the guest cites to the studio', () => {
+  it('counts within the project numbering, not from zero', () => {
     expect(frameOf(0, 24, 1001)).toBe(1001);
     expect(frameOf(1, 24, 1001)).toBe(1025);
   });
 
-  // Une cadence fractionnaire est le cas courant en production, pas une exception.
-  it('arrondit à l’image la plus proche sur une cadence fractionnaire', () => {
+  // A fractional frame rate is the common case in production, not an exception.
+  it('rounds to the nearest frame on a fractional frame rate', () => {
     expect(frameOf(1, 23.976, 1)).toBe(25);
   });
 
-  it('ne descend jamais sous la première frame', () => {
+  it('never goes below the first frame', () => {
     expect(frameOf(-5, 24, 1001)).toBe(1001);
   });
 
-  // Cadence inconnue : mieux vaut la première frame qu'un NaN affiché au client.
-  it('retombe sur la première frame quand la cadence est inexploitable', () => {
+  // Unknown frame rate: better show the first frame than a NaN to the client.
+  it('falls back to the first frame when the frame rate is unusable', () => {
     expect(frameOf(10, 0, 1001)).toBe(1001);
     expect(frameOf(10, Number.NaN, 1001)).toBe(1001);
   });

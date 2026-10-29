@@ -18,12 +18,11 @@ import { useSgConnection } from '../../lib/shotgridApi';
 import SgCrewPanel from '../../components/shotgrid/SgCrewPanel';
 
 /**
- * Onglet Membres : qui est sur le projet, avec quel rôle et dans quels départements.
+ * Members tab: who is on the project, with which role and in which departments.
  *
- * Le rôle par projet existait depuis la phase 38.E ; le département n'avait aucun écran,
- * alors que la relation et les routes existaient depuis la vague B. Les deux se règlent
- * maintenant d'un clic droit sur la ligne — le geste que le produit emploie partout
- * ailleurs pour assigner.
+ * The per-project role has existed since phase 38.E; the department had no screen, although the
+ * relation and the routes had existed since wave B. Both are now set with a right-click on the row,
+ * the gesture the product uses everywhere else to assign.
  */
 export default function MembersTab({ projectId }: { projectId: number }) {
   const t = useT();
@@ -59,7 +58,7 @@ export default function MembersTab({ projectId }: { projectId: number }) {
     }
   };
 
-  // Identité stable : la liste part en dépendance du filtrage de l'annuaire.
+  // Stable identity: the list feeds the dependency of the directory filtering.
   const memberIds = useMemo(
     () => (projQ.data?.project.memberships ?? []).map((m) => m.user.id),
     [projQ.data],
@@ -68,18 +67,18 @@ export default function MembersTab({ projectId }: { projectId: number }) {
   return (
     <div>
       <h2 className="mb-1 text-sm font-semibold text-muted-foreground">{t('members.title')}</h2>
-      {/* Le clic droit ne se devine pas : une ligne suffit à le dire, là où un bouton de
-          plus par ligne alourdirait l'écran. */}
+      {/* Right-click is not guessable: a row is enough to say so, whereas one more button per row
+          would weigh down the screen. */}
       {canManage && <p className="mb-4 text-xs text-muted-foreground">{t('members.hint')}</p>}
       {(error ?? loadError) && <p className="mb-3 text-sm text-destructive">{error ?? loadError}</p>}
-      {/* Projet relié : l'équipe du site entre ici, sans ressaisir une adresse. */}
+      {/* Linked project: the site's team comes in here, without retyping an address. */}
       {connection?.active && (
         <div className="mb-5">
           <SgCrewPanel projectId={projectId} />
         </div>
       )}
-      {/* Le choix se fait dans l'annuaire (recherche, visage, poste), pas dans une liste
-          déroulante où vingt-sept comptes homonymes se suivent. */}
+      {/* The choice is made in the directory (search, face, role), not in a drop-down list where
+          twenty-seven namesakes follow each other. */}
       <Button size="sm" className="mb-5" onClick={() => setAdding(true)}>
         <Plus size={14} /> {t('members.add')}
       </Button>

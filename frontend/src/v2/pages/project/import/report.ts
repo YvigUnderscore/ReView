@@ -5,15 +5,15 @@ import type { Tr } from '../../../i18n';
 import type { CsvField, CsvIssue, ImportReport } from './types';
 
 /**
- * Mise en mots du rapport d'import.
+ * Wording the import report.
  *
- * Un studio corrige son fichier et le rejoue : le rapport doit donc sortir du navigateur
- * sous forme de tableau, une ligne par anomalie, avec le numéro de ligne du fichier
- * d'origine. Les fonctions sont pures — elles reçoivent le traducteur — pour être
- * testables et pour ne pas figer la langue au chargement du module.
+ * A studio corrects its file and replays it, so the report must leave the browser as a table: one
+ * row per anomaly, with the row number of the original file. The functions are pure (they receive
+ * the translator) so that they can be tested, and so as not to freeze the language when the module
+ * loads.
  */
 
-/** Libellé d'un champ reconnu. Le vocabulaire de production reste en anglais. */
+/** Label of a recognized field. The production vocabulary stays in English. */
 export function fieldLabel(t: Tr, field: CsvField): string {
   switch (field) {
     case 'episode':
@@ -51,7 +51,7 @@ export function fieldLabel(t: Tr, field: CsvField): string {
   }
 }
 
-/** Motif d'une anomalie, avec la colonne et la valeur fautives quand elles existent. */
+/** Reason for an anomaly, with the faulty column and value when they exist. */
 export function issueLabel(t: Tr, issue: CsvIssue): string {
   const column = issue.column ?? '';
   const value = issue.value ?? '';
@@ -93,7 +93,7 @@ export function issueLabel(t: Tr, issue: CsvIssue): string {
   }
 }
 
-/** Une anomalie empêche-t-elle la ligne d'exister, ou n'est-ce qu'un avertissement ? */
+/** Does an anomaly prevent the row from existing, or is it only a warning? */
 export function isBlocking(code: CsvIssue['code']): boolean {
   return (
     code === 'EMPTY_FILE' || code === 'MISSING_SHOT_COLUMN' || code === 'MISSING_SHOT' || code === 'IN_TRASH'
@@ -101,15 +101,15 @@ export function isBlocking(code: CsvIssue['code']): boolean {
 }
 
 /**
- * Champ CSV échappé, avec la même garde anti-formule que côté serveur : un tableur ne
- * doit pas exécuter le contenu d'un rapport d'erreurs.
+ * Escaped CSV field, with the same formula guard as on the server side: a spreadsheet must not
+ * execute the content of an error report.
  */
 function csvField(value: string): string {
   const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
   return /[",\n]/.test(safe) ? `"${safe.replace(/"/g, '""')}"` : safe;
 }
 
-/** Le rapport en tableau : ligne du fichier, plan, gravité, motif. */
+/** The report as a table: file row, shot, severity, reason. */
 export function toReportCsv(t: Tr, report: ImportReport): string {
   const header = [
     t('common.line'),

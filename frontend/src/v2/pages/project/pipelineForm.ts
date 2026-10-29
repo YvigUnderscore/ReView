@@ -3,7 +3,7 @@
 
 import type { PipelineOverride, PipelineSettings } from '../../types/api';
 
-/** État de formulaire d'un override pipeline (chaînes éditables + bascule hériter/personnaliser). */
+/** Form state of a pipeline override (editable strings + inherit/customize toggle). */
 export interface PipelineForm {
   custom: boolean;
   width: string;
@@ -11,7 +11,7 @@ export interface PipelineForm {
   framerate: string;
 }
 
-/** Applique un override partiel sur un socle pipeline (miroir client du backend). */
+/** Applies a partial override onto a pipeline base (client mirror of the backend). */
 export function applyOverride(base: PipelineSettings, o: PipelineOverride | undefined): PipelineSettings {
   if (!o) return base;
   return {
@@ -30,8 +30,8 @@ function toNum(v: string, fallback: number): number {
 }
 
 /**
- * Construit l'état de formulaire depuis un override existant + les valeurs héritées.
- * Les champs sont préremplis avec l'override si présent, sinon la valeur héritée du parent.
+ * Builds the form state from an existing override plus the inherited values.
+ * The fields are prefilled with the override if present, otherwise with the parent's inherited value.
  */
 export function formFromOverride(o: PipelineOverride | undefined, inherited: PipelineSettings): PipelineForm {
   const custom = !!(o && (o.resolution || o.framerate !== undefined));
@@ -44,8 +44,8 @@ export function formFromOverride(o: PipelineOverride | undefined, inherited: Pip
 }
 
 /**
- * Override à envoyer au backend : `{}` (hérite) si non personnalisé, sinon la résolution
- * et la cadence saisies (repli sur l'hérité si la saisie est vide ou invalide).
+ * Override to send to the backend: `{}` (inherits) if not customized, otherwise the resolution and
+ * frame rate entered (falling back to the inherited value if the entry is empty or invalid).
  */
 export function overrideFromForm(f: PipelineForm, inherited: PipelineSettings): PipelineOverride {
   if (!f.custom) return {};

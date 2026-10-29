@@ -34,8 +34,8 @@ const fmt = (iso: string) =>
     minute: '2-digit',
   });
 
-/** Sessions actives du compte (36.B) : liste des appareils connectés + révocation. */
-/** Sessions affichées d'emblée ; au-delà, un bouton les déplie. */
+/** Active sessions of the account (36.B): list of connected devices, with revocation. */
+/** Sessions shown up front; beyond that, a button expands them. */
 const SESSIONS_PREVIEW = 8;
 
 export default function SessionsSection() {
@@ -47,8 +47,8 @@ export default function SessionsSection() {
     queryFn: () => api.get<{ sessions: SessionRow[] }>('/api/auth/sessions').then((d) => d.sessions),
   });
   const sessions = sessionsQ.data ?? [];
-  // Sur un compte actif, la liste complète (deux cents lignes constatées) écrasait tout le
-  // reste du profil. On en montre assez pour reconnaître ses appareils, le reste à la demande.
+  // On an active account, the full list (two hundred rows observed) pushed everything else in the
+  // profile off the page. Enough is shown to recognize one's devices, the rest on demand.
   const [expanded, setExpanded] = useState(false);
   const shown = expanded ? sessions : sessions.slice(0, SESSIONS_PREVIEW);
 

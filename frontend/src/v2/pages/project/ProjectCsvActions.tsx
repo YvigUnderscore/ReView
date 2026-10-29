@@ -10,8 +10,8 @@ import { downloadProjectCsv } from './import/api';
 import ImportCsvDialog from './import/ImportCsvDialog';
 
 /**
- * Passerelle CSV du projet : import de nomenclature (aperçu puis écriture) et export.
- * Réservée aux gestionnaires du projet — le montage est fait par `ProjectPage`.
+ * CSV gateway of the project: BOM import (preview, then write) and export.
+ * Reserved for project managers: it is mounted by `ProjectPage`.
  */
 export default function ProjectCsvActions({
   projectId,

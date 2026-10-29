@@ -9,11 +9,11 @@ import { isBlocking, issueLabel, toReportCsv } from './report';
 import type { ImportReport } from './types';
 
 /**
- * Anomalies et lignes refusées, avec leur motif.
+ * Anomalies and refused rows, with their reason.
  *
- * Un studio n'importe pas un fichier parfait du premier coup : il lui faut la ligne, la
- * colonne, la valeur, et de quoi repartir dans son tableur. Le rapport se télécharge
- * entier même quand la liste affichée est écourtée.
+ * A studio does not import a perfect file on the first try: it needs the row, the column, the
+ * value, and enough to start again in its spreadsheet. The report downloads in full, even when the
+ * displayed list is shortened.
  */
 export default function ImportIssues({ report, projectId }: { report: ImportReport; projectId: number }) {
   const t = useT();

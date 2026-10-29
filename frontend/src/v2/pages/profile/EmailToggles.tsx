@@ -8,7 +8,7 @@ import { qk } from '../../lib/query';
 import { useAuth } from '../../stores/useAuth';
 import { useT } from '../../i18n';
 
-/** Case à cocher générique branchée sur une clé booléenne de `preferences`. */
+/** Generic checkbox bound to a boolean key of `preferences`. */
 function PrefCheckbox({
   prefKey,
   label,
@@ -49,7 +49,7 @@ function PrefCheckbox({
   );
 }
 
-/** Abonnement au digest quotidien par email (préférence `emailDigest`, backlog P2). */
+/** Subscription to the daily email digest (`emailDigest` preference, backlog P2). */
 export function DigestToggle() {
   const t = useT();
   const prefsQ = useQuery({
@@ -71,7 +71,7 @@ export function DigestToggle() {
   );
 }
 
-/** Rapport hebdomadaire de production (43.B — `weeklyReport`) : superviseurs/admins. */
+/** Weekly production report (43.B, `weeklyReport`): supervisors and admins only. */
 export function WeeklyReportToggle() {
   const t = useT();
   const role = useAuth((s) => s.user?.role);

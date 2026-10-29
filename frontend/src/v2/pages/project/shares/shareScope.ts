@@ -4,16 +4,16 @@
 import type { ShareLink, ShareScope } from '../../../types/api';
 
 /**
- * Portée d'un lien de partage — le côté client de la décision « qu'est-ce que ce lien
- * ouvre ». Tout ce qui est calculable sans le DOM vit ici, testé : la portée est la seule
- * chose qui sépare « montrer un plan » de « ouvrir le film entier ».
+ * Scope of a share link: the client-side part of the decision "what does this link open".
+ * Everything computable without the DOM lives here, and is tested: the scope is the only thing
+ * that separates "showing a shot" from "opening the whole film".
  */
 
 export type { ShareScope };
 
 /**
- * Le lien tel que l'API le renvoie désormais. Composition (et non re-déclaration) du type
- * partagé : `types/share.ts` décrit le lien d'origine, la portée s'y ajoute.
+ * The link as the API now returns it. Composition (rather than re-declaration) of the shared type:
+ * `types/share.ts` describes the original link, and the scope is added to it.
  */
 export type ScopedShareLink = ShareLink & {
   scope: ShareScope;
@@ -24,7 +24,7 @@ export type ScopedShareLink = ShareLink & {
   version: { name: string } | null;
 };
 
-/** Une ligne du sélecteur de médias (GET /api/share/candidates). */
+/** One row of the media picker (GET /api/share/candidates). */
 export interface ShareCandidate {
   id: number;
   originalName: string;
@@ -35,7 +35,7 @@ export interface ShareCandidate {
   createdAt: string;
 }
 
-/** État du sélecteur, dans le dialogue de création. */
+/** State of the picker, in the creation dialog. */
 export interface ScopeState {
   scope: ShareScope;
   playlistId: number | null;
@@ -46,8 +46,8 @@ export interface ScopeState {
 export const emptyScope: ScopeState = { scope: 'PROJECT', playlistId: null, versionId: null, mediaIds: [] };
 
 /**
- * Vrai quand la portée choisie désigne réellement quelque chose. Sans ce garde-fou, un
- * lien « playlist » sans playlist part au serveur, qui le refuse — autant le dire avant.
+ * True when the chosen scope actually designates something. Without this guard, a "playlist" link
+ * without a playlist goes to the server, which refuses it: better to say so beforehand.
  */
 export function isScopeReady(state: ScopeState): boolean {
   switch (state.scope) {
@@ -62,7 +62,7 @@ export function isScopeReady(state: ScopeState): boolean {
   }
 }
 
-/** Corps de requête : on n'envoie QUE la cible de la portée choisie. */
+/** Request body: we send ONLY the target of the chosen scope. */
 export function scopePayload(state: ScopeState): Record<string, unknown> {
   switch (state.scope) {
     case 'PLAYLIST':
@@ -76,12 +76,12 @@ export function scopePayload(state: ScopeState): Record<string, unknown> {
   }
 }
 
-/** Coche/décoche un média dans la sélection, sans muter l'état d'origine. */
+/** Checks or unchecks a media in the selection, without mutating the original state. */
 export function toggleMedia(mediaIds: number[], id: number): number[] {
   return mediaIds.includes(id) ? mediaIds.filter((m) => m !== id) : [...mediaIds, id];
 }
 
-/** Les versions distinctes du catalogue, dans l'ordre où elles s'y présentent. */
+/** The distinct versions of the catalogue, in the order they are presented. */
 export function versionsOf(candidates: ShareCandidate[]): { id: number; label: string }[] {
   const seen = new Map<number, string>();
   for (const c of candidates) {
@@ -91,9 +91,9 @@ export function versionsOf(candidates: ShareCandidate[]): { id: number; label: s
 }
 
 /**
- * Adresses saisies dans le champ « destinataires » : une par ligne, par virgule ou par
- * point-virgule. Le filtre est volontairement grossier — le serveur valide pour de bon ;
- * il sert à ne pas envoyer une ligne vide ni un « ; » esseulé.
+ * Addresses typed into the "recipients" field: one per line, or separated by commas or semicolons.
+ * The filter is deliberately coarse: the server validates for real. It only serves to avoid sending
+ * an empty line or a lone ";".
  */
 export function parseRecipients(raw: string): string[] {
   const parts = raw
@@ -104,15 +104,15 @@ export function parseRecipients(raw: string): string[] {
 }
 
 /**
- * Libellé de la portée d'un lien existant, pour la liste. Le nom de la cible vient du
- * serveur : le stocker côté client le figerait au jour de la création.
+ * Label of the scope of an existing link, for the list. The name of the target comes from the
+ * server: storing it client-side would freeze it at the day of creation.
  */
 export function scopeBadge(
   link: Pick<ScopedShareLink, 'scope' | 'playlist' | 'version' | 'mediaIds'>,
   labels: {
     project: string;
     selection: (count: number) => string;
-    /** Portée restreinte dont la cible manque — état que la base interdit, jamais « projet ». */
+    /** Restricted scope whose target is missing: a state the database forbids, never "project". */
     restricted: string;
   },
 ): string {

@@ -27,7 +27,7 @@ import { SettingsCard } from '../../components/settings/SettingsCard';
 import { SETTINGS_KEYWORDS } from '../../components/settings/settingsKeywords';
 import { Hint } from '../../components/ui/hint';
 
-/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+/** Translator passed to the label tables, recomputed on each render. */
 type Tr = (key: MessageKey, params?: Record<string, string | number>) => string;
 
 const fmt = (iso: string) =>
@@ -43,11 +43,11 @@ const expiryLabel = (t: Tr, choice: string): string =>
   choice === '' ? t('common.never') : t('tokens.expiry.days', { count: Number(choice) });
 
 /**
- * Tokens d'API personnels (36.C) : création (secret montré une fois), liste, révocation.
+ * Personal API tokens (36.C): creation (secret shown once), listing, revocation.
  *
- * Le formulaire porte désormais tout ce que le serveur accepte — scopes fins,
- * cantonnement à un projet, expiration — et le mot de passe courant qu'il exige : sans
- * lui, la création répondait 403 et l'écran ne savait pas pourquoi.
+ * The form now carries everything the server accepts (fine-grained scopes, scoping to a project,
+ * expiry), along with the current password it requires. Without it, creation answered 403 and the
+ * screen did not know why.
  */
 export default function ApiTokensSection() {
   const t = useT();

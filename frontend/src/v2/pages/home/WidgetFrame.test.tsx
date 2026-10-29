@@ -9,14 +9,13 @@ import type { WidgetSize } from '../../components/widgets/widgetSizing';
 import { t } from '../../i18n';
 
 /**
- * Le cadre d'un bloc d'accueil : le retrait de @dnd-kit du premier chargement (F5), puis le
- * redimensionnement (lot 13).
+ * The frame of a home block: removing @dnd-kit from the first load (F5), then resizing (batch 13).
  *
- * Le cadre appelait `useSortable({ disabled: !editing })`, ce qui embarquait le moteur de
- * glisser-déposer chez tout le monde pour un geste facultatif. Il reçoit maintenant, du seul
- * mode réagencement, ce que le glisser lui donnait. Ce qu'il faut verrouiller, c'est
- * l'équivalence : hors édition, le rendu doit être **exactement** celui que produisait
- * `useSortable` désactivé — ni transform, ni transition, aucune poignée.
+ * The frame called `useSortable({ disabled: !editing })`, which shipped the drag-and-drop engine to
+ * everyone for an optional gesture. It now receives, from the rearrangement mode alone, what the
+ * drag used to give it. What must be locked down is the equivalence: outside edit mode, the
+ * rendering must be **exactly** that produced by a disabled `useSortable`, with no transform, no
+ * transition and no handle.
  */
 
 const BASE = {
@@ -36,7 +35,7 @@ const sectionOf = () => document.querySelector<HTMLElement>('section[data-widget
 const handleOf = () => screen.queryByTitle(t('overview.widget.resizeHint'));
 
 describe('WidgetFrame', () => {
-  it('hors édition, ne porte ni style de déplacement ni poignée', () => {
+  it('outside edit mode, carries neither a move style nor a handle', () => {
     render(
       <WidgetFrame {...BASE} editing={false}>
         <p>contenu</p>
@@ -44,17 +43,17 @@ describe('WidgetFrame', () => {
     );
     const section = sectionOf();
     expect(section).not.toBeNull();
-    // `useSortable` désactivé rendait `transform: undefined, transition: undefined` :
-    // autrement dit rien. C'est ce « rien » qu'on vérifie.
+    // A disabled `useSortable` rendered `transform: undefined, transition: undefined`: in other
+    // words, nothing. It is that "nothing" that is verified.
     expect(section?.getAttribute('style')).toBeNull();
     expect(screen.queryByRole('button', { name: /d(é|e)placer|drag/i })).not.toBeInTheDocument();
-    // La poignée de taille est une commande de composition : elle vit avec celle du
-    // déplacement, et disparaît avec elle.
+    // The size handle is a composition command: it lives with the move handle, and disappears
+    // with it.
     expect(handleOf()).toBeNull();
     expect(screen.getByText('contenu')).toBeInTheDocument();
   });
 
-  it('en réagencement, applique ce que le glisser lui donne', () => {
+  it('in rearrangement mode, applies what the drag gives it', () => {
     const drag: WidgetDragHandle = {
       ref: () => {},
       style: { transform: 'translate3d(12px, 0, 0)', transition: 'transform 200ms ease' },
@@ -69,12 +68,12 @@ describe('WidgetFrame', () => {
     const section = sectionOf();
     expect(section?.style.transform).toBe('translate3d(12px, 0, 0)');
     expect(section?.style.transition).toBe('transform 200ms ease');
-    // Le bloc en cours de déplacement s'efface, comme avant.
+    // The block being moved fades out, as before.
     expect(section?.className).toContain('opacity-60');
     expect(document.querySelector('[aria-roledescription="sortable"]')).not.toBeNull();
   });
 
-  it('porte l’emprise réglée : largeur en colonnes, hauteur en rangées', () => {
+  it('carries the set footprint: width in columns, height in rows', () => {
     render(
       <WidgetFrame {...BASE} settings={{ ...BASE.settings, span: 8, rows: 5 }} editing={false}>
         <p>contenu</p>
@@ -83,12 +82,12 @@ describe('WidgetFrame', () => {
     const section = sectionOf();
     expect(section?.className).toContain('xl:col-span-8');
     expect(section?.className).toContain('row-span-5');
-    // Sans cette rangée unique en `1fr`, la hauteur ne descendrait pas jusqu'à la carte et
-    // l'emprise réglée ne réserverait qu'un vide sous elle.
+    // Without this single `1fr` row, the height would not reach the card, and the set footprint
+    // would only reserve empty space beneath it.
     expect(section?.className).toContain('grid-rows-1');
   });
 
-  it('en composition, la poignée règle largeur ET hauteur au clavier', () => {
+  it('in composition, the handle sets BOTH width and height from the keyboard', () => {
     const sizes: WidgetSize[] = [];
     render(
       <WidgetFrame
@@ -106,15 +105,15 @@ describe('WidgetFrame', () => {
     if (!handle) return;
     fireEvent.keyDown(handle, { key: 'ArrowRight' });
     fireEvent.keyDown(handle, { key: 'ArrowDown' });
-    // Chaque touche enregistre depuis la taille affichée (6 colonnes, 4 rangées par
-    // défaut) : à droite la largeur, en bas la hauteur.
+    // Each key saves from the displayed size (6 columns, 4 rows by default): width on the right,
+    // height at the bottom.
     expect(sizes).toEqual([
       { span: 8, rows: 4 },
       { span: 6, rows: 5 },
     ]);
   });
 
-  it('n’enregistre rien quand la flèche ne change pas la taille', () => {
+  it('saves nothing when the arrow key does not change the size', () => {
     const sizes: WidgetSize[] = [];
     render(
       <WidgetFrame

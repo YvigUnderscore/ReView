@@ -28,15 +28,15 @@ import { useSgLinks } from '../../components/shotgrid/useSgLinks';
 import SgSyncDot from '../../components/shotgrid/SgSyncDot';
 
 /**
- * Onglet Séquences (C3).
+ * Sequences tab (C3).
  *
- * Le montage du film entier ouvre l'onglet — il vivait dans la vue d'ensemble, loin des
- * séquences qui le composent. Chaque séquence mène à sa page : l'accordéon rechargeait un
- * détail à chaque dépliage, et cachait le montage de la séquence derrière deux clics.
+ * The whole-film edit opens the tab: it used to live in the overview, far from the sequences that
+ * make it up. Each sequence leads to its page: the accordion reloaded a detail on each expansion,
+ * and hid the sequence's edit behind two clicks.
  *
- * Les séquences se présentent comme les plans et les assets — même carte, même bascule
- * grille/liste, même multi-sélection : c'était le dernier onglet à avoir sa mise en page
- * et ses gestes à lui, et le geste appris ailleurs n'y marchait pas.
+ * Sequences are presented like the shots and assets: same card, same grid/list toggle, same
+ * multi-selection. It was the last tab to have its own layout and its own gestures, and the gesture
+ * learned elsewhere did not work there.
  */
 export default function SequencesTab({
   projectId,
@@ -61,7 +61,7 @@ export default function SequencesTab({
   const sgLinks = useSgLinks(projectId);
   const sorted = sortByCode(sequences);
   const sel = useMultiSelect(sorted.map((s) => s.id));
-  // Statut par clic droit — même vocabulaire que sur les plans et le kanban.
+  // Status by right-click: the same vocabulary as on the shots and the kanban.
   const { entry: statusEntry } = useStatusMenu(projectId, 'sequence');
   const { peopleEntry, hideEntry, dialog: entityDialog } = useEntityMenus(projectId, 'sequences');
 
@@ -99,9 +99,8 @@ export default function SequencesTab({
   };
 
   /**
-   * Menu commun aux trois onglets (`entityCardMenu`) : même ordre, même vocabulaire. Une
-   * séquence n'a ni suivi de notifications ni omission — les entrées manquantes ne
-   * décalent pas les autres.
+   * Menu shared by the three tabs (`entityCardMenu`): same order, same vocabulary. A sequence has
+   * neither notification tracking nor omission: the missing entries do not shift the others.
    */
   const menuFor = (s: Sequence) =>
     entityCardMenu({
@@ -119,7 +118,7 @@ export default function SequencesTab({
       onTrash: () => setDeleting(s),
     });
 
-  /** Le nom n'apporte rien quand il répète le code — la plupart des imports le font. */
+  /** The name adds nothing when it repeats the code, as most imports do. */
   const subtitleFor = (s: Sequence): string | undefined =>
     [
       s.name === s.code ? null : s.name,
@@ -130,7 +129,7 @@ export default function SequencesTab({
 
   return (
     <div>
-      {/* Montage du film entier (45) : toutes les séquences bout à bout, tenu à jour seul. */}
+      {/* Whole-film edit (45): all the sequences end to end, kept up to date automatically. */}
       <TimelineCard projectId={projectId} sequenceId={null} />
 
       <div className="mb-3 flex items-center justify-between">
@@ -211,7 +210,7 @@ export default function SequencesTab({
           onClear={sel.clear}
           actions={[
             {
-              // Le geste met à la corbeille (`softDelete`) — le dire, comme sur la carte.
+              // The gesture moves to the trash (`softDelete`): say so, as on the card.
               label: t('common.moveToTrash'),
               icon: <Trash2 size={14} />,
               danger: true,

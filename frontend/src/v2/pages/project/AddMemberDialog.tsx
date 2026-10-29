@@ -14,17 +14,16 @@ import type { User } from '../../types/api';
 import { useT } from '../../i18n';
 
 /**
- * Qui entre dans le projet.
+ * Who enters the project.
  *
- * L'écran alignait un `<select>` natif d'un compte par ligne : sur un vrai studio, des
- * dizaines d'entrées indiscernables — jusqu'à vingt-sept « IT Artist » à la suite — sans
- * recherche, sans visage, sans rien pour savoir de qui il s'agit. La liste du produit sait
- * déjà faire tout cela ; elle est simplement branchée ici.
+ * The screen used to line up one native `<select>` entry per account. On a real studio that means
+ * dozens of indistinguishable entries, up to twenty-seven "IT Artist" in a row, with no search, no
+ * face, and nothing to tell who is who. The product's list already does all of this; it is simply
+ * wired in here.
  *
- * Le choix vaut l'ajout : une équipe arrive rarement une personne à la fois, et une
- * validation à cocher obligerait à rouvrir le dialogue entre chaque. La personne ajoutée
- * quitte donc la liste sur-le-champ (le rafraîchissement de la fiche projet arrive après),
- * et le dialogue reste ouvert pour la suivante.
+ * Choosing is adding: a team rarely arrives one person at a time, and a checkbox to validate would
+ * force reopening the dialog between each one. The added person therefore leaves the list on the
+ * spot (the refresh of the project sheet comes later), and the dialog stays open for the next one.
  */
 export default function AddMemberDialog({
   projectId,
@@ -32,7 +31,7 @@ export default function AddMemberDialog({
   onClose,
 }: {
   projectId: number;
-  /** Déjà dans le projet : ces comptes ne sont pas proposés. */
+  /** Already in the project: these accounts are not offered. */
   memberIds: readonly number[];
   onClose: () => void;
 }) {
@@ -83,8 +82,8 @@ export default function AddMemberDialog({
           excludeIds={excludeIds}
           onPick={(person) => add.mutate(person.id)}
           pendingId={add.isPending ? (add.variables ?? null) : null}
-          // Un studio dont tout le monde est déjà sur le projet est un cas ordinaire, pas
-          // une recherche infructueuse : le dire évite de faire douter d'un champ vide.
+          // A studio where everyone is already on the project is an ordinary case, not an
+          // unsuccessful search: saying so stops an empty field from looking broken.
           emptyLabel={t('members.everyoneAdded')}
         />
         <DialogFooter>

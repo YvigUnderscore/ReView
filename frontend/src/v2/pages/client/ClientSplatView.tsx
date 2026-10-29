@@ -12,9 +12,9 @@ import ClientUnavailable from './ClientUnavailable';
 import type { ClientMediaSource } from './clientTypes';
 
 /**
- * Viewer Gaussian Splat du partage client : le hook `useSplat` de la review interne, monté
- * dans le pane interne, sans une seule des briques d'édition (`editor/`, painter, gizmos).
- * Les éditions non destructives enregistrées sont rejouées — le client voit le scan nettoyé.
+ * Gaussian Splat viewer of the client share: the `useSplat` hook of the internal review,
+ * mounted in the internal pane, without any of the editing pieces (`editor/`, painter,
+ * gizmos). Saved non-destructive edits are replayed, so the client sees the cleaned scan.
  */
 export default function ClientSplatView({
   source,
@@ -27,7 +27,7 @@ export default function ClientSplatView({
   originalName: string;
   loading: boolean;
   watermark: ReactNode;
-  /** Overlay d'annotation : le pane l'ancre au cadre de livraison, pas au canvas WebGL. */
+  /** Annotation overlay: the pane anchors it to the delivery frame, not to the WebGL canvas. */
   overlay?: ReactNode;
 }) {
   const file = resolveClientSplat(source, originalName);
@@ -41,8 +41,8 @@ export default function ClientSplatView({
   }, [getSceneHandle]);
   useHomeViewShortcut(homeView, splat.ready);
 
-  // Fichier absent du partage ou refusé par Spark : message adressé au client, pas la
-  // consigne interne « vérifier le format ou re-téléverser le média ».
+  // File missing from the share or refused by Spark: a message addressed to the client,
+  // not the internal instruction "check the format or re-upload the media".
   const failed = splat.loadError || (!loading && !file);
 
   return (

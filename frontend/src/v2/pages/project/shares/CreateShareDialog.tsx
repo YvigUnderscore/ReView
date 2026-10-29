@@ -23,7 +23,7 @@ import ShareScopeFields from './ShareScopeFields';
 import { clientUrl } from './shareUrl';
 import { emptyScope, isScopeReady, scopePayload, type ScopedShareLink, type ScopeState } from './shareScope';
 
-/** Création d'un lien client durci : portée, permission, expiration, limite de vues, mot de passe. */
+/** Creates a hardened client link: scope, permission, expiry, view limit, password. */
 export default function CreateShareDialog({
   projectId,
   open,
@@ -107,8 +107,8 @@ export default function CreateShareDialog({
             >
               <option value="VIEW">{t('shares.permission.readOnly')}</option>
               <option value="COMMENT">{t('shares.permission.comment')}</option>
-              {/* Donner un avis engageant n'est pas laisser une note : on envoie un lien de
-                  relecture à trois personnes et le mandat de trancher à une seule. */}
+              {/* Giving a binding opinion is not leaving a note: a review link goes to three people,
+                  and the mandate to decide goes to a single one. */}
               <option value="DECIDE">{t('shares.permission.decide')}</option>
             </Select>
           </div>

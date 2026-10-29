@@ -4,8 +4,8 @@
 import { useT } from '../../../i18n';
 
 /**
- * Les compteurs de structure du projet : séquences, plans, assets. Chaque carte ouvre
- * l'onglet qu'elle compte — c'est le plus court chemin vers la liste.
+ * The project's structure counters: sequences, shots, assets. Each card opens the tab it counts,
+ * the shortest path to the list.
  */
 
 export interface ProjectCounts {
@@ -38,8 +38,8 @@ export default function CountsWidget({
     <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
       <StatCard label={t('sequences.title')} value={counts.sequences} onClick={() => onGo('sequences')} />
       <StatCard label={t('shots.title')} value={counts.shots} onClick={() => onGo('shots')} />
-      {/* « Assets » est du vocabulaire de production : il ne se traduit dans aucune langue
-          (cf. `scripts/i18n-glossary.json`), comme partout ailleurs dans l'application. */}
+      {/* "Assets" is production vocabulary: it is not translated into any language
+          (cf. `scripts/i18n-glossary.json`), as everywhere else in the application. */}
       <StatCard label="Assets" value={counts.assets} onClick={() => onGo('assets')} />
     </div>
   );

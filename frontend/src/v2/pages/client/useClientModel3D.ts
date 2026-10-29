@@ -17,22 +17,22 @@ import { clientFrameAspect, clientLighting } from './clientViewerModel';
 import type { ClientMediaSource } from './clientTypes';
 
 /**
- * Viewer 3D **en lecture seule** du partage client.
+ * **Read-only** 3D viewer of the client share.
  *
- * Il réutilise tel quel le socle du viewer interne — `createModelScene`, `loadModel`,
- * `resizeRendererCamera`, `createFlyControls`, `applyLighting` — et s'arrête là : pas de
- * gizmo, pas de transformation de version, pas de recomposition, aucune écriture. Ce qui est
- * rejoué, c'est ce que le studio a **persisté** : cadre de livraison, pose caméra, éclairage
- * HDRI, animation embarquée. Aucun appel authentifié : l'invité n'a pas de compte, la seule
- * source de vérité est le payload de partage.
+ * It reuses the internal viewer's base as is (`createModelScene`, `loadModel`,
+ * `resizeRendererCamera`, `createFlyControls`, `applyLighting`) and stops there: no gizmo,
+ * no version transform, no recomposition, no writes. What is replayed is what the studio
+ * **persisted**: delivery frame, camera pose, HDRI lighting, embedded animation. No
+ * authenticated call is made: the guest has no account, and the only source of truth is the
+ * share payload.
  */
 export interface ClientModel3DViewer {
   containerRef: React.RefObject<HTMLDivElement | null>;
   ready: boolean;
   loadError: boolean;
-  /** Recadre la vue d'origine (raccourci `H`) — seule commande offerte à l'invité. */
+  /** Reframes the original view (`H` shortcut): the only command offered to the guest. */
   homeView: () => void;
-  /** Poignée impérative vers la scène — consommée par le rejeu de l'override (46.D). */
+  /** Imperative handle to the scene, consumed by the replay of the override (46.D). */
   getSceneHandle: () => ViewerSceneHandle | null;
 }
 
@@ -56,8 +56,8 @@ export function useClientModel3D(
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
 
-  // Aspect et pose caméra sont lus dans une ref : ils appartiennent au montage de la scène,
-  // pas au cycle de rendu React — les relire en dépendance remonterait tout le viewer.
+  // Aspect and camera pose are read through a ref: they belong to the scene's mount, not to
+  // React's render cycle. Reading them as dependencies would remount the whole viewer.
   const aspectRef = useRef(DEFAULT_REVIEW_ASPECT);
   aspectRef.current = clientFrameAspect(source);
   const poseRef = useRef<unknown>(null);
@@ -116,12 +116,12 @@ export function useClientModel3D(
         return;
       }
       scene.root.add(model.object);
-      // Animation embarquée (40.A) : un lookdev en turntable doit tourner chez le client
-      // comme chez l'artiste. Lecture en boucle du premier clip, sans transport à piloter.
+      // Embedded animation (40.A): a turntable lookdev must play at the client's as it does at
+      // the artist's. Loops the first clip, with no transport to drive.
       const mixer = model.animations.length ? new THREE.AnimationMixer(model.animRoot) : null;
       mixer?.clipAction(model.animations[0]).play();
 
-      // Navigation : orbite + pan + vol clic droit, exactement comme la review interne.
+      // Navigation: orbit, pan and right-click fly, exactly as in the internal review.
       const fly = createFlyControls(THREE, scene.camera, scene.controls, scene.renderer.domElement);
 
       const resize = () =>
@@ -142,8 +142,8 @@ export function useClientModel3D(
         scene.camera.updateProjectionMatrix();
         scene.controls.update();
       }
-      // Pose persistée par le studio : elle prime sur le cadrage automatique — c'est elle
-      // que le client doit voir en ouvrant le média (« rejouée à l'identique »).
+      // Pose persisted by the studio takes precedence over automatic framing: it is what the
+      // client must see when opening the media ("replayed identically").
       restoreModelCamera(THREE, scene.camera, scene.controls, poseRef.current);
 
       const ro = new ResizeObserver(resize);
@@ -186,13 +186,13 @@ export function useClientModel3D(
     };
   }, [glbSrc]);
 
-  // Éclairage rejoué (HDRI + exposition + rotation + fond + sol d'ombres). L'invité n'a pas
-  // accès à `/api/studio/hdris` : l'URL présignée doit venir du payload de partage, sans
-  // quoi seuls l'exposition et les lumières neutres s'appliquent.
+  // Replayed lighting (HDRI, exposure, rotation, background, shadow ground). The guest has no
+  // access to `/api/studio/hdris`: the presigned URL must come from the share payload, otherwise
+  // only exposure and neutral lights apply.
   const hdriUrl = source?.hdri?.url ?? null;
   const hdriFormat = source?.hdri?.format ?? 'hdr';
-  // Champs primitifs plutôt que l'objet : la requête TanStack renvoie un objet neuf à chaque
-  // rafraîchissement, et l'effet rechargerait l'HDRI à chaque fois.
+  // Primitive fields rather than the object: the TanStack query returns a new object on each
+  // refetch, and the effect would reload the HDRI every time.
   const { exposure, rotationDeg, showBackground, groundShadow } = clientLighting(source);
   useEffect(() => {
     if (!ready) return;

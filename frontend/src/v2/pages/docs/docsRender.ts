@@ -7,33 +7,33 @@ import { isInternalDocHref, resolveDocHref } from './docsManifest';
 const escapeHtml = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
 
 /**
- * URL débarrassée de ses espaces et caractères de contrôle : le navigateur les ignore lui
- * aussi dans un `href`, un `java\tscript:` y reste donc parfaitement exécutable.
+ * URL stripped of spaces and control characters: browsers ignore those in an `href` too, so a
+ * `java\tscript:` URL would otherwise remain fully executable.
  */
-// eslint-disable-next-line no-control-regex -- retirer les caractères de contrôle (nul compris) est le but même de cette regex
+// eslint-disable-next-line no-control-regex -- stripping control characters (NUL included) is the whole purpose of this regex
 const protocolOf = (url: string) => url.replace(/[\u0000-\u0020]/g, '').toLowerCase();
 
-/** Protocole exécutable dans un lien ? (`data:` y sert à servir du HTML) */
+/** Executable protocol in a link? (`data:` is used to serve HTML) */
 export const isUnsafeHref = (url: string): boolean => /^(javascript|vbscript|data):/.test(protocolOf(url));
 
-/** Protocole exécutable dans une image ? `data:image/…` reste légitime en markdown. */
+/** Executable protocol in an image? `data:image/…` remains legitimate in markdown. */
 export const isUnsafeSrc = (url: string): boolean => /^(javascript|vbscript):/.test(protocolOf(url));
 
-/** Encarts de la documentation, à la syntaxe des alertes GitHub (`> [!NOTE]`). */
+/** Documentation callouts, using GitHub alert syntax (`> [!NOTE]`). */
 export const CALLOUT_KINDS = ['note', 'tip', 'important', 'warning', 'caution'] as const;
 export type CalloutKind = (typeof CALLOUT_KINDS)[number];
-/** Libellé affiché en tête d'encart, dans la langue du lecteur (jamais dans le markdown). */
+/** Label shown at the head of a callout, in the reader language (never in the markdown). */
 export type CalloutLabels = Record<CalloutKind, string>;
 
-/** Titre de niveau 2 ou 3 d'une page — le sommaire « chapitres » du panneau latéral. */
+/** Level 2 or 3 heading of a page: the "chapters" table of contents in the side panel. */
 export interface DocChapter {
   id: string;
   text: string;
   level: 2 | 3;
 }
 
-// Convention DOCUMENTATION/ : markdown pur. Le HTML brut (bloc ou inline) est
-// échappé — pas d'injection possible, comportement identique en test (happy-dom).
+// DOCUMENTATION/ convention: pure markdown. Raw HTML (block or inline) is escaped: no injection
+// is possible, and the behaviour is identical under test (happy-dom).
 const md = new Marked({
   gfm: true,
   renderer: {
@@ -44,10 +44,10 @@ const md = new Marked({
 });
 
 /**
- * Ancre stable d'un titre — l'algorithme de GitHub, au caractère près : minuscules,
- * ponctuation retirée, **chaque** espace devenu un tiret (« Transport & timeline » donne
- * donc `transport--timeline`, avec deux tirets). Les mêmes pages se lisent sur GitHub et
- * dans l'application : un `page.md#chapitre` doit y désigner le même titre des deux côtés.
+ * Stable anchor of a heading: GitHub's algorithm, to the character. Lowercased, punctuation
+ * removed, **each** space turned into a dash ("Transport & timeline" thus gives
+ * `transport--timeline`, with two dashes). The same pages are read on GitHub and in the
+ * application, so a `page.md#chapter` must designate the same heading on both sides.
  */
 export function slugifyHeading(text: string): string {
   const slug = text
@@ -58,7 +58,7 @@ export function slugifyHeading(text: string): string {
   return slug || 'section';
 }
 
-/** Un titre répété dans la page reçoit un suffixe numérique, comme sur GitHub. */
+/** A heading repeated in the page receives a numeric suffix, as on GitHub. */
 const uniqueSlug = (text: string, seen: Map<string, number>): string => {
   const base = slugifyHeading(text);
   const n = seen.get(base) ?? 0;
@@ -70,10 +70,10 @@ const CALLOUT_RE = /^\s*\[!(note|tip|important|warning|caution)\]\s*/i;
 const UPDATED_RE = /^\s*Updated\s*:/i;
 
 /**
- * Retire le préambule conventionnel — titre, sous-titre en italique, ligne « Updated: » —
- * quand la page en porte un. Ces trois informations sont déjà rendues par l'en-tête de la
- * page, avec la date au format du lecteur : les laisser dans le corps les afficherait deux
- * fois. Une page qui ne suit pas la convention n'est pas touchée.
+ * Removes the conventional preamble (title, italic subtitle, "Updated:" line) when the page has
+ * one. These three pieces are already rendered by the page header, with the date in the reader's
+ * format: leaving them in the body would display them twice. A page that does not follow the
+ * convention is left untouched.
  */
 function stripPreamble(root: DocumentFragment): void {
   const first = root.firstElementChild;
@@ -88,7 +88,7 @@ function stripPreamble(root: DocumentFragment): void {
   if (updated?.tagName === 'BLOCKQUOTE' && UPDATED_RE.test(updated.textContent ?? '')) updated.remove();
 }
 
-/** Liens : `.md` interne → navigation SPA, externe → nouvel onglet, exécutable → neutralisé. */
+/** Links: internal `.md` becomes SPA navigation, external opens a new tab, executable is neutralized. */
 function rewriteLinks(root: DocumentFragment, currentPath: string): void {
   for (const a of root.querySelectorAll('a[href]')) {
     const href = a.getAttribute('href') ?? '';
@@ -100,21 +100,21 @@ function rewriteLinks(root: DocumentFragment, currentPath: string): void {
       a.setAttribute('rel', 'noopener noreferrer');
       a.setAttribute('data-external', '');
     } else if (isUnsafeHref(href)) {
-      // `[clic](javascript:…)` en markdown produit un href exécutable : le HTML brut est
-      // échappé plus haut, mais pas les URLs que marked construit lui-même.
+      // A `[click](javascript:…)` in markdown produces an executable href: raw HTML is escaped
+      // above, but not the URLs that marked builds itself.
       a.removeAttribute('href');
     }
   }
 }
 
 /**
- * Images : chemin relatif → `/docs/…`, et une image seule dans son paragraphe devient une
- * figure légendée par son texte alternatif. La légende porte alors la description ; l'image
- * passe en `alt=""` pour qu'un lecteur d'écran ne l'annonce pas deux fois.
+ * Images: relative path → `/docs/…`, and a lone image in its paragraph becomes a figure captioned
+ * by its alt text. The caption then carries the description, and the image gets `alt=""` so a
+ * screen reader does not announce it twice.
  *
- * Pas de `loading="lazy"` : le contenu est monté dans le conteneur défilant de la page, et
- * le navigateur n'y déclenchait jamais le chargement — les captures restaient des carrés de
- * deux pixels, même après avoir fait défiler jusqu'à elles.
+ * No `loading="lazy"`: the content is mounted in the page's scrolling container, and the browser
+ * never triggered loading there. The captures stayed two-pixel squares, even after scrolling
+ * down to them.
  */
 function rewriteImages(root: DocumentFragment, currentPath: string): void {
   for (const img of root.querySelectorAll('img[src]')) {
@@ -141,15 +141,15 @@ function rewriteImages(root: DocumentFragment, currentPath: string): void {
   }
 }
 
-/** `> [!NOTE] …` → encart typé, libellé dans la langue du lecteur. */
+/** `> [!NOTE] …` becomes a typed callout, labelled in the reader language. */
 function rewriteCallouts(root: DocumentFragment, labels: CalloutLabels): void {
   for (const quote of [...root.querySelectorAll('blockquote')]) {
     const head = quote.querySelector('p');
     const kind = head?.textContent?.match(CALLOUT_RE)?.[1]?.toLowerCase() as CalloutKind | undefined;
     if (!head || !kind) continue;
 
-    // Le contenu est déjà échappé : réécrire `innerHTML` pour retirer le marqueur en tête
-    // ne réintroduit rien d'exécutable.
+    // The content is already escaped: rewriting `innerHTML` to strip the marker at the head does
+    // not reintroduce anything executable.
     head.innerHTML = head.innerHTML.replace(CALLOUT_RE, '');
     if ((head.textContent ?? '').trim() === '' && head.children.length === 0) head.remove();
 
@@ -165,7 +165,7 @@ function rewriteCallouts(root: DocumentFragment, labels: CalloutLabels): void {
   }
 }
 
-/** Titres ancrables, tableaux défilables, blocs de code étiquetés par leur langage. */
+/** Anchorable headings, scrollable tables, code blocks labelled by their language. */
 function decorateStructure(root: DocumentFragment): void {
   const seen = new Map<string, number>();
   for (const h of root.querySelectorAll('h1, h2, h3, h4'))
@@ -188,13 +188,13 @@ function decorateStructure(root: DocumentFragment): void {
 }
 
 /**
- * Markdown → HTML pour la page /docs.
- * - préambule conventionnel retiré (l'en-tête de page le rend lui-même) ;
- * - liens internes .md → <a data-doc="chemin/résolu.md"> (interceptés par la page) ;
- * - liens externes → nouvel onglet (noopener) ;
- * - images relatives → servies depuis /docs/<chemin résolu>, seules dans leur paragraphe
- *   elles deviennent une figure légendée ;
- * - `> [!NOTE]` → encart typé ; titres ancrés ; tableaux défilables.
+ * Markdown → HTML for the /docs page.
+ * - conventional preamble removed (the page header renders it itself);
+ * - internal .md links → <a data-doc="resolved/path.md"> (intercepted by the page);
+ * - external links → new tab (noopener);
+ * - relative images → served from /docs/<resolved path>; alone in their paragraph they become
+ *   a captioned figure;
+ * - `> [!NOTE]` → typed callout; anchored headings; scrollable tables.
  */
 export function renderDocHtml(markdown: string, currentPath: string, calloutLabels: CalloutLabels): string {
   const tpl = document.createElement('template');
@@ -210,8 +210,8 @@ export function renderDocHtml(markdown: string, currentPath: string, calloutLabe
 }
 
 /**
- * Sommaire de la page, lu sur le HTML déjà rendu — les ancres y sont posées, donc un
- * chapitre ne peut pas pointer à côté de son titre.
+ * Table of contents of the page, read from the already rendered HTML. The anchors are placed
+ * there, so a chapter cannot point beside its heading.
  */
 export function extractChapters(html: string): DocChapter[] {
   const tpl = document.createElement('template');

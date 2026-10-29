@@ -26,22 +26,22 @@ import type { Shape } from '../../components/AnnotationCanvas';
 import type { ClientComment, ClientMedia, ClientSharePayload } from '../../types/api';
 import { useT } from '../../i18n';
 
-/** Cadence de repli quand le partage n'annonce pas celle du média. */
+/** Fallback frame rate, used when the share does not announce the media's own. */
 const FALLBACK_FPS = 24;
-/** Première frame de repli — même convention que le backend (`project.startFrame`). */
+/** Fallback start frame, same convention as the backend (`project.startFrame`). */
 const FALLBACK_START_FRAME = 1001;
 
 /**
- * Viewer de la page client (35.D) — **les quatre types de médias**, et désormais les outils
- * de dessin sur les quatre.
+ * Viewer of the client page (35.D): **all four media types**, and now the drawing tools on
+ * all four.
  *
- * L'annotation n'est pas réécrite pour l'invité : ce sont `AnnotationCanvas`,
- * `useAnnotations` et `useAnnotationOverlay` de la review interne, qui ne dépendent ni d'un
- * compte ni d'une requête authentifiée. Le dessin part avec le commentaire, dans le format
- * que la review relit — c'est ce qui permet à l'artiste de rouvrir le retour du client et de
- * tomber sur la bonne frame, avec le trait au bon endroit.
+ * Annotation is not rewritten for the guest: `AnnotationCanvas`, `useAnnotations` and
+ * `useAnnotationOverlay` from the internal review are reused, as they depend on neither an
+ * account nor an authenticated request. The drawing travels with the comment, in the format
+ * the review reads back, so the artist can reopen the client's feedback and land on the
+ * right frame with the stroke in the right place.
  *
- * Le filigrane par spectateur (35.B) couvre les quatre types, overlay compris.
+ * The per-viewer watermark (35.B) covers all four types, overlay included.
  */
 export default function ClientMediaViewer({
   token,
@@ -55,7 +55,7 @@ export default function ClientMediaViewer({
   token: string;
   media: ClientMedia;
   canComment: boolean;
-  /** Les deux réponses offertes, ou `null` si le lien n'a pas le droit de se prononcer. */
+  /** The two offered answers, or `null` if the link is not allowed to give a verdict. */
   decisionStatuses: ClientSharePayload['decisionStatuses'];
   watermarkText: string | null;
   watermarkOpacity: number;
@@ -66,7 +66,7 @@ export default function ClientMediaViewer({
   const composerRef = useRef<HTMLTextAreaElement>(null);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [fpsOverride, setFpsOverride] = useState<number | null>(null);
-  // Un seul nom pour tout ce que l'invité pose : sa note comme sa réponse.
+  // One name for everything the guest posts: their note and their answer.
   const [guestName, setGuestName] = useGuestName();
   const ann = useAnnotations();
   const overlay = useAnnotationOverlay(ann);
@@ -77,8 +77,8 @@ export default function ClientMediaViewer({
     staleTime: 5 * 60 * 1000,
   });
   const source = sourceQ.data;
-  // Slate en tête du dérivé client (35.A) : les timestamps de commentaires restent exprimés
-  // dans le référentiel du média — on décale à l'affichage, au seek et à l'envoi.
+  // Slate first in the client derivation (35.A): comment timestamps stay expressed in the
+  // media's reference frame, so they are offset at display, seek and submission.
   const slateSec = source?.slateSec ?? 0;
 
   const commentsQ = useQuery({
@@ -102,9 +102,9 @@ export default function ClientMediaViewer({
   );
 
   /**
-   * Sélection d'un commentaire : on rejoue ensemble le seek et le dessin. La lecture
-   * masquerait aussitôt l'annotation, qui est alignée sur UNE frame — on met donc en pause,
-   * comme la review interne.
+   * Selecting a comment replays the seek and the drawing together. Playback would hide the
+   * annotation immediately, since it is aligned to ONE frame, so we pause, as the internal
+   * review does.
    */
   const selectComment = useCallback(
     (comment: { id: number; timestamp: number | null; annotation?: unknown }) => {
@@ -138,8 +138,8 @@ export default function ClientMediaViewer({
     <WatermarkOverlay text={watermarkText} opacity={watermarkOpacity} />
   ) : null;
   const loading = sourceQ.isPending;
-  // Le dessin est ouvert dès que le lien autorise les retours : un lien en lecture seule ne
-  // propose pas d'outil, il n'aurait nulle part où l'envoyer.
+  // Drawing is opened whenever the link allows feedback: a read-only link offers no tool,
+  // since it would have nowhere to send it.
   const canAnnotate = canComment;
   const drawOverlay = overlay();
 
@@ -206,7 +206,7 @@ export default function ClientMediaViewer({
               watermark={watermark}
             />
           )}
-          {/* Pilule « Masquer l'annotation » — la même qu'en review, Échap compris. */}
+          {/* "Hide annotation" pill: the same as in review, Escape included. */}
           <ReviewAnnotationBar ann={ann} onClearSelection={clearSelection} />
         </div>
 

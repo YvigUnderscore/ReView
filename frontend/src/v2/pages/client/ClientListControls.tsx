@@ -8,14 +8,13 @@ import { CLIENT_SORTS, type ClientSort } from './clientBrowseModel';
 import { useT, type Tr } from '../../i18n';
 
 /**
- * De quoi retrouver un plan dans une page de deux cents : chercher, trier, et choisir entre
- * la grille et la liste.
+ * Finding a shot in a page of two hundred: search, sort, and choose between grid and list.
  *
- * Aucun filtre par type de média : sur un lien de partage, le type est déjà lisible sur la
- * tuile, et un menu de plus pour trois cas de figure encombre plus qu'il ne sert.
+ * No media-type filter: on a share link the type is already readable on the tile, and one
+ * more menu for three cases adds more clutter than it saves.
  */
 
-/** Libellés de tri : une fonction, jamais une table de module — elle figerait la langue. */
+/** Sort labels: a function, never a module-level table, since a table would freeze the language. */
 const sortLabels = (t: Tr): Record<ClientSort, string> => ({
   recent: t('client.sort.recent'),
   name: t('client.sort.name'),

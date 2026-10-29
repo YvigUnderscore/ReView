@@ -19,15 +19,15 @@ import VideoTransport from '../review/VideoTransport';
 import { useT } from '../../i18n';
 
 /**
- * Lecteur vidéo du partage client — le **même** transport que la review interne
- * (`VideoTransport`, `VideoTimeline`, `useReviewShortcuts`, `videoPaneHooks`) plutôt qu'une
- * balise `<video controls>` : l'invité navigue à la frame, pose une boucle I/O, lit en
- * arrière (J/K/L) et clique les commentaires sur la timeline.
+ * Video player of the client share: the **same** transport as the internal review
+ * (`VideoTransport`, `VideoTimeline`, `useReviewShortcuts`, `videoPaneHooks`) rather than a
+ * bare `<video controls>` tag. The guest steps frame by frame, sets an I/O loop, plays
+ * backwards (J/K/L) and clicks comments on the timeline.
  *
- * Ce qui est retiré est ce qui suppose un compte : marqueurs partagés (écriture authentifiée),
- * qualité HLS (le master est servi par une route authentifiée), annotation, comparaison A/B.
- * `VideoPane` lui-même n'est pas réutilisable en l'état — il appelle `useTimelineMarkers` et
- * `useHlsPlayer` en interne ; l'écart exact est consigné dans le rapport de lot.
+ * What is removed is whatever presumes an account: shared markers (authenticated write),
+ * HLS quality (the master is served by an authenticated route), annotation and A/B
+ * comparison. `VideoPane` itself is not reusable as-is, since it calls `useTimelineMarkers`
+ * and `useHlsPlayer` internally; the exact gap is recorded in the batch report.
  */
 export default function ClientVideoPlayer({
   src,
@@ -45,23 +45,23 @@ export default function ClientVideoPlayer({
 }: {
   src: string;
   videoRef: RefObject<HTMLVideoElement | null>;
-  /** Commentaires exprimés en **temps lecteur** (slate compris) — cf. `toPlayerComments`. */
+  /** Comments expressed in **player time** (slate included), see `toPlayerComments`. */
   comments: ReviewComment[];
   selectedId: number | null;
   onSelectComment: (c: ReviewComment) => void;
-  /** `M` : met en pause et donne la main au champ de commentaire. */
+  /** `M`: pauses and hands focus to the comment field. */
   onMarker: () => void;
   fps: number;
-  /** Cadence connue du média : sinon l'invité peut la corriger dans le transport. */
+  /** Known frame rate of the media, which the guest can otherwise correct in the transport. */
   fpsDetected: boolean;
   setFpsOverride: (fps: number) => void;
   startFrame: number;
   watermark: ReactNode;
   /**
-   * Overlay d'annotation, rendu DANS la boîte de l'image (et non sur toute la zone) : c'est
-   * la seule position où les coordonnées normalisées 0..1 tombent sur le pixel visé, quelles
-   * que soient les bandes noires. Il est neutre au pointeur tant que le dessin n'est pas
-   * armé, sinon il mangerait le clic qui met en lecture.
+   * Annotation overlay, rendered INSIDE the image box rather than over the whole area: this
+   * is the only position where normalized 0..1 coordinates land on the intended pixel,
+   * whatever the black bars. It is pointer-neutral until drawing is armed, otherwise it
+   * would swallow the click that starts playback.
    */
   overlay?: ReactNode;
 }) {
@@ -96,7 +96,7 @@ export default function ClientVideoPlayer({
     onShuttle: playbackSpeed.onShuttle,
   });
 
-  // Boîte d'affichage : la vidéo remplit l'espace disponible sans se déformer.
+  // Display box: the video fills the available space without distortion.
   useEffect(() => {
     const el = containerRef.current;
     if (!el || !aspect) return;
@@ -118,8 +118,8 @@ export default function ClientVideoPlayer({
     }
   }, [videoRef, volume, muted]);
 
-  // Coalesceur de seeks : le scrub émet des dizaines de seeks par seconde et chacun avorte
-  // le précédent — on n'applique la position suivante qu'une fois la courante terminée.
+  // Seek coalescer: scrubbing emits dozens of seeks per second and each aborts the previous
+  // one, so the next position is applied only once the current one completes.
   const seekRef = useRef<ReturnType<typeof createSeekCoalescer> | null>(null);
   useEffect(() => {
     const v = videoRef.current;
@@ -165,8 +165,8 @@ export default function ClientVideoPlayer({
           <video
             ref={videoRef}
             src={src}
-            // Sans mode CORS, l'ORB de Chrome bloque le mp4 présigné cross-origin (MinIO)
-            // servi en sous-ressource no-cors — constaté en vérification navigateur.
+            // Without CORS mode, Chrome's ORB blocks the cross-origin presigned mp4 (MinIO)
+            // served as a no-cors subresource. Observed during browser verification.
             crossOrigin="anonymous"
             loop={loopAll}
             controlsList="nodownload"

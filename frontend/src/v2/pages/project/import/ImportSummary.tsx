@@ -5,11 +5,11 @@ import { intlLocale, useT } from '../../../i18n';
 import type { ImportCounts } from './types';
 
 /**
- * Ce que l'import va faire, en chiffres.
+ * What the import is going to do, in numbers.
  *
- * Trois colonnes — créer, mettre à jour, laisser tel quel — parce que c'est la question
- * qu'on se pose devant un fichier venu d'ailleurs : « qu'est-ce que ça va casser ? ».
- * Rejouer un fichier déjà importé remplit la seule colonne « inchangé ».
+ * Three columns (create, update, leave as is), because that is the question one asks in front of a
+ * file that came from elsewhere: "what is it going to break?". Replaying an already imported file
+ * fills only the "unchanged" column.
  */
 export default function ImportSummary({ counts }: { counts: ImportCounts }) {
   const t = useT();

@@ -13,9 +13,9 @@ import { useT } from '../../i18n';
 import { assetTypeLabel } from '../../lib/entityTypeLabels';
 
 /**
- * Création d'un asset — extraite de l'onglet, qui dépassait son budget de lignes une fois
- * les cartes enrichies posées. Le formulaire n'avait aucune raison d'y vivre : il ne
- * partage rien avec la liste, sinon le rechargement qui suit.
+ * Asset creation: extracted from the tab, which exceeded its line budget once the enriched cards
+ * were in place. The form had no reason to live there: it shares nothing with the list, except the
+ * reload that follows.
  */
 export default function AssetCreateDialog({
   open,
@@ -33,8 +33,8 @@ export default function AssetCreateDialog({
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     await onSubmit({ name, type });
-    // Le formulaire se vide seulement si l'écriture a abouti : sinon on ferait ressaisir
-    // un nom que l'appelant vient de signaler comme déjà pris.
+    // The form is cleared only if the write succeeded: otherwise the user would have to retype a
+    // name the caller has just flagged as already taken.
     setName('');
     setType('CHARACTER');
   };

@@ -28,11 +28,11 @@ import {
 } from '../../components/ui/context-menu';
 
 /**
- * Onglet Playlists du projet (Phase 33) : dailies = versions ordonnées cross-shots.
+ * Playlists tab of the project (Phase 33): dailies = ordered versions across shots.
  *
- * Chaque playlist mène à sa page (C5), où l'on construit son contenu depuis le catalogue
- * du projet. L'accordéon d'ici ne montrait que ce qu'elle contient déjà — on n'y ajoutait
- * rien, il fallait ouvrir chaque plan un par un pour y cliquer « ajouter ».
+ * Each playlist leads to its page (C5), where its content is built from the project catalogue. The
+ * accordion here only showed what the playlist already contains: nothing could be added from it,
+ * and one had to open each shot one by one to click "add".
  */
 export default function PlaylistsTab({ projectId }: { projectId: number }) {
   const t = useT();
@@ -59,7 +59,7 @@ export default function PlaylistsTab({ projectId }: { projectId: number }) {
 
   const refresh = () => void qc.invalidateQueries({ queryKey: ['playlists', projectId] });
   const canEdit = (p: PlaylistSummary) => canWrite && (isManager || p.createdBy?.id === userId);
-  // Sessions live en cours → badge LIVE cliquable sur la playlist (retours 33).
+  // Live sessions in progress → clickable LIVE badge on the playlist (review feedback 33).
   const liveQ = useLiveSessionsQuery(projectId);
   const liveOf = (playlistId: number) => (liveQ.data ?? []).find((s) => s.playlistId === playlistId) ?? null;
 

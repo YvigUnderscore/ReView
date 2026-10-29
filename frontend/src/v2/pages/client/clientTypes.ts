@@ -5,44 +5,43 @@ import type { LightingConfig, SplatEdits, SplatPresentation } from '../review/re
 import type { UsdVariantSet } from '../../types/usd';
 
 /**
- * Réponse de `GET /api/client/:token/media/:id/url` telle que la page publique la consomme.
+ * Response of `GET /api/client/:token/media/:id/url` as the public page consumes it.
  *
- * La route ne sert aujourd'hui que `url` et `slateSec` : tout le reste décrit la **mise en
- * scène persistée** dont un média spatial a besoin pour être rejoué à l'identique chez
- * l'invité (GLB converti, présentation caméra, éclairage, éditions splat, override de
- * scène). Ces champs sont donc **optionnels** — les viewers se dégradent proprement quand la
- * route ne les envoie pas encore, et se remplissent d'eux-mêmes le jour où elle le fera.
- * Le détail exact de l'extension attendue est consigné dans le rapport de lot.
+ * Today the route serves only `url` and `slateSec`. Everything else describes the **persisted
+ * staging** a spatial media needs to be replayed identically for the guest (converted GLB,
+ * camera presentation, lighting, splat edits, scene override). These fields are therefore
+ * **optional**: viewers degrade cleanly while the route does not send them yet, and fill in
+ * on their own the day it does. The exact extension expected is recorded in the batch report.
  */
 export interface ClientMediaSource {
-  /** Fichier servi : dérivé client (vidéo, slate en tête) ou source du média. */
+  /** Served file: client derivative (video, slate first) or the media source. */
   url: string;
-  /** Durée du slate en tête du dérivé client (35.A) — décalage des timestamps. */
+  /** Duration of the slate at the head of the client derivative (35.A), used to offset timestamps. */
   slateSec?: number;
-  /** GLB converti (`metadata.glbKey`) : indispensable dès que l'original n'est pas du glTF. */
+  /** Converted GLB (`metadata.glbKey`): required whenever the original is not glTF. */
   glbUrl?: string | null;
-  /** Cadence du média — sans elle le lecteur invité ne sait pas compter les frames. */
+  /** Media frame rate: without it the guest player cannot count frames. */
   fps?: number | null;
-  /** Première frame du projet (numérotation studio) — affichée par le transport. */
+  /** Project start frame (studio numbering), displayed by the transport. */
   startFrame?: number | null;
-  /** « ReView override » de la scène 3D (46.D) : mise en scène rejouée pour tous. */
+  /** "ReView override" of the 3D scene (46.D): staging replayed for everyone. */
   usdOverride?: unknown;
-  /** Chemins de prims de la scène USD — clé d'indexation de l'override. */
+  /** USD scene prim paths: the indexing key of the override. */
   usdPrimPaths?: string[] | null;
-  /** Jeux de variantes actifs à la conversion — base de composition de l'override. */
+  /** Variant sets active at conversion: the composition base of the override. */
   usdVariantSets?: UsdVariantSet[] | null;
-  /** Éditions splat non destructives (transform, flip, volumes de crop). */
+  /** Non-destructive splat edits (transform, flip, crop volumes). */
   splatEdits?: SplatEdits | null;
-  /** Masque binaire de suppression (bitset) — URL présignée. */
+  /** Binary deletion mask (bitset), presigned URL. */
   splatMaskUrl?: string | null;
-  /** Ops binaires de transformation de sous-ensembles — URL présignée. */
+  /** Binary transform operations on subsets, presigned URL. */
   splatSubsetUrl?: string | null;
-  /** Présentation persistée : caméra, aspect du cadre, DoF, LOD, éclairage. */
+  /** Persisted presentation: camera, frame aspect, DoF, LOD, lighting. */
   splatPresentation?: SplatPresentation | null;
-  /** Ratio de livraison hérité des réglages pipeline — défaut du cadre (cf. `reviewAspect.ts`). */
+  /** Delivery ratio inherited from pipeline settings: default frame (cf. `reviewAspect.ts`). */
   deliveryAspect?: number | null;
-  /** Éclairage par défaut du projet (39.F), repli quand le média n'a pas le sien. */
+  /** Default project lighting (39.F), fallback when the media has its own. */
   projectDefaultLighting?: LightingConfig | null;
-  /** HDRI référencée par la présentation, déjà résolue en URL présignée pour l'invité. */
+  /** HDRI referenced by the presentation, already resolved to a presigned URL for the guest. */
   hdri?: { url: string; format: 'hdr' | 'exr' } | null;
 }

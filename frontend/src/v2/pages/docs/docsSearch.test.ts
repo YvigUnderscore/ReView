@@ -6,13 +6,13 @@ import { docWords, filterSections, matchingHeadings, searchDocs } from './docsSe
 import type { DocsSection } from './docsManifest';
 
 /**
- * Le moteur commun au sommaire de `/docs` et à la palette Ctrl+K.
+ * The engine shared by the `/docs` table of contents and the Ctrl+K palette.
  *
- * Le défaut qu'il répare : le filtre du sommaire ignorait les titres de chapitre, que la
- * palette exploitait. Chercher « watermark » dans la page de documentation ne rendait donc
- * rien, alors que Ctrl+K ouvrait la bonne page sur le bon chapitre — deux réponses
- * contradictoires à la même question. Les tests ci-dessous portent sur le moteur partagé ;
- * ceux de la palette (`components/palette/surfaceSearch.test.ts`) vérifient son habillage.
+ * The defect it repairs: the table-of-contents filter ignored chapter titles, which the palette
+ * exploited. Searching "watermark" in the documentation page therefore returned nothing, while
+ * Ctrl+K opened the right page on the right chapter: two contradictory answers to the same
+ * question. The tests below cover the shared engine; those of the palette
+ * (`components/palette/surfaceSearch.test.ts`) verify its wrapping.
  */
 
 const page = (path: string, title: string, summary = '', headings: string[] = []) => ({
@@ -51,37 +51,37 @@ const sections: DocsSection[] = [
 ];
 
 describe('docWords', () => {
-  it('replie la casse et les accents, et découpe sur les espaces', () => {
+  it('folds case and accents, and splits on spaces', () => {
     expect(docWords('  DÉFENCES  Watermark ')).toEqual(['defences', 'watermark']);
   });
-  it('rend une liste vide sur une saisie vide — tout passe alors', () => {
+  it('returns an empty list for an empty input: everything then passes', () => {
     expect(docWords('   ')).toEqual([]);
   });
 });
 
 describe('filterSections', () => {
-  it('sans requête, rend tout', () => {
+  it('without a query, returns everything', () => {
     expect(filterSections(sections, '  ')).toEqual(sections);
   });
 
-  it('filtre par titre (insensible à la casse) et retire les sections vides', () => {
+  it('filters by title (case-insensitive) and removes empty sections', () => {
     const out = filterSections(sections, 'VIDEO review');
     expect(out).toHaveLength(1);
     expect(out[0].pages.map((p) => p.path)).toEqual(['user-guide/review-video.md']);
   });
 
-  it('filtre aussi par chemin', () => {
+  it('also filters by path', () => {
     const out = filterSections(sections, 'boards.md');
     expect(out.flatMap((s) => s.pages.map((p) => p.path))).toEqual(['user-guide/boards.md']);
   });
 
-  it('cherche jusque dans le sous-titre — c’est là que vivent les mots du lecteur', () => {
+  it('searches down into the subtitle: that is where the words of readers live', () => {
     const out = filterSections(sections, 'comparison');
     expect(out.flatMap((s) => s.pages.map((p) => p.path))).toEqual(['user-guide/review-video.md']);
   });
 
-  /** Le défaut de départ : ce mot ne vit que dans des titres de chapitre. */
-  it('trouve une page par un TITRE DE CHAPITRE, comme la palette', () => {
+  /** The starting defect: this word lives only in chapter titles. */
+  it('finds a page by a CHAPTER TITLE, as the palette does', () => {
     const out = filterSections(sections, 'watermark');
     expect(out.flatMap((s) => s.pages.map((p) => p.path))).toEqual([
       'user-guide/sharing.md',
@@ -89,11 +89,11 @@ describe('filterSections', () => {
     ]);
   });
 
-  it('exige tous les mots', () => {
+  it('requires all the words', () => {
     expect(filterSections(sections, 'watermark boards')).toEqual([]);
   });
 
-  it('ignore les accents des deux côtés', () => {
+  it('ignores accents on both sides', () => {
     for (const typed of ['defences', 'DÉFENCES'])
       expect(
         filterSections(sections, typed).flatMap((s) => s.pages.map((p) => p.title)),
@@ -101,13 +101,13 @@ describe('filterSections', () => {
       ).toEqual(['Secure distribution']);
   });
 
-  it('garde l’ordre de lecture du sommaire — on ne classe pas un sommaire, on le raye', () => {
+  it('keeps the table-of-contents reading order: it is filtered, not ranked', () => {
     const out = filterSections(sections, 'video');
     expect(out.map((s) => s.dir)).toEqual(['user-guide']);
     expect(out[0].pages.map((p) => p.path)).toEqual(['user-guide/review-video.md', 'user-guide/sharing.md']);
   });
 
-  it('reste filtrable sur un manifest sans chapitres (build antérieur)', () => {
+  it('remains filterable on a manifest without chapters (earlier build)', () => {
     const old: DocsSection[] = [
       {
         dir: 'api',
@@ -123,40 +123,40 @@ describe('filterSections', () => {
 describe('matchingHeadings', () => {
   const target = sections[1].pages[0];
 
-  it('rend les chapitres qui portent la recherche — la raison du résultat', () => {
+  it('returns the chapters that carry the search: the reason for the result', () => {
     expect(matchingHeadings(target, docWords('watermark'))).toEqual(['Viewer watermark']);
   });
 
-  it('un seul mot suffit ici : la page a déjà répondu, on cherche par où y entrer', () => {
+  it('one word is enough here: the page has already answered, we are looking for where to enter', () => {
     expect(matchingHeadings(target, docWords('watermark defences'))).toEqual([
       'Four défences',
       'Viewer watermark',
     ]);
   });
 
-  it('borne la liste — le sommaire reste lisible', () => {
+  it('caps the list, so the table of contents stays readable', () => {
     expect(matchingHeadings(target, docWords('e'), 1)).toHaveLength(1);
   });
 
-  it('ne rend rien sans recherche, ni sur une page sans chapitre', () => {
+  it('returns nothing without a search, or on a page without chapters', () => {
     expect(matchingHeadings(target, [])).toEqual([]);
     expect(matchingHeadings(sections[0].pages[1], docWords('boards'))).toEqual([]);
   });
 });
 
 describe('searchDocs', () => {
-  it('place le titre avant le chapitre : ce qui porte le mot passe devant ce qui le mentionne', () => {
+  it('places the title before the chapter: what carries the word goes ahead of what mentions it', () => {
     const hits = searchDocs(sections, 'video');
     expect(hits.map((h) => h.page.title)).toEqual(['Video review', 'Sharing with clients']);
   });
 
-  it('nomme le chapitre trouvé', () => {
+  it('names the chapter found', () => {
     const [hit] = searchDocs(sections, 'watermark');
     expect(hit.page.title).toBe('Sharing with clients');
     expect(hit.heading).toBe('Video source, watermark, downloads');
   });
 
-  it('ne rend rien sur une saisie vide — un classement n’est pas un sommaire', () => {
+  it('returns nothing for an empty input: a ranking is not a table of contents', () => {
     expect(searchDocs(sections, '  ')).toEqual([]);
   });
 });

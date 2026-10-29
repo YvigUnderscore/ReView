@@ -9,24 +9,24 @@ import type { MenuEntry } from '../../lib/menuSpec';
 import type { BoardTask } from './kanbanTypes';
 import { useT } from '../../i18n';
 
-/** Une colonne vide garde le même tableau : sinon la colonne se re-rendrait sans raison. */
+/** An empty column keeps the same array: otherwise the column would re-render for no reason. */
 const EMPTY_COLUMN: BoardTask[] = [];
 
 /**
- * Une famille de statuts, dépliable (C4).
+ * A status family, collapsible (C4).
  *
- * Quinze colonnes côte à côte ne se lisent pas. Repliée, une famille devient un simple
- * compteur : on garde « terminé » et « écarté » fermées pour travailler, on les rouvre
- * pour vérifier. Le repli est un affichage, pas un filtre — les cartes restent comptées.
+ * Fifteen columns side by side cannot be read. Collapsed, a family becomes a simple counter: one
+ * keeps "done" and "dropped" closed in order to work, and reopens them to check. Collapsing is a
+ * display, not a filter: the cards remain counted.
  *
- * `onToggle` reçoit la clé de la famille plutôt que d'être une fermeture par famille :
- * la page peut ainsi passer un rappel stable, sans quoi la mémoïsation des colonnes
- * tomberait à chaque rendu du board.
+ * `onToggle` receives the family's key rather than being a closure per family: the page can thus
+ * pass a stable callback, otherwise the memoization of the columns would fall apart at every render
+ * of the board.
  *
- * La famille n'a PLUS sa propre bande qui défile (Phase 50) : elle est une tranche du
- * tableau, et c'est le tableau qui défile horizontalement, d'un seul mouvement. Chaque
- * famille avait son ascenseur, si bien que deux colonnes de deux familles ne se
- * retrouvaient jamais l'une sous l'autre — on comparait deux vues décalées du même projet.
+ * The family NO LONGER has its own scrolling strip (Phase 50): it is a slice of the board, and it
+ * is the board that scrolls horizontally, in a single movement. Each family used to have its own
+ * scrollbar, so two columns from two families never ended up one beneath the other: one compared
+ * two offset views of the same project.
  */
 function KanbanFamily({
   group,

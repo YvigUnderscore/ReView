@@ -16,20 +16,19 @@ import type { BoardTask, BoardResponse } from './kanbanTypes';
 import { useT } from '../../i18n';
 
 /**
- * Données du board (C4) : une seule requête de tâches pour tout le projet.
+ * Board data (C4): a single task request for the whole project.
  *
- * Le board en envoyait une par plan **et** une par asset — cent cinquante appels HTTP à
- * l'ouverture d'un projet moyen, jusqu'à se faire limiter par le serveur. Sur le
- * long-métrage visé, deux mille plans, l'écran ne s'ouvrait tout simplement pas.
+ * The board used to send one request per shot **and** one per asset: a hundred and fifty HTTP
+ * calls when opening an average project, to the point of being rate-limited by the server. On the
+ * targeted feature film (two thousand shots), the screen simply would not open.
  *
- * Le déplacement d'une carte envoie l'identifiant du statut du référentiel quand la
- * colonne en a un : c'est ce qui distingue « On Hold » de « Waiting to Start », que
- * l'énumération à six valeurs confondait.
+ * Moving a card sends the reference-data status identifier when the column has one: this is what
+ * distinguishes "On Hold" from "Waiting to Start", which the six-value enumeration conflated.
  */
-/** Le board vide garde le même tableau : sinon chaque rendu re-calculerait tout l'écran. */
+/** The empty board keeps the same array: otherwise every render would recompute the whole screen. */
 const NO_TASKS: BoardTask[] = [];
 
-/** Colonne d'une carte, telle que `move` l'attend — de quoi la remettre d'où elle vient. */
+/** Column of a card, as `move` expects it: enough to put it back where it came from. */
 type MoveTarget = { statusId: number | null; legacyStatus: TaskStatus };
 
 export function useKanbanBoard(projectId: number) {
@@ -49,14 +48,14 @@ export function useKanbanBoard(projectId: number) {
   const tasks: BoardTask[] = boardQ.data?.items ?? NO_TASKS;
 
   /**
-   * Pose un statut dans le cache du board et rend de quoi revenir en arrière.
+   * Sets a status in the board cache and returns what is needed to go back.
    *
-   * Le menu contextuel et le glisser-déposer partagent cette écriture : sans elle, la
-   * carte changée au clic droit resterait dans son ancienne colonne jusqu'au retour du
-   * serveur, alors que la même carte déplacée à la souris bouge tout de suite.
+   * The context menu and drag-and-drop share this write: without it, a card changed by right-click
+   * would stay in its old column until the server replies, whereas the same card moved with the
+   * mouse moves immediately.
    *
-   * Identité stable (le client de requêtes et le projet ne bougent pas de la vie de
-   * l'écran) : le menu des cartes s'y accroche, et les cartes sont mémoïsées.
+   * Stable identity (the query client and the project do not change during the life of the
+   * screen): the card menu hooks onto it, and the cards are memoized.
    */
   const applyOptimisticStatus = useCallback(
     (taskId: number, choice: StatusChoice | null) => {
@@ -73,10 +72,10 @@ export function useKanbanBoard(projectId: number) {
   );
 
   /**
-   * L'écriture nue du déplacement : optimiste, et qui **laisse remonter** son échec.
+   * The bare write of the move: optimistic, and it **lets its failure propagate**.
    *
-   * Séparée de `move` parce que l'annulation la rejoue vers la colonne d'origine, et qu'un
-   * échec d'annulation doit parvenir au toast qui l'a proposée.
+   * Separated from `move` because the undo replays it towards the original column, and a failure
+   * of the undo must reach the toast that offered it.
    */
   const writeMove = useCallback(
     async (taskId: number, column: MoveTarget) => {
@@ -99,7 +98,7 @@ export function useKanbanBoard(projectId: number) {
           column.statusId !== null ? { pipelineStatusId: column.statusId } : { status: column.legacyStatus },
         );
       } catch (e) {
-        // Rollback : l'invalidation relance la requête, inutile de l'attendre.
+        // Rollback: the invalidation re-runs the query, so there is no need to wait for it.
         void qc.invalidateQueries({ queryKey: key });
         throw e;
       }
@@ -108,14 +107,14 @@ export function useKanbanBoard(projectId: number) {
   );
 
   /**
-   * Déplacement optimiste, rollback par invalidation. Le cache est celui du board entier :
-   * la carte change de colonne à l'instant du lâcher, sans attendre le serveur.
+   * Optimistic move, with rollback by invalidation. The cache is that of the whole board: the card
+   * changes column the instant it is dropped, without waiting for the server.
    *
-   * Le lâcher est confirmé, avec « Annuler » : une carte lâchée dans la mauvaise colonne d'un
-   * board à quinze colonnes ne se rattrapait qu'en cherchant à la main d'où elle venait — et
-   * rien ne le disait, puisque le succès était silencieux. On tient l'inverse exactement : la
-   * colonne de départ est connue, et la remettre est le même `PATCH`. Ce n'est pas pour autant
-   * un Ctrl+Z : l'écriture est partie chez les autres, et ShotGrid a pu arbitrer derrière.
+   * The drop is confirmed, with "Undo": a card dropped in the wrong column of a fifteen-column
+   * board could only be recovered by searching by hand for where it came from, and nothing said
+   * so, since success was silent. The reverse is held exactly: the starting column is known, and
+   * putting it back is the same `PATCH`. It is not a Ctrl+Z for all that: the write has gone out to
+   * others, and ShotGrid may have arbitrated behind it.
    */
   const move = useCallback(
     async (taskId: number, column: MoveTarget) => {

@@ -10,17 +10,16 @@ import type { ClientMedia, ClientSharePayload } from '../../types/api';
 import { useT } from '../../i18n';
 
 /**
- * La réponse du client : « c'est bon pour moi » ou « à revoir ».
+ * The client's response: "this is good for me" or "needs revision".
  *
- * Deux boutons, pas une liste : « Pending », « CBB » et « Retake » sont des états de
- * pipeline, pas des réponses. Les deux proposés sont ceux que le studio a lui-même marqués
- * comme validation et comme retake — son vocabulaire, sans qu'on lui impose le nôtre ni
- * qu'on expose au client le reste de sa liste.
+ * Two buttons, not a list: "Pending", "CBB" and "Retake" are pipeline states, not answers.
+ * The two offered are the ones the studio itself marked as validation and retake, so its
+ * vocabulary is used without imposing ours or exposing the rest of its list to the client.
  *
- * Ce que le client pose est un **avis, pas un verdict** : il s'inscrit dans l'historique de
- * la version, attribué à son nom et au lien par lequel il est arrivé, et le superviseur
- * tranche. C'est dit ici, sous les boutons, pour que personne ne croie avoir fait bouger le
- * plan tout seul.
+ * What the client posts is an **opinion, not a verdict**: it is recorded in the version
+ * history, attributed to their name and to the link they arrived through, and the
+ * supervisor decides. This is stated below the buttons so nobody believes they moved the
+ * plan on their own.
  */
 export default function ClientDecision({
   token,
@@ -45,8 +44,8 @@ export default function ClientDecision({
   if (offered.length === 0) return null;
 
   const answer = async (statusId: number, name: string) => {
-    // Le nom est ce qui rend l'avis utilisable côté studio : sans lui, l'historique dirait
-    // « quelqu'un a demandé une retake ».
+    // The name makes the opinion usable on the studio side: without it, the history would
+    // read "someone asked for a retake".
     if (!guestName.trim()) {
       toast.error(t('client.nameFirst'));
       return;
@@ -59,7 +58,7 @@ export default function ClientDecision({
       });
       setAnswered(name);
       toast.success(t('client.answerSent'));
-      // La file d'accueil se range sur `decided` : elle doit refléter la réponse tout de suite.
+      // The home queue sorts on `decided`, so it must reflect the answer immediately.
       void qc.invalidateQueries({ queryKey: ['client-share', token] });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
@@ -83,8 +82,8 @@ export default function ClientDecision({
             title={status.name}
             className="flex items-center gap-1.5 rounded-md border border-border px-2.5 py-1.5 text-xs transition-colors hover:bg-secondary disabled:opacity-50"
           >
-            {/* La pastille porte la couleur que le studio a donnée au statut — c'est une
-                valeur de données, pas de l'habillage. */}
+            {/* The dot carries the colour the studio gave to the status: it is a data value,
+                not styling. */}
             <span className="h-2 w-2 rounded-full" style={{ backgroundColor: status.color }} />
             <Icon size={13} /> {status.name}
           </button>

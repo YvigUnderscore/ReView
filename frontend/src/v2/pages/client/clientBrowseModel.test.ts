@@ -40,66 +40,66 @@ const browse = (over: Partial<ShareBrowse> = {}): ShareBrowse => ({
 
 const params = (query: string) => new URLSearchParams(query);
 
-describe('parseClientView — où se trouve le visiteur', () => {
-  it('sans paramètre, c’est l’accueil : l’adresse nue du lien est ce que le client recopie', () => {
+describe('parseClientView — where the visitor is', () => {
+  it('without a parameter it is home: the bare link address is what the client copies', () => {
     expect(parseClientView(params(''))).toEqual({ kind: 'home' });
   });
 
-  it('lit un onglet connu, ignore un onglet inventé', () => {
+  it('reads a known tab and ignores an invented one', () => {
     expect(parseClientView(params('tab=shots'))).toEqual({ kind: 'tab', tab: 'shots' });
     expect(parseClientView(params('tab=kanban'))).toEqual({ kind: 'home' });
   });
 
-  it('va du plus précis au plus général : une entité l’emporte sur l’onglet', () => {
+  it('goes from most specific to most general: an entity wins over the tab', () => {
     expect(parseClientView(params('tab=shots&seq=4'))).toEqual({ kind: 'sequence', id: 4 });
     expect(parseClientView(params('shot=7'))).toEqual({ kind: 'shot', id: 7 });
     expect(parseClientView(params('asset=9'))).toEqual({ kind: 'asset', id: 9 });
     expect(parseClientView(params('pl=2'))).toEqual({ kind: 'playlist', id: 2 });
   });
 
-  // Un identifiant bricolé ne doit pas ouvrir un écran vide : on retombe sur l'accueil.
-  it('refuse un identifiant qui n’est pas un entier positif', () => {
+  // A tampered identifier must not open an empty screen: fall back to home.
+  it('rejects an identifier that is not a positive integer', () => {
     expect(parseClientView(params('seq=abc'))).toEqual({ kind: 'home' });
     expect(parseClientView(params('shot=0'))).toEqual({ kind: 'home' });
     expect(parseClientView(params('asset=-3'))).toEqual({ kind: 'home' });
     expect(parseClientView(params('pl=1.5'))).toEqual({ kind: 'home' });
   });
 
-  it('lit le média ouvert indépendamment de la vue', () => {
+  it('reads the open media regardless of the view', () => {
     expect(parseClientMediaId(params('tab=review&m=12'))).toBe(12);
     expect(parseClientMediaId(params('tab=review'))).toBeNull();
     expect(parseClientMediaId(params('m=nope'))).toBeNull();
   });
 });
 
-describe('viewParams — ce que l’URL porte', () => {
-  it('n’écrit rien pour l’accueil', () => {
+describe('viewParams — what the URL carries', () => {
+  it('writes nothing for home', () => {
     expect(viewParams({ kind: 'home' })).toEqual({});
   });
 
-  it('écrit la vue, et le média ouvert quand il y en a un', () => {
+  it('writes the view, and the open media when there is one', () => {
     expect(viewParams({ kind: 'tab', tab: 'assets' })).toEqual({ tab: 'assets' });
     expect(viewParams({ kind: 'shot', id: 7 }, 12)).toEqual({ shot: '7', m: '12' });
     expect(viewParams({ kind: 'playlist', id: 2 }, null)).toEqual({ pl: '2' });
   });
 
-  it('fait l’aller-retour avec la lecture', () => {
+  it('round-trips through reading', () => {
     const view = { kind: 'sequence', id: 4 } as const;
     expect(parseClientView(new URLSearchParams(viewParams(view)))).toEqual(view);
   });
 });
 
-describe('visibleTabs — un onglet vide ne s’affiche pas', () => {
-  it('ne propose rien quand le lien n’ouvre aucun média', () => {
+describe('visibleTabs — an empty tab is not shown', () => {
+  it('offers nothing when the link opens no media', () => {
     expect(visibleTabs([], browse({ shots: [] }))).toEqual([]);
   });
 
-  it('propose Review dès qu’il y a un média, même sans arborescence', () => {
+  it('offers Review as soon as there is a media, even without a tree', () => {
     expect(visibleTabs([media(1)], undefined)).toEqual(['review']);
   });
 
-  // Un lien qui ne partage qu'un asset ne doit pas nommer « Sequences » ni « Shots ».
-  it('n’ouvre que les niveaux réellement peuplés', () => {
+  // A link sharing only an asset must not name "Sequences" or "Shots".
+  it('opens only the levels that are actually populated', () => {
     const only = browse({
       assets: [{ id: 90, name: 'Fox', type: 'CHARACTER', typeLabel: null, mediaIds: [1], coverMediaId: 1 }],
     });
@@ -107,17 +107,17 @@ describe('visibleTabs — un onglet vide ne s’affiche pas', () => {
   });
 });
 
-describe('résolution des identifiants en tuiles', () => {
-  it('garde l’ordre demandé', () => {
+describe('resolving identifiers into tiles', () => {
+  it('keeps the requested order', () => {
     expect(mediaByIds([media(1), media(2), media(3)], [3, 1]).map((m) => m.id)).toEqual([3, 1]);
   });
 
-  // Un identifiant au-delà de la page servie : mieux vaut aucune tuile qu'une tuile vide.
-  it('ignore un identifiant absent de la page servie', () => {
+  // An identifier beyond the served page: better no tile than an empty one.
+  it('ignores an identifier absent from the served page', () => {
     expect(mediaByIds([media(1)], [1, 999]).map((m) => m.id)).toEqual([1]);
   });
 
-  it('prend la couverture dans les vignettes déjà signées', () => {
+  it('takes the cover from the thumbnails already signed', () => {
     expect(coverUrl([media(1, 'thumb-1')], 1)).toBe('thumb-1');
     expect(coverUrl([media(1, null)], 1)).toBeNull();
     expect(coverUrl([media(1)], null)).toBeNull();
@@ -125,7 +125,7 @@ describe('résolution des identifiants en tuiles', () => {
   });
 });
 
-describe('mediaOfView — ce que la vue courante montre', () => {
+describe('mediaOfView — what the current view shows', () => {
   const all = [media(1), media(2), media(3)];
   const tree = browse({
     sequences: [
@@ -156,33 +156,33 @@ describe('mediaOfView — ce que la vue courante montre', () => {
     },
   ];
 
-  it('rend tout à plat sur Review, et rien sur les onglets de niveau', () => {
+  it('renders everything flat on Review, and nothing on the level tabs', () => {
     expect(mediaOfView({ kind: 'tab', tab: 'review' }, all, tree, playlists)).toHaveLength(3);
     expect(mediaOfView({ kind: 'tab', tab: 'sequences' }, all, tree, playlists)).toEqual([]);
     expect(mediaOfView({ kind: 'home' }, all, tree, playlists)).toEqual([]);
   });
 
-  it('rend les médias du nœud ouvert, playlist comprise, dans son ordre', () => {
+  it('renders the media of the open node, playlist included, in order', () => {
     expect(mediaOfView({ kind: 'sequence', id: 10 }, all, tree, playlists).map((m) => m.id)).toEqual([1, 2]);
     expect(mediaOfView({ kind: 'shot', id: 20 }, all, tree, playlists).map((m) => m.id)).toEqual([2]);
     expect(mediaOfView({ kind: 'asset', id: 90 }, all, tree, playlists).map((m) => m.id)).toEqual([3]);
     expect(mediaOfView({ kind: 'playlist', id: 5 }, all, tree, playlists).map((m) => m.id)).toEqual([2, 1]);
   });
 
-  // Un lien recopié qui pointe une entité hors portée : écran vide, jamais « tout le projet ».
-  it('ne retombe sur rien quand le nœud demandé n’existe pas', () => {
+  // A copied link pointing to an out-of-scope entity: an empty screen, never "the whole project".
+  it('falls back to nothing when the requested node does not exist', () => {
     expect(mediaOfView({ kind: 'shot', id: 999 }, all, tree, playlists)).toEqual([]);
     expect(mediaOfView({ kind: 'sequence', id: 999 }, all, undefined, playlists)).toEqual([]);
   });
 
-  it('remonte les plans d’une séquence, et rien pour une séquence inconnue', () => {
+  it('lists the shots of a sequence, and nothing for an unknown sequence', () => {
     expect(shotsOfSequence(tree, 10).map((s) => s.code)).toEqual(['SH020']);
     expect(shotsOfSequence(tree, 999)).toEqual([]);
     expect(shotsOfSequence(undefined, 10)).toEqual([]);
   });
 });
 
-describe('filterMedia — ce que cherche quelqu’un qui tape dans le champ', () => {
+describe('filterMedia — what someone typing in the field is looking for', () => {
   const tree = browse({
     shots: [
       {
@@ -216,31 +216,31 @@ describe('filterMedia — ce que cherche quelqu’un qui tape dans le champ', ()
   };
   const all = [onShot, onAsset];
 
-  it('rend tout quand la recherche est vide', () => {
+  it('returns everything when the search is empty', () => {
     expect(filterMedia(all, tree, '   ')).toHaveLength(2);
   });
 
   /**
-   * Le cas qui justifie le champ : « SH0240 » n'est nulle part dans le nom du fichier, mais
-   * c'est ce qu'un client tape — c'est ainsi que le studio lui a parlé du plan.
+   * The case that justifies the field: "SH0240" appears nowhere in the file name, yet it is
+   * what a client types, since that is how the studio named the shot to them.
    */
-  it('trouve par le code du plan, absent du nom de fichier', () => {
+  it('finds a shot by its code, which is absent from the file name', () => {
     expect(filterMedia(all, tree, 'SH0240').map((m) => m.id)).toEqual([1]);
     expect(onShot.originalName).not.toContain('SH0240');
   });
 
-  it('trouve aussi par séquence, par asset et par nom de fichier, sans tenir compte de la casse', () => {
+  it('also finds by sequence, asset and file name, case-insensitively', () => {
     expect(filterMedia(all, tree, 'cold open').map((m) => m.id)).toEqual([1]);
     expect(filterMedia(all, tree, 'fox').map((m) => m.id)).toEqual([2]);
     expect(filterMedia(all, tree, 'M1.MP4').map((m) => m.id)).toEqual([1]);
   });
 
-  it('ne rend rien plutôt que tout quand rien ne correspond', () => {
+  it('returns nothing rather than everything when nothing matches', () => {
     expect(filterMedia(all, tree, 'SH9999')).toEqual([]);
   });
 });
 
-describe('sortMedia — les trois ordres de lecture', () => {
+describe('sortMedia — the three reading orders', () => {
   const tree = browse({
     sequences: [
       {
@@ -274,42 +274,42 @@ describe('sortMedia — les trois ordres de lecture', () => {
     originalName: name,
     placement: { episodeId: null, sequenceId, shotId, assetId: null },
   });
-  // Servi du plus récent au plus ancien, donc dans l'ordre inverse de la production.
+  // Served newest first, so in the reverse order of production.
   const served = [at(3, 'c.mp4', 11, 21), at(2, 'b.mp4', 10, 20), at(1, 'a.mp4', null, null)];
 
-  it('laisse l’ordre du serveur pour « plus récent »', () => {
+  it('keeps the server order for "most recent"', () => {
     expect(sortMedia(served, tree, 'recent').map((m) => m.id)).toEqual([3, 2, 1]);
   });
 
-  it('classe par nom', () => {
+  it('sorts by name', () => {
     expect(sortMedia(served, tree, 'name').map((m) => m.originalName)).toEqual(['a.mp4', 'b.mp4', 'c.mp4']);
   });
 
-  // L'ordre dans lequel un film se regarde : séquence, puis plan.
-  it('remonte l’ordre de production, et range à la fin ce qu’il ne situe pas', () => {
+  // The order in which a film is watched: sequence, then shot.
+  it('follows production order, and puts at the end what it cannot place', () => {
     expect(sortMedia(served, tree, 'production').map((m) => m.id)).toEqual([2, 3, 1]);
   });
 
-  it('ne modifie pas le tableau reçu', () => {
+  it('does not mutate the array it receives', () => {
     const before = served.map((m) => m.id);
     sortMedia(served, tree, 'name');
     expect(served.map((m) => m.id)).toEqual(before);
   });
 });
 
-describe('pendingMedia — la file « en attente de votre réponse »', () => {
+describe('pendingMedia — the "awaiting your answer" queue', () => {
   const answered = { ...media(1), decided: true };
   const waiting = { ...media(2), decided: false };
 
-  it('ne retient que ce sur quoi le lien ne s’est pas prononcé', () => {
+  it('keeps only what the link has not yet given a verdict on', () => {
     expect(pendingMedia([answered, waiting], true).map((m) => m.id)).toEqual([2]);
   });
 
   /**
-   * Un lien sans droit de décision n'a pas de file : lui annoncer « en attente de votre
-   * réponse » serait lui demander ce qu'on ne lui permet pas de donner.
+   * A link without decision rights has no queue: announcing "awaiting your answer" would ask
+   * it for something it is not allowed to give.
    */
-  it('n’en propose aucune à un lien qui n’a pas le droit de se prononcer', () => {
+  it('offers none to a link that is not allowed to give a verdict', () => {
     expect(pendingMedia([answered, waiting], false)).toEqual([]);
   });
 });

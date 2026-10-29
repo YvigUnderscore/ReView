@@ -15,31 +15,30 @@ import type { MenuEntry } from '../../lib/menuSpec';
 import type { BoardTask } from './kanbanTypes';
 
 /**
- * La pile de cartes d'une colonne (vague 2 — échelle).
+ * A column's card stack (wave 2, scale).
  *
- * La colonne défile pour elle-même : au-delà de sa hauteur, on la parcourt sans emporter
- * la page entière, et surtout sans monter les mille cartes qu'elle contient. En deçà
- * d'une trentaine de cartes on garde la liste simple — la fenêtre visible vaudrait de
- * toute façon la colonne entière, et rien ne change pour un petit projet.
+ * The column scrolls on its own: beyond its height, one scrolls through it without carrying the
+ * whole page along, and above all without mounting the thousand cards it contains. Below about
+ * thirty cards the simple list is kept: the visible window would in any case be the whole column,
+ * and nothing changes for a small project.
  *
- * La hauteur ne vient plus d'un pourcentage de FENÊTRE : elle vient du tableau (Phase 50).
- * Chaque colonne faisait 68 % de la hauteur de l'écran et jusqu'à cinq familles s'empilaient
- * — le board débordait de trois écrans et il fallait faire défiler la page pour atteindre la
- * famille suivante. La pile prend maintenant la place que le tableau lui laisse (`flex-1
- * min-h-0`), et rien ne dépasse.
+ * The height no longer comes from a percentage of the WINDOW: it comes from the board (Phase 50).
+ * Each column used to take 68% of the screen height and up to five families stacked up: the board
+ * overflowed by three screens, and the page had to be scrolled to reach the next family. The stack
+ * now takes the space the board leaves it (`flex-1 min-h-0`), and nothing overflows.
  *
- * `overscroll-contain` a disparu avec : il coupait le chaînage de la molette, si bien qu'une
- * molette prise sur une colonne dense ne faisait plus rien du tout une fois la pile au bout.
+ * `overscroll-contain` went away with it: it cut the wheel chaining, so a wheel gesture on a dense
+ * column did nothing at all once the stack was at its end.
  */
 
 interface CardListProps {
   tasks: BoardTask[];
   menuFor?: (task: BoardTask) => MenuEntry[];
-  /** Carte tenue à la souris, pour la garder montée même hors fenêtre. */
+  /** Card held by the mouse, kept mounted even when out of the window. */
   activeTaskId?: number | null;
 }
 
-/** La pile occupe la hauteur que la colonne lui laisse, et défile à l'intérieur. */
+/** The stack takes the height the column leaves it, and scrolls inside it. */
 const SCROLL = 'min-h-0 flex-1 overflow-y-auto';
 
 const PlainCardList = memo(function PlainCardList({ tasks, menuFor }: CardListProps) {
@@ -63,11 +62,11 @@ const VirtualCardList = memo(function VirtualCardList({
     (range: Range) => withActiveIndex(defaultRangeExtractor(range), activeIndex),
     [activeIndex],
   );
-  // Le compilateur React renonce à mémoïser un composant qui appelle `useVirtualizer` :
-  // le virtualiseur rend des fonctions liées à un état mutable, qu'on figerait à tort.
-  // C'est sans conséquence ici — la liste est mémoïsée à la main (`memo` ci-dessus) et
-  // ne laisse sortir que des tâches, jamais une fonction du virtualiseur.
-  // eslint-disable-next-line react-hooks/incompatible-library -- mémoïsation explicite, cf. ci-dessus
+  // The React compiler gives up memoizing a component that calls `useVirtualizer`: the virtualizer
+  // returns functions bound to mutable state, which would be wrongly frozen.
+  // This is harmless here: the list is memoized by hand (`memo` above) and only emits tasks, never
+  // a virtualizer function.
+  // eslint-disable-next-line react-hooks/incompatible-library -- explicit memoization, see above
   const virtualizer = useVirtualizer({
     count: tasks.length,
     getScrollElement: () => scrollRef.current,
@@ -79,7 +78,7 @@ const VirtualCardList = memo(function VirtualCardList({
 
   return (
     <div ref={scrollRef} className={SCROLL}>
-      {/* Cale à la hauteur réelle de la pile : l'ascenseur dit la vérité sur le volume. */}
+      {/* Spacer sized to the stack's real height: the scrollbar reflects the true volume. */}
       <div className="relative w-full" style={{ height: virtualizer.getTotalSize() }}>
         {virtualizer.getVirtualItems().map((item) => (
           <div

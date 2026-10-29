@@ -21,13 +21,13 @@ import {
 
 const t = (key: MessageKey) => key;
 
-/** Marque un trait de séparation dans la liste attendue — il n'a pas de libellé. */
+/** Marks a separator in the expected list: it has no label. */
 const SEP = '--';
 
-/** Épinglage aux favoris : `EntityCard` le pose lui-même, avant les actions du menu. */
+/** Pinning to favourites: `EntityCard` sets it itself, before the menu actions. */
 const FAVORITE: EntityItemAction = { icon: null, label: 'favorites.pin' };
 
-/** Une entrée de hook (statut, personnes…), réduite à son identifiant pour la lecture. */
+/** A hook entry (status, people…), reduced to its identifier for readability. */
 const stateEntry = (id: string): MenuEntry => ({ id, label: id, onSelect: () => {} });
 
 const ALL_STATE: EntityStateEntries = {
@@ -44,7 +44,7 @@ function labelOf(entry: MenuEntry): string {
   return entry.label;
 }
 
-/** Reproduit la composition d'`EntityCard` : entrées, puis épinglage, puis actions. */
+/** Reproduces the composition of `EntityCard`: entries, then pinning, then actions. */
 function rendered(menu: EntityCardMenu): string[] {
   return tidyMenu([...menu.contextEntries, ...toMenuEntries([FAVORITE, ...menu.contextActions])]).map(
     labelOf,
@@ -91,8 +91,8 @@ const sequenceMenu = () =>
     onTrash: () => {},
   });
 
-describe('entityCardMenu — ordre du menu', () => {
-  it('range le menu d’un plan en quatre blocs, l’épinglage avant la gestion', () => {
+describe('entityCardMenu — menu order', () => {
+  it('lays out the menu of a shot in four blocks, pinning before management', () => {
     expect(rendered(shotMenu())).toEqual([
       'common.open',
       SEP,
@@ -110,7 +110,7 @@ describe('entityCardMenu — ordre du menu', () => {
     ]);
   });
 
-  it('range le menu d’un asset au même endroit, rattachement compris', () => {
+  it('lays out the menu of an asset in the same place, linking included', () => {
     expect(rendered(assetMenu())).toEqual([
       'common.open',
       SEP,
@@ -128,7 +128,7 @@ describe('entityCardMenu — ordre du menu', () => {
     ]);
   });
 
-  it('range le menu d’une séquence au même endroit, sans suivi ni omission', () => {
+  it('lays out the menu of a sequence in the same place, without watching or omission', () => {
     expect(rendered(sequenceMenu())).toEqual([
       'common.open',
       SEP,
@@ -144,7 +144,7 @@ describe('entityCardMenu — ordre du menu', () => {
     ]);
   });
 
-  it('présente les gestes communs dans le même ordre sur les trois types', () => {
+  it('presents the common gestures in the same order across the three types', () => {
     const shared = new Set([
       SEP,
       'common.open',
@@ -160,8 +160,8 @@ describe('entityCardMenu — ordre du menu', () => {
   });
 });
 
-describe('entityCardMenu — vocabulaire', () => {
-  it('n’invente aucun libellé : tous viennent du catalogue', () => {
+describe('entityCardMenu — vocabulary', () => {
+  it('invents no label: all of them come from the catalogue', () => {
     for (const menu of [shotMenu(), assetMenu(), sequenceMenu()]) {
       const own = [
         ...menu.hoverActions.map((a) => a.label),
@@ -173,7 +173,7 @@ describe('entityCardMenu — vocabulaire', () => {
     }
   });
 
-  it('annonce la corbeille, pas une suppression : le geste est réversible', () => {
+  it('announces the trash, not a deletion: the gesture is reversible', () => {
     const menu = shotMenu();
     const labels = menu.contextActions.map((a) => a.label);
     expect(labels).toContain('common.moveToTrash');
@@ -181,30 +181,30 @@ describe('entityCardMenu — vocabulaire', () => {
     expect(menu.hoverActions.map((a) => a.label)).not.toContain('common.delete');
   });
 
-  it('annonce les réglages, pas une modification : le crayon ouvre le panneau', () => {
+  it('announces settings, not a modification: the pencil opens the panel', () => {
     const labels = shotMenu().hoverActions.map((a) => a.label);
     expect(labels).toContain('entity.settings.open');
     expect(labels).not.toContain('common.edit');
   });
 
-  it('nomme le suivi selon le type suivi, et son état', () => {
+  it('names the watch according to the type watched, and its state', () => {
     expect(watchLabel(t, 'shot', false)).toBe('shots.watch');
     expect(watchLabel(t, 'shot', true)).toBe('shots.unwatch');
     expect(watchLabel(t, 'asset', false)).toBe('assets.watch');
     expect(watchLabel(t, 'asset', true)).toBe('assets.unwatch');
   });
 
-  it('nomme la fiche ShotGrid selon le type d’entité', () => {
+  it('names the ShotGrid sheet according to the entity type', () => {
     expect(shotgridLabel(t, 'shot')).toBe('shotgrid.openIn.shot');
     expect(shotgridLabel(t, 'asset')).toBe('shotgrid.openIn.asset');
     expect(shotgridLabel(t, 'sequence')).toBe('shotgrid.openIn.sequence');
   });
 });
 
-describe('entityCardMenu — ce que le menu offre', () => {
-  it('reprend tout ce que l’ancien menu de plan offrait', () => {
-    // Ancien inventaire : statut, personnes, omission, masquage, épinglage, fiche
-    // ShotGrid, suivi, ouverture des réglages, mise à la corbeille.
+describe('entityCardMenu — what the menu offers', () => {
+  it('keeps everything the former shot menu offered', () => {
+    // Former inventory: status, people, omission, hiding, pinning, ShotGrid sheet, watch, opening
+    // settings, moving to the trash.
     expect(rendered(shotMenu())).toEqual(
       expect.arrayContaining([
         'status',
@@ -220,7 +220,7 @@ describe('entityCardMenu — ce que le menu offre', () => {
     );
   });
 
-  it('reprend tout ce que l’ancien menu d’asset offrait', () => {
+  it('keeps everything the former asset menu offered', () => {
     expect(rendered(assetMenu())).toEqual(
       expect.arrayContaining([
         'assign',
@@ -237,7 +237,7 @@ describe('entityCardMenu — ce que le menu offre', () => {
     );
   });
 
-  it('reprend tout ce que l’ancien menu de séquence offrait', () => {
+  it('keeps everything the former sequence menu offered', () => {
     expect(rendered(sequenceMenu())).toEqual(
       expect.arrayContaining([
         'common.open',
@@ -252,7 +252,7 @@ describe('entityCardMenu — ce que le menu offre', () => {
     );
   });
 
-  it('propose au survol exactement les gestes de gestion du menu, dans le même ordre', () => {
+  it('offers on hover exactly the management gestures of the menu, in the same order', () => {
     for (const menu of [shotMenu(), assetMenu(), sequenceMenu()]) {
       const hover = menu.hoverActions.map((a) => a.label);
       const context = menu.contextActions.map((a) => a.label);
@@ -260,15 +260,15 @@ describe('entityCardMenu — ce que le menu offre', () => {
     }
   });
 
-  it('ouvre un bloc de gestion séparé du suivi', () => {
+  it('opens a management block separate from the watch', () => {
     const menu = shotMenu();
     const settings = menu.contextActions.find((a) => a.label === 'entity.settings.open');
     expect(settings?.separatorBefore).toBe(true);
   });
 });
 
-describe('entityCardMenu — ce que le menu retire', () => {
-  it('ne propose ni réglages, ni rattachement, ni corbeille à un spectateur', () => {
+describe('entityCardMenu — what the menu removes', () => {
+  it('offers neither settings, nor linking, nor trash to a viewer', () => {
     const menu = shotMenu({ canManage: false });
     expect(menu.hoverActions).toEqual([]);
     expect(rendered(menu)).toEqual([
@@ -285,12 +285,12 @@ describe('entityCardMenu — ce que le menu retire', () => {
     ]);
   });
 
-  it('ne laisse aucun trait dans le vide quand tout est retiré', () => {
+  it('leaves no stray line in the void when everything is removed', () => {
     const menu = shotMenu({ canManage: false, sgUrl: null, watch: null, state: {} });
     expect(rendered(menu)).toEqual(['common.open', SEP, 'favorites.pin']);
   });
 
-  it('n’offre pas le suivi sur une séquence, que l’API ne sait pas suivre', () => {
+  it('offers no watch on a sequence, which the API cannot watch', () => {
     const menu = entityCardMenu({
       t,
       kind: 'sequence',
@@ -304,11 +304,11 @@ describe('entityCardMenu — ce que le menu retire', () => {
     expect(watchLabel(t, 'sequence', true)).toBeNull();
   });
 
-  it('n’offre la fiche ShotGrid que si l’entité y est reliée', () => {
+  it('offers the ShotGrid sheet only if the entity is linked to it', () => {
     expect(rendered(shotMenu({ sgUrl: null }))).not.toContain('shotgrid.openIn.shot');
   });
 
-  it('n’offre le rattachement qu’aux entités qui en ont un', () => {
+  it('offers linking only to entities that have one', () => {
     expect(shotMenu().hoverActions.map((a) => a.label)).not.toContain('assets.assign');
     expect(assetMenu().hoverActions.map((a) => a.label)).toContain('assets.assign');
   });

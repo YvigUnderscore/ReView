@@ -18,17 +18,18 @@ import { useT, intlLocale } from '../../../i18n';
 import { parseRecipients, type ScopedShareLink } from './shareScope';
 
 /**
- * Même plafond que `SHARE_MAIL_MAX_RECIPIENTS` côté serveur. Dupliqué à dessein : sans lui,
- * une liste collée depuis un tableur part vers l'API et revient en 400 sans rien expliquer.
+ * Same ceiling as `SHARE_MAIL_MAX_RECIPIENTS` on the server side. Duplicated on purpose: without
+ * it, a list pasted from a spreadsheet would go to the API and come back as a 400 with no
+ * explanation.
  */
 const MAX_RECIPIENTS = 10;
 
 /**
- * Envoi du lien par courriel (le relais SMTP du studio existe déjà).
+ * Sends the link by email (the studio's SMTP relay already exists).
  *
- * Le lien n'était que copié dans le presse-papier : le superviseur le collait dans un fil
- * de discussion, sans sa date d'expiration ni sa limite de vues, et le client découvrait
- * la péremption en cliquant. L'email porte les deux, et rappelle la portée.
+ * The link used to be merely copied to the clipboard: the supervisor pasted it into a discussion
+ * thread, without its expiry date or its view limit, and the client discovered the expiry by
+ * clicking. The email carries both, and recalls the scope.
  */
 export default function ShareEmailDialog({
   link,

@@ -4,11 +4,11 @@
 import type { TaskStatus, TaskType, UserRef } from '../../types/api';
 
 /**
- * Une carte du board, telle que `GET /api/tasks/board` la renvoie (C4).
+ * A card of the board, as `GET /api/tasks/board` returns it (C4).
  *
- * Une tâche pend d'un shot OU d'un asset : un projet dont tout le travail vit sur des
- * assets affichait un board vide tant que seuls les shots étaient parcourus.
- * `parentLabel` porte le repère montré sur la carte, quel que soit le côté d'où elle vient.
+ * A task hangs from a shot OR an asset: a project whose work lives on assets displayed an empty
+ * board for as long as only the shots were scanned.
+ * `parentLabel` carries the marker shown on the card, whichever side it comes from.
  */
 export interface BoardTask {
   id: number;
@@ -23,12 +23,12 @@ export interface BoardTask {
   versionCount: number;
   parentKind: 'shot' | 'asset';
   parentId: number;
-  /** Code du shot ou nom de l'asset — ce que lit l'utilisateur sur la carte. */
+  /** Shot code or asset name: what the user reads on the card. */
   parentLabel: string;
   sequenceId: number | null;
 }
 
-/** Le board entier, avec le total : une troncature silencieuse se lirait comme un board complet. */
+/** The whole board, with its total: a silent truncation would read as a complete board. */
 export interface BoardResponse {
   items: BoardTask[];
   total: number;

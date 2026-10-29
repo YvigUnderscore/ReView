@@ -4,58 +4,56 @@
 import type { WidgetHeight, WidgetSettings, WidgetSpan } from '../../../lib/widgetLayout';
 
 /**
- * Le modèle de taille de la vue d'ensemble — largeur **et** hauteur, en rangées de grille.
+ * The size model of the overview: width **and** height, in grid rows.
  *
- * Un bloc ne portait qu'une largeur. Sa hauteur était celle de son contenu, et la grille
- * alignait les blocs par le haut : un bloc court laissait sous lui un trou que son voisin
- * ne pouvait pas combler, et une carte agrandie en largeur affichait toujours trois lignes.
- * C'est exactement ce que l'utilisatrice a entouré en rouge — de larges zones vides sous
- * les médias publiés et à droite des deux listes de tâches.
+ * A block used to carry only a width. Its height was that of its content, and the grid aligned the
+ * blocks to the top: a short block left beneath it a hole that its neighbour could not fill, and an
+ * enlarged card in width always showed three lines. That is exactly what the user circled in red:
+ * wide empty areas beneath the published media and beside the two task lists.
  *
- * Trois décisions tiennent la réponse :
+ * Three decisions hold the answer:
  *
- *  1. **La hauteur est un nombre de rangées**, pas des pixels libres. Une rangée vaut
- *     `ROW_HEIGHT`, l'écart entre deux rangées est celui de la grille (`gap-6`). Une
- *     disposition enregistrée sur un 27 pouces se rejoue donc à l'identique sur un
- *     portable : seules les colonnes s'étirent, les rangées ont partout la même hauteur.
- *  2. **La grille tasse** (`grid-flow-row-dense`) : un bloc plus court que son voisin
- *     laisse des rangées libres, et le premier bloc suivant qui y tient les prend. C'est
- *     le compactage, obtenu par le navigateur plutôt que par un algorithme de placement
- *     maison — donc juste au pixel, à toutes les largeurs d'écran.
- *  3. **Le contenu suit la taille** : `listCapacity` et `tileCapacity` disent combien de
- *     lignes ou de vignettes tiennent dans une carte de N rangées. Agrandir un bloc sans
- *     lui donner plus à montrer n'aurait rien réglé.
+ *  1. **The height is a number of rows**, not free pixels. A row is worth `ROW_HEIGHT`, and the gap
+ *     between two rows is that of the grid (`gap-6`). A layout saved on a 27-inch screen therefore
+ *     replays identically on a laptop: only the columns stretch, the rows have the same height
+ *     everywhere.
+ *  2. **The grid packs** (`grid-flow-row-dense`): a block shorter than its neighbour leaves free
+ *     rows, and the first following block that fits takes them. This is packing obtained from the
+ *     browser rather than from a home-made placement algorithm, so it is exact to the pixel at every
+ *     screen width.
+ *  3. **The content follows the size**: `listCapacity` and `tileCapacity` say how many lines or
+ *     thumbnails fit in a card of N rows. Enlarging a block without giving it more to show would
+ *     have fixed nothing.
  *
- * Tout ce fichier est pur : la géométrie se vérifie sans écran.
+ * This whole file is pure: the geometry is verified without a screen.
  */
 
 /**
- * Hauteurs offertes, en rangées de la grille.
+ * Heights offered, in grid rows.
  *
- * Rampe discrète, comme les largeurs : les classes `row-span-*` doivent être écrites en
- * toutes lettres (Tailwind purge ce qu'il ne lit pas), et une hauteur libre au pixel ne
- * survivrait pas au changement d'écran.
+ * A discrete scale, like the widths: the `row-span-*` classes must be written out in full (Tailwind
+ * purges what it does not read), and a free height in pixels would not survive a change of screen.
  */
 export const OVERVIEW_ROWS = [2, 3, 4, 5, 6] as const;
 
 export type OverviewRows = (typeof OVERVIEW_ROWS)[number];
 
-/** Hauteur d'une rangée, en pixels (`auto-rows-[5rem]`). */
+/** Height of a row, in pixels (`auto-rows-[5rem]`). */
 export const ROW_HEIGHT = 80;
 
-/** Écart entre deux blocs, en pixels (`gap-6`). */
+/** Gap between two blocks, in pixels (`gap-6`). */
 export const GRID_GAP = 24;
 
-/** Pas vertical d'une rangée à la suivante — hauteur de rangée plus écart. */
+/** Vertical step from one row to the next: row height plus gap. */
 export const ROW_PITCH = ROW_HEIGHT + GRID_GAP;
 
 /**
- * Classes de la grille de la vue d'ensemble.
+ * Classes of the overview grid.
  *
- * Elle ne peut pas être celle des autres pages composables (`WIDGET_GRID_CLASS`) : celle-ci
- * a des rangées de hauteur fixe, tasse ses blocs et les laisse s'étirer sur la hauteur de
- * leur emprise — là où l'accueil aligne encore ses blocs par le haut (`items-start`) et les
- * laisse prendre la hauteur de leur contenu.
+ * It cannot be that of the other composable pages (`WIDGET_GRID_CLASS`): this one has rows of
+ * fixed height, packs its blocks, and lets them stretch over the height of their footprint. The
+ * home page, by contrast, still aligns its blocks to the top (`items-start`) and lets them take the
+ * height of their content.
  */
 export const OVERVIEW_GRID_CLASS = 'grid grid-cols-12 grid-flow-row-dense auto-rows-[5rem] gap-6';
 
@@ -70,11 +68,10 @@ const ROW_SPAN_CLASS: Record<OverviewRows, string> = {
 export const rowSpanClass = (rows: OverviewRows): string => ROW_SPAN_CLASS[rows];
 
 /**
- * L'ancienne échelle de hauteur (`short`/`normal`/`tall`) relue en rangées.
+ * The former height scale (`short`/`normal`/`tall`) read back as rows.
  *
- * Les dispositions enregistrées avant ce lot portent cette clé et aucune hauteur en
- * rangées. On la traduit **à la lecture** : les préférences ne sont pas réécrites, et
- * personne ne perd le bloc haut qu'il s'était réglé.
+ * Layouts saved before this batch carry that key and no height in rows. It is translated **on
+ * read**: the preferences are not rewritten, and nobody loses the tall block they had set.
  */
 const LEGACY_ROWS: Record<WidgetHeight, OverviewRows> = { short: 2, normal: 3, tall: 5 };
 
@@ -82,8 +79,8 @@ export const isOverviewRows = (value: number): value is OverviewRows =>
   (OVERVIEW_ROWS as readonly number[]).includes(value);
 
 /**
- * Hauteur effective d'un bloc : celle enregistrée, sinon l'ancienne échelle traduite,
- * sinon le défaut du registre. Une valeur hors rampe est ignorée, pas appliquée de travers.
+ * Effective height of a block: the saved one, otherwise the former scale translated, otherwise the
+ * registry default. A value outside the scale is ignored, not applied wrongly.
  */
 export function resolveRows(saved: WidgetSettings | undefined, fallback: OverviewRows): OverviewRows {
   if (saved?.rows !== undefined && isOverviewRows(saved.rows)) return saved.rows;
@@ -92,32 +89,32 @@ export function resolveRows(saved: WidgetSettings | undefined, fallback: Overvie
 }
 
 /**
- * Hauteur du cadre d'une carte, en pixels : ses marges intérieures (`p-4`, deux fois 1 rem)
- * et son en-tête (titre de 1,25 rem plus `mb-3`). C'est ce qui ne sert pas au contenu.
+ * Height of a card's frame, in pixels: its inner margins (`p-4`, twice 1 rem) and its header (a
+ * 1.25 rem title plus `mb-3`). This is what does not serve the content.
  */
 const CARD_CHROME = 68;
 
-/** Pixels réellement offerts au contenu d'une carte de N rangées. */
+/** Pixels actually available to the content of a card of N rows. */
 const contentHeight = (rows: OverviewRows): number => rows * ROW_PITCH - GRID_GAP - CARD_CHROME;
 
-/** Hauteur d'une ligne de liste (`py-1.5` plus le texte, plus l'interligne `space-y-1.5`). */
+/** Height of a list line (`py-1.5` plus the text, plus the `space-y-1.5` spacing). */
 const LIST_LINE = 30;
 
 /**
- * Lignes qu'une liste montre dans une carte de N rangées — le plancher de trois vaut pour
- * la plus courte des cartes, où mieux vaut trois lignes qui débordent qu'une liste vide.
+ * Lines a list shows in a card of N rows. The floor of three applies to the shortest card, where
+ * three overflowing lines are better than an empty list.
  */
 export const listCapacity = (rows: OverviewRows): number =>
   Math.max(3, Math.floor(contentHeight(rows) / LIST_LINE));
 
 /**
- * Hauteur d'une ligne de vignettes : à largeur pleine (huit colonnes), une vignette 16:9
- * fait environ 87 px, son nom 20 px. Une ligne de vignettes vaut donc à peu près une
- * rangée de grille — ce qui rend la rampe lisible : plus haut, plus de lignes.
+ * Height of a row of thumbnails: at full width (eight columns), a 16:9 thumbnail is about 87 px and
+ * its name 20 px. A row of thumbnails is therefore roughly one grid row, which makes the scale
+ * readable: taller means more rows.
  */
 const TILE_LINE = 110;
 
-/** Colonnes de vignettes selon la largeur du bloc, et les classes qui les portent. */
+/** Thumbnail columns according to the block's width, and the classes that carry them. */
 const TILE_COLUMNS: Record<WidgetSpan, number> = { 3: 2, 4: 3, 6: 4, 8: 6, 12: 8 };
 
 const TILE_GRID_CLASS: Record<WidgetSpan, string> = {
@@ -130,35 +127,35 @@ const TILE_GRID_CLASS: Record<WidgetSpan, string> = {
 
 export const tileGridClass = (span: WidgetSpan): string => TILE_GRID_CLASS[span];
 
-/** Vignettes qu'une grille de médias montre dans un bloc de N rangées sur N colonnes. */
+/** Thumbnails a media grid shows in a block of N rows over N columns. */
 export const tileCapacity = (rows: OverviewRows, span: WidgetSpan): number =>
   TILE_COLUMNS[span] * Math.max(1, Math.floor(contentHeight(rows) / TILE_LINE));
 
-/** Taille d'un bloc : largeur en colonnes, hauteur en rangées. */
+/** Size of a block: width in columns, height in rows. */
 export interface WidgetSize {
   span: WidgetSpan;
   rows: OverviewRows;
 }
 
-/** Pas horizontal et vertical de la grille, en pixels — écart compris. */
+/** Horizontal and vertical step of the grid, in pixels, gap included. */
 export interface GridGeometry {
   column: number;
   row: number;
 }
 
 /**
- * Géométrie de repli, quand le navigateur ne rend aucune mise en page (rendu de test).
- * Une colonne de 96 px correspond à une grille d'environ 1 130 px de large, soit la
- * largeur utile courante du contenu de l'application.
+ * Fallback geometry, when the browser renders no layout (test rendering).
+ * A 96 px column corresponds to a grid about 1,130 px wide, which is the current useful width of
+ * the application's content.
  */
 export const FALLBACK_GEOMETRY: GridGeometry = { column: 96, row: ROW_PITCH };
 
 /**
- * Pas de la grille, lu sur le conteneur lui-même.
+ * Step of the grid, read from the container itself.
  *
- * Le calcul ne suppose rien de la largeur de la fenêtre : `gridTemplateColumns` donne les
- * pistes réellement calculées, ce qui rend le geste juste aux trois paliers responsives
- * comme dans un panneau réduit.
+ * The computation assumes nothing about the window width: `gridTemplateColumns` gives the tracks
+ * actually computed, which makes the gesture exact at the three responsive breakpoints as well as
+ * in a reduced panel.
  */
 export function gridGeometry(container: Element | null): GridGeometry {
   if (!container || typeof getComputedStyle !== 'function') return FALLBACK_GEOMETRY;
@@ -174,12 +171,12 @@ export function gridGeometry(container: Element | null): GridGeometry {
 }
 
 /**
- * La valeur offerte la plus proche de celle visée.
+ * The offered value closest to the one aimed at.
  *
- * `bias` est le sens du geste, et il ne sert qu'aux ex æquo — mais ils sont fréquents :
- * la rampe des largeurs saute de deux en deux (4, 6, 8, 12), si bien qu'un glissement
- * d'une seule colonne tombe pile entre deux crans. Sans lui, tirer d'une colonne vers la
- * droite depuis 6 rendrait 6 : la poignée ne répondrait pas.
+ * `bias` is the direction of the gesture, and it only serves for ties, but ties are frequent: the
+ * width scale jumps by two (4, 6, 8, 12), so a drag of a single column lands exactly between two
+ * notches. Without it, dragging one column to the right from 6 would return 6, and the handle would
+ * not respond.
  */
 function nearest<T extends number>(wanted: number, offered: readonly T[], bias: number): T {
   const sorted = [...offered].sort((a, b) => a - b);
@@ -193,11 +190,11 @@ function nearest<T extends number>(wanted: number, offered: readonly T[], bias: 
 }
 
 /**
- * Taille visée par un glissement de la poignée : on traduit le déplacement en colonnes et
- * en rangées, puis on retient les tailles offertes les plus proches.
+ * Size targeted by a drag of the handle: the movement is translated into columns and rows, then the
+ * offered sizes closest to it are retained.
  *
- * Le bornage est ici et nulle part ailleurs : un bloc ne peut pas prendre une largeur que
- * sa définition ne propose pas, ni une hauteur hors rampe, quel que soit le geste.
+ * The bounding happens here and nowhere else: a block cannot take a width its definition does not
+ * offer, nor a height outside the scale, whatever the gesture.
  */
 export function resizeTarget(
   start: WidgetSize,
@@ -214,10 +211,10 @@ export function resizeTarget(
 }
 
 /**
- * Taille suivante ou précédente sur un axe — ce que fait une flèche du clavier.
+ * Next or previous size on an axis: what an arrow key of the keyboard does.
  *
- * La poignée est un contrôle, pas un décor : le même réglage doit s'atteindre sans souris.
- * Aux bornes, la taille ne change pas (et l'appelant n'enregistre donc rien).
+ * The handle is a control, not decoration: the same setting must be reachable without a mouse. At
+ * the bounds the size does not change, and the caller therefore saves nothing.
  */
 export function stepSize(
   current: WidgetSize,

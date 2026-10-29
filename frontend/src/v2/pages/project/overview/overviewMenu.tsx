@@ -10,15 +10,14 @@ import type { Tr } from '../../../i18n';
 import { OVERVIEW_WIDGET_DEFS, addableOverviewWidgets, type OverviewWidgetId } from './overviewWidgets';
 
 /**
- * Le menu contextuel de la vue d'ensemble — tout ce qu'on peut faire à la page se fait ici.
+ * The context menu of the overview: everything that can be done to the page is done here.
  *
- * La règle du projet veut qu'une action passe par le clic droit avant d'obtenir un bouton :
- * une page qui se compose n'a donc pas de barre d'outils, elle a un menu. Seule la bascule
- * « personnaliser » a droit à une icône, parce qu'un menu qu'on ne soupçonne pas n'existe
- * pas.
+ * The project's rule is that an action goes through right-click before getting a button: a page
+ * that composes itself therefore has no toolbar, it has a menu. Only the "customize" toggle is
+ * entitled to an icon, because a menu one does not suspect does not exist.
  *
- * Les entrées d'administration ne sont pas un décor réservé : le serveur refuse l'écriture
- * à quiconque n'est pas administrateur du studio (`requireRole(ADMIN)`).
+ * The administration entries are not a reserved decoration: the server refuses the write to anyone
+ * who is not a studio administrator (`requireRole(ADMIN)`).
  */
 
 const ROLES: Role[] = ['ADMIN', 'SUPERVISOR', 'ARTIST', 'CLIENT'];
@@ -28,11 +27,11 @@ export interface OverviewMenuOptions {
   editing: boolean;
   ready: boolean;
   layout: WidgetsPref;
-  /** Vrai si la personne a elle-même réglé sa page : sinon, rien à remettre au défaut. */
+  /** True if the person has set their own page: otherwise, there is nothing to reset to the default. */
   personalised: boolean;
   canManage: boolean;
   isAdmin: boolean;
-  /** Rôles pour lesquels l'administration a déjà enregistré un défaut. */
+  /** Roles for which the administration has already saved a default. */
   definedRoles: Role[];
   onToggleEdit: () => void;
   onShow: (id: OverviewWidgetId) => void;

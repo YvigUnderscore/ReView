@@ -18,19 +18,18 @@ import { resolveRows, type OverviewRows, type WidgetSize } from './overviewSizin
 import type { Role } from '../../../types/api';
 
 /**
- * Registre des blocs de la vue d'ensemble d'un projet (lot 10).
+ * Registry of the project overview blocks (batch 10).
  *
- * La page était figée : trois compteurs, huit vignettes, une jauge et deux colonnes, dans
- * cet ordre, pour tout le monde. Or un artiste, un superviseur et un producteur n'ouvrent
- * pas la même page — le premier vient voir ce qu'on lui demande, le deuxième ce qui bloque,
- * le troisième où en est le projet. La page se compose donc **par personne**, sur un défaut
- * **par rôle** décidé en administration.
+ * The page was frozen: three counters, eight thumbnails, a gauge and two columns, in that order,
+ * for everyone. Yet an artist, a supervisor and a producer do not open the same page: the first
+ * comes to see what is asked of them, the second what is blocking, the third where the project
+ * stands. The page is therefore composed **per person**, on a **per-role** default decided by the
+ * administration.
  *
- * La liste des identifiants est **recopiée à l'identique côté serveur**
- * (`backend/src/lib/overviewWidgets.ts`), qui refuse d'enregistrer une disposition citant
- * un bloc inconnu ; `overviewWidgets.test.ts` (backend) refuse que les deux copies
- * divergent. Les règles de composition, elles, sont celles de toute page composable
- * (`lib/widgetLayout`), partagées avec l'accueil.
+ * The list of identifiers is **copied verbatim on the server side** (`backend/src/lib/overviewWidgets.ts`),
+ * which refuses to save a layout citing an unknown block; `overviewWidgets.test.ts` (backend)
+ * refuses to let the two copies diverge. The composition rules, for their part, are those of any
+ * composable page (`lib/widgetLayout`), shared with the home page.
  */
 export const OVERVIEW_WIDGETS = [
   'counts',
@@ -45,27 +44,27 @@ export const OVERVIEW_WIDGETS = [
 
 export type OverviewWidgetId = (typeof OVERVIEW_WIDGETS)[number];
 
-/** Clé de premier niveau du sac de préférences où vit la disposition d'une personne. */
+/** Top-level key of the preferences bag where a person's layout lives. */
 export const OVERVIEW_PREFERENCE_KEY = 'projectOverview';
 
 /**
- * Un bloc de la vue d'ensemble. `manage` marque ceux dont le contenu est **réservé à qui
- * gère le projet** : le serveur refuse déjà ces lectures aux autres (`requireProjectManage`),
- * et un bloc qui n'afficherait qu'une erreur ne doit pas exister pour eux — ni dans la
- * page, ni dans le catalogue des blocs à ajouter.
+ * A block of the overview. `manage` marks those whose content is **reserved for whoever manages
+ * the project**: the server already refuses these reads to others (`requireProjectManage`), and a
+ * block that would only display an error must not exist for them, neither on the page nor in the
+ * catalogue of blocks to add.
  */
 export interface OverviewWidgetDefinition extends WidgetDefinition {
   manage?: boolean;
-  /** Hauteur par défaut, en rangées de grille (cf. `overviewSizing`). */
+  /** Default height, in grid rows (cf. `overviewSizing`). */
   rows: OverviewRows;
 }
 
 /**
- * Ordre de déclaration = disposition livrée avec le produit, avant tout défaut de rôle.
+ * Declaration order = layout shipped with the product, before any role default.
  *
- * Chaque bloc porte maintenant sa hauteur autant que sa largeur : les compteurs et la
- * jauge tiennent en deux rangées, les listes en quatre. C'est cette hauteur qui empêche
- * la page de s'ouvrir sur des cartes de trois lignes suivies de vide.
+ * Each block now carries its height as well as its width: the counters and the gauge fit in two
+ * rows, the lists in four. It is this height that stops the page from opening on three-line cards
+ * followed by empty space.
  */
 export const OVERVIEW_WIDGET_DEFS: Record<OverviewWidgetId, OverviewWidgetDefinition> = {
   counts: { labelKey: 'overview.widget.counts', span: 12, spans: [4, 6, 8, 12], rows: 2, variants: ['kpi'] },
@@ -103,12 +102,12 @@ export const ALL_OVERVIEW_IDS = registryIds(OVERVIEW_WIDGET_DEFS);
 export const isOverviewWidget = (v: string): v is OverviewWidgetId => v in OVERVIEW_WIDGET_DEFS;
 
 /**
- * Dispositions livrées avec le produit, une par rôle.
+ * Layouts shipped with the product, one per role.
  *
- * Elles ne sont qu'un point de départ — l'administration les remplace, chacun les modifie —
- * mais elles doivent déjà être justes : un studio qui ne règle rien doit ouvrir une page
- * qui parle à chacun. L'artiste entre par son travail, le superviseur par ce qui bloque,
- * le client par ce qu'il y a à regarder.
+ * They are only a starting point (the administration replaces them, and everyone modifies them),
+ * but they must already be right: a studio that sets nothing must open a page that speaks to each
+ * person. The artist comes in through their work, the supervisor through what is blocking, and
+ * the client through what there is to look at.
  */
 export const BUILTIN_ROLE_LAYOUTS: Record<Role, WidgetsPref> = {
   ADMIN: {
@@ -140,7 +139,7 @@ export const BUILTIN_ROLE_LAYOUTS: Record<Role, WidgetsPref> = {
       latestMedia: { rows: 3 },
     },
   },
-  // Un client vient voir ce qu'il y a à regarder, pas l'organisation interne du studio.
+  // A client comes to see what there is to look at, not the studio's internal organization.
   CLIENT: {
     order: ['latestMedia', 'activity', 'counts', 'progress', 'myTasks', 'tasks'],
     hidden: ['counts', 'progress', 'myTasks', 'tasks'],
@@ -149,14 +148,13 @@ export const BUILTIN_ROLE_LAYOUTS: Record<Role, WidgetsPref> = {
 };
 
 /**
- * Disposition effective : celle de la personne, **champ par champ**, complétée par le
- * défaut de son rôle.
+ * Effective layout: the person's, **field by field**, completed by their role's default.
  *
- * Le repli est par champ et non en bloc, et c'est tout l'intérêt : quelqu'un qui masque un
- * bloc n'a rien dit de l'ordre. Un repli « tout ou rien » lui ferait perdre l'ordre décidé
- * par l'administration au premier bloc masqué, et la page se réarrangerait sous ses yeux
- * pour un geste qui n'en demandait pas tant. Les réglages, eux, se superposent : ceux du
- * rôle d'abord, ceux de la personne par-dessus.
+ * The fallback is per field and not per block, which is the whole point: someone who hides a block
+ * has said nothing about the order. An "all or nothing" fallback would lose the order decided by
+ * the administration at the first hidden block, and the page would rearrange itself before their
+ * eyes for a gesture that did not ask for so much. The settings, for their part, overlay: the role
+ * ones first, the person's on top.
  */
 export function resolveOverviewLayout(
   personal: WidgetsPref | undefined | null,
@@ -172,9 +170,9 @@ export function resolveOverviewLayout(
 }
 
 /**
- * Disposition par défaut d'un rôle : celle du studio si l'administration en a réglé une,
- * sinon celle livrée avec le produit. Un rôle inconnu (compte sans rôle lisible) retombe
- * sur l'artiste, le plus restreint des rôles internes.
+ * Default layout of a role: the studio's if the administration has set one, otherwise the one
+ * shipped with the product. An unknown role (an account with no readable role) falls back to the
+ * artist, the most restricted of the internal roles.
  */
 export function roleLayout(
   defaults: Partial<Record<Role, WidgetsPref>> | undefined,
@@ -184,14 +182,14 @@ export function roleLayout(
   return defaults?.[effective] ?? BUILTIN_ROLE_LAYOUTS[effective];
 }
 
-/** Blocs masqués, filtrés sur ceux que le registre connaît encore. */
+/** Hidden blocks, filtered on those the registry still knows. */
 export const hiddenOverviewWidgets = (pref: WidgetsPref | undefined): OverviewWidgetId[] =>
   genericHidden(OVERVIEW_WIDGET_DEFS, pref);
 
 /**
- * Ordre effectif de la page. `canManage` écarte les blocs dont le serveur refuse le
- * contenu : le filtre est ici, à la source, pour que le catalogue des blocs à ajouter ne
- * propose jamais ce qui n'afficherait qu'un 403.
+ * Effective order of the page. `canManage` drops the blocks whose content the server refuses: the
+ * filter is here, at the source, so that the catalogue of blocks to add never offers what would
+ * only display a 403.
  */
 export function visibleOverviewWidgets(
   pref: WidgetsPref | undefined,
@@ -202,7 +200,7 @@ export function visibleOverviewWidgets(
   );
 }
 
-/** Blocs masqués qu'on peut proposer d'ajouter, droits compris. */
+/** Hidden blocks that can be offered for adding, rights included. */
 export function addableOverviewWidgets(
   pref: WidgetsPref | undefined,
   canManage: boolean,
@@ -210,17 +208,17 @@ export function addableOverviewWidgets(
   return hiddenOverviewWidgets(pref).filter((id) => canManage || !OVERVIEW_WIDGET_DEFS[id].manage);
 }
 
-/** Réglages d'un bloc de cette page : ceux de toute page composable, plus la hauteur. */
+/** Settings of a block on this page: those of any composable page, plus the height. */
 export interface OverviewResolvedSettings extends ResolvedWidgetSettings {
   rows: OverviewRows;
 }
 
 /**
- * Réglages effectifs d'un bloc : ceux de la disposition, complétés par le registre.
+ * Effective settings of a block: those of the layout, completed by the registry.
  *
- * La hauteur se relit en trois temps (`resolveRows`) — rangées enregistrées, ancienne
- * échelle `short`/`normal`/`tall` traduite, défaut du bloc. C'est ce qui fait qu'une
- * disposition enregistrée avant ce lot s'ouvre sans trou et sans réécriture.
+ * The height is read back in three steps (`resolveRows`): saved rows, former `short`/`normal`/`tall`
+ * scale translated, block default. This is what makes a layout saved before this batch open without
+ * a gap, and without being rewritten.
  */
 export const overviewWidgetSettings = (
   id: OverviewWidgetId,
@@ -237,8 +235,8 @@ export const setOverviewWidgetSetting = (
 ): WidgetsPref => genericSetSetting(id, patch, pref);
 
 /**
- * Enregistre une taille d'un seul geste : largeur et hauteur partent ensemble, parce que
- * la poignée les règle ensemble et qu'un enregistrement par axe doublerait les écritures.
+ * Saves a size in a single gesture: width and height go together, because the handle sets them
+ * together, and one save per axis would double the writes.
  */
 export const setOverviewWidgetSize = (
   id: OverviewWidgetId,

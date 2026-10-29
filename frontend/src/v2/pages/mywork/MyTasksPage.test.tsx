@@ -8,10 +8,10 @@ import MyTasksPage from '../MyTasksPage';
 import { t } from '../../i18n';
 
 /**
- * La page « mes tâches », destination des deux compteurs personnels de l'Accueil.
+ * The "my tasks" page, destination of the two personal counters on the home page.
  *
- * Son filtre vit dans l'URL, sans quoi la carte « my retakes » ne pourrait pas ouvrir sa
- * vue — c'était tout le défaut de l'ancienne ancre `#my-tasks`.
+ * Its filter lives in the URL, otherwise the "my retakes" card could not open its view: that was
+ * the whole defect of the former `#my-tasks` anchor.
  */
 
 const task = {
@@ -33,7 +33,7 @@ const mount = (route: string) =>
   });
 
 describe('MyTasksPage', () => {
-  it('déplie le compteur de retakes quand l’adresse le demande', async () => {
+  it('unfolds the retake counter when the address asks for it', async () => {
     const { api } = mount('/my-tasks?scope=blocked');
     await waitFor(() => expect(api.called('GET /api/dashboard/tasks').length).toBeGreaterThan(0));
     expect(api.called('GET /api/dashboard/tasks').at(-1)!.url.searchParams.get('scope')).toBe('blocked');
@@ -41,7 +41,7 @@ describe('MyTasksPage', () => {
     expect(screen.getByText('Dock')).toBeInTheDocument();
   });
 
-  it('montre toutes mes tâches quand aucun périmètre n’est demandé', async () => {
+  it('shows all my tasks when no scope is requested', async () => {
     const { api } = mount('/my-tasks');
     await waitFor(() => expect(api.called('GET /api/dashboard/tasks').length).toBeGreaterThan(0));
     expect(api.called('GET /api/dashboard/tasks').at(-1)!.url.searchParams.get('scope')).toBeNull();

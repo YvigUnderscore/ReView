@@ -6,10 +6,10 @@ import { useProjectActivity } from './useProjectActivity';
 import { useT } from '../../../i18n';
 
 /**
- * Avancement du projet : la répartition des tâches par statut, en une jauge et sa légende.
+ * Project progress: the distribution of tasks by status, as a gauge and its legend.
  *
- * Les tâches sont celles que sert `/api/projects/:id/activity`, exactement celles que liste
- * le bloc « tâches à traiter » — la jauge et la liste ne peuvent donc pas se contredire.
+ * The tasks are those served by `/api/projects/:id/activity`, exactly those listed by the "tasks to
+ * handle" block, so the gauge and the list cannot contradict each other.
  */
 export default function ProgressWidget({ projectId }: { projectId: number }) {
   const t = useT();

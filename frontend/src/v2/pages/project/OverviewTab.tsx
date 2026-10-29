@@ -20,18 +20,17 @@ import {
 import { useT } from '../../i18n';
 
 /**
- * Vue d'ensemble d'un projet — composable par personne, sur un défaut par rôle (lot 10).
+ * Project overview: composable per person, on a default per role (batch 10).
  *
- * La page servait la même chose à tout le monde, dans le même ordre : trois compteurs, huit
- * vignettes, une jauge, deux colonnes. Un artiste y cherchait ce qu'on lui demande et ne le
- * trouvait nulle part ; un superviseur devait ouvrir l'onglet Production pour voir ce qui
- * bloque. Chacun choisit désormais ses blocs et leur ordre, et l'administration décide de
- * ce que voit, par défaut, qui n'a rien choisi.
+ * The page used to serve the same thing to everyone, in the same order: three counters, eight
+ * thumbnails, a gauge, two columns. An artist looked there for what is asked of them and found it
+ * nowhere; a supervisor had to open the Production tab to see what is blocking. Everyone now
+ * chooses their blocks and their order, and the administration decides what someone who has chosen
+ * nothing sees by default.
  *
- * On entre en composition de deux façons — le clic droit sur le fond de page ou sur un
- * bloc, et une icône discrète en tête de page, parce qu'un menu qu'on ne soupçonne pas
- * n'existe pas. Hors composition, la page reste une page : aucune poignée, aucun bouton
- * ajouté sur les blocs.
+ * One enters composition in two ways: right-click on the page background or on a block, and an
+ * unobtrusive icon at the top of the page, because a menu one does not suspect does not exist.
+ * Outside composition the page remains a page: no handle, and no button added to the blocks.
  */
 export default function OverviewTab({
   name,
@@ -52,9 +51,9 @@ export default function OverviewTab({
 
   const show = (id: OverviewWidgetId) => state.save(toggleOverviewWidget(id, true, layout));
   const addable = addableOverviewWidgets(layout, canManage);
-  // Une page dont tous les blocs sont masqués n'offrirait plus rien à cliquer — pas même
-  // un fond où ouvrir le menu. Le catalogue reste alors visible hors composition : c'est
-  // le seul chemin de retour.
+  // A page whose blocks are all hidden would offer nothing left to click, not even a background to
+  // open the menu from. The catalogue then stays visible outside composition: it is the only way
+  // back.
   const empty = visibleOverviewWidgets(layout, canManage).length === 0;
 
   const entries = overviewMenuEntries({
@@ -109,7 +108,7 @@ export default function OverviewTab({
             onGo={onGo}
           />
 
-          {/* Catalogue des blocs retirés : en composition, ou sur une page entièrement vidée. */}
+          {/* Catalogue of removed blocks: in composition, or on a page that has been emptied. */}
           {(editing || empty) && addable.length > 0 && (
             <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-border p-3">
               <span className="flex items-center gap-1.5 text-xs text-muted-foreground">

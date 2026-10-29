@@ -14,13 +14,13 @@ import { applyLod } from '../review/splat/scene/lod';
 import type { ClientMediaSource } from './clientTypes';
 
 /**
- * Rejeu, chez l'invité, de tout ce que le studio a enregistré sur un splat : transformation
- * et flip d'orientation, volumes de crop, masque de suppression, transformations de
- * sous-ensembles, pose caméra + profondeur de champ, mode LOD par défaut.
+ * Replays, for the guest, everything the studio recorded on a splat: transform and
+ * orientation flip, crop volumes, deletion mask, subset transforms, camera pose with depth of
+ * field, default LOD mode.
  *
- * Le fichier d'origine n'est jamais touché (règle du projet) : ce sont exactement les mêmes
- * opérations non destructives que la review interne rejoue pour un artiste — l'invité voit
- * donc le splat nettoyé, pas le scan brut. Rien n'est écrit : aucun éditeur n'est monté.
+ * The original file is never touched (project rule). These are exactly the same
+ * non-destructive operations the internal review replays for an artist, so the guest sees the
+ * cleaned splat, not the raw scan. Nothing is written: no editor is mounted.
  */
 export function useClientSplatReplay(splat: SplatViewer, source: ClientMediaSource | undefined): void {
   const { ready, applyTransform, setBaseFlip, getSceneHandle, restoreCamera } = splat;
@@ -64,7 +64,7 @@ export function useClientSplatReplay(splat: SplatViewer, source: ClientMediaSour
     };
   }, [ready, getSceneHandle, savedVolumes, maskUrl, subsetUrl]);
 
-  // Pose caméra + DoF : la mise en scène persistée prime sur l'auto-cadrage de `useSplat`.
+  // Camera pose and DoF: the persisted staging takes precedence over `useSplat`'s auto-framing.
   const camera = presentation?.camera ?? null;
   const dof = presentation?.dof ?? null;
   useEffect(() => {
@@ -72,8 +72,8 @@ export function useClientSplatReplay(splat: SplatViewer, source: ClientMediaSour
     restoreCamera(dof ? { ...camera, ...dof } : camera);
   }, [ready, restoreCamera, camera, dof]);
 
-  // LOD par défaut choisi par le studio. `auto` reste hors sujet ici : il suppose la machine
-  // à états sur le FPS mesuré, qui appartient au HUD d'inspection interne.
+  // Default LOD chosen by the studio. `auto` stays out of scope here: it relies on a state machine
+  // driven by measured FPS, which belongs to the internal inspection HUD.
   const lodDefault = presentation?.lodDefault ?? 'auto';
   useEffect(() => {
     if (!ready || lodDefault === 'auto' || lodDefault === 'off') return;

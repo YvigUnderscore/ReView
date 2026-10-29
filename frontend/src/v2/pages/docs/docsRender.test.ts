@@ -15,50 +15,49 @@ const LABELS: CalloutLabels = {
 const render = (markdown: string, path = 'README.md') => renderDocHtml(markdown, path, LABELS);
 
 describe('renderDocHtml', () => {
-  it('transforme les liens internes .md en data-doc résolu', () => {
+  it('turns internal .md links into a resolved data-doc', () => {
     const html = render('[Errors](../api/errors.md)', 'user-guide/review-video.md');
     expect(html).toContain('data-doc="api/errors.md"');
     expect(html).not.toContain('href="../api/errors.md"');
   });
 
-  it('ouvre les liens externes dans un nouvel onglet', () => {
+  it('opens external links in a new tab', () => {
     const html = render('[Site](https://example.com)');
     expect(html).toContain('target="_blank"');
     expect(html).toContain('rel="noopener noreferrer"');
     expect(html).toContain('data-external');
   });
 
-  it('ne diffère pas le chargement des images', () => {
-    // `loading="lazy"` ne se déclenchait jamais dans le conteneur défilant de la page :
-    // les captures restaient des carrés de deux pixels, même après avoir défilé jusqu'à
-    // elles.
+  it('does not defer image loading', () => {
+    // `loading="lazy"` never triggered in the page's scrolling container: the captures stayed
+    // two-pixel squares, even after scrolling down to them.
     const html = render('![x](../assets/a.png)', 'user-guide/page.md');
     expect(html).not.toContain('loading');
   });
 
-  it('réécrit les images relatives vers /docs/', () => {
+  it('rewrites relative images to /docs/', () => {
     const html = render('![cap](../assets/user-guide/review-01.png)', 'user-guide/a.md');
     expect(html).toContain('src="/docs/assets/user-guide/review-01.png"');
   });
 
-  it('échappe le HTML brut (convention : markdown pur)', () => {
+  it('escapes raw HTML (convention: pure markdown)', () => {
     const html = render('hello <script>alert(1)</script>');
     expect(html).not.toContain('<script>');
     expect(html).toContain('&lt;script&gt;');
   });
 
-  it('rend les titres et le code', () => {
+  it('renders headings and code', () => {
     const html = render('## Title\n\n`code`');
     expect(html).toContain('<h2');
     expect(html).toContain('<code>code</code>');
   });
 });
 
-describe('préambule conventionnel', () => {
+describe('conventional preamble', () => {
   const page =
     '# Video review\n\n*Frame-accurate playback.*\n\n> Updated: 2026-08-23\n\n## Transport\n\nTexte.\n';
 
-  it('retire titre, sous-titre et date — l’en-tête de page les rend lui-même', () => {
+  it('removes the title, subtitle and date: the page header renders them itself', () => {
     const html = render(page);
     expect(html).not.toContain('<h1');
     expect(html).not.toContain('Frame-accurate playback');
@@ -66,19 +65,19 @@ describe('préambule conventionnel', () => {
     expect(html).toContain('Transport');
   });
 
-  it('ne touche pas une page qui ne commence pas par un titre', () => {
+  it('does not touch a page that does not start with a title', () => {
     const html = render('*Juste une italique.*\n\nTexte.\n');
     expect(html).toContain('Juste une italique');
   });
 
-  it('ne retire que le préambule, pas une citation qui suit le titre', () => {
+  it('removes only the preamble, not a quote that follows the title', () => {
     const html = render('# Titre\n\n> Une citation.\n');
     expect(html).toContain('Une citation');
   });
 });
 
-describe('encarts', () => {
-  it('transforme `> [!NOTE]` en encart typé, libellé dans la langue du lecteur', () => {
+describe('callouts', () => {
+  it('turns `> [!NOTE]` into a typed callout, labelled in the reader language', () => {
     const html = render('> [!NOTE]\n> Le média publié est verrouillé.');
     expect(html).toContain('data-callout="note"');
     expect(html).toContain('class="doc-callout-label">Note<');
@@ -86,12 +85,12 @@ describe('encarts', () => {
     expect(html).toContain('Le média publié est verrouillé.');
   });
 
-  it('reconnaît les cinq types, quelle que soit la casse', () => {
+  it('recognizes the five types, whatever the case', () => {
     for (const kind of ['note', 'tip', 'important', 'warning', 'caution'])
       expect(render(`> [!${kind.toUpperCase()}]\n> x`)).toContain(`data-callout="${kind}"`);
   });
 
-  it('laisse une citation ordinaire en citation', () => {
+  it('leaves an ordinary quote as a quote', () => {
     const html = render('> Une citation ordinaire.');
     expect(html).toContain('<blockquote>');
     expect(html).not.toContain('doc-callout');
@@ -99,34 +98,34 @@ describe('encarts', () => {
 });
 
 describe('figures', () => {
-  it('une image seule dans son paragraphe devient une figure légendée', () => {
+  it('a lone image in its paragraph becomes a captioned figure', () => {
     const html = render('![The transport bar.](../assets/a.png)', 'user-guide/a.md');
     expect(html).toContain('<figure>');
     expect(html).toContain('<figcaption>The transport bar.</figcaption>');
-    // La légende porte la description : l'image n'est plus annoncée une seconde fois.
+    // The caption carries the description: the image is no longer announced a second time.
     expect(html).toContain('alt=""');
   });
 
-  it('une image au fil du texte reste une image', () => {
+  it('an image inline with the text stays an image', () => {
     const html = render('Voir ![x](../assets/a.png) ici.', 'user-guide/a.md');
     expect(html).not.toContain('<figure>');
   });
 });
 
-describe('ancres et sommaire', () => {
-  it('pose une ancre sur chaque titre', () => {
+describe('anchors and table of contents', () => {
+  it('places an anchor on each heading', () => {
     const html = render('## Playback quality\n\n### I/O points\n');
     expect(html).toContain('id="playback-quality"');
     expect(html).toContain('id="io-points"');
   });
 
-  it('numérote les titres répétés', () => {
+  it('numbers repeated headings', () => {
     const html = render('## Limits\n\ntexte\n\n## Limits\n');
     expect(html).toContain('id="limits"');
     expect(html).toContain('id="limits-1"');
   });
 
-  it('extrait le sommaire du HTML rendu, ancres comprises', () => {
+  it('extracts the table of contents from the rendered HTML, anchors included', () => {
     const chapters = extractChapters(render('## Transport\n\n### Loop\n\n#### Detail\n'));
     expect(chapters).toEqual([
       { id: 'transport', text: 'Transport', level: 2 },
@@ -136,34 +135,34 @@ describe('ancres et sommaire', () => {
 });
 
 describe('slugifyHeading', () => {
-  it('minuscule, ponctuation retirée, espaces en tirets', () => {
+  it('lowercases, removes punctuation, and turns spaces into dashes', () => {
     expect(slugifyHeading('  Loop (I/O points)  ')).toBe('loop-io-points');
   });
 
-  it('suit GitHub au caractère près : la ponctuation retirée laisse son espace', () => {
-    // C'est ce qui produit le double tiret, et c'est la forme des liens déjà écrits dans
-    // DOCUMENTATION/ — s'en écarter casserait les ancres d'un côté ou de l'autre.
+  it('follows GitHub to the character: the space left by removed punctuation is kept', () => {
+    // This is what produces the double dash, and it is the form of the links already written in
+    // DOCUMENTATION/: deviating from it would break anchors on one side or the other.
     expect(slugifyHeading('Transport & timeline')).toBe('transport--timeline');
     expect(slugifyHeading('Audit — Admin → Maintenance')).toBe('audit--admin--maintenance');
   });
 
-  it('conserve les lettres accentuées et les alphabets non latins', () => {
+  it('keeps accented letters and non-Latin alphabets', () => {
     expect(slugifyHeading('Réglages hérités')).toBe('réglages-hérités');
   });
 
-  it('retombe sur un identifiant valide quand il ne reste rien', () => {
+  it('falls back to a valid identifier when nothing remains', () => {
     expect(slugifyHeading('***')).toBe('section');
   });
 });
 
-describe('tableaux et blocs de code', () => {
-  it('enveloppe les tableaux dans un conteneur défilant', () => {
+describe('tables and code blocks', () => {
+  it('wraps tables in a scrolling container', () => {
     const html = render('| a | b |\n|---|---|\n| 1 | 2 |\n');
     expect(html).toContain('class="doc-table"');
     expect(html).toContain('<table>');
   });
 
-  it('annonce le langage du bloc de code', () => {
+  it('announces the language of the code block', () => {
     const html = render('```bash\nnpm run dev\n```\n');
     expect(html).toContain('data-lang="bash"');
   });

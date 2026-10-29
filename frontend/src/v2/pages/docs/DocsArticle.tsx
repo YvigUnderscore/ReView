@@ -7,12 +7,12 @@ import { intlLocale, useT } from '../../i18n';
 import type { DocsPage } from './docsManifest';
 
 /**
- * Colonne de lecture : en-tête de page (fil d'Ariane, titre, sous-titre, date), corps
- * markdown rendu, et les deux pages voisines en pied — le sommaire se lit aussi en
- * avançant page après page.
+ * Reading column: page header (breadcrumb, title, subtitle, date), rendered markdown body, and
+ * the two neighbouring pages at the foot, since the table of contents is also read by moving
+ * from page to page.
  */
 
-/** Date de mise à jour au format du lecteur ; vide ou invalide, rien ne s'affiche. */
+/** Update date in the reader's format; when empty or invalid, nothing is shown. */
 const formatUpdated = (iso: string): string => {
   if (!iso) return '';
   const date = new Date(iso);
@@ -55,9 +55,8 @@ function PagerLink({
 }
 
 /**
- * Ce que la recherche a trouvé **dans cette page** — la contrepartie du surlignage : sans
- * ce compte, une page ouverte sans aucune occurrence visible à l'écran laisse croire que le
- * surlignage ne marche pas.
+ * What the search found **in this page**: the counterpart of the highlighting. Without this
+ * count, a page opened with no visible occurrence would suggest the highlighting is broken.
  */
 function HitCount({ hits }: { hits: number }) {
   const t = useT();
@@ -84,7 +83,7 @@ export default function DocsArticle({
   page?: DocsPage;
   sectionLabel: string;
   html: string;
-  /** Occurrences surlignées dans la page, `null` quand aucune recherche n'est en cours. */
+  /** Occurrences highlighted in the page, `null` when no search is in progress. */
   hits: number | null;
   notFound: boolean;
   previous?: DocsPage;
@@ -102,9 +101,9 @@ export default function DocsArticle({
       ref={containerRef}
       role="presentation"
       className="min-w-0 flex-1 overflow-y-auto"
-      /* Le clic est délégué aux liens <a data-doc> du markdown, eux-mêmes accessibles au
-         clavier (Entrée déclenche un clic qui remonte ici) : le conteneur, lui, n'est pas
-         un contrôle. */
+      /* Clicks are delegated to the <a data-doc> links of the markdown, which are keyboard
+         accessible themselves (Enter fires a click that bubbles up here). The container is
+         not a control. */
       onClick={onContentClick}
     >
       {notFound ? (
@@ -134,7 +133,7 @@ export default function DocsArticle({
 
           <article
             className="prose-doc doc-article text-foreground"
-            // Markdown du repo ; le HTML brut est échappé dans renderDocHtml.
+            // Repo markdown; raw HTML is escaped in renderDocHtml.
             dangerouslySetInnerHTML={{ __html: html }}
           />
 

@@ -11,21 +11,20 @@ import type { MenuEntry } from '../../lib/menuSpec';
 import type { BoardTask } from './kanbanTypes';
 
 /**
- * Colonne de statut : zone de dépôt, largeur fixe, hauteur bornée par le tableau (C4).
+ * Status column: drop zone, fixed width, height bounded by the board (C4).
  *
- * La grille repliait les colonnes sur deux rangées dès qu'il y en avait plus de six —
- * un board ShotGrid en a quinze, et les colonnes du bas passaient sous la ligne de
- * flottaison. Une bande à largeur minimale se lit comme un vrai kanban : on fait
- * défiler horizontalement, chaque colonne garde sa place.
+ * The grid folded the columns onto two rows as soon as there were more than six, and a ShotGrid
+ * board has fifteen, so the lower columns fell below the fold. A strip with a minimum width reads
+ * like a real kanban: one scrolls horizontally, and each column keeps its place.
  *
- * La pile de cartes, elle, s'arrêtait à soixante et annonçait le reste sans permettre de
- * l'atteindre ; elle défile maintenant et ne monte que sa fenêtre (`KanbanCardList`).
- * La zone de dépôt reste la colonne entière, en-tête compris : une carte lâchée sur une
- * colonne dont on n'a pas encore fait défiler la pile arrive quand même à bon port.
+ * The card stack, for its part, stopped at sixty and announced the rest without letting one reach
+ * it. It now scrolls and mounts only its window (`KanbanCardList`). The drop zone remains the whole
+ * column, header included: a card dropped on a column whose stack has not yet been scrolled still
+ * reaches its destination.
  *
- * L'en-tête est FIGÉ sans `sticky` (Phase 50) : il est simplement hors du conteneur qui
- * défile. Le nom du statut et son compteur restent donc lisibles quelle que soit la
- * position de la pile — c'est la première chose qu'on cherche sur un board dense.
+ * The header is FROZEN without `sticky` (Phase 50): it is simply outside the scrolling container.
+ * The status name and its counter therefore stay readable whatever the position of the stack,
+ * which is the first thing one looks for on a dense board.
  */
 function KanbanColumn({
   column,

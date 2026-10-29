@@ -12,14 +12,14 @@ import { SettingsCard } from '../../components/settings/SettingsCard';
 import { SETTINGS_KEYWORDS } from '../../components/settings/settingsKeywords';
 
 /**
- * L'interrupteur du niveau Épisode, dans les réglages du projet.
+ * The Episode level switch, in the project settings.
  *
- * C'est le seul endroit d'où le niveau s'allume : l'onglet Épisodes n'existe pas tant
- * qu'il est éteint, il ne pouvait donc pas porter sa propre bascule.
+ * It is the only place from which the level is switched on: the Episodes tab does not exist while
+ * it is off, so it could not carry its own toggle.
  *
- * Éteindre ne détruit rien — ni les épisodes, ni les rattachements. Le dire ici, avec le
- * décompte de ce qui va être masqué, évite d'avoir à le deviner : un interrupteur dont on
- * ignore s'il efface ne s'actionne pas.
+ * Switching off destroys nothing: neither the episodes nor the links. Saying so here, with the
+ * count of what is going to be hidden, avoids having to guess. A switch whose effect is unknown is
+ * not operated lightly.
  */
 export default function EpisodesToggle({ projectId }: { projectId: number }) {
   const t = useT();

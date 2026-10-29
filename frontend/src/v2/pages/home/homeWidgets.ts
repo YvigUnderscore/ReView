@@ -18,29 +18,27 @@ import {
 import { resolveRows, type WidgetRows, type WidgetSize } from '../../components/widgets/widgetSizing';
 
 /**
- * Registre des blocs de l'Accueil (C2).
+ * Registry of the home blocks (C2).
  *
- * La page se composait déjà, mais de très loin : trois colonnes figées dans le code, un
- * widget assigné à l'une d'elles une fois pour toutes, un déplacement d'un cran par menu
- * contextuel, et aucun réglage — ni taille, ni densité, ni variante. Un bloc « activité »
- * ne pouvait pas monter en colonne principale, et la page ne pouvait être ni resserrée ni
- * épurée.
+ * The page was already composable, but only very loosely: three columns frozen in the code, one
+ * widget assigned to one of them once and for all, one-notch moves through a context menu, and no
+ * settings at all: neither size, density nor variant. An "activity" block could not move up to the
+ * main column, and the page could be neither tightened nor simplified.
  *
- * Désormais : une grille de douze colonnes, un ordre unique, et chaque bloc portant sa
- * taille, sa hauteur, sa densité, sa variante et l'affichage ou non de son cadre. Tout est
- * persisté par compte dans la préférence `homeWidgets`.
+ * From now on: a twelve-column grid, a single order, and each block carrying its size, its height,
+ * its density, its variant and whether its frame is shown. Everything is persisted per account in
+ * the `homeWidgets` preference.
  *
- * Les règles de composition, elles, ne sont plus écrites ici : elles sont partagées avec la
- * vue d'ensemble d'un projet (`lib/widgetLayout`), qui demande les mêmes gestes. Ce fichier
- * ne garde que ce qui appartient en propre à l'accueil — ses blocs — et lie le registre aux
- * fonctions communes pour que les appelants n'aient pas à le répéter à chaque appel.
+ * The composition rules are no longer written here: they are shared with the project overview
+ * (`lib/widgetLayout`), which asks for the same gestures. This file keeps only what belongs to the
+ * home page itself, its blocks, and binds the registry to the common functions so that callers do
+ * not have to repeat it at every call.
  *
- * Depuis le lot 13, chaque bloc porte aussi sa **hauteur en rangées**
- * (`components/widgets/widgetSizing`) : c'est le modèle de taille de la vue d'ensemble,
- * demandé à l'identique pour l'accueil. La hauteur se relit en trois temps — rangées
- * enregistrées, ancienne échelle `short`/`normal`/`tall` traduite, défaut du bloc — si bien
- * qu'un accueil composé avant ce lot s'ouvre sans trou et **sans réécriture** de la
- * préférence.
+ * Since batch 13, each block also carries its **height in rows** (`components/widgets/widgetSizing`):
+ * it is the size model of the overview, requested identically for the home page. The height is
+ * read back in three steps (saved rows, old `short`/`normal`/`tall` scale translated, block
+ * default), so that a home page composed before this batch opens without a gap and **without
+ * rewriting** the preference.
  */
 
 export type HomeWidgetId = 'stats' | 'projects' | 'myTasks' | 'latestReviews' | 'activity';
@@ -53,23 +51,23 @@ export type {
   WidgetVariant,
 } from '../../lib/widgetLayout';
 
-/** Réglages d'un bloc de l'accueil — la forme commune, renommée pour ses appelants. */
+/** Settings of a home block: the common shape, renamed for its callers. */
 export type HomeWidgetSettings = WidgetSettings;
 
-/** Préférence `homeWidgets` — absente = disposition par défaut. */
+/** `homeWidgets` preference: absent means the default layout. */
 export type HomeWidgetsPref = WidgetsPref;
 
-/** Un bloc de l'accueil : la définition commune, plus sa hauteur par défaut en rangées. */
+/** A home block: the common definition, plus its default height in rows. */
 export interface HomeWidgetDefinition extends WidgetDefinition {
   rows: WidgetRows;
 }
 
 /**
- * Ordre de déclaration = disposition par défaut d'un compte neuf.
+ * Declaration order = default layout of a new account.
  *
- * Chaque bloc porte maintenant sa hauteur autant que sa largeur : les compteurs tiennent
- * en deux rangées, les listes et la grille de projets en quatre. C'est cette hauteur qui
- * empêche la page de s'ouvrir sur des cartes de trois lignes suivies de vide.
+ * Each block now carries its height as well as its width: counters fit in two rows, lists and the
+ * project grid in four. It is this height that stops the page from opening on three-line cards
+ * followed by empty space.
  */
 export const HOME_WIDGETS: Record<HomeWidgetId, HomeWidgetDefinition> = {
   stats: { labelKey: 'home.widget.stats', span: 12, spans: [6, 8, 12], rows: 2, variants: ['kpi'] },
@@ -95,20 +93,20 @@ export const ALL_WIDGET_IDS = registryIds(HOME_WIDGETS);
 
 export const isWidgetId = (v: string): v is HomeWidgetId => v in HOME_WIDGETS;
 
-/** Widgets masqués (préférence filtrée sur les ids encore connus). */
+/** Hidden widgets (preference filtered on the identifiers still known). */
 export const hiddenWidgets = (pref: HomeWidgetsPref | undefined): HomeWidgetId[] =>
   genericHidden(HOME_WIDGETS, pref);
 
-/** Ordre effectif de la page, moins les blocs masqués. */
+/** Effective order of the page, minus the hidden blocks. */
 export const visibleWidgets = (pref: HomeWidgetsPref | undefined): HomeWidgetId[] =>
   genericVisible(HOME_WIDGETS, pref);
 
-/** Réglages d'un bloc de l'accueil : ceux de toute page composable, plus la hauteur. */
+/** Settings of a home block: those of any composable page, plus the height. */
 export interface HomeResolvedSettings extends ResolvedWidgetSettings {
   rows: WidgetRows;
 }
 
-/** Réglages effectifs d'un bloc : ceux du compte, complétés par les défauts du registre. */
+/** Effective settings of a block: the account's, completed by the registry defaults. */
 export const widgetSettings = (
   id: HomeWidgetId,
   pref: HomeWidgetsPref | undefined,
@@ -117,7 +115,7 @@ export const widgetSettings = (
   rows: resolveRows(pref?.settings?.[id], HOME_WIDGETS[id].rows),
 });
 
-/** Applique un réglage à un bloc ; renvoie le patch de préférence. */
+/** Applies a setting to a block; returns the preference patch. */
 export const setWidgetSetting = (
   id: HomeWidgetId,
   patch: HomeWidgetSettings,
@@ -125,8 +123,8 @@ export const setWidgetSetting = (
 ): HomeWidgetsPref => genericSetSetting(id, patch, pref);
 
 /**
- * Enregistre une taille d'un seul geste : largeur et hauteur partent ensemble, parce que
- * la poignée les règle ensemble et qu'un enregistrement par axe doublerait les écritures.
+ * Saves a size in a single gesture: width and height go together, because the handle sets them
+ * together, and one save per axis would double the preference writes.
  */
 export const setWidgetSize = (
   id: HomeWidgetId,
@@ -134,21 +132,21 @@ export const setWidgetSize = (
   pref: HomeWidgetsPref | undefined,
 ): HomeWidgetsPref => genericSetSetting(id, { span: size.span, rows: size.rows }, pref);
 
-/** Réordonne la page après un déplacement ; renvoie le patch de préférence. */
+/** Reorders the page after a move; returns the preference patch. */
 export const reorderWidgets = (
   activeId: HomeWidgetId,
   overId: HomeWidgetId,
   pref: HomeWidgetsPref | undefined,
 ): HomeWidgetsPref => genericReorder(HOME_WIDGETS, activeId, overId, pref);
 
-/** Masque ou réaffiche un bloc ; renvoie le patch de préférence. */
+/** Hides or shows a block; returns the preference patch. */
 export const toggleWidget = (
   id: HomeWidgetId,
   visible: boolean,
   pref: HomeWidgetsPref | undefined,
 ): HomeWidgetsPref => genericToggle(HOME_WIDGETS, id, visible, pref);
 
-/** Rend à la page sa disposition d'origine. */
+/** Restores the page to its original layout. */
 export const resetWidgets = (): HomeWidgetsPref => genericReset(HOME_WIDGETS);
 
 export { spanClass } from '../../lib/widgetLayout';

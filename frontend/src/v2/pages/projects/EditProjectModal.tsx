@@ -13,7 +13,7 @@ import { Textarea } from '../../components/ui/textarea';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { useT, type MessageKey } from '../../i18n';
 
-/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+/** Translator passed to the label tables, recomputed on each render. */
 type Tr = (key: MessageKey) => string;
 
 const statusLabel = (t: Tr): Record<string, string> => ({
@@ -24,7 +24,7 @@ const statusLabel = (t: Tr): Record<string, string> => ({
 });
 const STATUS_OPTIONS: readonly ProjectStatus[] = ['ACTIVE', 'ON_HOLD', 'COMPLETED', 'ARCHIVED'];
 
-/** Modale d'édition d'un projet (extraite de ProjectsPage pour le budget de taille). */
+/** Edit modal for a project (extracted from ProjectsPage to stay within the size budget). */
 export default function EditProjectModal({
   project,
   onClose,

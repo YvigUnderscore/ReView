@@ -4,16 +4,16 @@
 import { useEffect, useState, type RefObject } from 'react';
 import type { DocChapter } from './docsRender';
 
-/** Marge haute (px) : un titre compte comme « atteint » un peu avant de toucher le bord. */
+/** Top margin (px): a heading counts as reached slightly before touching the edge. */
 const OFFSET = 96;
 
 /**
- * Chapitre en cours de lecture, suivi au défilement.
+ * Chapter currently being read, tracked on scroll.
  *
- * Mesure directe plutôt qu'`IntersectionObserver` : la question posée n'est pas « ce titre
- * est-il visible ? » mais « quel est le dernier titre franchi ? », et un titre suivi de
- * trois écrans de texte n'est visible sur aucun d'eux. La mesure est calée sur une frame
- * d'animation, donc au plus une par rendu.
+ * Direct measurement rather than `IntersectionObserver`: the question asked is not "is this
+ * heading visible?" but "what is the last heading passed?", and a heading followed by three
+ * screens of text is visible on none of them. The measurement is aligned to an animation frame,
+ * so at most one per render.
  */
 export function useActiveChapter(container: RefObject<HTMLElement | null>, chapters: DocChapter[]): string {
   const [active, setActive] = useState('');
@@ -21,7 +21,7 @@ export function useActiveChapter(container: RefObject<HTMLElement | null>, chapt
   useEffect(() => {
     const el = container.current;
     const first = chapters[0];
-    // Sans chapitre, la valeur retenue n'est plus lue : le sommaire ne s'affiche pas.
+    // Without a chapter, the retained value is no longer read: the table of contents is not shown.
     if (!el || !first) return;
 
     let frame = 0;

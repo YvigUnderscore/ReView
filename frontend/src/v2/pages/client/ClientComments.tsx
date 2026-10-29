@@ -14,10 +14,10 @@ import { frameOf } from './clientAnnotation';
 import { useT } from '../../i18n';
 
 /**
- * Fil de commentaires de la page client : notes rendues visibles au client par le studio,
- * horodatées quand elles portent sur une vidéo (clic = seek), et composeur pour les liens en
- * permission COMMENT. L'invité n'a pas de compte : son nom est saisi une fois et mémorisé
- * localement, rien de plus n'est demandé.
+ * Comment thread of the client page: notes the studio makes visible to the client,
+ * timestamped when they target a video (click = seek), and a composer for links with
+ * COMMENT permission. Guests have no account: their name is entered once and stored
+ * locally, and nothing more is asked.
  */
 export default function ClientComments({
   comments,
@@ -38,27 +38,27 @@ export default function ClientComments({
 }: {
   comments: ClientComment[];
   canComment: boolean;
-  /** Le média porte une notion de temps (vidéo) — affiche et rend cliquable l'horodatage. */
+  /** The media has a time axis (video): shows and makes the timestamp clickable. */
   timed: boolean;
-  /** Cadence et première frame du projet : de quoi citer un NUMÉRO, pas une durée. */
+  /** Project frame rate and start frame: enough to cite a FRAME NUMBER, not a duration. */
   fps: number;
   startFrame: number;
-  /** Note dont le dessin est affiché sur le viewer. */
+  /** Note whose drawing is shown on the viewer. */
   selectedId: number | null;
-  /** Sélection d'une note : rejoue ensemble son dessin et sa position. */
+  /** Selected note: replays its drawing and position together. */
   onSelect: (comment: ClientComment) => void;
-  /** Position dans le **média** (hors slate) demandée par le clic sur un horodatage. */
+  /** Position within the **media** (excluding slate) requested by a timestamp click. */
   onSeek: (mediaSeconds: number) => void;
   onSubmit: (guestName: string, content: string) => Promise<void>;
   composerRef: RefObject<HTMLTextAreaElement | null>;
-  /** Outils de dessin — posés SOUS le champ, là où la review interne met les siens. */
+  /** Drawing tools, placed BELOW the field, where the internal review puts its own. */
   annotationBar?: ReactNode;
-  /** Un dessin en cours suffit à envoyer : le texte devient facultatif. */
+  /** An in-progress drawing is enough to send: the text becomes optional. */
   hasAnnotation: boolean;
-  /** Le nom sous lequel l'invité s'exprime — partagé avec sa réponse, pas dupliqué ici. */
+  /** The name the guest speaks under, shared with their reply rather than duplicated here. */
   guestName: string;
   onGuestName: (name: string) => void;
-  /** Bloc « votre réponse », posé au-dessus du fil quand le lien autorise à se prononcer. */
+  /** "Your reply" block, placed above the thread when the link allows a verdict. */
   decision?: ReactNode;
 }) {
   const t = useT();
@@ -67,7 +67,7 @@ export default function ClientComments({
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Un dessin vaut un retour : on n'exige le texte que s'il n'y a rien d'autre à envoyer.
+    // A drawing is feedback in itself: require text only when there is nothing else to send.
     if (!guestName.trim() || (!content.trim() && !hasAnnotation) || busy) return;
     setBusy(true);
     try {
@@ -80,15 +80,15 @@ export default function ClientComments({
 
   return (
     <aside className="flex w-full flex-col rounded-lg border border-border bg-card lg:w-80">
-      {/* La réponse passe AVANT le fil : c'est ce qu'on attend du client, la note vient
-          l'étayer. */}
+      {/* The reply goes BEFORE the thread: that is what is expected of the client, and the note
+          backs it up. */}
       {decision}
       <h2 className="border-b border-border px-4 py-3 text-sm font-semibold">{t('admin.tab.comments')}</h2>
       <div className="min-h-0 flex-1 space-y-3 overflow-y-auto p-4">
         {comments.length === 0 && <p className="text-sm text-muted-foreground">{t('comments.empty')}</p>}
         {comments.map((c) => {
-          // Une note qui porte un dessin s'annonce : sans repère, le client ne sait pas
-          // qu'un clic ferait apparaître un trait sur l'image.
+          // A note carrying a drawing is flagged: without a cue, the client would not know
+          // that clicking it shows a stroke on the image.
           const hasDrawing = splitAnnotationParts(c.annotation).shapes.length > 0;
           return (
             <div
@@ -116,19 +116,19 @@ export default function ClientComments({
                     }}
                     className="flex items-center gap-1 rounded bg-primary/15 px-1.5 py-0.5 text-primary hover:bg-primary/25"
                   >
-                    {/* Un studio parle en frames. L'heure reste lisible pour qui scrube, le
-                      numéro est ce que l'artiste retrouve dans son logiciel. */}
+                    {/* A studio speaks in frames. The time stays readable for whoever scrubs, while the
+                      number is what the artist finds in their software. */}
                     <Clock size={11} /> {formatTime(c.timestamp)} · {frameOf(c.timestamp, fps, startFrame)}
                   </button>
                 )}
               </div>
-              {/* Contenu déjà assaini côté serveur (sanitizeHtml) — affiché en texte brut,
-                  replié d'office s'il est trop grand (D6). */}
+              {/* Content already sanitized server-side (sanitizeHtml): displayed as plain text,
+                  collapsed by default if too large (D6). */}
               <CollapsibleText text={c.content}>
                 <p className="whitespace-pre-wrap break-words">{c.content.replace(/<[^>]+>/g, '')}</p>
               </CollapsibleText>
-              {/* Images jointes par le studio : invisibles du client jusqu'ici, faute d'être
-                  servies ET rendues. Mêmes vignettes et même carrousel que côté studio. */}
+              {/* Images attached by the studio: invisible to the client until now, for lack of being
+                  served AND rendered. Same thumbnails and same carousel as on the studio side. */}
               {c.attachments && c.attachments.length > 0 && (
                 <CommentAttachmentList attachments={c.attachments} stop={(e) => e.stopPropagation()} />
               )}

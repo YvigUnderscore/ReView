@@ -35,11 +35,11 @@ import SgSyncDot from '../../components/shotgrid/SgSyncDot';
 import { useUrlFilters } from '../../lib/useUrlFilters';
 
 /**
- * Onglet Shots : création en lot, cartes groupées par séquence, filtres partagés (C4).
+ * Shots tab: batch creation, cards grouped by sequence, shared filters (C4).
  *
- * La liste n'avait ni recherche ni filtre : sur un long-métrage — deux mille plans — il
- * n'existait aucun moyen d'y retrouver quoi que ce soit autrement qu'en faisant défiler.
- * Les critères et les présélections nommées sont les mêmes qu'au kanban.
+ * The list had neither search nor filter: on a feature film (two thousand shots) there was no way
+ * to find anything in it other than scrolling. The criteria and named presets are the same as on
+ * the kanban.
  */
 export default function ShotsTab({
   projectId,
@@ -59,28 +59,28 @@ export default function ShotsTab({
   const t = useT();
   const navigate = useNavigate();
   const view = useViewMode(`shots:${projectId}`);
-  // Suivi de notifications par shot (32.G, clic droit).
+  // Notification tracking per shot (32.G, right-click).
   const watch = useWatch();
   const [editing, setEditing] = useState<Shot | null>(null);
   const [deleting, setDeleting] = useState<Shot | null>(null);
   const [bulkDeleting, setBulkDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useUrlFilters('shots');
-  // Même liste que la page (même clé de cache), consultée ici pour ce qu'elle sait d'elle :
-  // combien de plans existent, et s'il en reste à descendre. Un filtre posé sur une page
-  // tronquée répondrait « aucun plan » pour un plan qui existe : on descend alors tout.
+  // Same list as the page (same cache key), consulted here for what it knows about itself: how many
+  // shots exist and whether any remain to be loaded. A filter set on a truncated page would answer
+  // "no shot" for a shot that exists, so we then load everything.
   const paging = useShotsQuery(projectId, projectId > 0, { all: activeCount(filters) > 0 });
   const { data: statuses = [] } = usePipelineStatuses('shot', projectId);
-  // Statut par clic droit : le geste le plus fréquent de la production n'a plus à passer
-  // par la fiche du plan puis son panneau de réglages.
+  // Status by right-click: the most frequent gesture of production no longer has to go through the
+  // shot's sheet and then its settings panel.
   const { entry: statusEntry } = useStatusMenu(projectId, 'shot');
-  // Omission du montage : décision de production, elle aussi au clic droit (UI simple).
+  // Omission from the edit: a production decision, also on right-click (simple UI).
   const { entry: omitEntry } = useOmitMenu(projectId);
   const { data: departments = [] } = useDepartments(projectId, projectId > 0);
-  // Personnes responsables et masquage : deux gestes de carte, au clic droit.
+  // Responsible people and hiding: two card gestures, on right-click.
   const { peopleEntry, hideEntry, dialog: entityDialog } = useEntityMenus(projectId, 'shots');
 
-  // Drawer piloté par l'URL (?shot=ID) : back/forward et partage de lien cohérents (10.A6)
+  // Drawer driven by the URL (?shot=ID): back/forward and link sharing stay consistent (10.A6)
 
   const sortedSequences = sortByCode(sequences);
 
@@ -109,10 +109,10 @@ export default function ShotsTab({
   };
 
   /**
-   * Même composition que sur les sequences : le code fait le titre, le nom passe en dessous.
-   * Les deux écrans montrent la même chose et se lisaient différemment — le plan alignait
-   * « SH010 · Wide establishing » sur une ligne, la sequence empilait. Et comme sur les
-   * sequences, le nom disparaît quand il répète le code : la plupart des imports le font.
+   * Same composition as on the sequences: the code makes the title, the name goes beneath.
+   * The two screens show the same thing and were read differently: the shot lined up
+   * "SH010 · Wide establishing" on one line, while the sequence stacked them. And as on the
+   * sequences, the name disappears when it repeats the code: most imports do that.
    */
   const subtitleFor = (shot: Shot): string | undefined =>
     [
@@ -129,8 +129,8 @@ export default function ShotsTab({
     sequenceId: shot.sequenceId,
     departmentIds: shot.departments?.map((d) => d.id),
   }));
-  // La sélection ne porte que sur ce qui est affiché — comme sur les assets : une action
-  // de masse ne doit jamais atteindre une ligne que le filtre a écartée de la vue.
+  // The selection covers only what is displayed, as on assets: a bulk action must never reach a row
+  // that the filter has set aside from view.
   const sel = useMultiSelect(visible.map((s) => s.id));
 
   const confirmBulkDelete = async () => {
@@ -151,7 +151,7 @@ export default function ShotsTab({
       list: visible.filter((sh) => sh.sequenceId === s.id),
     })),
     { seq: null as Sequence | null, list: visible.filter((sh) => sh.sequenceId === null) },
-    // Un groupe vide n'apporte rien quand on filtre : il n'y a plus rien à y ranger.
+    // An empty group is of no use when filtering: there is nothing left to file in it.
   ].filter((g) => g.list.length > 0);
 
   const sgLinks = useSgLinks(projectId);
@@ -219,8 +219,8 @@ export default function ShotsTab({
       {groups.map((g) => (
         <section key={g.seq?.id ?? 'none'} className="mb-6">
           <h3 className="mb-2 text-xs font-semibold section-label text-muted-foreground">
-            {/* Le titre du groupe mène à la séquence : c'est le chemin qu'on cherche en
-                regardant ses plans, et il n'existait nulle part depuis cet onglet. */}
+            {/* The group title leads to the sequence: it is the path one looks for while browsing its
+                shots, and it did not exist anywhere from this tab. */}
             {g.seq ? (
               <Link
                 to={`/sequences/${g.seq.id}`}
@@ -235,8 +235,8 @@ export default function ShotsTab({
           </h3>
           <EntityContainer view={view}>
             {g.list.map((shot) => {
-              // Menu commun aux trois onglets (`entityCardMenu`) : même ordre, même
-              // vocabulaire. Le lien ShotGrid n'apparaît que si le projet y est relié.
+              // Menu shared by the three tabs (`entityCardMenu`): same order, same vocabulary. The
+              // ShotGrid link only appears if the project is linked to it.
               const menu = entityCardMenu({
                 t,
                 kind: 'shot',
@@ -277,8 +277,8 @@ export default function ShotsTab({
                   }}
                   badge={
                     <span className="flex items-center gap-1">
-                      {/* Coupé au montage : la carte le dit, sinon la case cochée du clic
-                          droit serait le seul endroit où l'état existe. */}
+                      {/* Cut at mounting: the card says so, otherwise the checkbox ticked by right-click
+                          would be the only place where the state exists. */}
                       {shot.omitted && (
                         <span title={t('shots.omitted')} className="text-muted-foreground">
                           <EyeOff size={12} />
@@ -304,8 +304,8 @@ export default function ShotsTab({
         </section>
       ))}
 
-      {/* Hors des groupes : un filtre peut n'en laisser aucun à l'écran, et c'est
-          justement là qu'il faut pouvoir descendre la suite de la liste. */}
+      {/* Outside the groups: a filter may leave none on screen, and that is precisely where one must
+          be able to scroll further down the list. */}
       <ListSentinel hasMore={paging.hasMore} isLoading={paging.isFetchingMore} onLoadMore={paging.loadMore} />
 
       {canManage && (

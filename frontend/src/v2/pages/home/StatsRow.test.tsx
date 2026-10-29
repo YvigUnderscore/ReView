@@ -8,13 +8,13 @@ import StatsRow from './StatsRow';
 import { t } from '../../i18n';
 
 /**
- * Où mènent les quatre compteurs de l'Accueil.
+ * Where the four home counters lead.
  *
- * Deux d'entre eux pointaient l'ancre `#my-tasks` : elle disparaissait avec le bloc
- * « mes tâches » dès qu'on le retirait de son accueil, et le clic ne faisait alors plus
- * rien. Les deux autres menaient à `/reviews` sans filtre, où rien ne correspondait au
- * chiffre affiché. Chaque carte doit ouvrir SA vue — sinon personne ne peut vérifier son
- * chiffre, et c'est là qu'un compteur se met à mentir sans qu'on le sache.
+ * Two of them pointed to the `#my-tasks` anchor: it vanished with the "my tasks" block as soon as
+ * that block was removed from the home page, and the click then did nothing. The other two led to
+ * `/reviews` without a filter, where nothing matched the displayed figure. Each card must open
+ * ITS view, otherwise nobody can verify its figure, and that is where a counter starts lying
+ * without anyone noticing.
  */
 
 const stats = {
@@ -28,7 +28,7 @@ const stats = {
 };
 
 describe('StatsRow', () => {
-  it('ouvre une vue filtrée par compteur, et plus aucune ancre morte', () => {
+  it('opens a per-counter filtered view, with no dead anchor left', () => {
     renderWithProviders(<StatsRow stats={stats} />);
     const targets = screen.getAllByRole('link').map((a) => a.getAttribute('href'));
     expect(targets).toEqual([
@@ -40,10 +40,10 @@ describe('StatsRow', () => {
     expect(targets.some((href) => href?.startsWith('#'))).toBe(false);
   });
 
-  it('dit « ce qu’on attend de moi » à la place de « awaiting review »', () => {
+  it('says "what is expected of me" instead of "awaiting review"', () => {
     renderWithProviders(<StatsRow stats={stats} />);
     expect(screen.getByText(t('home.stat.awaitingMyReview'))).toBeInTheDocument();
-    // Le libellé de la quatrième carte n'est plus emprunté au filtre du fil de review.
+    // The label of the fourth card is no longer borrowed from the review feed's filter.
     expect(screen.getByText(t('home.stat.comments'))).toBeInTheDocument();
     expect(screen.queryByText(t('comments.filter.all'))).toBeNull();
   });

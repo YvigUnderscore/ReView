@@ -13,11 +13,11 @@ import type { PlaylistDetail, PlaylistItemEntry } from '../../types/api';
 import { useT } from '../../i18n';
 
 /**
- * Contenu ordonné de la playlist, à droite du catalogue (C5).
+ * Ordered content of the playlist, to the right of the catalogue (C5).
  *
- * Réordonner échouait dès qu'une seule version de la playlist passait à la corbeille :
- * l'écran renvoyait la liste qu'il affiche, le serveur exigeait la liste complète. Le
- * serveur accepte désormais un ordre partiel — c'est corrigé côté service.
+ * Reordering failed as soon as a single version of the playlist was moved to the trash: the screen
+ * sent back the list it displays, while the server required the complete list. The server now
+ * accepts a partial order; this is fixed on the service side.
  */
 export default function PlaylistContent({
   playlist,
@@ -97,7 +97,7 @@ export default function PlaylistContent({
         {items.map((item, index) => (
           <EntityContextMenu key={item.id} entries={menuFor(item, index)}>
             <li className="border-b border-border/50 last:border-b-0">
-              {/* L'interaction vit sur un bouton interne : le <li> reste non interactif (a11y). */}
+              {/* The interaction lives on an inner button: the <li> stays non-interactive (a11y). */}
               <button
                 type="button"
                 onClick={() => open(item)}

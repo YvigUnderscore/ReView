@@ -9,14 +9,14 @@ import { SkeletonRows } from '../../../components/ui/skeleton';
 import type { ProductionOverview } from '../../../types/production';
 
 /**
- * Ce qui bloque : en retard, sans assigné, en attente de review.
+ * What is blocking: overdue, unassigned, awaiting review.
  *
- * Le panneau existe depuis la phase 43 et ne vivait que dans l'onglet Production — c'est-à-dire
- * à deux clics de la page qu'un superviseur ouvre en premier. Il lit la même route, avec la
- * fenêtre de rythme par défaut : la vue d'ensemble ne règle pas de fenêtre, elle annonce.
+ * The panel has existed since phase 43 and lived only in the Production tab, that is, two clicks
+ * away from the page a supervisor opens first. It reads the same route, with the default pace
+ * window: the overview does not set a window, it announces.
  *
- * `requireProjectManage` côté serveur : le bloc n'existe que pour qui gère le projet, et le
- * registre le sait (`manage: true`) — il n'est donc jamais proposé aux autres.
+ * `requireProjectManage` on the server side: the block exists only for those who manage the
+ * project, and the registry knows it (`manage: true`), so it is never offered to the others.
  */
 const DEFAULT_WEEKS = 8;
 

@@ -13,16 +13,16 @@ import { useProjectActivity, type ActivityTask, type ProjectActivity } from './u
 import { useT } from '../../../i18n';
 
 /**
- * Les tâches à traiter, les plus urgentes d'abord — statut et assignation au clic, pour qui
- * gère le projet.
+ * The tasks to handle, most urgent first: status and assignment on click, for whoever manages the
+ * project.
  *
- * Les deux mutations écrivent d'abord le cache, appellent ensuite : un statut qui met une
- * seconde à s'afficher se re-clique, et se re-clique à tort. L'échec invalide, ce qui remet
- * la ligne dans l'état du serveur.
+ * Both mutations write the cache first, then call: a status that takes a second to display gets
+ * clicked again, and is wrongly clicked again. A failure invalidates, which puts the row back into
+ * the server's state.
  *
- * `limit` est ce que la carte peut montrer — la hauteur réglée traduite en lignes : une
- * carte haute liste réellement plus de tâches, là où le plafond figé de vingt-cinq lignes
- * débordait d'une petite carte et laissait du vide dans une grande.
+ * `limit` is what the card can show: the height set, translated into rows. A tall card really lists
+ * more tasks, whereas the fixed ceiling of twenty-five rows overflowed a small card and left empty
+ * space in a large one.
  */
 
 export default function TasksWidget({
@@ -47,8 +47,8 @@ export default function TasksWidget({
     );
   const rollback = () => qc.invalidateQueries({ queryKey: qk.projectActivity(projectId) });
 
-  // Les deux valeurs avancent ensemble : le référentiel porte le vocabulaire du site,
-  // l'énumération reste ce sur quoi s'appuient le kanban, les statistiques et l'API v1.
+  // The two values move together: the reference data carries the site's vocabulary, while the
+  // enumeration remains what the kanban, the statistics and the v1 API rely on.
   const setStatus = async (taskId: number, next: { statusId: number | null; legacyStatus: TaskStatus }) => {
     patchTask(taskId, { status: next.legacyStatus, pipelineStatusId: next.statusId });
     try {

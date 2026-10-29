@@ -11,22 +11,20 @@ import type { WidgetSpan, WidgetVariant } from './homeWidgets';
 import { useT } from '../../i18n';
 
 /**
- * Projets de l'Accueil, en liste ou en grande grille (C2).
+ * Home projects, as a list or a large grid (C2).
  *
- * La liste compacte convenait à une colonne latérale, mais elle rendait le projet — ce
- * qu'on vient chercher en premier — moins visible que le reste de la page. La variante
- * « grille » en fait l'élément le plus grand de l'accueil : une vignette par projet,
- * cliquable en entier, avec son avancement. Un studio qui n'a qu'un projet obtient une
- * tuile pleine largeur.
+ * The compact list suited a side column, but it made the project (what one comes for first) less
+ * visible than the rest of the page. The "grid" variant makes it the largest element of the home
+ * page: one thumbnail per project, fully clickable, with its progress. A studio with a single
+ * project gets a full-width tile.
  *
- * Lot 13 : le bloc porte une emprise (largeur en colonnes, hauteur en rangées) et son
- * contenu la suit. La **largeur** décide du nombre de colonnes de tuiles — une tuile de
- * projet est bien plus grande qu'une vignette de média, elle a donc sa propre rampe — et la
- * **hauteur** décide du nombre de rangées montrées. « Tous les projets », en haut du bloc,
- * mène au reste.
+ * Batch 13: the block carries a footprint (width in columns, height in rows) and its content
+ * follows it. The **width** decides the number of tile columns (a project tile is much larger
+ * than a media thumbnail, so it has its own scale), and the **height** decides the number of rows
+ * shown. "All projects", at the top of the block, leads to the rest.
  */
 
-/** Colonnes de tuiles selon la largeur du bloc, et les classes qui les portent. */
+/** Tile columns according to the block's width, and the classes that carry them. */
 const TILE_COLUMNS: Record<WidgetSpan, { count: number; className: string }> = {
   3: { count: 1, className: 'grid-cols-1' },
   4: { count: 2, className: 'grid-cols-1 sm:grid-cols-2' },
@@ -35,10 +33,10 @@ const TILE_COLUMNS: Record<WidgetSpan, { count: number; className: string }> = {
   12: { count: 4, className: 'grid-cols-2 lg:grid-cols-4' },
 };
 
-/** Hauteur d'une tuile : son 16/9 (environ 150 px à quatre colonnes) plus son pied. */
+/** Height of a tile: its 16/9 (about 150 px at four columns) plus its footer. */
 const TILE_LINE = 200;
 
-/** Hauteur d'une ligne de liste : sa vignette (`h-8`) et ses marges (`py-1.5`). */
+/** Height of a list row: its thumbnail (`h-8`) and its margins (`py-1.5`). */
 const ROW_LINE = 44;
 
 function Progress({ p, compact }: { p: DashboardProject; compact?: boolean }) {
@@ -84,8 +82,8 @@ export default function RecentProjects({
       {projects.length === 0 ? (
         <p className="py-4 text-center text-sm text-muted-foreground">{t('home.noProject')}</p>
       ) : grid ? (
-        // Une seule tuile quand il n'y a qu'un projet à montrer : ouvrir plusieurs colonnes
-        // pour n'en remplir qu'une donnerait un bloc bancal.
+        // A single tile when there is only one project to show: opening several columns to fill
+        // only one would produce a lopsided block.
         <div className={`grid gap-3 ${shown.length === 1 ? 'grid-cols-1' : tiles.className}`}>
           {shown.map((p) => (
             <Link
@@ -93,8 +91,8 @@ export default function RecentProjects({
               to={projectPath(p)}
               className="group flex flex-col overflow-hidden rounded-lg border border-border transition-colors hover:border-primary"
             >
-              {/* Bornée en hauteur : sur un projet unique, un 16/9 pleine largeur occupait
-                  tout l'écran et repoussait le reste de la page hors du champ. */}
+              {/* Capped in height: on a single project, a full-width 16/9 would fill the whole
+                  screen and push the rest of the page out of view. */}
               <span className="relative block aspect-video max-h-72 w-full overflow-hidden bg-muted">
                 <EntityThumb
                   url={p.thumbnailUrl}

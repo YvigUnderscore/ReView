@@ -5,22 +5,22 @@ import type { PlaylistItemEntry } from '../../types/api';
 import { findPlayableNeighbor } from '../review/playlistNav';
 
 /**
- * Enchaînement d'une playlist en review (constat vague 5).
+ * Chaining of a playlist under review (finding from wave 5).
  *
- * La fin d'un média ne faisait rien : passer vingt plans en dailies demandait vingt clics
- * sur la flèche « suivant » — et en salle live, vingt clics du pilote. Le montage
- * automatique enchaîne depuis la Phase 45 (`useTimelineChain`) ; on reprend la même
- * mécanique, appliquée aux items d'une playlist, avec une bascule pour la désarmer.
+ * The end of a media did nothing: going through twenty shots in dailies required twenty clicks on
+ * the "next" arrow, and in a live room, twenty clicks from the driver. The automatic edit has
+ * chained since Phase 45 (`useTimelineChain`). The same mechanism is reused here, applied to the
+ * items of a playlist, with a toggle to disarm it.
  */
 
 /**
- * Rang de l'item qui porte ce média. Les items d'une playlist désignent des **versions** ;
- * la review, elle, connaît le média affiché — c'est par lui qu'on retrouve sa place.
+ * Rank of the item that carries this media. Playlist items designate **versions**; the review,
+ * however, knows the displayed media, and that is how its place is found.
  */
 export const itemIndexOfMedia = (items: PlaylistItemEntry[], mediaId: number): number =>
   items.findIndex((it) => it.media?.id === mediaId);
 
-/** Item lisible suivant (les versions sans média visible sont sautées), null en fin de liste. */
+/** Next playable item (versions without a visible media are skipped), null at the end of the list. */
 export function nextPlayableAfterMedia(
   items: PlaylistItemEntry[],
   mediaId: number,
@@ -31,7 +31,7 @@ export function nextPlayableAfterMedia(
 
 const STORAGE_KEY = 'review:playlist:autoAdvance';
 
-/** Enchaînement armé par défaut : c'est ce qu'on attend d'une session de dailies. */
+/** Chaining armed by default: this is what is expected of a dailies session. */
 export const loadAutoAdvance = (): boolean => {
   try {
     return localStorage.getItem(STORAGE_KEY) !== '0';
@@ -44,6 +44,6 @@ export const saveAutoAdvance = (enabled: boolean): void => {
   try {
     localStorage.setItem(STORAGE_KEY, enabled ? '1' : '0');
   } catch {
-    // Stockage indisponible (navigation privée) : choix de session seulement.
+    // Storage unavailable (private browsing): the choice holds for the session only.
   }
 };

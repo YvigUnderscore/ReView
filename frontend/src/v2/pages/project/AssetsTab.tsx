@@ -40,10 +40,10 @@ import { assetTypeLabel } from '../../lib/entityTypeLabels';
 import { useUrlFilters } from '../../lib/useUrlFilters';
 
 /**
- * Onglet Assets réutilisables : création, cartes, assignation, filtres partagés (C4).
+ * Reusable Assets tab: creation, cards, assignment, shared filters (C4).
  *
- * La liste n'avait ni recherche ni filtre — mille assets sur un long-métrage, à faire
- * défiler. Les critères et les présélections nommées sont ceux du kanban et des plans.
+ * The list had neither search nor filter: a thousand assets on a feature film, to scroll through.
+ * The criteria and named presets are those of the kanban and of the shots.
  */
 export default function AssetsTab({
   projectId,
@@ -59,7 +59,7 @@ export default function AssetsTab({
   const t = useT();
   const view = useViewMode(`assets:${projectId}`);
   const navigate = useNavigate();
-  // Suivi de notifications par asset (32.G, clic droit).
+  // Notification tracking per asset (32.G, right-click).
   const watch = useWatch();
   const [creating, setCreating] = useState(false);
   const [deleting, setDeleting] = useState<AssetListItem | null>(null);
@@ -69,9 +69,9 @@ export default function AssetsTab({
   const [editing, setEditing] = useState<AssetListItem | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useUrlFilters('assets');
-  // Même liste que la page (même clé de cache) : on y lit combien d'assets existent et
-  // s'il en reste à descendre. Filtrer une liste tronquée mentirait sur le résultat, donc
-  // un critère posé fait descendre toutes les pages.
+  // Same list as the page (same cache key): it tells how many assets exist and whether any remain
+  // to be loaded. Filtering a truncated list would lie about the result, so a criterion set loads
+  // all the pages.
   const paging = useAssetsQuery(projectId, projectId > 0, { all: activeCount(filters) > 0 });
   const { data: departments = [] } = useDepartments(projectId, projectId > 0);
 
@@ -80,11 +80,11 @@ export default function AssetsTab({
     type: a.type,
     departmentIds: a.departments?.map((d) => d.id),
   }));
-  // La sélection ne porte que sur ce qui est affiché : une action de masse ne doit jamais
-  // atteindre des lignes que le filtre a écartées de la vue.
+  // The selection covers only what is displayed: a bulk action must never reach rows that the
+  // filter has set aside from view.
   const sel = useMultiSelect(visible.map((a) => a.id));
-  // Assignation par clic droit : confier un asset demandait d'ouvrir chacune de ses
-  // tâches, une par une.
+  // Assignment by right-click: giving an asset to someone used to require opening each of its
+  // tasks, one by one.
   const { assignEntry } = useAssignMenu(projectId, 'asset');
   const { peopleEntry, hideEntry, dialog: entityDialog } = useEntityMenus(projectId, 'assets');
 
@@ -179,8 +179,8 @@ export default function AssetsTab({
       ) : (
         <EntityContainer view={view}>
           {visible.map((a) => {
-            // Menu commun aux trois onglets (`entityCardMenu`) : même ordre, même
-            // vocabulaire, quelles que soient les entrées que ce type d'entité offre.
+            // Menu shared by the three tabs (`entityCardMenu`): same order, same vocabulary, whatever
+            // entries this entity type offers.
             const menu = entityCardMenu({
               t,
               kind: 'asset',
@@ -237,8 +237,8 @@ export default function AssetsTab({
         </EntityContainer>
       )}
 
-      {/* Hors du bloc de liste : un filtre peut ne rien laisser à l'écran, et c'est
-          justement là qu'il faut pouvoir descendre la suite. */}
+      {/* Outside the list block: a filter may leave nothing on screen, and that is precisely
+          where one must be able to scroll further. */}
       <ListSentinel hasMore={paging.hasMore} isLoading={paging.isFetchingMore} onLoadMore={paging.loadMore} />
 
       {canManage && (
@@ -253,7 +253,7 @@ export default function AssetsTab({
               onClick: () => setBulkAssigning(true),
             },
             {
-              // Le geste met à la corbeille (`softDelete`) — le dire, comme sur la carte.
+              // The gesture moves to the trash (`softDelete`): say so, as on the card.
               label: t('common.moveToTrash'),
               icon: <Trash2 size={14} />,
               danger: true,

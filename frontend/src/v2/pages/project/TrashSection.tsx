@@ -7,10 +7,10 @@ import { idsOf, isSelected, type TrashSelection } from './trashSelection';
 import { useT } from '../../i18n';
 
 /**
- * Une section de la corbeille — un domaine, ses éléments.
+ * A section of the trash: one domain, and its items.
  *
- * Elle ne détient plus la sélection : celle-ci vit dans l'onglet, pour que « tout
- * sélectionner » veuille dire tout et non « tout, dans cette section ».
+ * It no longer holds the selection: that lives in the tab, so that "select all" means all, and not
+ * "all, within this section".
  */
 
 export interface TrashItem {
@@ -19,7 +19,7 @@ export interface TrashItem {
   endpoint: string;
 }
 
-/** Case cochable qui capte les modificateurs — le clavier les porte aussi bien. */
+/** Checkbox that captures modifier keys: the keyboard handles them just as well. */
 function Box({
   checked,
   label,
