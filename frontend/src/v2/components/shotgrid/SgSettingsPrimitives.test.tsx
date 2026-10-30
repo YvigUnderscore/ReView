@@ -6,14 +6,14 @@ import { render, screen } from '@testing-library/react';
 import { Row, SettingNumber, SettingSelect } from './SgSettingsPrimitives';
 
 /**
- * Le libellé d'une ligne de réglages doit nommer son contrôle.
+ * A settings row label must name its control.
  *
- * Il vivait dans un `<div>` : la page se lit à l'œil, mais un lecteur d'écran énumérait dix
- * « listes déroulantes » indiscernables. Ces trois cas tiennent l'association — et le fait
- * qu'un champ posé hors d'une ligne garde son dernier recours.
+ * It lived in a `<div>`: the page reads fine by eye, but a screen reader listed ten
+ * indistinguishable "dropdowns". These three cases cover the association, and the fact
+ * that a field placed outside a row keeps its last-resort name.
  */
 describe('Row', () => {
-  it('donne son libellé au sélecteur qu’elle porte', () => {
+  it('gives its label to the select it carries', () => {
     render(
       <Row label="Mode de publication">
         <SettingSelect value="link" onChange={() => {}}>
@@ -25,8 +25,8 @@ describe('Row', () => {
     expect(screen.getByRole('combobox', { name: 'Mode de publication' })).toBeInTheDocument();
   });
 
-  it('nomme le champ numérique par la ligne, pas par son placeholder', () => {
-    // « Sans limite » est un exemple de valeur, pas le nom du réglage.
+  it('names the numeric field by its row, not by its placeholder', () => {
+    // "Sans limite" is an example value, not the name of the setting.
     render(
       <Row label="Taille maximale">
         <SettingNumber value={12} placeholder="Sans limite" onChange={() => {}} />
@@ -36,7 +36,7 @@ describe('Row', () => {
     expect(screen.getByRole('spinbutton', { name: 'Taille maximale' })).toBeInTheDocument();
   });
 
-  it('retombe sur le placeholder quand le champ est posé hors d’une ligne', () => {
+  it('falls back on the placeholder when the field is placed outside a row', () => {
     render(<SettingNumber value="" placeholder="Sans limite" onChange={() => {}} />);
 
     expect(screen.getByRole('spinbutton', { name: 'Sans limite' })).toBeInTheDocument();

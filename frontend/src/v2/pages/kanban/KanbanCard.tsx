@@ -11,7 +11,7 @@ import EntityContextMenu from '../../components/ui/entity-menu';
 import type { MenuEntry } from '../../lib/menuSpec';
 import type { BoardTask } from './kanbanTypes';
 
-/** Contenu visuel d'une carte (partagé entre la carte draggable et le DragOverlay). */
+/** Visual content of a card, shared between the draggable card and the DragOverlay. */
 export const KanbanCardBody = memo(function KanbanCardBody({
   task,
   dragging,
@@ -48,20 +48,19 @@ export const KanbanCardBody = memo(function KanbanCardBody({
 });
 
 /**
- * Carte déplaçable : le drag ne s'active qu'après un mouvement (le clic ouvre la tâche).
+ * Draggable card: the drag only activates after a movement (a click opens the task).
  *
- * La carte reçoit le **constructeur** de son menu, pas ses entrées : construire quinze
- * entrées de statut par carte au niveau de la page annulait toute mémoïsation, puisque
- * le tableau d'entrées était neuf à chaque rendu. Ici, tant que la tâche et le
- * constructeur ne bougent pas, la carte ne se rend pas du tout — c'est ce qui permet à
- * une frappe dans la recherche de ne pas rejouer les cartes d'une colonne dense.
+ * The card receives the **builder** of its menu, not its entries: building fifteen status entries
+ * per card at page level cancelled any memoization, since the entries array was new on each
+ * render. Here, as long as the task and the builder do not change, the card does not render at
+ * all, which is what lets a keystroke in the search avoid replaying the cards of a dense column.
  */
 function KanbanCard({
   task,
   menuFor,
 }: {
   task: BoardTask;
-  /** Menu contextuel de la carte — le statut s'y change sans traverser le board. */
+  /** Context menu of the card: the status is changed there without going through the board. */
   menuFor?: (task: BoardTask) => MenuEntry[];
 }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: task.id });
@@ -77,7 +76,7 @@ function KanbanCard({
     </div>
   );
   if (entries.length === 0) return card;
-  // `nested` : le board porte son propre menu contextuel, les deux s'ouvriraient ensemble.
+  // `nested`: the board has its own context menu, and the two would open together.
   return (
     <EntityContextMenu entries={entries} nested>
       {card}

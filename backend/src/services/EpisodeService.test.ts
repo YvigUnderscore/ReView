@@ -4,9 +4,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * Le niveau Épisode est facultatif : tout ce qui suit vérifie qu'un projet où il est
- * éteint — le cas par défaut, celui du long-métrage — ne peut ni recevoir ni montrer
- * d'épisode, et que l'éteindre ne détruit rien.
+ * The Episode level is optional: everything below checks that a project where it is switched off — the
+ * default case, that of a feature film — can neither receive nor show
+ * an episode, and that switching it off destroys nothing.
  */
 
 const { db, thumbs, store } = vi.hoisted(() => ({
@@ -38,7 +38,7 @@ const { db, thumbs, store } = vi.hoisted(() => ({
 
 vi.mock('../lib/prisma', () => ({ prisma: db }));
 vi.mock('../lib/thumbnails', () => thumbs);
-vi.mock('./StorageService', () => store);
+vi.mock('../lib/storage', () => store);
 
 import * as EpisodeService from './EpisodeService';
 import { AppError } from '../lib/errors';
@@ -52,13 +52,13 @@ beforeEach(() => {
   db.$transaction.mockImplementation((ops: unknown[]) => Promise.resolve(ops));
 });
 
-describe('le réglage', () => {
-  it('vaut faux sur un projet qui ne le connaît pas', async () => {
+describe('the setting', () => {
+  it('is false on a project that does not know it', async () => {
     db.project.findUnique.mockResolvedValue(null);
     expect(await EpisodeService.isEnabled(7)).toBe(false);
   });
 
-  it('refuse toute opération en 409 tant qu’il est éteint', async () => {
+  it('refuses any operation with a 409 while it is switched off', async () => {
     enabled(false);
     await expect(EpisodeService.assertEnabled(7)).rejects.toMatchObject({
       statusCode: 409,
@@ -66,14 +66,14 @@ describe('le réglage', () => {
     });
   });
 
-  it('laisse passer une fois allumé', async () => {
+  it('lets it through once switched on', async () => {
     enabled(true);
     await expect(EpisodeService.assertEnabled(7)).resolves.toBeUndefined();
   });
 
-  it('éteindre ne supprime ni épisode ni rattachement', async () => {
-    // Le comportement retenu : un interrupteur d'affichage ne détruit pas de la donnée
-    // que personne n'a demandé à perdre. Tout doit revenir intact à la réactivation.
+  it('switching off deletes neither episode nor attachment', async () => {
+    // The adopted behaviour: a display switch does not destroy data that nobody asked to lose. Everything
+    // must come back intact on reactivation.
     db.project.update.mockResolvedValue({ id: 7 });
     enabled(false);
     await EpisodeService.setEnabled(7, false);
@@ -86,7 +86,7 @@ describe('le réglage', () => {
     expect(db.sequence.updateMany).not.toHaveBeenCalled();
   });
 
-  it('annonce ce que la désactivation va masquer', async () => {
+  it('announces what deactivation is going to hide', async () => {
     enabled(true);
     db.episode.count.mockResolvedValue(6);
     db.sequence.count.mockResolvedValue(31);
@@ -98,14 +98,14 @@ describe('le réglage', () => {
   });
 });
 
-describe('création', () => {
-  it('refuse tant que le niveau est éteint', async () => {
+describe('creation', () => {
+  it('refuses while the level is switched off', async () => {
     enabled(false);
     await expect(EpisodeService.create(7, { name: 'EP101', code: 'EP101' })).rejects.toBeInstanceOf(AppError);
     expect(db.episode.create).not.toHaveBeenCalled();
   });
 
-  it('refuse un code déjà pris', async () => {
+  it('refuses a code already taken', async () => {
     enabled(true);
     db.episode.findUnique.mockResolvedValue({ id: 3 });
     await expect(EpisodeService.create(7, { name: 'EP101', code: 'EP101' })).rejects.toMatchObject({
@@ -113,7 +113,7 @@ describe('création', () => {
     });
   });
 
-  it('crée avec l’ordre demandé', async () => {
+  it('creates with the requested order', async () => {
     enabled(true);
     db.episode.findUnique.mockResolvedValue(null);
     db.episode.create.mockResolvedValue({ id: 9 });
@@ -125,14 +125,14 @@ describe('création', () => {
 });
 
 /**
- * L'image d'un épisode : la liste n'en renvoyait aucune — même pas celle qu'on avait
- * choisie, faute d'URL signée — et l'épisode n'héritait de rien de ses plans. Sa carte
- * restait donc au nom de l'épisode indéfiniment, quel que soit le travail livré.
+ * An episode's image: the list used to return none — not even the one chosen, for lack of a signed URL — and
+ * the episode inherited nothing from its shots. Its card therefore stayed under the episode's name
+ * indefinitely, whatever the delivered work.
  */
-describe('vignette de la liste', () => {
+describe('list thumbnail', () => {
   const page = { page: 1, pageSize: 20, order: 'desc' as const };
 
-  it('signe la vignette choisie, et retombe sur le premier média des plans sinon', async () => {
+  it('signs the chosen thumbnail, and falls back on the first media of the shots otherwise', async () => {
     db.episode.findMany.mockResolvedValue([
       { id: 4, code: 'EP101', thumbnailKey: null },
       { id: 5, code: 'EP102', thumbnailKey: 'entity-thumbs/episode/5.jpg' },
@@ -148,12 +148,12 @@ describe('vignette de la liste', () => {
       'derived/9/thumbnail.webp',
       'entity-thumbs/episode/5.jpg',
     ]);
-    // Une seule requête pour toute la page : la variante unitaire en signerait une par ligne.
+    // A single query for the whole page: the unit variant would sign one per row.
     expect(thumbs.firstMediaThumbKeysForEpisodes).toHaveBeenCalledTimes(1);
     expect(thumbs.firstMediaThumbKeysForEpisodes).toHaveBeenCalledWith([4, 5]);
   });
 
-  it('laisse la vignette nulle tant qu’aucune image n’existe — l’interface affiche le nom', async () => {
+  it('leaves the thumbnail null as long as no image exists — the interface displays the name', async () => {
     db.episode.findMany.mockResolvedValue([{ id: 4, code: 'EP101', thumbnailKey: null }]);
     db.episode.count.mockResolvedValue(1);
     thumbs.firstMediaThumbKeysForEpisodes.mockResolvedValue(new Map());
@@ -165,14 +165,14 @@ describe('vignette de la liste', () => {
 });
 
 describe('firstDuplicate', () => {
-  it('rend le premier code répété, sinon null', () => {
+  it('returns the first repeated code, otherwise null', () => {
     expect(EpisodeService.firstDuplicate(['EP101', 'EP102', 'EP101'])).toBe('EP101');
     expect(EpisodeService.firstDuplicate(['EP101', 'EP102'])).toBeNull();
   });
 });
 
 describe('createBulk', () => {
-  it('annule tout le lot sur un doublon interne — rien n’est créé', async () => {
+  it('cancels the whole batch on an internal duplicate — nothing is created', async () => {
     enabled(true);
     await expect(
       EpisodeService.createBulk(7, [
@@ -183,7 +183,7 @@ describe('createBulk', () => {
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 
-  it('annule tout le lot sur un code déjà en base', async () => {
+  it('cancels the whole batch on a code already in the database', async () => {
     enabled(true);
     db.episode.findMany.mockResolvedValue([{ code: 'EP101' }]);
     await expect(EpisodeService.createBulk(7, [{ name: 'a', code: 'EP101' }])).rejects.toMatchObject({
@@ -192,7 +192,7 @@ describe('createBulk', () => {
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 
-  it('numérote l’ordre dans le rang du lot', async () => {
+  it("numbers the order within the batch's rank", async () => {
     enabled(true);
     db.episode.findMany.mockResolvedValue([]);
     await EpisodeService.createBulk(7, [
@@ -209,15 +209,15 @@ describe('createBulk', () => {
 });
 
 describe('reorder', () => {
-  it('refuse en bloc dès qu’un identifiant n’est pas du projet', async () => {
-    // Appliquer la moitié de la demande laisserait un ordre que personne n'a voulu.
+  it('refuses in bulk as soon as an identifier is not from the project', async () => {
+    // Applying half the request would leave an order that nobody asked for.
     enabled(true);
     db.episode.findMany.mockResolvedValue([{ id: 1 }]);
     await expect(EpisodeService.reorder(7, [1, 2])).rejects.toMatchObject({ code: 'BAD_EPISODE' });
     expect(db.$transaction).not.toHaveBeenCalled();
   });
 
-  it('écrit le rang de chaque épisode dans l’ordre reçu', async () => {
+  it('writes the rank of each episode in the order received', async () => {
     enabled(true);
     db.episode.findMany.mockResolvedValue([{ id: 5 }, { id: 3 }]);
     await EpisodeService.reorder(7, [5, 3]);
@@ -227,7 +227,7 @@ describe('reorder', () => {
 });
 
 describe('assignSequences', () => {
-  it('refuse un épisode qui n’appartient pas au projet', async () => {
+  it('refuses an episode that does not belong to the project', async () => {
     enabled(true);
     db.episode.findFirst.mockResolvedValue(null);
     await expect(EpisodeService.assignSequences(7, 42, [1, 2])).rejects.toMatchObject({
@@ -236,7 +236,7 @@ describe('assignSequences', () => {
     expect(db.sequence.updateMany).not.toHaveBeenCalled();
   });
 
-  it('borne l’écriture au projet, même avec un identifiant emprunté', async () => {
+  it('bounds the write to the project, even with a borrowed identifier', async () => {
     enabled(true);
     db.episode.findFirst.mockResolvedValue({ id: 42 });
     db.sequence.updateMany.mockResolvedValue({ count: 1 });
@@ -247,7 +247,7 @@ describe('assignSequences', () => {
     });
   });
 
-  it('détache avec un épisode nul, sans rien vérifier de plus', async () => {
+  it('detaches with a null episode, without checking anything further', async () => {
     enabled(true);
     db.sequence.updateMany.mockResolvedValue({ count: 2 });
     expect(await EpisodeService.assignSequences(7, null, [1, 2])).toBe(2);

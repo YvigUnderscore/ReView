@@ -9,25 +9,25 @@ import { captureCenters, selectByShape } from './screenSelect';
 import { selectionOp } from './selectionHistory';
 import type { SelectCombine, SelectionShape } from './shapes2d';
 import { selectByBrush } from './surfaceBrush';
-import { useT } from '../../../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
- * Sélection par splat (10.G, perf/lisibilité revues en V2) : ensemble d'indices sélectionnés,
- * alimenté par les formes tracées à l'écran (rectangle/lasso, Maj = ajouter / Alt = retirer).
- * Les centres sont mis en cache en `Float32Array` au premier commit (plus de passe
- * `forEachSplat` par sélection) et la surbrillance est une **teinte par index** injectée dans
- * le rendu Spark (`RgbaArray`) — nette par-dessus les gaussiennes, restaurée à la désélection.
- * `isHidden` exclut les splats masqués (suppression non-destructive) sans invalider le cache.
+ * Per-splat selection (10.G, perf and readability reviewed in V2): set of selected indices,
+ * fed by the shapes drawn on screen (rectangle/lasso, Shift = add / Alt = remove).
+ * The centres are cached as a `Float32Array` on the first commit (no more `forEachSplat`
+ * pass per selection), and the highlight is a **per-index tint** injected into the Spark
+ * rendering (`RgbaArray`), visible over the gaussians and restored on deselection.
+ * `isHidden` excludes hidden splats (non-destructive deletion) without invalidating the cache.
  *
- * Chaque geste de sélection est un **cran d'historique** (`pushHistory`, Phase 50 lot 12) :
- * Ctrl+Z rend la sélection précédente comme il rend une suppression. L'ensemble courant est
- * tenu dans une réf en plus de l'état — c'est elle que lisent les gestes et les crans, pour
- * que deux coups de pinceau d'une même image partent bien du résultat du précédent.
+ * Each selection gesture is a **history step** (`pushHistory`, Phase 50 lot 12): Ctrl+Z restores
+ * the previous selection just as it restores a deletion. The current set is kept in a ref in
+ * addition to the state: it is what gestures and steps read, so that two brush strokes of the
+ * same frame correctly start from the result of the previous one.
  */
 export function useSelection(
   splat: SplatViewer,
   isHidden: (index: number) => boolean,
-  /** Historique de l'éditeur. Absent (lecture seule) : la sélection reste, sans cran. */
+  /** Editor history. Absent (read-only): the selection remains, without a step. */
   pushHistory?: (op: EditOp) => void,
 ) {
   const t = useT();
@@ -36,13 +36,13 @@ export function useSelection(
   const selectedRef = useRef<ReadonlySet<number>>(selected);
   const centersRef = useRef<Float32Array | null>(null);
   const highlightRef = useRef<SelectionHighlight | null>(null);
-  // Ensemble d'avant le coup de pinceau en cours : un trait stampe en continu (un appel par
-  // déplacement), et cent crans pour un seul geste rendraient Ctrl+Z inutilisable. Le cran
-  // n'est poussé qu'au lâcher (`endBrush`), avec cet ensemble-là pour point de départ.
+  // Set from before the current brush stroke: a stroke stamps continuously (one call per move),
+  // and a hundred steps for a single gesture would make Ctrl+Z unusable. The step is pushed only
+  // on release (`endBrush`), with this set as its starting point.
   const strokeRef = useRef<ReadonlySet<number> | null>(null);
 
-  // Applique la teinte à chaque changement de sélection (création paresseuse : l'import Spark
-  // est déjà en cache — le viewer l'a chargé — mais reste hors du bundle initial).
+  // Applies the tint on each selection change (lazy creation: the Spark import is already cached
+  // since the viewer loaded it, but stays out of the initial bundle).
   useEffect(() => {
     if (selected.size === 0 && !highlightRef.current) return;
     const handle = getSceneHandle();
@@ -61,7 +61,7 @@ export function useSelection(
     };
   }, [selected, getSceneHandle]);
 
-  // Nettoyage au démontage de l'éditeur (détache l'override et libère la texture).
+  // Cleanup on editor unmount (detaches the override and releases the texture).
   useEffect(
     () => () => {
       highlightRef.current?.dispose();
@@ -71,13 +71,13 @@ export function useSelection(
     [],
   );
 
-  /** Remplace la sélection **sans** cran d'historique : undo/redo, et suppression (qui a le sien). */
+  /** Replaces the selection **without** a history step: undo/redo, and deletion (which has its own). */
   const restore = useCallback((next: ReadonlySet<number>) => {
     selectedRef.current = next;
     setSelected(next);
   }, []);
 
-  /** Remplace la sélection et inscrit le cran — sauf si le geste n'a rien changé. */
+  /** Replaces the selection and records a step, unless the gesture changed nothing. */
   const record = useCallback(
     (next: ReadonlySet<number>) => {
       const before = selectedRef.current;
@@ -88,13 +88,13 @@ export function useSelection(
     [restore, pushHistory, t],
   );
 
-  /** Centres des splats, capturés une fois — `null` tant que la scène n'est pas montée. */
+  /** Splat centres, captured once; `null` until the scene is mounted. */
   const centersOf = useCallback(
     (mesh: Parameters<typeof captureCenters>[0]) => (centersRef.current ??= captureCenters(mesh)),
     [],
   );
 
-  /** Applique une forme tracée à l'écran (au lâcher du drag) à la sélection courante. */
+  /** Applies a shape drawn on screen (on drag release) to the current selection. */
   const commitShape = useCallback(
     (shape: SelectionShape, combine: SelectCombine, viewport: { width: number; height: number }) => {
       const handle = getSceneHandle();
@@ -105,7 +105,7 @@ export function useSelection(
     [getSceneHandle, isHidden, centersOf, record],
   );
 
-  /** Coup de pinceau de surface (V3) : disque écran + bande de profondeur au point touché. */
+  /** Surface brush stroke (V3): screen disc and depth band at the touched point. */
   const commitBrush = useCallback(
     (
       point: { x: number; y: number },
@@ -125,7 +125,7 @@ export function useSelection(
     [getSceneHandle, isHidden, centersOf, restore],
   );
 
-  /** Fin du coup de pinceau (lâcher, annulation du pointeur) : le trait entier fait un cran. */
+  /** End of the brush stroke (release, pointer cancel): the whole stroke makes one step. */
   const endBrush = useCallback(() => {
     const before = strokeRef.current;
     strokeRef.current = null;
@@ -134,12 +134,12 @@ export function useSelection(
     if (op) pushHistory?.(op);
   }, [restore, pushHistory, t]);
 
-  /** Signale des indices (dé)masqués — la teinte resynchronise leur alpha au prochain apply. */
+  /** Signals (un)masked indices; the tint resyncs their alpha at the next apply. */
   const markDirty = useCallback((indices: Iterable<number>) => {
     highlightRef.current?.markDirty(indices);
   }, []);
 
-  /** « Tout désélectionner » : un geste de l'utilisateur, donc un cran comme les autres. */
+  /** "Deselect all": a user gesture, hence a step like any other. */
   const clear = useCallback(() => record(new Set()), [record]);
 
   return { selected, commitShape, commitBrush, endBrush, clear, restore, markDirty };

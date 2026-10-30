@@ -20,11 +20,10 @@ import type { LiveSession } from './useLiveSession';
 import { useT } from '../../i18n';
 
 /**
- * Contrôle de la salle de review live (33.B) dans l'en-tête : rejoindre/quitter,
- * participants (couronne = pilote, éclair = co-pilote, anneau = driver effectif).
- * Une session déjà en cours sur ce média/playlist est signalée sur le bouton (badge
- * LIVE pulsant + nombre de participants). Gestion des rôles par le pilote : clic droit
- * sur un avatar, ou clic droit sur le chip « LIVE » (sous-menus — retours 33).
+ * Live review room control (33.B) in the header: join/leave, participants (crown = pilot,
+ * bolt = co-pilot, ring = effective driver). A session already running on this media/playlist
+ * is flagged on the button (pulsing LIVE badge + participant count). Role management by the
+ * pilot: right-click an avatar, or right-click the "LIVE" chip (submenus — feedback 33).
  */
 export default function LiveControl({ live, projectId }: { live: LiveSession; projectId: number }) {
   const t = useT();
@@ -33,7 +32,7 @@ export default function LiveControl({ live, projectId }: { live: LiveSession; pr
   const current = (sessionsQ.data ?? []).find((s) => s.key === live.key) ?? null;
 
   if (!live.active) {
-    // Session en cours sans nous : badge visible incitant à rejoindre (retours 33).
+    // Session running without us: visible badge prompting to join (feedback 33).
     if (current)
       return (
         <button
@@ -64,7 +63,7 @@ export default function LiveControl({ live, projectId }: { live: LiveSession; pr
 
   return (
     <div className="flex items-center gap-1.5 rounded-md border border-primary/50 bg-primary/10 px-1.5 py-1">
-      {/* Clic droit sur « LIVE » : quitter + gestion des rôles (pilote, retours 33). */}
+      {/* Right-click "LIVE": leave + role management (pilot, feedback 33). */}
       <ContextMenu>
         <ContextMenuTrigger asChild>
           <button
@@ -164,7 +163,7 @@ export default function LiveControl({ live, projectId }: { live: LiveSession; pr
               )}
             </span>
           );
-          // Gestion des rôles par clic droit — réservée au pilote, sur les autres participants.
+          // Role management via right-click — reserved for the pilot, on other participants.
           if (!live.isPilot || p.id === selfId) return <span key={p.id}>{avatar}</span>;
           return (
             <ContextMenu key={p.id}>

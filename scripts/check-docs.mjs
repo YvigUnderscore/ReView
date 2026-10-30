@@ -2,45 +2,40 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Contrôle du dossier `DOCUMENTATION/` — la documentation est du livrable, pas un brouillon.
+ * Check of the `DOCUMENTATION/` folder — the documentation is a deliverable, not a draft.
  *
- * Soixante-dix pages qui se citent les unes les autres, une centaine de figures : à la main,
- * un lien mort ne se découvre qu'en cliquant dessus, et une figure supprimée laisse un carré
- * blanc que personne ne signale. Cinq contrôles, tous mécaniques :
+ * Seventy pages citing one another, a hundred or so figures: by hand, a dead link is only found by
+ * clicking it, and a deleted figure leaves a blank square that nobody reports. Five mechanical checks:
  *
- *   1. **Préambule** — `# Titre`, sous-titre en italique, `> Updated: AAAA-MM-JJ`. C'est ce
- *      que la page /docs affiche en en-tête et ce que le manifest indexe pour la recherche ;
- *      une page sans préambule s'affiche sans sous-titre ni date.
- *   2. **Liens internes** — tout `[x](autre-page.md)` désigne un fichier existant, et toute
- *      ancre `#chapitre` un titre réellement présent dans la page visée.
- *   3. **Images** — tout `![x](../assets/…)` désigne un fichier existant, et porte un texte
- *      alternatif (il devient la légende dans l'application).
- *   4. **Figures SVG** — bien formées, dimensionnées (`viewBox` ET taille intrinsèque),
- *      titrées sans identifiant générique (lecteur d'écran), et adaptées au thème sombre.
- *      Une figure lisible en clair seulement est illisible pour la moitié des lecteurs,
- *      le mode sombre étant le défaut de ReView.
- *   5. **Orphelines** — figure ou rendu que plus aucune page ne cite est du poids mort.
- *   6. **Rendus** — une animation (`.mp4`, `.webm`, `.gif`) tient là où une figure fixe
- *      échoue : ce qui se passe *dans le temps*. Elle obéit aux mêmes règles qu'une figure
- *      — rangée dans `assets/<section>/`, citée avec une légende, jamais orpheline — plus
- *      deux qui lui sont propres : le contenu doit correspondre à l'extension (un fichier
- *      renommé ne se lit nulle part) et le poids doit rester borné, `DOCUMENTATION/` étant
- *      versionné : un binaire lourd y reste pour toujours.
+ *   1. **Preamble** — `# Title`, italic subtitle, `> Updated: YYYY-MM-DD`. This is what the /docs page
+ *      shows as its header and what the manifest indexes for search; a page without a preamble is
+ *      displayed without subtitle or date.
+ *   2. **Internal links** — every `[x](other-page.md)` designates an existing file, and every `#chapter`
+ *      anchor a heading really present in the target page.
+ *   3. **Images** — every `![x](../assets/…)` designates an existing file, and carries alt text (it
+ *      becomes the caption in the application).
+ *   4. **SVG figures** — well formed, sized (`viewBox` AND intrinsic size), titled without a generic
+ *      identifier (screen reader), and adapted to the dark theme. A figure legible only in light mode
+ *      is unreadable for half the readers, dark mode being ReView's default.
+ *   5. **Orphans** — a figure or render that no page cites any more is dead weight.
+ *   6. **Renders** — an animation (`.mp4`, `.webm`, `.gif`) covers where a static figure fails: what
+ *      happens *over time*. It follows the same rules as a figure — filed under `assets/<section>/`,
+ *      cited with a caption, never orphaned — plus two of its own: the content must match the extension
+ *      (a renamed file is readable nowhere) and the weight must stay bounded, `DOCUMENTATION/` being
+ *      versioned: a heavy binary stays there forever.
  *
- * ⚠ D'OÙ VIENNENT LES RENDUS, ET POURQUOI ILS NE SE REFONT PAS. Ils sortent de Tesseract
- * (Mirage), dans le dossier `motion/` à la racine — qui tenait jusqu'au 2026-09-24 un projet
- * Remotion. Tesseract n'est pas un logiciel libre (licence propriétaire) et ReView est
- * AGPL-3.0-or-later : `motion/` est donc **entièrement gitignoré**. Un rendu entre dans le
- * dépôt en étant COPIÉ dans `DOCUMENTATION/assets/<section>/` (`make.py --publish`), où ce
- * contrôle le surveille comme une figure ; le binaire sort, jamais la composition qui l'a
- * produit. CONSÉQUENCE ASSUMÉE, décidée par l'utilisateur le 2026-09-20 : **un rendu n'est
- * pas re-générable par quelqu'un d'autre.** Qui n'a pas le dossier `motion/` ne peut ni le
- * corriger ni le rejouer à une autre résolution ; il ne peut que le remplacer. Préférer donc
- * une figure SVG partout où le temps n'est pas le sujet, et réserver le rendu aux cas où il
- * l'est. Cf. `motion/README.md` (local), le chapitre « Renders » de
- * `DOCUMENTATION/development/documentation-style.md` et les règles de `.gitignore`.
+ * ⚠ WHERE THE RENDERS COME FROM, AND WHY THEY CANNOT BE REBUILT. They come out of Tesseract (Mirage),
+ * in the `motion/` folder at the root — which, until 2026-09-24, held a Remotion project. Tesseract is
+ * not free software (proprietary licence) and ReView is AGPL-3.0-or-later: `motion/` is therefore
+ * **fully gitignored**. A render enters the repository by being COPIED into `DOCUMENTATION/assets/<section>/`
+ * (`make.py --publish`), where this check watches it as a figure; the binary goes in, never the
+ * composition that produced it. A DELIBERATE CONSEQUENCE, decided by the user on 2026-09-20: **a render
+ * cannot be regenerated by someone else.** Whoever does not have the `motion/` folder can neither fix it
+ * nor replay it at another resolution; they can only replace it. Prefer therefore an SVG figure wherever
+ * time is not the subject, and reserve the render for cases where it is. See `motion/README.md` (local),
+ * the "Renders" chapter of `DOCUMENTATION/development/documentation-style.md` and the `.gitignore` rules.
  *
- * Usage : node scripts/check-docs.mjs [--list]
+ * Usage: node scripts/check-docs.mjs [--list]
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -50,19 +45,19 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ROOT = 'DOCUMENTATION';
 
-/** Pages dispensées de préambule : elles ne sont pas servies par la page /docs. */
+/** Pages exempt from the preamble: they are not served by the /docs page. */
 const NO_PREAMBLE = new Set(['CHANGELOG.md']);
 
 /**
- * Rendus acceptés à côté des figures SVG, avec le motif d'octets qui prouve le type. Un
- * `.mp4` qui n'est pas un MP4 (fichier renommé, sortie tronquée, marqueur LFS resté en
- * place) s'affiche en carré vide : personne ne le signale, exactement comme pour une image
- * manquante — sauf que le fichier, lui, existe. On lit donc l'en-tête.
+ * Renders accepted alongside SVG figures, with the byte pattern that proves the type. A
+ * A `.mp4` that is not an MP4 (renamed file, truncated output, LFS marker left in
+ * place) displays as an empty square: nobody reports it, exactly as for a missing image —
+ * except that the file does exist. So we read the header.
  */
 export const RENDER_SIGNATURES = {
-  // ISO-BMFF : taille de boîte sur 4 octets, puis le type de boîte « ftyp ».
+  // ISO-BMFF: box size on 4 bytes, then the box type "ftyp".
   '.mp4': (b) => b.length > 12 && b.subarray(4, 8).toString('latin1') === 'ftyp',
-  // Matroska/WebM : en-tête EBML.
+  // Matroska/WebM: EBML header.
   '.webm': (b) => b.length > 4 && b.subarray(0, 4).toString('hex') === '1a45dfa3',
   '.gif': (b) =>
     b
@@ -74,17 +69,17 @@ export const RENDER_SIGNATURES = {
 export const RENDER_EXT = Object.keys(RENDER_SIGNATURES);
 
 /**
- * Plafond de poids d'un rendu. `DOCUMENTATION/` est versionné : un binaire y entre pour
- * toujours, chaque révision s'ajoutant à la précédente dans l'historique. Quatre mébioctets
- * laissent largement de quoi tenir une dizaine de secondes en 720p à CRF serré ; au-delà,
- * c'est que l'animation est trop longue ou trop grande, pas que la limite est trop basse.
+ * Weight ceiling of a render. `DOCUMENTATION/` is versioned: a binary enters it for
+ * ever, each revision adding to the previous one in the history. Four mebibytes leave
+ * plenty of room for ten seconds or so at 720p with a tight CRF; beyond that, the animation is
+ * too long or too large, not the limit too low.
  */
 export const RENDER_MAX_BYTES = 4 * 1024 * 1024;
 
 /**
- * Ancre d'un titre — même forme que `frontend/src/v2/pages/docs/docsRender.ts`. Les deux
- * implémentations doivent rester d'accord : ce contrôle valide les ancres que l'application
- * pose, et un lien accepté ici doit y fonctionner.
+ * Heading anchor — same shape as `frontend/src/v2/pages/docs/docsRender.ts`. The two
+ * implementations must stay in agreement: this check validates the anchors the application
+ * sets, and a link accepted here must work there.
  */
 export function slugifyHeading(text) {
   const slug = text
@@ -95,7 +90,7 @@ export function slugifyHeading(text) {
   return slug || 'section';
 }
 
-/** Titres d'une page, ancres comprises, doublons numérotés comme dans l'application. */
+/** Headings of a page, anchors included, duplicates numbered as in the application. */
 export function headingAnchors(markdown) {
   const seen = new Map();
   const anchors = [];
@@ -105,7 +100,7 @@ export function headingAnchors(markdown) {
     if (inFence) continue;
     const heading = line.match(/^(#{1,4})\s+(.+?)\s*$/);
     if (!heading) continue;
-    // Le markdown en ligne ne fait pas partie du texte du titre une fois rendu.
+    // Inline markdown is not part of the heading text once rendered.
     const text = heading[2]
       .replace(/`([^`]*)`/g, '$1')
       .replace(/\*\*([^*]*)\*\*/g, '$1')
@@ -119,7 +114,7 @@ export function headingAnchors(markdown) {
   return anchors;
 }
 
-/** Le préambule conventionnel est-il complet ? Rend la liste de ce qui manque. */
+/** Is the conventional preamble complete? Returns the list of what is missing. */
 export function missingPreamble(markdown) {
   const lines = markdown.split('\n').slice(0, 8);
   const missing = [];
@@ -130,7 +125,7 @@ export function missingPreamble(markdown) {
   return missing;
 }
 
-/** Liens et images d'une page, hors blocs de code (un exemple n'est pas un lien). */
+/** Links and images of a page, outside code blocks (an example is not a link). */
 export function references(markdown) {
   const body = markdown.replace(/```[\s\S]*?```/g, '');
   const links = [...body.matchAll(/(!?)\[([^\]]*)\]\(([^)\s]+)\)/g)];
@@ -138,12 +133,12 @@ export function references(markdown) {
 }
 
 /**
- * Conventions d'une figure SVG. Contrôle textuel : un analyseur XML complet serait une
- * dépendance de plus pour une garantie que ces quelques motifs donnent déjà.
+ * Conventions of an SVG figure. Textual check: a full XML parser would be one more dependency for a
+ * guarantee these few patterns already give.
  *
- * Ce qui se mesure au navigateur (chevauchement d'étiquettes, débordement du cadre) reste
- * hors de portée d'ici et vit dans le contrôle géométrique — mais tout ce qui se lit dans
- * le fichier doit être attrapé ici, seule barrière branchée sur `validate.sh`.
+ * What is measured in the browser (overlapping labels, overflow of the frame) remains out of reach
+ * here and lives in the geometric check — but everything readable in the file must be caught here,
+ * the only barrier wired into `validate.sh`.
  */
 export function figureProblems(svg) {
   const problems = [];
@@ -151,10 +146,10 @@ export function figureProblems(svg) {
     problems.push('ne commence pas par <svg> ou ne finit pas par </svg>');
   if (!/viewBox="[\d\s.-]+"/.test(svg)) problems.push('sans viewBox (la figure ne se redimensionne pas)');
 
-  // `viewBox` seul donne un rapport d'aspect, pas une taille : posée dans un conteneur sans
-  // largeur, la figure retombe sur les 300×150 par défaut du navigateur et son contenu sort
-  // du cadre. Le cas s'est produit (brief-blocks.svg, 2026-08-27) et n'a été vu qu'au
-  // contrôle géométrique, faute d'être attrapé ici.
+  // `viewBox` alone gives an aspect ratio, not a size: placed in a container without a
+  // width, the figure falls back to the browser's 300×150 default and its content spills out
+  // of the frame. This happened (brief-blocks.svg, 2026-08-27) and was only seen by the
+  // geometric check, for lack of being caught here.
   const racine = /<svg\b[^>]*>/.exec(svg)?.[0] ?? '';
   if (!/\swidth="[\d.]+"/.test(racine) || !/\sheight="[\d.]+"/.test(racine))
     problems.push(
@@ -164,8 +159,8 @@ export function figureProblems(svg) {
   if (!/<title[\s>]/.test(svg)) problems.push('sans <title> (illisible au lecteur d’écran)');
   if (!/role="img"/.test(svg)) problems.push('sans role="img"');
 
-  // Les figures d'une même page cohabitent dans un seul document : un `id="title"` générique
-  // fait pointer l'`aria-labelledby` de la seconde figure sur le titre de la première.
+  // The figures of one page share a single document: a generic `id="title"` makes the
+  // `aria-labelledby` of the second figure point at the title of the first.
   for (const generique of ['title', 'desc']) {
     if (new RegExp(`id="${generique}"`).test(svg))
       problems.push(
@@ -176,7 +171,7 @@ export function figureProblems(svg) {
   if (!/prefers-color-scheme:\s*dark/.test(svg))
     problems.push('sans variante sombre (@media prefers-color-scheme)');
 
-  // Équilibre des balises : la faute la plus fréquente d'une figure écrite à la main.
+  // Tag balance: the most frequent mistake in a hand-written figure.
   const opened = [...svg.matchAll(/<([a-zA-Z][\w:-]*)(\s[^>]*?)?(\/?)>/g)].filter((m) => m[3] !== '/');
   const closed = [...svg.matchAll(/<\/([a-zA-Z][\w:-]*)>/g)];
   const voids = new Set([
@@ -203,13 +198,13 @@ export function figureProblems(svg) {
 }
 
 /**
- * Conventions d'un rendu. Ce qu'on peut affirmer d'un binaire sans le décoder : qu'il est
- * bien du type qu'annonce son nom, et qu'il tient dans le budget du dépôt.
+ * Conventions of a render. What can be asserted about a binary without decoding it: that it is
+ * indeed of the type its name announces, and that it fits the repository's budget.
  *
- * Ce qui reste hors de portée d'ici — et qui incombe donc à qui produit le rendu : la
- * lisibilité. Un rendu est un fichier de pixels, il n'a pas de variante sombre ; il se pose
- * sur une page qui, elle, bascule. La règle est donc d'écrire l'animation dans la palette
- * SOMBRE de `documentation-style.md`, la seule qui reste lisible sur les deux fonds.
+ * What stays out of reach here — and therefore falls to whoever produces the render: legibility. A
+ * render is a file of pixels, it has no dark variant; it is placed on a page that does switch. The
+ * rule is therefore to write the animation in the DARK palette of `documentation-style.md`, the only
+ * one that remains legible on both backgrounds.
  */
 export function renderProblems(bytes, file) {
   const problems = [];
@@ -231,8 +226,8 @@ export function renderProblems(bytes, file) {
 }
 
 /**
- * Tous les fichiers portant l'une des extensions données sous un dossier, chemins relatifs
- * à `DOCUMENTATION/`.
+ * All the files carrying one of the given extensions under a folder, paths relative
+ * to `DOCUMENTATION/`.
  */
 function* files(dir, ext) {
   const wanted = Array.isArray(ext) ? ext : [ext];
@@ -251,7 +246,7 @@ const exists = (rel) => {
   }
 };
 
-/** Résout un chemin relatif depuis une page ("a/b.md" + "../c.svg" → "c.svg"). */
+/** Resolves a relative path from a page ("a/b.md" + "../c.svg" → "c.svg"). */
 const resolveFrom = (page, target) => path.posix.normalize(path.posix.join(path.posix.dirname(page), target));
 
 function main() {
@@ -290,13 +285,13 @@ function main() {
         continue;
       }
       if (RENDER_EXT.includes(path.extname(target).toLowerCase())) {
-        // Cité comme lien, le rendu n'a pas de légende — or la légende est ce qui reste
-        // quand l'animation ne se lit pas (impression, export, lecteur sans codec).
+        // Cited as a link, the render has no caption — yet the caption is what remains
+        // when the animation cannot be played (print, export, player without a codec).
         add(`rendu cité comme lien : ${ref.target} — l’écrire « ![légende](…) »`);
         used.add(resolveFrom(page, target));
         continue;
       }
-      if (!target.endsWith('.md')) continue; // fichier joint (CSV d'exemple…)
+      if (!target.endsWith('.md')) continue; // attached file (example CSV…)
       const resolved = resolveFrom(page, target);
       if (!exists(resolved)) {
         add(`lien mort : ${ref.target}`);

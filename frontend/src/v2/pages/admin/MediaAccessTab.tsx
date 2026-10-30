@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Eye, Link2, User as UserIcon } from 'lucide-react';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
@@ -37,7 +37,7 @@ const fmt = (iso: string) =>
     minute: '2-digit',
   });
 
-/** Journal d'accès aux médias (36.E) : qui a visionné quoi / quand — comptes et partages. */
+/** Media access log (36.E): who viewed what / when — accounts and shares. */
 export default function MediaAccessTab() {
   const t = useT();
   const [page, setPage] = useState(1);

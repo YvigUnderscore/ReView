@@ -3,8 +3,10 @@
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft } from 'lucide-react';
 import { api } from '../../lib/apiClient';
+import { qk } from '../lib/query';
 import { useAuth, type AuthUser } from '../stores/useAuth';
 import { useT, type MessageKey } from '../i18n';
 import { Button } from '../components/ui/button';
@@ -18,6 +20,7 @@ export default function SetupPage() {
   const tr = useT();
   const setAuth = useAuth((s) => s.setAuth);
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState({ studioName: '', adminName: '', adminEmail: '', adminPassword: '' });
   const [error, setError] = useState<string | null>(null);
@@ -39,6 +42,9 @@ export default function SetupPage() {
     try {
       const { token, user } = await api.post<{ token: string; user: AuthUser }>('/api/setup', form);
       setAuth(token, user);
+      // The router only offers /setup while the cached status says so (fetched once, never stale):
+      // without this, navigating home bounced straight back to an empty setup form.
+      queryClient.setQueryData(qk.setupStatus, { needsSetup: false });
       void navigate('/');
     } catch (err) {
       setError(err instanceof Error ? err.message : tr('setup.error.generic'));

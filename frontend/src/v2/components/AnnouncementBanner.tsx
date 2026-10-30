@@ -8,6 +8,7 @@ import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import type { Announcement, AnnouncementType } from '../types/api';
 import { useT } from '../i18n';
+import { notifyError } from '@/v2/lib/notifyError';
 
 const STYLE: Record<AnnouncementType, { cls: string; Icon: typeof Info }> = {
   INFO: { cls: 'border-info/40 bg-info/10 text-info', Icon: Info },
@@ -16,9 +17,9 @@ const STYLE: Record<AnnouncementType, { cls: string; Icon: typeof Info }> = {
 };
 
 /**
- * Bannières d'annonces studio actives pour l'utilisateur (Phase 22). Le backend filtre déjà
- * par période / rôle / fréquence ; la fermeture pose un accusé de lecture (masque selon la
- * fréquence : permanent → réapparaît, 1re connexion/du jour → masquée durablement).
+ * Active studio announcement banners for the user (Phase 22). The backend already filters
+ * by period / role / frequency; closing posts a read receipt (hidden depending on the
+ * frequency: permanent → reappears, first sign-in / of the day → hidden durably).
  */
 export default function AnnouncementBanner() {
   const t = useT();
@@ -31,7 +32,8 @@ export default function AnnouncementBanner() {
 
   const dismiss = (id: number) => {
     setDismissed((d) => [...d, id]);
-    void api.post(`/api/announcements/${id}/ack`, {}).catch(() => undefined);
+    // Hidden right away; if the server did not record it, it comes back on the next visit — say so.
+    void api.post(`/api/announcements/${id}/ack`, {}).catch((err) => notifyError(err));
   };
 
   const items = (data ?? []).filter((a) => !dismissed.includes(a.id));

@@ -18,7 +18,7 @@ const ctx = {
 beforeEach(() => vi.clearAllMocks());
 
 describe('realignMediaNames', () => {
-  it('renomme un média importé dont le nom diverge du code', () => {
+  it('renames an imported media whose name diverges from the code', () => {
     db.mediaObject.findMany.mockResolvedValue([
       {
         id: 1,
@@ -37,7 +37,7 @@ describe('realignMediaNames', () => {
     });
   });
 
-  it('mémorise le nom d’origine à la première reprise', async () => {
+  it('records the original name on the first rename', async () => {
     db.mediaObject.findMany.mockResolvedValue([
       { id: 1, originalName: 'playblast.mov', mimeType: null, metadata: { importedFromShotgrid: true } },
     ]);
@@ -46,7 +46,7 @@ describe('realignMediaNames', () => {
     expect(call.data.metadata.sourceFilename).toBe('playblast.mov');
   });
 
-  it('n’écrit rien quand le nom est déjà aligné', async () => {
+  it('writes nothing when the name is already aligned', async () => {
     db.mediaObject.findMany.mockResolvedValue([
       {
         id: 1,
@@ -59,9 +59,9 @@ describe('realignMediaNames', () => {
     expect(db.mediaObject.update).not.toHaveBeenCalled();
   });
 
-  it('ne touche jamais un fichier déposé à la main', async () => {
-    // Le nom du fichier d'un artiste porte de l'information (_lin_, _acescg_, _h265_)
-    // que le code du site ne reprend pas.
+  it('never touches a file dropped by hand', async () => {
+    // An artist's file name carries information (_lin_, _acescg_, _h265_)
+    // that the site's code does not carry over.
     db.mediaObject.findMany.mockResolvedValue([
       { id: 2, originalName: 'wip_acescg.exr', mimeType: 'image/x-exr', metadata: {} },
     ]);
@@ -69,7 +69,7 @@ describe('realignMediaNames', () => {
     expect(db.mediaObject.update).not.toHaveBeenCalled();
   });
 
-  it('respecte le réglage « garder le nom du fichier »', async () => {
+  it('respects the "keep the file name" setting', async () => {
     const filenameCtx = {
       ...ctx,
       settings: { media: { naming: 'filename' as const } },

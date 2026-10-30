@@ -4,9 +4,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * Filtre par épisode sur une liste de plans. Le niveau est facultatif : sans filtre, la
- * requête doit être exactement celle d'avant — un long-métrage ne doit rien voir changer,
- * ni dans ses résultats ni dans son plan d'exécution.
+ * Episode filter on a list of shots. The level is optional: without a filter, the query must be exactly
+ * the same as before. A feature film must see nothing change, neither in its results nor in its execution plan.
  */
 
 const { db, thumbs } = vi.hoisted(() => ({
@@ -36,17 +35,17 @@ beforeEach(() => {
 });
 
 describe('episodeWhere', () => {
-  it('ne restreint rien sans filtre', () => {
+  it('restricts nothing without a filter', () => {
     expect(episodeWhere(undefined)).toEqual({});
   });
 
-  it('traverse la séquence pour un épisode donné', () => {
-    // Un plan n'appartient pas à un épisode : c'est sa séquence qui en porte un.
+  it('goes through the sequence for a given episode', () => {
+    // A shot does not belong to an episode directly: its sequence carries one.
     expect(episodeWhere(4)).toEqual({ sequence: { episodeId: 4 } });
   });
 
-  it('« hors épisode » comprend les plans sans séquence du tout', () => {
-    // Ils sont hors épisode par construction : les omettre les rendrait introuvables.
+  it('"outside any episode" includes shots with no sequence at all', () => {
+    // They are outside any episode by construction: leaving them out would make them unreachable.
     expect(episodeWhere('none')).toEqual({
       OR: [{ sequenceId: null }, { sequence: { episodeId: null } }],
     });
@@ -54,7 +53,7 @@ describe('episodeWhere', () => {
 });
 
 describe('ShotService.list', () => {
-  it('laisse la requête intacte quand aucun épisode n’est demandé', async () => {
+  it('leaves the query intact when no episode is requested', async () => {
     await list(3, undefined, page);
     const args = db.shot.findMany.mock.calls[0]![0] as { where: Record<string, unknown> };
     expect(args.where).toMatchObject({ projectId: 3, deletedAt: null });
@@ -62,13 +61,13 @@ describe('ShotService.list', () => {
     expect(args.where.OR).toBeUndefined();
   });
 
-  it('combine le filtre de séquence et celui d’épisode', async () => {
+  it('combines the sequence filter and the episode filter', async () => {
     await list(3, 12, page, 4);
     const args = db.shot.findMany.mock.calls[0]![0] as { where: Record<string, unknown> };
     expect(args.where).toMatchObject({ sequenceId: 12, sequence: { episodeId: 4 } });
   });
 
-  it('compte le total avec le même filtre que la page', async () => {
+  it('counts the total with the same filter as the page', async () => {
     await list(3, undefined, page, 4);
     const countArgs = db.shot.count.mock.calls[0]![0] as { where: Record<string, unknown> };
     expect(countArgs.where).toMatchObject({ projectId: 3, sequence: { episodeId: 4 } });

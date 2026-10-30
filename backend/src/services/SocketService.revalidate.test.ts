@@ -9,8 +9,8 @@ const { getAuthUser, isSessionActive } = vi.hoisted(() => ({
 }));
 
 vi.mock('../lib/userCache', () => ({ getAuthUser }));
-// `SocketService` importe aussi le contrat du canal de révocation immédiate (A3-02) : un
-// export absent d'un double fait échouer vitest à l'accès, même si ce fichier ne l'exerce pas.
+// `SocketService` also imports the immediate-revocation channel contract (A3-02): an export missing
+// from a double makes vitest fail on access, even if this file does not exercise it.
 vi.mock('../lib/sessions', () => ({
   isSessionActive,
   SESSION_REVOCATION_CHANNEL: 'review:session-revoked',
@@ -25,7 +25,7 @@ import { revalidateSocket, sweepSockets, type AuthedSocket } from './SocketServi
 
 const active = { id: 7, email: 'sup@studio.com', role: Role.SUPERVISOR, disabledAt: null };
 
-/** Socket minimal : seuls l'identité posée au handshake et la déconnexion nous intéressent. */
+/** Minimal socket: only the identity set at handshake and the disconnection matter here. */
 const socketOf = (over: Partial<AuthedSocket> = {}): AuthedSocket =>
   ({
     user: { id: 7, email: 'sup@studio.com', role: Role.SUPERVISOR },
@@ -41,59 +41,58 @@ beforeEach(() => {
 });
 
 /**
- * A3-02 — `authenticateSocket` ne s'exécute qu'au handshake : ensuite `socket.user` est figé
- * et la connexion vit tant que le transport tient, c'est-à-dire des jours. Révoquer une
- * session ou rétrograder un rôle coupait l'API en trente secondes sans rien changer au canal
- * temps réel : l'onglet resté ouvert continuait de recevoir les commentaires internes du
- * projet, et son ancien rôle lui rouvrait `join_project`.
+ * A3-02: `authenticateSocket` only runs at handshake: afterwards `socket.user` is frozen and the connection
+ * lives as long as the transport holds, that is, for days. Revoking a session or demoting a role cut the API
+ * within thirty seconds without changing anything on the real-time channel: the tab left open kept receiving
+ * the project's internal comments, and its former role reopened `join_project` for it.
  */
-describe('revalidateSocket — la porte se rejoue', () => {
-  it('ferme une connexion dont la session a été révoquée', async () => {
+describe('revalidateSocket: the gate is replayed', () => {
+  it('closes a connection whose session has been revoked', async () => {
     isSessionActive.mockResolvedValue(false);
     expect(await revalidateSocket(socketOf())).toBe(false);
   });
 
-  it('ferme une connexion dont le compte a été désactivé', async () => {
+  it('closes a connection whose account has been deactivated', async () => {
     getAuthUser.mockResolvedValue({ ...active, disabledAt: new Date() });
     expect(await revalidateSocket(socketOf())).toBe(false);
   });
 
-  it('ferme une connexion dont le compte a disparu', async () => {
+  it('closes a connection whose account has disappeared', async () => {
     getAuthUser.mockResolvedValue(null);
     expect(await revalidateSocket(socketOf())).toBe(false);
   });
 
   /**
-   * Le point dur : `join_project` lit `socket.user.role`, et `resolveProjectAccess` accorde
-   * un accès global à ADMIN comme à SUPERVISOR. Vérifier sans réécrire aurait laissé
-   * l'ancien superviseur rejoindre n'importe quel projet depuis son onglet ouvert.
+   * The hard point: `join_project` reads `socket.user.role`, and `resolveProjectAccess` grants global access
+   * to ADMIN as well as SUPERVISOR. Checking without rewriting would have let the former supervisor join any
+   * project from their open tab.
    */
-  it('remplace le rôle figé par le rôle courant', async () => {
+  it('replaces the frozen role with the current role', async () => {
     getAuthUser.mockResolvedValue({ ...active, role: Role.CLIENT });
     const socket = socketOf();
     expect(await revalidateSocket(socket)).toBe(true);
     expect(socket.user?.role).toBe(Role.CLIENT);
   });
 
-  // Un jeton d'avant la phase 36 n'a pas de session à vérifier : rien ne peut le révoquer.
-  it('ferme une connexion sans session identifiée', async () => {
+  // A token from before phase 36 has no session to check: nothing can revoke it.
+  it('closes a connection with no identified session', async () => {
     expect(await revalidateSocket(socketOf({ authSid: undefined }))).toBe(false);
   });
 
-  // Un invité de partage n'a ni session ni rôle : son accès tient au ShareLink, revérifié
-  // côté API à chaque lecture. Rien à rejouer, et surtout rien à couper.
-  it('laisse tranquille un invité arrivé par un lien de partage', async () => {
+  // A share guest has neither session nor role: their access rests on the ShareLink, rechecked
+  // on the API side at every read. Nothing to replay, and above all nothing to cut.
+  it('leaves alone a guest who arrived through a share link', async () => {
     const guest = socketOf({ user: undefined, shareProjectId: 3 });
     expect(await revalidateSocket(guest)).toBe(true);
     expect(isSessionActive).not.toHaveBeenCalled();
   });
 });
 
-describe('sweepSockets — balayage de la réplique', () => {
+describe('sweepSockets: sweep of the replica', () => {
   const serverOf = (...sockets: AuthedSocket[]) =>
     ({ sockets: { sockets: new Map(sockets.map((s, i) => [String(i), s])) } }) as never;
 
-  it('déconnecte celles qui ne valent plus, garde les autres', async () => {
+  it('disconnects those that are no longer valid, keeps the others', async () => {
     const revoked = socketOf({ authSid: 'morte' });
     const kept = socketOf({ authSid: 'sid-1' });
     isSessionActive.mockImplementation((sid: string) => Promise.resolve(sid !== 'morte'));
@@ -104,9 +103,9 @@ describe('sweepSockets — balayage de la réplique', () => {
     expect(kept.disconnect).not.toHaveBeenCalled();
   });
 
-  // Une panne de base ou de Redis ne doit pas déconnecter tout le studio : le contrôle qui
-  // échoue garde la connexion (l'API, elle, échoue fermé de son côté).
-  it('conserve la connexion quand le contrôle lui-même échoue', async () => {
+  // A database or Redis outage must not disconnect the whole studio: the check that fails keeps the
+  // connection (the API, for its part, fails closed).
+  it('keeps the connection when the check itself fails', async () => {
     isSessionActive.mockRejectedValue(new Error('redis down'));
     const socket = socketOf();
 

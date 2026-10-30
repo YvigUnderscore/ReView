@@ -7,9 +7,9 @@ import { useViewShortcuts, type ViewCommands } from './useViewShortcuts';
 import { viewActionsFor } from '../chrome/tools';
 
 /**
- * `F` et `H` sur les viewers plats. Les deux actions de vue étaient **déclarées** par le rail
- * (`action.fitMedia`, `action.resetMedia`) et branchées nulle part : les deux lettres ne
- * faisaient rien, ni sur une image, ni sur une vidéo.
+ * `F` and `H` on the flat viewers. Both view actions were **declared** by the rail
+ * (`action.fitMedia`, `action.resetMedia`) and wired nowhere: the two letters did nothing, neither
+ * on an image nor on a video.
  */
 const mount = (commands: ViewCommands | null) => renderHook(() => useViewShortcuts(commands));
 
@@ -26,12 +26,12 @@ afterEach(() => {
 });
 
 describe('useViewShortcuts', () => {
-  it('reprend exactement les touches que le rail annonce', () => {
+  it('uses exactly the keys the rail announces', () => {
     expect(viewActionsFor('VIDEO').map((a) => a.key)).toEqual(['F', 'H']);
     expect(viewActionsFor('IMAGE').map((a) => a.key)).toEqual(['F', 'H']);
   });
 
-  it('F ajuste à l’écran', () => {
+  it('F fits to screen', () => {
     const cmd = spies();
     mount(cmd);
     press('f');
@@ -39,14 +39,14 @@ describe('useViewShortcuts', () => {
     expect(cmd.oneToOne).not.toHaveBeenCalled();
   });
 
-  it('H revient à la taille réelle', () => {
+  it('H returns to actual size', () => {
     const cmd = spies();
     mount(cmd);
     press('h');
     expect(cmd.oneToOne).toHaveBeenCalledTimes(1);
   });
 
-  it('ignore la frappe modifiée — Ctrl+F reste la recherche du navigateur', () => {
+  it('ignores modified keystrokes — Ctrl+F remains the browser search', () => {
     const cmd = spies();
     mount(cmd);
     press('f', { ctrlKey: true });
@@ -55,7 +55,7 @@ describe('useViewShortcuts', () => {
     expect(cmd.oneToOne).not.toHaveBeenCalled();
   });
 
-  it('désarmé (`null`), ne répond à rien — les panes de comparaison ne doublent pas le geste', () => {
+  it('disarmed (`null`), responds to nothing — comparison panes do not duplicate the gesture', () => {
     const cmd = spies();
     mount(null);
     press('f');

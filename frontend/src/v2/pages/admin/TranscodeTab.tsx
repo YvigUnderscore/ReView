@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Plus, Save, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -18,7 +18,7 @@ import { useT } from '../../i18n';
 
 const PRESETS = ['ultrafast', 'superfast', 'veryfast', 'faster', 'fast', 'medium', 'slow'];
 
-/** Contexte Vidéo (admin) : configuration du transcodage HLS lue par le worker (Phase 22/23). */
+/** Video context (admin): HLS transcoding configuration read by the worker (Phase 22/23). */
 export default function TranscodeTab() {
   const t = useT();
   const qc = useQueryClient();
@@ -65,7 +65,7 @@ export default function TranscodeTab() {
         <span className="text-xs text-muted-foreground">{t('transcode.singleProxy')}</span>
       </label>
 
-      {/* Scene detection (34.H) : opt-in — une passe d'analyse FFmpeg en plus par vidéo. */}
+      {/* Scene detection (34.H): opt-in — one additional FFmpeg analysis pass per video. */}
       <label className="flex items-center gap-2 text-sm">
         <input
           type="checkbox"

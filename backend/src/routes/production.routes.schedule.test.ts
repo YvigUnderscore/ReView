@@ -5,9 +5,9 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 
 /**
- * PERF-06 — contrat de la fenêtre du planning. La route ne prenait aucun paramètre : le
- * client ne pouvait pas demander moins que tout le projet. Elle accepte désormais deux
- * bornes facultatives, et les transmet telles quelles au service.
+ * PERF-06: contract of the schedule window. The route took no parameter: the client could not ask for
+ * less than the whole project. It now accepts two optional bounds, and passes them through as they are
+ * to the service.
  */
 
 vi.mock('../services/ScheduleService', () => ({
@@ -19,16 +19,17 @@ vi.mock('../services/GridService', () => ({
   getProjectGrid: vi.fn(() => Promise.resolve({})),
   GRID_MAX_LIMIT: 200,
 }));
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: Request, _res: Response, next: NextFunction) => {
     req.user = { id: 7, role: 'ADMIN' } as Request['user'];
     next();
   },
 }));
 /**
- * La garde est celle de la GESTION de projet, plus celle du simple membership : l'onglet
- * expose la charge nominative, les retards et les tâches non assignées. Le test la remplace
- * par un interrupteur pour vérifier les deux issues sans monter le RBAC entier.
+ * The guard is that of project MANAGEMENT, not of simple membership: the tab exposes named workloads,
+ * delays and unassigned tasks. The test replaces it with a switch to verify both outcomes without
+ * mounting the whole RBAC.
  */
 let manageAllowed = true;
 vi.mock('../middleware/rbac', () => ({
@@ -54,13 +55,13 @@ beforeEach(() => {
 });
 
 describe('GET /api/projects/:projectId/schedule', () => {
-  it('sans borne, demande le planning entier — le contrat d’avant est intact', async () => {
+  it('without bounds, requests the whole schedule: the previous contract is intact', async () => {
     const res = await request(app).get('/api/projects/7/schedule');
     expect(res.status).toBe(200);
     expect(getSchedule).toHaveBeenCalledWith(7, { from: undefined, to: undefined });
   });
 
-  it('transmet la fenêtre demandée, convertie en dates', async () => {
+  it('passes the requested window on, converted to dates', async () => {
     const res = await request(app).get('/api/projects/7/schedule?from=2026-09-01&to=2026-12-01');
     expect(res.status).toBe(200);
     expect(getSchedule).toHaveBeenCalledWith(7, {
@@ -69,7 +70,7 @@ describe('GET /api/projects/:projectId/schedule', () => {
     });
   });
 
-  it('accepte une borne seule', async () => {
+  it('accepts a single bound', async () => {
     await request(app).get('/api/projects/7/schedule?from=2026-09-01');
     expect(getSchedule).toHaveBeenCalledWith(7, {
       from: new Date('2026-09-01T00:00:00.000Z'),
@@ -77,13 +78,13 @@ describe('GET /api/projects/:projectId/schedule', () => {
     });
   });
 
-  it('refuse une borne illisible plutôt que de l’ignorer', async () => {
+  it('rejects an unreadable bound rather than ignoring it', async () => {
     const res = await request(app).get('/api/projects/7/schedule?to=la-semaine-prochaine');
     expect(res.status).toBe(400);
     expect(getSchedule).not.toHaveBeenCalled();
   });
 
-  it('rend le plafond et l’état de troncature au lecteur', async () => {
+  it('returns the ceiling and the truncation state to the reader', async () => {
     getSchedule.mockResolvedValue({ tasks: [], truncated: true, limit: 2000 });
     const res = await request(app).get('/api/projects/7/schedule');
     expect(res.body).toEqual({ tasks: [], truncated: true, limit: 2000 });
@@ -91,13 +92,13 @@ describe('GET /api/projects/:projectId/schedule', () => {
 });
 
 describe('GET /api/projects/:projectId/grid', () => {
-  it('sert la page par défaut sans aucun filtre', async () => {
+  it('serves the default page with no filter', async () => {
     const res = await request(app).get('/api/projects/7/grid');
     expect(res.status).toBe(200);
     expect(vi.mocked(GridService.getProjectGrid)).toHaveBeenCalledWith(7, {});
   });
 
-  it('transmet curseur, plafond et les cinq filtres, convertis en nombres', async () => {
+  it('passes the cursor, the ceiling and the five filters on, converted to numbers', async () => {
     await request(app).get(
       '/api/projects/7/grid?cursor=abc&limit=120&episodeId=5&sequenceId=3&department=comp&assigneeId=9&status=ip',
     );
@@ -112,19 +113,19 @@ describe('GET /api/projects/:projectId/grid', () => {
     });
   });
 
-  it('refuse un plafond hors bornes plutôt que de le rogner en silence', async () => {
+  it('rejects an out-of-range ceiling rather than silently trimming it', async () => {
     const res = await request(app).get('/api/projects/7/grid?limit=5000');
     expect(res.status).toBe(400);
     expect(vi.mocked(GridService.getProjectGrid)).not.toHaveBeenCalled();
   });
 
-  it('refuse un identifiant de séquence illisible', async () => {
+  it('rejects an unreadable sequence identifier', async () => {
     expect((await request(app).get('/api/projects/7/grid?sequenceId=abc')).status).toBe(400);
   });
 });
 
-describe('Production — droits de lecture', () => {
-  /** Les quatre lectures de l'onglet, toutes réservées à qui gère le projet. */
+describe('Production — read rights', () => {
+  /** The four reads of the tab, all reserved to whoever manages the project. */
   const paths = [
     '/api/projects/7/grid',
     '/api/projects/7/production',
@@ -132,18 +133,18 @@ describe('Production — droits de lecture', () => {
     '/api/projects/7/stats',
   ];
 
-  it('refuse les quatre lectures à qui ne gère pas le projet — CLIENT compris', async () => {
+  it('rejects the four reads to whoever does not manage the project, CLIENT included', async () => {
     manageAllowed = false;
     for (const path of paths) {
       const res = await request(app).get(path);
       expect(res.status, path).toBe(403);
     }
-    // Aucun service n'est atteint : le refus précède la lecture, il ne la filtre pas après.
+    // No service is reached: the refusal precedes the read, it does not filter it afterwards.
     expect(vi.mocked(GridService.getProjectGrid)).not.toHaveBeenCalled();
     expect(getSchedule).not.toHaveBeenCalled();
   });
 
-  it('laisse passer qui gère le projet', async () => {
+  it('lets through whoever manages the project', async () => {
     for (const path of paths) expect((await request(app).get(path)).status, path).toBe(200);
   });
 });

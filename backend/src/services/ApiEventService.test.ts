@@ -4,11 +4,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * Le journal v1 et les webhooks partent du même point. Ce qui se joue ici :
- *  - la ligne de journal est écrite AVANT l'émission, pour que son identifiant accompagne
- *    la livraison (c'est lui qui permet à un consommateur de recouper les deux) ;
- *  - un incident du journal ne doit pas retenir la livraison — l'abonné reçoit quand même ;
- *  - un même fait publié par deux couches (service puis route v1 héritée) ne fait qu'un.
+ * The v1 journal and the webhooks start from the same point. What is at stake here:
+ *  - the journal row is written BEFORE emission, so that its identifier travels with the delivery
+ *    (it is what lets a consumer match the two);
+ *  - a journal failure must not hold back the delivery: the subscriber still receives it;
+ *  - a single fact published by two layers (service, then the legacy v1 route) counts once.
  */
 vi.mock('../lib/prisma', () => ({ prisma: { apiEvent: { create: vi.fn() } } }));
 vi.mock('../lib/logger', () => ({ logger: { warn: vi.fn(), info: vi.fn() } }));
@@ -18,7 +18,7 @@ import { prisma } from '../lib/prisma';
 import { emitWebhookEvent } from './WebhookService';
 import { publish } from './ApiEventService';
 
-/** `publish` ne s'attend pas : on laisse la chaîne de promesses se dérouler. */
+/** `publish` is not awaited: the promise chain is left to run its course. */
 const settle = async () => {
   await Promise.resolve();
   await Promise.resolve();
@@ -32,8 +32,8 @@ beforeEach(() => {
   vi.mocked(prisma.apiEvent.create).mockImplementation(() => Promise.resolve({ id: nextId++ }) as never);
 });
 
-describe('ApiEventService.publish — journal puis livraison', () => {
-  it('écrit la ligne de journal et passe son identifiant à l’émission', async () => {
+describe('ApiEventService.publish: journal, then delivery', () => {
+  it('writes the journal row and passes its identifier on emission', async () => {
     publish('comment.created', {
       projectId: 7,
       entityType: 'comment',
@@ -61,7 +61,7 @@ describe('ApiEventService.publish — journal puis livraison', () => {
     );
   });
 
-  it('livre quand même si la journalisation échoue', async () => {
+  it('still delivers if journaling fails', async () => {
     vi.mocked(prisma.apiEvent.create).mockRejectedValueOnce(new Error('base injoignable'));
     publish('comment.created', { projectId: 7, payload: {} });
     await settle();
@@ -72,7 +72,7 @@ describe('ApiEventService.publish — journal puis livraison', () => {
     );
   });
 
-  it('ne lève jamais, même si la base est absente', async () => {
+  it('never throws, even when the database is absent', async () => {
     vi.mocked(prisma.apiEvent.create).mockImplementation(() => {
       throw new Error('client non initialisé');
     });
@@ -81,8 +81,8 @@ describe('ApiEventService.publish — journal puis livraison', () => {
   });
 });
 
-describe('ApiEventService.publish — coalescence du même fait', () => {
-  it('ne publie qu’une fois une version publiée deux fois de suite', async () => {
+describe('ApiEventService.publish: coalescing of the same fact', () => {
+  it('publishes only once a version published twice in a row', async () => {
     const input = { projectId: 1, entityType: 'version', entityId: 9, payload: {} };
     publish('version.published', input);
     publish('version.published', input);
@@ -91,14 +91,14 @@ describe('ApiEventService.publish — coalescence du même fait', () => {
     expect(emitWebhookEvent).toHaveBeenCalledTimes(1);
   });
 
-  it('n’étouffe pas deux versions différentes', async () => {
+  it('does not swallow two different versions', async () => {
     publish('version.published', { projectId: 1, entityType: 'version', entityId: 10, payload: {} });
     publish('version.published', { projectId: 1, entityType: 'version', entityId: 11, payload: {} });
     await settle();
     expect(emitWebhookEvent).toHaveBeenCalledTimes(2);
   });
 
-  it('ne coalesce pas les autres événements : deux changements rapprochés sont deux faits', async () => {
+  it('does not coalesce other events: two close changes are two facts', async () => {
     const input = { projectId: 1, entityType: 'task', entityId: 5, payload: {} };
     publish('task.status_changed', input);
     publish('task.status_changed', input);
@@ -106,7 +106,7 @@ describe('ApiEventService.publish — coalescence du même fait', () => {
     expect(emitWebhookEvent).toHaveBeenCalledTimes(2);
   });
 
-  it('republie le même fait une fois la fenêtre écoulée', async () => {
+  it('republishes the same fact once the window has elapsed', async () => {
     const input = { projectId: 1, entityType: 'version', entityId: 12, payload: {} };
     publish('version.published', input);
     vi.setSystemTime(Date.now() + 6_000);

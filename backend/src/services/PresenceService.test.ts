@@ -49,13 +49,13 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-/** Avance l'horloge sans déclencher de minuterie (seul `Date` est simulé). */
+/** Advances the clock without triggering a timer (only `Date` is simulated). */
 const advance = (ms: number): void => {
   vi.setSystemTime(new Date(Date.now() + ms));
 };
 
-describe('présence en ligne', () => {
-  it('compte les onglets : en ligne au premier, hors ligne au dernier', async () => {
+describe('online presence', () => {
+  it('counts the tabs: online at the first, offline at the last', async () => {
     await markOnline(1, 'ongletA');
     expect(getOnlineUserIds()).toEqual([1]);
     await markOnline(1, 'ongletB');
@@ -66,14 +66,14 @@ describe('présence en ligne', () => {
     expect(getOnlineUserIds()).toEqual([]);
   });
 
-  it('ne diffuse que sur changement effectif de la liste', async () => {
+  it('only broadcasts on an effective change of the list', async () => {
     await markOnline(1, 'a');
     await markOnline(1, 'b');
     await markOnline(2, 'c');
     expect(broadcasts).toEqual([[1], [1, 2]]);
   });
 
-  it('écrit lastSeenAt à la première connexion et à la dernière déconnexion, pas entre', async () => {
+  it('writes lastSeenAt at the first connection and at the last disconnection, not in between', async () => {
     await markOnline(1, 'a');
     expect(update).toHaveBeenCalledOnce();
     await markOnline(1, 'b');
@@ -84,21 +84,21 @@ describe('présence en ligne', () => {
     expect(update).toHaveBeenCalledTimes(2);
   });
 
-  // Une réplique tuée ne peut plus retirer ses entrées : sans bail, ses utilisateurs
-  // resteraient « en ligne » indéfiniment pour tout le studio.
-  it('une entrée dont le bail a expiré disparaît de la liste', async () => {
+  // A killed replica can no longer remove its entries: without a lease, its users would remain "online"
+  // indefinitely for the whole studio.
+  it('an entry whose lease has expired disappears from the list', async () => {
     await markOnline(1, 'a');
     await markOnline(2, 'b');
     expect(getOnlineUserIds()).toEqual([1, 2]);
     advance(PRESENCE_TTL_MS + 1);
     await __redisTesting.runHeartbeat();
-    // Seules les connexions de ce process ont vu leur bail renouvelé.
+    // Only the connections of this process have seen their lease renewed.
     expect(getOnlineUserIds()).toEqual([1, 2]);
   });
 
-  it('l’entrée d’une réplique disparue expire, celle de ce process est renouvelée', async () => {
+  it('the entry of a vanished replica expires, that of this process is renewed', async () => {
     await markOnline(1, 'local');
-    // Entrée écrite « par une autre réplique », avec un bail qui va échoir.
+    // Entry written "by another replica", with a lease about to expire.
     await redis.call('ZADD', 'review:presence:online', Date.now() + 1_000, '99|distant');
     await __redisTesting.runHeartbeat();
     expect(getOnlineUserIds()).toEqual([1, 99]);
@@ -107,30 +107,30 @@ describe('présence en ligne', () => {
     expect(getOnlineUserIds()).toEqual([1]);
   });
 
-  it('la notification d’une autre réplique rafraîchit le miroir local', async () => {
+  it('the notification from another replica refreshes the local mirror', async () => {
     await markOnline(1, 'local');
     await redis.call('ZADD', 'review:presence:online', Date.now() + PRESENCE_TTL_MS, '7|ailleurs');
     __redisTesting.deliver('review:presence:online', 'online');
     await vi.waitFor(() => expect(getOnlineUserIds()).toEqual([1, 7]));
   });
 
-  // Une réplique qui ne porte aucun socket ne se serait jamais réveillée : la page
-  // d'administration qu'elle sert aurait annoncé « personne en ligne ».
-  it('amorce la synchronisation au démarrage, sans socket local', async () => {
+  // A replica carrying no socket would never have woken up: the administration page it serves would have
+  // announced "nobody online".
+  it('seeds the synchronisation at start-up, without a local socket', async () => {
     await redis.call('ZADD', 'review:presence:online', Date.now() + PRESENCE_TTL_MS, '4|ailleurs');
     expect(getOnlineUserIds()).toEqual([]);
     startPresenceSync();
     await vi.waitFor(() => expect(getOnlineUserIds()).toEqual([4]));
   });
 
-  it('publie sur le canal pour que les autres répliques diffusent aussi', async () => {
+  it('publishes on the channel so that the other replicas broadcast too', async () => {
     await markOnline(1, 'a');
     expect(redis.published).toContainEqual({ channel: 'review:presence:online', payload: 'online' });
   });
 });
 
-describe('présence par review', () => {
-  it('ajoute puis retire un spectateur', async () => {
+describe('presence per review', () => {
+  it('adds then removes a viewer', async () => {
     expect((await joinReview(1001, viewer(1), 'c1')).map((v) => v.id)).toEqual([1]);
     expect((await joinReview(1001, viewer(2), 'c2')).map((v) => v.id)).toEqual([1, 2]);
     expect((await leaveReview(1001, 1, 'c1')).map((v) => v.id)).toEqual([2]);
@@ -138,14 +138,14 @@ describe('présence par review', () => {
     expect(await getReviewViewers(1001)).toEqual([]);
   });
 
-  it('compte les onglets multiples : ne retire qu’au dernier leave', async () => {
+  it('counts multiple tabs: removes only at the last leave', async () => {
     await joinReview(1002, viewer(5), 'c1');
     await joinReview(1002, viewer(5), 'c2');
     expect((await leaveReview(1002, 5, 'c1')).map((v) => v.id)).toEqual([5]);
     expect(await leaveReview(1002, 5, 'c2')).toEqual([]);
   });
 
-  it('isole les reviews entre elles et ignore un leave inconnu', async () => {
+  it('isolates reviews from one another and ignores an unknown leave', async () => {
     await joinReview(2001, viewer(1), 'c1');
     await joinReview(2002, viewer(2), 'c2');
     expect((await getReviewViewers(2001)).map((v) => v.id)).toEqual([1]);
@@ -153,14 +153,14 @@ describe('présence par review', () => {
     expect((await leaveReview(2001, 99, 'inconnu')).map((v) => v.id)).toEqual([1]);
   });
 
-  it('rafraîchit l’identité au re-join (avatar présigné le plus récent)', async () => {
+  it('refreshes the identity on re-join (most recent presigned avatar)', async () => {
     await joinReview(3001, viewer(7, 'Ancien Nom'), 'c1');
     const updated = { ...viewer(7, 'Nouveau Nom'), avatarUrl: 'https://exemple/avatar.png' };
     advance(10);
     expect(await joinReview(3001, updated, 'c2')).toEqual([updated]);
   });
 
-  it('conserve l’ordre d’arrivée, quel que soit l’ordre de stockage', async () => {
+  it('keeps the arrival order, whatever the storage order', async () => {
     await joinReview(4001, viewer(30), 'c30');
     advance(5);
     await joinReview(4001, viewer(10), 'c10');
@@ -169,21 +169,21 @@ describe('présence par review', () => {
     expect((await getReviewViewers(4001)).map((v) => v.id)).toEqual([30, 10, 20]);
   });
 
-  it('un spectateur dont le bail est échu n’est plus listé et son entrée est nettoyée', async () => {
+  it('a viewer whose lease has expired is no longer listed and its entry is cleaned up', async () => {
     await joinReview(5001, viewer(1), 'c1');
     advance(PRESENCE_TTL_MS + 1);
     expect(await getReviewViewers(5001)).toEqual([]);
     await vi.waitFor(() => expect(redis.peek('review:presence:review:5001')).toBeUndefined());
   });
 
-  it('voit les spectateurs entrés depuis une autre réplique', async () => {
+  it('sees the viewers who joined from another replica', async () => {
     await joinReview(6001, viewer(1), 'c1');
     const stored = JSON.stringify({ v: viewer(2), j: Date.now() + 1, e: Date.now() + PRESENCE_TTL_MS });
     await redis.call('HSET', 'review:presence:review:6001', '2|distant', stored);
     expect((await getReviewViewers(6001)).map((v) => v.id)).toEqual([1, 2]);
   });
 
-  it('Redis muet : on affiche la vue locale plutôt qu’une salle vide', async () => {
+  it('Redis silent: the local view is displayed rather than an empty room', async () => {
     await joinReview(7001, viewer(1), 'c1');
     redis.failing = true;
     expect((await getReviewViewers(7001)).map((v) => v.id)).toEqual([1]);

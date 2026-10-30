@@ -1,4 +1,4 @@
-/* Service worker Web Push (42.B — №66). Affiche les notifications push et gère le clic. */
+/* Web Push service worker (42.B, №66). Displays push notifications and handles the click. */
 /* global self, clients */
 
 self.addEventListener('push', (event) => {
@@ -13,7 +13,7 @@ self.addEventListener('push', (event) => {
     self.registration.showNotification(title, {
       body: data.body || '',
       icon: '/logo_192.png',
-      // Le badge est rendu en monochrome par Android : silhouette blanche sur fond transparent.
+      // The badge is rendered in monochrome by Android: white silhouette on a transparent background.
       badge: '/logo_badge.png',
       data: { url: data.url || '/' },
     }),

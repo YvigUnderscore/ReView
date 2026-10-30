@@ -7,29 +7,22 @@ import { bestScore, rankBy } from './searchRank';
 import { excerptAround, searchTokens } from './searchComments';
 
 /**
- * Ce que la recherche globale ne trouvait pas.
+ * What the global search did not find.
  *
- * `searchEntities` interrogeait dix types — le pipe, les versions, les médias, les notes de
- * review, les personnes — et rien d'autre. Le produit en contient davantage : taper le nom
- * d'un département (« Modeling ») ou d'un épisode ne rendait rien du tout, et les montages,
- * les boards et les fiches d'entité (le brief, là où vit ce qu'un plan doit devenir)
- * n'étaient atteignables qu'en sachant déjà où cliquer.
+ * `searchEntities` queried ten types — the pipeline, versions, media, review notes, people — and nothing else. The product contains more: typing the
+ * name of a department ("Modeling") or of an episode returned nothing at all, and edits, boards and entity sheets (the brief, where what a shot must become
+ * lives) were reachable only by already knowing where to click.
  *
- * Ces cinq familles vivent ici plutôt que dans `search.ts` pour deux raisons : le fichier
- * d'origine tenait déjà son propre poids, et surtout ces types ne se filtrent pas comme les
- * autres — un département peut n'appartenir à aucun projet, un montage peut n'avoir aucun
- * nom, une fiche appartient à son entité porteuse plus qu'à elle-même.
+ * These five families live here rather than in `search.ts` for two reasons: the original file already carried its own weight, and above all these types
+ * do not filter like the others — a department may belong to no project, an edit may have no name, a sheet belongs to its carrying entity more than to itself.
  *
- * **Cloisonnement.** Même règle que dans `search.ts` : le filtre d'accès est écrit dans la
- * clause `where`, jamais appliqué après coup. La corbeille (`deletedAt`) et le masquage
- * (`hiddenAt`) excluent partout, y compris quand ils portent sur l'entité **porteuse** —
- * la fiche d'un plan masqué n'est pas un résultat, c'est une fuite.
+ * **Partitioning.** Same rule as in `search.ts`: the access filter is written in the `where` clause, never applied afterwards. The trash (`deletedAt`) and the
+ * hiding (`hiddenAt`) exclude everywhere, including when they bear on the **carrying** entity — the sheet of a hidden shot is not a result, it is a leak.
  */
 
 /**
- * Nombre de résultats par type. Volontairement plus court que pour les shots ou les
- * médias : ce sont des référentiels ou des écrans uniques, pas des listes qui suivent la
- * production, et la palette doit rester lisible d'un coup d'œil.
+ * Number of results per type. Deliberately shorter than for shots or media: these are reference lists or unique screens, not lists that follow production,
+ * and the palette must stay readable at a glance.
  */
 export const EXTRA_LIMITS = {
   episodes: 5,
@@ -39,40 +32,39 @@ export const EXTRA_LIMITS = {
   briefs: 5,
 } as const;
 
-/** Entité porteuse d'une fiche — c'est elle qui décide de la page à ouvrir. */
+/** Carrying entity of a sheet — it is this that decides the page to open. */
 export type BriefHolder = 'episode' | 'sequence' | 'shot' | 'asset';
 
 export interface ExtraResults {
   episodes: { id: number; code: string; name: string; projectId: number }[];
-  /** `projectId` à `null` = référentiel du studio, hérité par tous les projets. */
+  /** `projectId` `null` = studio reference, inherited by all projects. */
   departments: { id: number; name: string; key: string; projectId: number | null }[];
-  /** `name` à `null` quand personne n'a renommé le montage : l'écran affiche son libellé traduit. */
+  /** `name` `null` when no one has renamed the edit: the screen displays its translated label. */
   timelines: { id: number; name: string | null; projectName: string; sequenceCode: string | null }[];
   boards: { id: number; projectId: number | null; assetId: number | null; name: string }[];
   briefs: { id: number; holder: BriefHolder; holderId: number; label: string; excerpt: string }[];
 }
 
-/** Filtre textuel commun, monté une fois par `searchEntities`. */
+/** Common textual filter, mounted once per `searchEntities`. */
 export type Contains = { contains: string; mode: 'insensitive' };
 
 export interface ExtraScope {
-  /** Projets lisibles par le demandeur (cf. `projectScope`). */
+  /** Projects readable by the requester (cf. `projectScope`). */
   project: Prisma.ProjectWhereInput;
   role: Role;
 }
 
 /**
- * Les départements ne mènent qu'aux écrans où on les configure — le référentiel du studio
- * (`/admin/defaults`) ou l'onglet « Réglages » d'un projet. Les proposer à qui ne peut pas
- * les ouvrir, c'est promettre une porte fermée ; l'artiste qui tape « Modeling », lui,
- * trouve ses tâches de ce département (cf. la recherche de tâches dans `search.ts`).
+ * Departments only lead to the screens where they are configured — the studio reference (`/admin/defaults`) or the "Settings" tab of a project. Offering
+ * them to someone who cannot open them promises a closed door; the artist who types "Modeling", for their part, finds their tasks of that department (cf.
+ * the task search in `search.ts`).
  */
 const canOpenDepartments = (role: Role): boolean => role === Role.ADMIN || role === Role.SUPERVISOR;
 
-/** Une entité de production visible : ni à la corbeille, ni masquée. */
+/** A visible production entity: neither in the trash nor hidden. */
 const VISIBLE = { deletedAt: null, hiddenAt: null } as const;
 
-/** Épisodes — même fiche qu'une séquence : code, nom, description. */
+/** Episodes — same sheet as a sequence: code, name, description. */
 async function searchEpisodes(
   contains: Contains,
   { project }: ExtraScope,
@@ -97,9 +89,8 @@ async function searchEpisodes(
 }
 
 /**
- * Départements du pipe. Deux origines dans la même table : le référentiel du studio
- * (`projectId` nul, hérité partout) et les étapes propres à un projet, qui suivent l'accès
- * de ce projet.
+ * Departments of the pipe. Two origins in the same table: the studio reference (`projectId` null, inherited everywhere) and the steps specific to a
+ * project, which follow that project's access.
  */
 async function searchDepartments(
   contains: Contains,
@@ -125,9 +116,8 @@ async function searchDepartments(
 }
 
 /**
- * Montages. La plupart n'ont pas de nom — ils sont désignés par ce qu'ils montent : la
- * séquence, ou le projet entier. C'est donc là-dessus que porte la recherche, faute de quoi
- * seuls les montages renommés à la main seraient trouvables.
+ * Edits. Most have no name — they are designated by what they edit: the sequence, or the whole project. So that is where the search bears, failing which
+ * only the edits renamed by hand would be findable.
  */
 async function searchTimelines(
   contains: Contains,
@@ -136,7 +126,7 @@ async function searchTimelines(
   const rows = await prisma.timeline.findMany({
     where: {
       project,
-      // Un montage de séquence retirée ou masquée ne mène nulle part.
+      // An edit of a removed or hidden sequence leads nowhere.
       OR: [{ sequenceId: null }, { sequence: VISIBLE }],
       AND: [
         {
@@ -173,9 +163,8 @@ async function searchTimelines(
 }
 
 /**
- * Boards. Un board n'a pas de nom propre : il est celui d'un projet ou d'un asset, et c'est
- * ce nom-là qu'on tape. Le résultat existe pour la destination — la palette n'offrait
- * jusqu'ici que le board du projet **courant**.
+ * Boards. A board has no name of its own: it is that of a project or an asset, and it is that name one types. The result exists for the destination —
+ * until now the palette only offered the board of the **current** project.
  */
 async function searchBoards(contains: Contains, { project }: ExtraScope): Promise<ExtraResults['boards']> {
   const rows = await prisma.board.findMany({
@@ -203,7 +192,7 @@ async function searchBoards(contains: Contains, { project }: ExtraScope): Promis
   );
 }
 
-/** Le porteur d'une fiche : une seule colonne est renseignée (CHECK `EntityNote_target_xor`). */
+/** The carrier of a sheet: only one column is filled in (CHECK `EntityNote_target_xor`). */
 function holderOf(row: {
   episode: { id: number; code: string } | null;
   sequence: { id: number; code: string } | null;
@@ -218,20 +207,17 @@ function holderOf(row: {
 }
 
 /**
- * Fiches d'entité (le brief). C'est le seul endroit où vit ce qu'un plan doit devenir, et
- * il n'était cherchable nulle part — pas même depuis la page qui le porte.
+ * Entity sheets (the brief). This is the only place where what a shot must become lives, and it was searchable nowhere — not even from the page carrying it.
  *
- * Recherche par sous-chaîne, contrairement aux notes de review : la fiche est du markdown
- * écrit d'un bloc, sans index plein texte (cf. le compte rendu de phase). L'extrait rendu
- * réutilise le fenêtrage des notes de review, pour que la ligne de palette montre le
- * passage trouvé et non le début du document.
+ * Substring search, unlike review notes: the sheet is markdown written in one block, without a full-text index (cf. the phase report). The rendered excerpt
+ * reuses the windowing of the review notes, so that the palette line shows the passage found rather than the beginning of the document.
  */
 async function searchBriefs(contains: Contains, { project }: ExtraScope): Promise<ExtraResults['briefs']> {
   const rows = await prisma.entityNote.findMany({
     where: {
       body: contains,
       project,
-      // Une fiche sans porteur visible n'a pas de page à ouvrir : ce n'est pas un résultat.
+      // A sheet without a visible carrier has no page to open: it is not a result.
       OR: [{ episode: VISIBLE }, { sequence: VISIBLE }, { shot: VISIBLE }, { asset: VISIBLE }],
     },
     select: {
@@ -254,7 +240,7 @@ async function searchBriefs(contains: Contains, { project }: ExtraScope): Promis
   });
 }
 
-/** Les cinq familles absentes de `searchEntities`, interrogées en parallèle. */
+/** The five families absent from `searchEntities`, queried in parallel. */
 export async function searchExtras(contains: Contains, scope: ExtraScope): Promise<ExtraResults> {
   const [episodes, departments, timelines, boards, briefs] = await Promise.all([
     searchEpisodes(contains, scope),

@@ -15,22 +15,21 @@ import { useT, type Tr } from '../../i18n';
 import { Hint } from '../../components/ui/hint';
 
 /**
- * Réglages de notification par type d'événement (lot 9).
+ * Notification settings per event type (batch 9).
  *
- * Il n'en existait aucun : le profil n'offrait que le digest email, le rapport hebdo et
- * l'abonnement push du navigateur — c'est-à-dire tout sauf ce qui arrive vraiment, ligne
- * après ligne, dans le panneau. Le registre `notificationKinds` est ici la seule source de
- * la liste affichée : il est aussi celui que `notify()` consulte côté serveur, si bien
- * qu'une case cochée ici correspond nécessairement à une décision prise là-bas.
+ * None existed: the profile only offered the email digest, the weekly report and the browser push
+ * subscription, that is, everything except what actually arrives, line by line, in the panel. The
+ * `notificationKinds` registry is the only source of the displayed list here. It is also what
+ * `notify()` consults on the server side, so a box ticked here necessarily matches a decision
+ * taken there.
  *
- * Absence de réglage = activé. La grille part donc tout cochée pour un compte neuf, et un
- * genre ajouté plus tard arrive activé sans migration.
+ * No setting means enabled. The grid therefore starts fully ticked for a new account, and a kind
+ * added later arrives enabled, without a migration.
  */
 
 /**
- * Libellé d'un genre. Un `switch` à clés littérales, et non une table de constantes : une
- * table figerait la langue au chargement du module (règle i18n 5), et une clé construite
- * échapperait au détecteur de clés mortes.
+ * Label of a kind. A `switch` on literal keys, not a table of constants: a table would freeze the
+ * language at module load (i18n rule 5), and a constructed key would escape the dead-key detector.
  */
 function kindLabel(t: Tr, kind: NotificationKind): string {
   switch (kind) {
@@ -58,8 +57,8 @@ export default function NotificationSettings() {
   const prefsQ = usePreferences();
   const updatePrefs = useUpdatePreferences();
   const settings = prefsQ.data?.notifications as Settings | undefined;
-  // La mutation en cours désactive la grille entière : la fusion du serveur remplace
-  // `notifications` d'un bloc, deux bascules concurrentes s'écraseraient l'une l'autre.
+  // The mutation in progress disables the whole grid: the server merge replaces `notifications` as
+  // a block, so two concurrent toggles would overwrite each other.
   const busy = prefsQ.isLoading || updatePrefs.isPending;
 
   const toggle = (kind: NotificationKind, channel: NotificationChannel, enabled: boolean) => {

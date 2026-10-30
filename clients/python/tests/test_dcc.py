@@ -40,7 +40,7 @@ class GuessPipelinePath(unittest.TestCase):
             "PROJ/SQ010/SH0100/layout",
         )
 
-    # Publier dans le mauvais plan ne se rattrape pas : mieux vaut ne rien deviner.
+    # Publishing to the wrong shot cannot be undone: better not to guess.
     def test_says_nothing_rather_than_guessing_wrong(self) -> None:
         self.assertIsNone(guess_pipeline_path("render.mov", project="PROJ"))
         self.assertIsNone(guess_pipeline_path("SQ010_SH0100_anim.mov"))

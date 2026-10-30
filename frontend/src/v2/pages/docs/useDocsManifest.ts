@@ -7,15 +7,15 @@ import { t } from '../../i18n';
 import type { DocsManifest } from './docsManifest';
 
 /**
- * Sommaire de la documentation, partagé par la page `/docs` et la palette Ctrl+K.
+ * Table of contents of the documentation, shared by the `/docs` page and the Ctrl+K palette.
  *
- * Le manifest est un fichier statique produit au build (`scripts/build-docs.mjs`) et servi
- * par le frontend : il ne passe pas par l'API, ne dépend d'aucune session, et ne change
- * jamais pendant la vie de l'onglet — d'où `staleTime: Infinity` et une clé unique, pour
- * que la palette réutilise ce que la page de documentation a déjà chargé (et réciproquement).
+ * The manifest is a static file produced at build time (`scripts/build-docs.mjs`) and served by
+ * the frontend: it does not go through the API, depends on no session, and never changes during
+ * the life of the tab. Hence `staleTime: Infinity` and a single key, so that the palette reuses
+ * what the documentation page has already loaded, and vice versa.
  *
- * `enabled` existe pour la palette : elle ne doit pas aller chercher soixante-dix titres de
- * page tant que personne n'a rien tapé.
+ * `enabled` exists for the palette: it must not fetch seventy page titles while nobody has typed
+ * anything.
  */
 export function useDocsManifest(enabled = true) {
   return useQuery({

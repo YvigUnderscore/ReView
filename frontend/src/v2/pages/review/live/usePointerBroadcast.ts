@@ -2,18 +2,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useEffect } from 'react';
-import { getSocket } from '../../../../lib/socket';
+import { getSocket } from '@/lib/socket';
 import { clearPointers, setPointerEmitter } from './pointerBus';
 
 /**
- * Diffusion du curseur du driver sur le canal `live:sync` existant.
+ * Broadcasts the driver's cursor on the existing `live:sync` channel.
  *
- * La cadence est celle du bus (~20 Hz), volontairement décorrélée de `syncHz` : la
- * diffusion périodique, réglée à 2 Hz par défaut, ferait un pointeur qui saute d'un bout
- * à l'autre de l'image. La trame est légère (identifiant + deux fractions) et les
- * spectateurs l'appliquent seule — aucun autre champ n'accompagne le curseur.
+ * The rate is that of the bus (~20 Hz), deliberately decoupled from `syncHz`: the periodic
+ * broadcast, set to 2 Hz by default, would make a pointer jump from one end of the image to the
+ * other. The frame is light (identifier + two fractions) and the viewers apply it on their own:
+ * no other field accompanies the cursor.
  *
- * Prendre la main efface les curseurs reçus : c'est nous qui montrons désormais.
+ * Taking over clears the received cursors: we are the ones pointing now.
  */
 export function usePointerBroadcast({
   active,

@@ -23,8 +23,8 @@ import EntityContextMenu from './ui/entity-menu';
 import type { NotesScope } from '../lib/notesExport';
 
 /**
- * L'EDL et l'OTIO existaient sans surface d'appel. Ce qui se vérifie ici : ils sont
- * proposés là où le serveur les accepte — une suite de plans — et nulle part ailleurs.
+ * The EDL and the OTIO existed without a call surface. What is verified here: they are
+ * offered where the server accepts them (a shot sequence), and nowhere else.
  */
 
 const withQuery = (node: React.ReactNode) => {
@@ -32,7 +32,7 @@ const withQuery = (node: React.ReactNode) => {
   return render(<QueryClientProvider client={qc}>{node}</QueryClientProvider>);
 };
 
-/** Petit hôte : le sous-menu déclaratif n'existe qu'à travers un menu contextuel. */
+/** Small host: the declarative submenu only exists through a context menu. */
 function MenuHost({ scope, id }: { scope: NotesScope; id: number }) {
   const entry = useNotesExportEntry({ scope, id });
   return (
@@ -50,7 +50,7 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('notesFormatsFor', () => {
-  it('n’offre l’EDL et l’OTIO que sur une suite de plans', () => {
+  it('offers the EDL and the OTIO only on a sequence of shots', () => {
     expect(notesFormatsFor('timeline')).toEqual(['csv', 'sheet', 'edl', 'otio']);
     expect(notesFormatsFor('playlist')).toEqual(['csv', 'sheet', 'edl', 'otio']);
     for (const scope of ['media', 'version', 'shot'] as NotesScope[])
@@ -59,25 +59,25 @@ describe('notesFormatsFor', () => {
 });
 
 describe('NotesExportButtons', () => {
-  it('propose les quatre formats du montage', () => {
+  it('offers the four formats of the edit', () => {
     withQuery(<NotesExportButtons scope="timeline" id={3} />);
     expect(screen.getAllByRole('button')).toHaveLength(4);
   });
 
-  it('demande l’EDL de la portée affichée et confirme le téléchargement', async () => {
+  it('requests the EDL of the displayed scope and confirms the download', async () => {
     withQuery(<NotesExportButtons scope="timeline" id={3} />);
     await userEvent.click(screen.getAllByRole('button')[2]);
     await waitFor(() => expect(download).toHaveBeenCalledWith({ scope: 'timeline', id: 3, format: 'edl' }));
     await waitFor(() => expect(toasts.success).toHaveBeenCalled());
   });
 
-  it('demande l’OTIO sur le quatrième bouton', async () => {
+  it('requests the OTIO from the fourth button', async () => {
     withQuery(<NotesExportButtons scope="timeline" id={3} />);
     await userEvent.click(screen.getAllByRole('button')[3]);
     await waitFor(() => expect(download).toHaveBeenCalledWith({ scope: 'timeline', id: 3, format: 'otio' }));
   });
 
-  it('prévient d’un export plafonné et laisse l’échec réessayable', async () => {
+  it('warns of a capped export and leaves the failure retryable', async () => {
     download.mockResolvedValue({ filename: 'notes-timeline-3.csv', truncated: true });
     withQuery(<NotesExportButtons scope="timeline" id={3} />);
     const csv = screen.getAllByRole('button')[0] as HTMLButtonElement;
@@ -90,14 +90,14 @@ describe('NotesExportButtons', () => {
     await waitFor(() => expect(csv.disabled).toBe(false));
   });
 
-  it('ne propose que le tableur et la planche sur un média isolé', () => {
+  it('offers only the spreadsheet and the sheet on an isolated media', () => {
     withQuery(<NotesExportButtons scope="media" id={7} />);
     expect(screen.getAllByRole('button')).toHaveLength(2);
   });
 });
 
 describe('useNotesExportEntry', () => {
-  it('décrit un sous-menu dont chaque entrée déclenche son format', async () => {
+  it('describes a submenu whose each entry triggers its format', async () => {
     withQuery(<MenuHost scope="playlist" id={11} />);
     await userEvent.pointer({ keys: '[MouseRight]', target: screen.getByText('zone') });
     const trigger = await screen.findByRole('menuitem', { name: /notesExport\.title|Review notes/i });

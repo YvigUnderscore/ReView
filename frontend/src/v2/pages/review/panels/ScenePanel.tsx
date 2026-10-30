@@ -3,18 +3,18 @@
 
 import type { ReactNode } from 'react';
 import { RotateCcw } from 'lucide-react';
-import { IconButton } from '../../../components/ui/icon-button';
-import { NumberField } from '../../../components/ui/number-field';
-import { SegmentedControl } from '../../../components/ui/segmented-control';
-import { Select } from '../../../components/ui/select';
-import { Switch } from '../../../components/ui/switch';
+import { IconButton } from '@/v2/components/ui/icon-button';
+import { NumberField } from '@/v2/components/ui/number-field';
+import { SegmentedControl } from '@/v2/components/ui/segmented-control';
+import { Select } from '@/v2/components/ui/select';
+import { Switch } from '@/v2/components/ui/switch';
 import { DOCK_SELECT, Group, Row } from '../chrome/DockGroup';
 import type { LodMode } from '../splat/scene/lod';
 import type { RevealConfig } from '../splat/presentation/usePresentation';
 import type { RevealType } from '../splat/scene/effects/reveal';
-import { useT, type MessageKey } from '../../../i18n';
+import { useT, type MessageKey } from '@/v2/i18n';
 
-/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+/** Translator passed to the label tables, recomputed on each render. */
 type Tr = (key: MessageKey) => string;
 
 const reveals = (t: Tr): { value: RevealType; label: string }[] => [
@@ -39,9 +39,9 @@ const lods = (t: Tr): { value: LodMode; label: string; hint: string }[] => [
 export type SectionAxis = 'x' | 'y' | 'z';
 
 /**
- * Panneau Scène du dock spatial : ce qui entoure le média (repères), ce qui le coupe (plan de
- * coupe, turntable) et ce qui règle son coût de rendu. Réunit `SectionBar`, `TurntableBar`,
- * la grille de sol et la section Performance de l'ancien panneau de réglages du viewer.
+ * Scene panel of the spatial dock: what surrounds the media (guides), what cuts it (cutting plane,
+ * turntable) and what sets its rendering cost. Brings together `SectionBar`, `TurntableBar`, the
+ * ground grid and the Performance section of the former viewer settings panel.
  */
 export default function ScenePanel({
   grid,
@@ -74,16 +74,16 @@ export default function ScenePanel({
     speed: number;
     onSpeed: (s: number) => void;
   };
-  /** Arbre de prims USD (46.C) — absent pour un media sans scenegraph. */
+  /** USD prim tree (46.C): absent for a media without a scenegraph. */
   scenegraph?: ReactNode;
   /**
-   * Recomposition de la scène USD (45.F) — absente sans source USD ou sans droits. Posée ici,
-   * et non plus dans une modale : elle change les variantes que l'arbre juste au-dessus
-   * affiche, et on la règle en tournant autour de la scène.
+   * Recomposition of the USD scene (45.F): absent without a USD source or without rights. It is placed
+   * here, and no longer in a modal: it changes the variants that the tree just above displays, and one
+   * adjusts it by orbiting around the scene.
    */
   recompose?: ReactNode;
   perf: {
-    /** LOD et culling : splat uniquement. */
+    /** LOD and culling: splat only. */
     lod?: { mode: LodMode; onMode: (m: LodMode) => void };
     culling?: { off: boolean; onOff: (v: boolean) => void };
     reveal?: {
@@ -97,7 +97,7 @@ export default function ScenePanel({
   const reveal = perf.reveal;
   return (
     <>
-      {/* Scenegraph USD (46.C) en tête : c'est la structure de la scene, le reste la decore. */}
+      {/* Scenegraph USD (46.C) at the top: it is the structure of the scene, the rest decorates it. */}
       {scenegraph && <Group title={t('scenegraph.title')}>{scenegraph}</Group>}
       {recompose}
       <Group title={t('viewer.guides.title')}>
@@ -200,7 +200,7 @@ export default function ScenePanel({
         </Group>
       )}
 
-      {/* Le modèle 3D n'a ni LOD ni effet d'apparition : pas de section vide dans son dock. */}
+      {/* The 3D model has neither LOD nor fade-in effect: no empty section in its dock. */}
       {(perf.lod || perf.culling || reveal) && (
         <Group title={t('panel.performance')}>
           {perf.lod && (

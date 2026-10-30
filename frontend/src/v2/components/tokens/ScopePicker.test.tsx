@@ -15,9 +15,9 @@ vi.mock('./tokenApi', () => ({
 import ScopePicker from './ScopePicker';
 
 /**
- * Le sélecteur ne connaît aucun scope : il met en forme celui que le serveur sert. C'est
- * ce qui fait qu'un scope retiré du catalogue disparaît de l'écran sans qu'on y touche —
- * et ce que ces tests protègent.
+ * The picker knows no scopes: it formats the ones the server serves. That is why a scope
+ * removed from the catalogue disappears from the screen without anyone touching it, and
+ * what these tests protect.
  */
 function Harness({ initial = [] as string[] }) {
   const [value, setValue] = useState<string[]>(initial);
@@ -39,16 +39,16 @@ afterEach(() => {
 });
 
 describe('ScopePicker', () => {
-  it('n’affiche que les scopes servis par le serveur', () => {
+  it('only displays the scopes served by the server', () => {
     catalog.current = { scopes: ['shots:read', 'shots:write', 'events:read'], legacy: [] };
     render(<Harness />);
     expect(screen.getByText('shots')).toBeTruthy();
     expect(screen.getByText('events')).toBeTruthy();
-    // events n'a pas d'écriture au catalogue : deux cases pour shots, une pour events.
+    // events has no catalogue write: two checkboxes for shots, one for events.
     expect(boxes()).toHaveLength(3);
   });
 
-  it('accorde la lecture avec l’écriture', () => {
+  it('grants read along with write', () => {
     catalog.current = { scopes: ['shots:read', 'shots:write'], legacy: [] };
     render(<Harness />);
     fireEvent.click(boxes()[1]);
@@ -56,7 +56,7 @@ describe('ScopePicker', () => {
     expect(boxes()[0]?.getAttribute('aria-checked')).toBe('true');
   });
 
-  it('coche tout et verrouille la grille sous `admin`', () => {
+  it('ticks everything and locks the grid under `admin`', () => {
     catalog.current = { scopes: ['shots:read', 'admin'], legacy: [] };
     render(<Harness />);
     const admin = boxes()[1];
@@ -67,16 +67,16 @@ describe('ScopePicker', () => {
     expect(domain.hasAttribute('disabled')).toBe(true);
   });
 
-  it('signale un catalogue indisponible plutôt que d’afficher une grille vide', () => {
+  it('flags an unavailable catalogue rather than showing an empty grid', () => {
     catalog.current = { scopes: [], legacy: [] };
     state.isError = true;
     render(<Harness />);
-    // Le libellé traduit, et non la clé : le catalogue anglais est chargé dans les tests.
+    // The translated label, not the key: the English catalogue is loaded in tests.
     expect(screen.getByText('The permission catalogue could not be loaded.')).toBeTruthy();
     expect(screen.queryAllByRole('checkbox')).toHaveLength(0);
   });
 
-  it('attend le catalogue avant de proposer quoi que ce soit', () => {
+  it('waits for the catalogue before offering anything', () => {
     catalog.current = { scopes: [], legacy: [] };
     state.isPending = true;
     render(<Harness />);

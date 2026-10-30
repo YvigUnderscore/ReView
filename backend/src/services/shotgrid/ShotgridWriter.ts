@@ -9,38 +9,28 @@ import { writeAllowedOn } from './shotgridTemplateGuard';
 import { asEntityRef, type SgRecord } from './shotgridMapper';
 
 /**
- * Le seul chemin par lequel ReView écrit dans ShotGrid.
+ * The only path through which ReView writes to ShotGrid.
  *
- * Les contrôles de cloisonnement existaient déjà — relecture de la cible,
- * `belongsToProject`, refus des projets modèles — mais ils reposaient sur la **mémoire de
- * celui qui écrit le code** : rien n'empêchait un nouvel appel de parler au client
- * directement. La preuve que ça glisse est dans l'historique : `ShotgridPlaylistSync`
- * avait recopié les trois vérifications à la main au lieu de réutiliser `resolveTarget`,
- * et deux copies d'une même règle finissent toujours par diverger.
+ * The partitioning checks already existed — re-reading the target, `belongsToProject`, refusal of template projects — but they relied on the **memory of whoever wrote the code**:
+ * nothing prevented a new call from talking to the client directly. The proof that it slips is in the history: `ShotgridPlaylistSync` had copied the three checks by hand instead
+ * of reusing `resolveTarget`, and two copies of one rule always end up diverging.
  *
- * Ce module transforme la discipline en contrainte. Les méthodes brutes du client sont
- * préfixées `unsafe` et ne s'appellent plus nulle part ailleurs — `ShotgridWriteGuard.test.ts`
- * fait échouer la suite si l'une d'elles réapparaît hors d'ici. Écrire dans le mauvais
- * projet redevient ce que ça aurait toujours dû être : une erreur qu'on ne peut pas
- * commettre par distraction.
+ * This module turns the discipline into a constraint. The client's raw methods are prefixed `unsafe` and are no longer called anywhere else — `ShotgridWriteGuard.test.ts`
+ * makes the suite fail if one of them reappears outside here. Writing into the wrong project becomes what it should always have been: an error one cannot commit by distraction.
  *
- * **Ce que ce garde-fou ne couvre pas**, et qu'aucun code ne couvrira :
+ * **What this guard does not cover**, and no code will:
  *
- *  - *La fenêtre entre la relecture et l'écriture.* L'API REST de ShotGrid n'offre aucune
- *    écriture conditionnelle : entre le moment où l'on vérifie le projet d'une entité et
- *    celui où on l'écrit, rien ne garantit formellement qu'elle n'a pas bougé. Quelques
- *    millisecondes, et une relecture qui rend le cas négligeable — mais pas nul.
- *  - *Une connexion pointée sur le mauvais projet dès le départ.* Toutes les écritures
- *    partent alors au « bon » endroit d'une prémisse fausse. C'est `createConnection`
- *    (identifiant **et** nom confrontés) et `openConnection` (nom revérifié avant chaque
- *    passe) qui tiennent ce bout-là.
+ *  - *The window between the re-read and the write.* ShotGrid's REST API offers no conditional write: between the moment one checks an entity's project and the moment one
+ *    writes it, nothing formally guarantees it has not moved. A few milliseconds, and a re-read that makes the case negligible — but not nil.
+ *  - *A connection pointed at the wrong project from the start.* All writes then go to the "right" place of a false premise. It is `createConnection`
+ *    (identifier **and** name checked against each other) and `openConnection` (name rechecked before each pass) that hold this end.
  */
 
 export interface WriterScope extends ProjectScope {
   client: ShotgridClient;
 }
 
-/** Champs relus pour trancher : l'identité, le projet, et le nom du projet pour le gabarit. */
+/** Fields re-read to decide: the identity, the project, and the project name for the template. */
 const GUARD_FIELDS = ['id', 'project'];
 
 export class ShotgridWriter {
@@ -51,36 +41,34 @@ export class ShotgridWriter {
   }
 
   /**
-   * La cible est-elle écrivable ? Relecture, cloisonnement, gabarit.
+   * Is the target writable? Re-read, segregation, template.
    *
-   * Rend `false` plutôt que de lever : une écriture refusée se journalise et la
-   * synchronisation continue. C'est le comportement qu'avaient déjà `resolveTarget` et
-   * la garde recopiée dans les playlists.
+   * Returns `false` rather than throwing: a refused write is logged and the synchronization carries on. This is the behaviour that `resolveTarget` and the guard copied
+   * into the playlists already had.
    */
   private async targetWritable(sgType: string, sgId: number): Promise<boolean> {
     const remote = await this.scope.client.findById(sgType, sgId, GUARD_FIELDS);
     if (!remote) {
-      logger.warn({ sgType, sgId }, 'Écriture ShotGrid abandonnée : cible introuvable sur le site');
+      logger.warn({ sgType, sgId }, 'ShotGrid write abandoned: target not found on the site');
       return false;
     }
     const verdict = belongsToProject(remote, this.projectScope);
     if (!verdict.ok) {
       logger.error(
         { sgType, sgId, expected: this.scope.sgProjectId, found: verdict.foundProjectId },
-        'Écriture ShotGrid annulée : la cible appartient à un autre projet',
+        'ShotGrid write cancelled: the target belongs to another project',
       );
       return false;
     }
     if (!writeAllowedOn(remote)) {
-      logger.error({ sgType, sgId }, 'Écriture ShotGrid annulée : cible dans un projet modèle');
+      logger.error({ sgType, sgId }, 'ShotGrid write cancelled: target in a template project');
       return false;
     }
     return true;
   }
 
   /**
-   * Modifie une entité existante. `null` quand l'écriture a été refusée — l'appelant
-   * n'a rien de plus à faire, le refus est déjà journalisé.
+   * Modifies an existing entity. `null` when the write was refused — the caller has nothing more to do, the refusal is already logged.
    */
   async update(
     sgType: string,
@@ -93,15 +81,12 @@ export class ShotgridWriter {
   }
 
   /**
-   * Crée une entité **dans le projet lié**.
+   * Creates an entity **in the linked project**.
    *
-   * Le `project` est posé ici et nulle part ailleurs : un appelant ne peut ni l'oublier
-   * ni en viser un autre. Une charge utile qui en porte un différent est une erreur de
-   * programmation, pas une donnée à arbitrer — on lève.
+   * The `project` is set here and nowhere else: a caller can neither forget it nor target another one. A payload carrying a different one is a programming error,
+   * not data to arbitrate — we throw.
    *
-   * La relecture qui suit n'est pas de la superstition : c'est le site qui décide de ce
-   * qu'il a réellement écrit, et une entité déposée dans la production de quelqu'un
-   * d'autre ne se rattrape pas toute seule.
+   * The re-read that follows is not superstition: it is the site that decides what it actually wrote, and an entity deposited in someone else's production cannot be undone by itself.
    */
   async create(
     sgType: string,
@@ -112,7 +97,7 @@ export class ShotgridWriter {
     if (asked && asked.id !== this.scope.sgProjectId) {
       logger.error(
         { sgType, asked: asked.id, expected: this.scope.sgProjectId },
-        'Création ShotGrid refusée : la charge utile vise un autre projet',
+        'ShotGrid creation refused: the payload targets another project',
       );
       throw badRequest('ShotGrid payload targets another project');
     }
@@ -127,7 +112,7 @@ export class ShotgridWriter {
     if (check && !belongsToProject(check, this.projectScope).ok) {
       logger.error(
         { sgType, sgId: created.id, expected: this.scope.sgProjectId },
-        'Entité créée hors du projet lié — à retirer du site',
+        'Entity created outside the linked project — remove it from the site',
       );
       throw badRequest('ShotGrid filed the entity outside the target project');
     }
@@ -137,7 +122,7 @@ export class ShotgridWriter {
     return created;
   }
 
-  /** Dépose un fichier sur une entité — même relecture que `update`. */
+  /** Deposits a file on an entity — same re-read as `update`. */
   async upload(
     sgType: string,
     sgId: number,
@@ -152,7 +137,7 @@ export class ShotgridWriter {
   }
 }
 
-/** Writer d'une connexion — c'est la seule façon d'en obtenir un. */
+/** A connection's writer — the only way to obtain one. */
 export function writerFor(scope: WriterScope): ShotgridWriter {
   return new ShotgridWriter(scope);
 }

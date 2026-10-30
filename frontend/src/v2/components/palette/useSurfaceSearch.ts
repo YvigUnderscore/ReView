@@ -7,16 +7,14 @@ import { useT } from '../../i18n';
 import { searchDocSurfaces, searchSettingsSurfaces, type SurfaceHit } from './surfaceSearch';
 
 /**
- * Les deux familles de résultats que le serveur ne connaît pas : les pages de documentation
- * et les écrans de réglages (cf. `surfaceSearch`, où vit toute la logique).
+ * The two families of results the server does not know about: documentation pages and settings screens
+ * (see `surfaceSearch`, where all the logic lives).
  *
- * Dans un module à part du composant : la palette a besoin de savoir **s'il y a quelque
- * chose à afficher** avant de rendre son message « aucun résultat », et un fichier qui
- * exporte à la fois un composant et un hook casse le rafraîchissement à chaud de Vite.
+ * They live in a module separate from the component: the palette must know **whether there is anything to display**
+ * before rendering its "no results" message, and a file exporting both a component and a hook breaks Vite's hot reload.
  *
- * Aucune mémoïsation : le calcul porte sur soixante-dix titres de page en mémoire, et un
- * `useMemo` dont les dépendances ne bougent pas au changement de langue rendrait des
- * libellés périmés — le seul cas où il coûterait quelque chose.
+ * No memoisation: the computation runs over seventy page titles held in memory, and a `useMemo` whose dependencies do
+ * not change on a language switch would render stale labels, the only case where it would cost anything.
  */
 export interface SurfaceHits {
   docs: SurfaceHit[];
@@ -29,7 +27,7 @@ export const hasSurfaceHits = (hits: SurfaceHits): boolean =>
 export function useSurfaceSearch(query: string, enabled: boolean): SurfaceHits {
   const t = useT();
   const role = useAuth((s) => s.user?.role);
-  // Le sommaire n'est chargé qu'à la première recherche, et partagé avec la page /docs.
+  // The table of contents is only loaded on the first search, and shared with the /docs page.
   const manifest = useDocsManifest(enabled);
 
   if (!enabled) return { docs: [], settings: [] };

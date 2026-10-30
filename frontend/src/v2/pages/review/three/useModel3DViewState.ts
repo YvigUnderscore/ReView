@@ -8,16 +8,15 @@ import type { Model3DThreeState } from './useModel3DThree';
 import type { SectionPlaneState } from './useSectionPlane';
 
 /**
- * Branche l'**état de vue** (mode d'affichage, plan de coupe, éclairage HDRI) sur la vue
- * caméra du viewer : capturé avec le commentaire, rejoué à sa sélection.
+ * Hooks the **view state** (display mode, section plane, HDRI lighting) onto the viewer's camera
+ * view: captured with the comment, replayed on its selection.
  *
- * Un commentaire emportait déjà la caméra, le hotspot, l'animation et la proposition de
- * scène — mais pas ce qui change le plus l'image. « Regarde ce que je vois » renvoyait donc
- * le lecteur à la bonne caméra devant un rendu différent : shaded au lieu de wireframe, coupe
- * refermée, autre HDRI.
+ * A comment already carried the camera, the hotspot, the animation and the scene proposal — but not
+ * what changes the image the most. "Look at what I see" therefore sent the reader to the right
+ * camera in front of a different render: shaded instead of wireframe, cut closed, another HDRI.
  *
- * Les trois hooks sont des objets neufs à chaque rendu : le fournisseur les rappelle par une
- * ref, ce qui garde l'enregistrement stable (une seule fois au montage).
+ * The three hooks are new objects on every render: the provider recalls them through a ref, which
+ * keeps the registration stable (done once on mount).
  */
 export function useModel3DViewState(params: {
   model3d: Model3DThreeState;

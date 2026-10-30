@@ -5,38 +5,37 @@ import { createReadStream } from 'node:fs';
 import { stat } from 'node:fs/promises';
 
 /**
- * Forme d'onde audio compacte, calculée au transcodage.
+ * Compact audio waveform, computed at transcode time.
  *
- * Le lecteur n'affichait rien du son : la sonde relevait `hasAudio` et personne ne le
- * lisait. Repérer un décalage lèvres/son ou une coupure de dialogue demandait d'écouter
- * la vidéo entière. On produit donc, une fois pour toutes, une **crête par barre** —
- * un octet — plutôt qu'une image : quelques centaines d'octets voyagent avec les
- * métadonnées du média, sans dérivé à stocker ni URL présignée à régénérer.
+ * The player showed nothing of the sound: the probe recorded `hasAudio` and nobody read it.
+ * Spotting a lip-sync offset or a cut-off line meant listening to the whole video. So we produce,
+ * once and for all, **one peak per bar** (one byte) rather than an image: a few hundred bytes
+ * travel with the media metadata, with no derived file to store and no presigned URL to regenerate.
  *
- * Le flux analysé est du PCM `s16le` mono extrait par ffmpeg (cf. `ffmpeg.worker`), lu
- * en flot : un long-métrage ne tient pas en mémoire à 8 kHz, l'accumulateur si.
+ * The analysed stream is mono `s16le` PCM extracted by ffmpeg (see `ffmpeg.worker`), read as a
+ * stream: a feature film does not fit in memory at 8 kHz, the accumulator does.
  */
 
-/** Fréquence d'échantillonnage du flux PCM mono extrait pour l'analyse. */
+/** Sample rate of the extracted mono PCM stream used for analysis. */
 export const WAVEFORM_SAMPLE_RATE = 8000;
 
-/** Résolution cible de la forme d'onde : huit barres par seconde, bornée aux extrêmes. */
+/** Target waveform resolution: eight bars per second, clamped to extremes. */
 const BINS_PER_SEC = 8;
 const MIN_BINS = 64;
 const MAX_BINS = 1200;
 
-/** Forme d'onde rangée dans `metadata.waveform` d'un MediaObject vidéo. */
+/** Waveform stored in `metadata.waveform` of a video MediaObject. */
 export interface WaveformMeta {
   version: 1;
-  /** Nombre de barres — la barre `i` couvre `[i/bins, (i+1)/bins]` de la durée. */
+  /** Number of bars: bar `i` covers `[i/bins, (i+1)/bins]` of the duration. */
   bins: number;
-  /** Crêtes 0..255, un octet par barre, encodées en base64. */
+  /** Peaks 0..255, one byte per bar, base64-encoded. */
   peaks: string;
 }
 
 /**
- * Nombre de barres pour une durée donnée. `null` quand la durée est inconnue ou nulle :
- * sans elle, aucune barre ne correspond à un instant, la forme d'onde mentirait.
+ * Number of bars for a given duration. `null` when the duration is unknown or zero: without it no
+ * bar maps to an instant, and the waveform would be misleading.
  */
 export function planWaveformBins(durationSec: number | undefined): number | null {
   if (typeof durationSec !== 'number' || !Number.isFinite(durationSec) || durationSec <= 0) return null;
@@ -46,11 +45,11 @@ export function planWaveformBins(durationSec: number | undefined): number | null
 const toSigned = (v: number): number => (v >= 0x8000 ? v - 0x10000 : v);
 
 /**
- * Accumulateur de crêtes sur un flux PCM `s16le` mono.
+ * Peak accumulator over a mono `s16le` PCM stream.
  *
- * Les morceaux lus n'ont aucune raison de tomber sur un nombre pair d'octets : l'octet
- * de poids faible orphelin est retenu (`carry`) et recollé au morceau suivant, sinon un
- * seul chunk impair décalerait d'un octet tout le reste de la piste — soit du bruit.
+ * Read chunks have no reason to contain an even number of bytes: the orphan low byte is kept
+ * (`carry`) and joined to the next chunk, otherwise a single odd chunk would shift the rest of the
+ * track by one byte, producing noise.
  */
 export class PeakAccumulator {
   private readonly peaks: Uint8Array;
@@ -89,15 +88,15 @@ export class PeakAccumulator {
   }
 }
 
-/** Encode les crêtes en base64 — un octet par barre. */
+/** Encodes the peaks in base64: one byte per bar. */
 export function encodePeaks(peaks: Uint8Array): WaveformMeta {
   return { version: 1, bins: peaks.length, peaks: Buffer.from(peaks).toString('base64') };
 }
 
 /**
- * Lit un fichier PCM `s16le` mono et en tire la forme d'onde. Le nombre exact
- * d'échantillons vient de la taille du fichier, pas de la durée sondée : une durée
- * approchée décalerait progressivement les barres par rapport à l'image.
+ * Reads a mono `s16le` PCM file and derives the waveform from it. The exact sample count comes from
+ * the file size, not the probed duration: an approximate duration would gradually shift the bars
+ * relative to the picture.
  */
 export async function waveformFromPcmFile(path: string, bins: number): Promise<WaveformMeta | null> {
   const { size } = await stat(path);

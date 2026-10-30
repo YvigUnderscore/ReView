@@ -5,7 +5,7 @@ import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
@@ -13,6 +13,7 @@ import { QueryState } from '../../components/ui/query-state';
 import { Panel } from './AdminPrimitives';
 import HdriPreview from './HdriPreview';
 import { useT } from '../../i18n';
+import { putToPresignedUrl } from '@/v2/lib/presignedUpload';
 
 interface HdriItem {
   id: string;
@@ -23,8 +24,8 @@ interface HdriItem {
 }
 
 /**
- * Bibliothèque HDRI (Phase 15 V4) : upload présigné MinIO (.hdr/.exr) + liste + suppression.
- * Ces environnements seront proposés à l'éclairage du viewer 3D Three.js.
+ * HDRI library (Phase 15 V4): presigned MinIO upload (.hdr/.exr) + list + deletion.
+ * These environments will be offered for the lighting of the Three.js 3D viewer.
  */
 export default function HdriTab() {
   const t = useT();
@@ -53,8 +54,7 @@ export default function HdriTab() {
         '/api/studio/hdris/presign',
         { format: ext },
       );
-      const put = await fetch(uploadUrl, { method: 'PUT', body: file });
-      if (!put.ok) throw new Error(t('hdri.uploadFailed'));
+      await putToPresignedUrl(uploadUrl, file, t('hdri.uploadFailed'), null);
       await api.post('/api/studio/hdris', {
         name: file.name.replace(/\.(hdr|exr)$/i, ''),
         storageKey,

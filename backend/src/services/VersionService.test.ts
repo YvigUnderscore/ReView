@@ -6,14 +6,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../lib/prisma', () => ({
   prisma: {
     version: { count: vi.fn(), create: vi.fn(), findUnique: vi.fn(), update: vi.fn(), findMany: vi.fn() },
-    // Projet writable par défaut (38.B) : le verrou d’archivage interroge project.findFirst.
+    // Project writable by default (38.B): the archive lock queries project.findFirst.
     project: { findFirst: vi.fn().mockResolvedValue({ status: 'ACTIVE' }) },
-    // Le nom d'une version dépend désormais du projet : relié ou non, et sous quel parent.
+    // A version's name now depends on the project: linked or not, and under which parent.
     shotgridConnection: { findUnique: vi.fn() },
     task: { findUnique: vi.fn() },
     asset: { findUnique: vi.fn() },
-    // Les droits se lisent sur le rôle EFFECTIF (38.E) : par défaut, membre sans rôle local
-    // (donc contributeur au rôle global), ce que testaient déjà les cas ci-dessous.
+    // Rights are read from the EFFECTIVE role (38.E): by default, a member without a local role
+    // (hence a contributor on the global role), which the cases below already tested.
     projectMembership: { findUnique: vi.fn().mockResolvedValue({ role: null }) },
   },
 }));
@@ -41,7 +41,7 @@ const updateVersion = vi.mocked(prisma.version.update);
 const membership = vi.mocked(prisma.projectMembership.findUnique);
 const user = { id: 3, role: Role.ARTIST };
 
-describe('VersionService.create — auto-nommage des versions', () => {
+describe('VersionService.create: automatic version naming', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     createVersion.mockImplementation(({ data }) => Promise.resolve({ id: 1, ...data }) as never);
@@ -51,7 +51,7 @@ describe('VersionService.create — auto-nommage des versions', () => {
     asset.mockResolvedValue(null);
   });
 
-  it('nomme V01 quand aucune version n’existe encore', async () => {
+  it('names V01 when no version exists yet', async () => {
     await create(user, 7, { taskId: 42 });
     expect(createVersion).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ name: 'V01', taskId: 42, authorId: 3 }) }),
@@ -63,9 +63,8 @@ describe('VersionService.create — auto-nommage des versions', () => {
     );
   });
 
-  it('reprend au-dessus du plus grand numéro, jamais au nombre de versions', async () => {
-    // Compter régressait dès qu'on supprimait une version : deux V03 finissaient par
-    // désigner deux travaux différents.
+  it('continues above the highest number, never at the version count', async () => {
+    // Counting regressed as soon as a version was deleted: two V03 ended up naming two different pieces of work.
     siblings.mockResolvedValue([{ name: 'V01' }, { name: 'V09' }] as never);
     await create(user, 7, { assetId: 5 });
     expect(createVersion).toHaveBeenCalledWith(
@@ -73,7 +72,7 @@ describe('VersionService.create — auto-nommage des versions', () => {
     );
   });
 
-  it('suit la convention du site quand le projet y est relié', async () => {
+  it('follows the site convention when the project is linked to it', async () => {
     connection.mockResolvedValue({ active: true } as never);
     task.mockResolvedValue({ department: 'anim', shot: { code: 'DEMO_SH010' }, asset: null } as never);
     siblings.mockResolvedValue([{ name: 'DEMO_SH010_anim_v002' }] as never);
@@ -85,7 +84,7 @@ describe('VersionService.create — auto-nommage des versions', () => {
     );
   });
 
-  it('respecte un nom explicite sans rien calculer', async () => {
+  it('respects an explicit name without computing anything', async () => {
     await create(user, 7, { taskId: 1, name: 'Final' });
     expect(siblings).not.toHaveBeenCalled();
     expect(createVersion).toHaveBeenCalledWith(
@@ -94,7 +93,7 @@ describe('VersionService.create — auto-nommage des versions', () => {
   });
 });
 
-describe('VersionService.update — verrou de publication de la transform (Phase 11)', () => {
+describe('VersionService.update: publication lock on the transform (Phase 11)', () => {
   const transform = { position: [0, 0, 0], quaternion: [0, 0, 0, 1], scale: [1, 1, 1] };
 
   beforeEach(() => {
@@ -104,7 +103,7 @@ describe('VersionService.update — verrou de publication de la transform (Phase
     );
   });
 
-  it('refuse la transform sur une version publiée (403 PUBLISHED_LOCKED)', async () => {
+  it('refuses the transform on a published version (403 PUBLISHED_LOCKED)', async () => {
     findUnique.mockResolvedValue({ authorId: 3, published: true } as never);
     await expect(update(user, 7, 1, { transform })).rejects.toMatchObject({
       statusCode: 403,
@@ -113,7 +112,7 @@ describe('VersionService.update — verrou de publication de la transform (Phase
     expect(updateVersion).not.toHaveBeenCalled();
   });
 
-  it('accepte la transform sur une version non publiée (auteur)', async () => {
+  it('accepts the transform on an unpublished version (author)', async () => {
     findUnique.mockResolvedValue({ authorId: 3, published: false } as never);
     await update(user, 7, 1, { transform });
     expect(updateVersion).toHaveBeenCalledWith(
@@ -121,7 +120,7 @@ describe('VersionService.update — verrou de publication de la transform (Phase
     );
   });
 
-  it('autorise encore le renommage d’une version publiée (seule la transform est figée)', async () => {
+  it('still allows renaming a published version (only the transform is frozen)', async () => {
     findUnique.mockResolvedValue({ authorId: 3, published: true } as never);
     await update(user, 7, 1, { name: 'V02_final' });
     expect(updateVersion).toHaveBeenCalledWith(
@@ -131,12 +130,11 @@ describe('VersionService.update — verrou de publication de la transform (Phase
 });
 
 /**
- * Le modèle d'autorisation est celui du rôle EFFECTIF sur le projet (38.E). Le modèle
- * concurrent — un `isGlobalManager(user.role)` recopié dans le service — jugeait sur le
- * rôle global : il refusait au superviseur nommé sur CE projet de publier ce qu'il
- * supervise, et laissait un membre rétrogradé CLIENT y créer des versions.
+ * The authorization model is that of the EFFECTIVE role on the project (38.E). The competing model, a
+ * `isGlobalManager(user.role)` copied into the service, judged on the global role: it refused a supervisor named on THIS
+ * project from publishing what they supervise, and let a member demoted to CLIENT create versions there.
  */
-describe('VersionService — rôle effectif du projet (38.E)', () => {
+describe('VersionService: effective project role (38.E)', () => {
   const artist = { id: 3, role: Role.ARTIST };
 
   beforeEach(() => {
@@ -152,7 +150,7 @@ describe('VersionService — rôle effectif du projet (38.E)', () => {
     createVersion.mockImplementation(({ data }) => Promise.resolve({ id: 1, ...data }) as never);
   });
 
-  it('ARTIST promu SUPERVISOR sur le projet publie une version dont il n’est pas l’auteur', async () => {
+  it('an ARTIST promoted to SUPERVISOR on the project publishes a version they did not author', async () => {
     membership.mockResolvedValue({ role: Role.SUPERVISOR } as never);
     findUnique.mockResolvedValue({ authorId: 99, published: false } as never);
     await update(artist, 7, 1, { status: VersionStatus.PUBLISHED });
@@ -163,7 +161,7 @@ describe('VersionService — rôle effectif du projet (38.E)', () => {
     );
   });
 
-  it('ARTIST sans élévation locale ne publie pas la version d’un autre (403)', async () => {
+  it("an ARTIST without local elevation does not publish someone else's version (403)", async () => {
     findUnique.mockResolvedValue({ authorId: 99, published: false } as never);
     await expect(update(artist, 7, 1, { status: VersionStatus.PUBLISHED })).rejects.toMatchObject({
       statusCode: 403,
@@ -171,7 +169,7 @@ describe('VersionService — rôle effectif du projet (38.E)', () => {
     expect(updateVersion).not.toHaveBeenCalled();
   });
 
-  it('ARTIST rétrogradé CLIENT sur le projet ne crée plus de version (403 ROLE_FORBIDDEN)', async () => {
+  it('an ARTIST demoted to CLIENT on the project no longer creates versions (403 ROLE_FORBIDDEN)', async () => {
     membership.mockResolvedValue({ role: Role.CLIENT } as never);
     await expect(create(artist, 7, { taskId: 42 })).rejects.toMatchObject({
       statusCode: 403,
@@ -180,18 +178,18 @@ describe('VersionService — rôle effectif du projet (38.E)', () => {
     expect(createVersion).not.toHaveBeenCalled();
   });
 
-  it('ARTIST rétrogradé CLIENT sur le projet ne publie plus les brouillons (403)', async () => {
+  it('an ARTIST demoted to CLIENT on the project no longer publishes drafts (403)', async () => {
     membership.mockResolvedValue({ role: Role.CLIENT } as never);
     await expect(publishAll(artist, 7, 1)).rejects.toMatchObject({ statusCode: 403 });
     expect(findUnique).not.toHaveBeenCalled();
   });
 
-  it('non-membre : aucune création possible, même avec un rôle global d’artiste', async () => {
+  it('non-member: no creation possible, even with a global artist role', async () => {
     membership.mockResolvedValue(null);
     await expect(create(artist, 7, { taskId: 42 })).rejects.toMatchObject({ statusCode: 403 });
   });
 
-  it('ARTIST promu SUPERVISOR purge et supprime sur son projet', async () => {
+  it('an ARTIST promoted to SUPERVISOR purges and deletes on their project', async () => {
     membership.mockResolvedValue({ role: Role.SUPERVISOR } as never);
     findUnique.mockResolvedValue({ authorId: 99, taskId: 42, assetId: null } as never);
     await purge(artist, 7, 1);
@@ -199,25 +197,23 @@ describe('VersionService — rôle effectif du projet (38.E)', () => {
     await expect(remove(artist, 7, 1)).resolves.toBeUndefined();
   });
 
-  it('ARTIST sans élévation ne purge pas (403), même auteur de la version', async () => {
+  it('an ARTIST without elevation does not purge (403), even as the version author', async () => {
     findUnique.mockResolvedValue({ authorId: 3, taskId: 42, assetId: null } as never);
     await expect(purge(artist, 7, 1)).rejects.toMatchObject({ statusCode: 403 });
     expect(purgeVersion).not.toHaveBeenCalled();
   });
 });
 
-describe('VersionService.list — comptage aligné sur la visibilité réelle (10.C2)', () => {
+describe('VersionService.list: counting aligned with real visibility (10.C2)', () => {
   beforeEach(() => vi.clearAllMocks());
 
   /*
-   * Ce filtre était gardé par le scénario d'intégration « flux projet → … → média », qui
-   * déposait un brouillon et vérifiait qu'un autre membre ne le comptait pas. Depuis la
-   * Phase 50 un média naît PUBLIÉ (mode brouillon éteint par défaut) : ce scénario ne peut
-   * plus produire de brouillon, et le filtre s'y retrouverait sans gardien. Ici on ne passe
-   * pas par l'upload — on vérifie la REQUÊTE émise, donc le filtre lui-même. C'est bien la
-   * clause qui est verrouillée, pas le comportement de la base.
+   * This filter used to be guarded by the integration scenario "project flow -> ... -> media", which dropped a draft and
+   * checked that another member did not count it. Since Phase 50 a media is born PUBLISHED (draft mode off by default): that
+   * scenario can no longer produce a draft, and the filter would have no guard there. Here we do not go through the upload:
+   * we check the query emitted, hence the filter itself. It is indeed the clause that is locked, not the database behaviour.
    */
-  it('ne compte un média non publié que pour son uploader', async () => {
+  it('counts an unpublished media only for its uploader', async () => {
     siblings.mockResolvedValue([] as never);
 
     await list(42, 7);
@@ -231,7 +227,7 @@ describe('VersionService.list — comptage aligné sur la visibilité réelle (1
     });
   });
 
-  it('ne rend jamais les brouillons d’autrui dans `draftCount`', async () => {
+  it("never returns other people's drafts in `draftCount`", async () => {
     siblings.mockResolvedValue([{ id: 1, media: [{ id: 9 }] }] as never);
 
     const versions = await list(42, 7);

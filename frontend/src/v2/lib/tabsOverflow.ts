@@ -2,16 +2,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Répartition d'une barre d'onglets entre ce qui tient et ce qui part au menu « … » (A1).
+ * Splits a tab bar between what fits and what goes into the "…" menu (A1).
  *
- * Fonctions pures : la mesure du DOM reste dans le composant, la décision est testable.
- * Onze onglets sur la page projet ne tiennent pas sous 1000 px ; sans repli, la barre
- * débordait et faisait défiler la page entière latéralement.
+ * Pure functions: the DOM measurement stays in the component, the decision is testable.
+ * Eleven tabs on the project page do not fit below 1000 px; without a fallback, the bar overflowed and
+ * made the whole page scroll sideways.
  */
 
 /**
- * Nombre d'onglets affichables. Si tout ne tient pas, la place du bouton « … » est
- * réservée d'abord — sinon le dernier onglet visible le pousserait hors du cadre.
+ * Number of tabs that can be displayed. If not everything fits, the room for the "…" button is
+ * reserved first — otherwise the last visible tab would push it out of the frame.
  */
 export function computeVisibleTabs(
   widths: number[],
@@ -20,7 +20,7 @@ export function computeVisibleTabs(
   moreWidth: number,
 ): number {
   if (widths.length === 0) return 0;
-  // Conteneur non encore mesuré : on montre tout, la mesure suivante corrigera.
+  // Container not yet measured: show everything, the next measurement will correct it.
   if (container <= 0) return widths.length;
 
   const total = widths.reduce((sum, w) => sum + w, 0) + gap * (widths.length - 1);
@@ -39,9 +39,9 @@ export function computeVisibleTabs(
 }
 
 /**
- * Découpe la liste en visibles / débordement. L'onglet actif reste toujours atteignable
- * d'un seul clic : s'il tombe dans le débordement, il prend la dernière place visible et
- * l'onglet délogé part à sa position dans le menu (l'ordre relatif du menu est conservé).
+ * Splits the list into visible / overflow. The active tab always stays reachable in one click: if it
+ * falls into the overflow, it takes the last visible slot and the displaced tab goes to its position in
+ * the menu (the relative order of the menu is kept).
  */
 export function splitTabs<T>(
   items: T[],

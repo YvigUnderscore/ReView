@@ -13,23 +13,23 @@ import {
   type ModelPerf,
 } from './perfStats';
 import type { Model3DThreeState } from './useModel3DThree';
-import { intlLocale, useT } from '../../../i18n';
+import { intlLocale, useT } from '@/v2/i18n';
 
 const fmt = (n: number) => Math.round(n).toLocaleString(intlLocale());
 
 /**
- * Compteurs de performance du viewer 3D, sous le panneau Scène — le panneau recevait un objet
- * `perf` vide, donc ni FPS, ni appels de rendu, ni mémoire texture, alors que le splat
- * affichait déjà les siens. C'est la réponse immédiate au « pourquoi ça rame ».
+ * Performance counters of the 3D viewer, under the Scene panel: the panel used to receive an empty
+ * `perf` object, so no FPS, no render calls and no texture memory, whereas the splat already showed its own.
+ * It is the immediate answer to "why is it lagging".
  *
- * L'abonnement n'existe que tant que ce groupe est monté : panneau fermé, rien n'est mesuré.
+ * The subscription only exists while this group is mounted: panel closed, nothing is measured.
  */
 export default function Model3DPerfGroup({
   m,
   textures,
 }: {
   m: Model3DThreeState;
-  /** Textures relevées par la fiche technique — base de l'estimation de mémoire texture. */
+  /** Textures reported by the technical sheet: basis of the texture-memory estimate. */
   textures: TextureInfo[] | null;
 }) {
   const t = useT();

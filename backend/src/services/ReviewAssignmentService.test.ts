@@ -26,7 +26,7 @@ vi.mock('../lib/projectRoles', () => ({
   effectiveProjectRole: vi.fn(async (_id: number, role: Role) => role),
 }));
 vi.mock('../lib/projectSettings', async (importOriginal) => ({
-  // `checkReviewNote` EST la règle : la mocker reviendrait à tester le mock.
+  // `checkReviewNote` IS the rule: mocking it would only test the mock.
   ...(await importOriginal<typeof import('../lib/projectSettings')>()),
   resolveProjectSettingsById: vi.fn(),
 }));
@@ -35,7 +35,7 @@ vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
 vi.mock('./NotificationService', () => ({ notify: vi.fn() }));
 vi.mock('./WatchService', () => ({ setWatch: vi.fn() }));
 vi.mock('./ApiEventService', () => ({ publish: vi.fn() }));
-// La photo est signée par le service : le test vérifie la forme rendue, pas la signature.
+// The photo is signed by the service: the test checks the rendered shape, not the signature.
 vi.mock('../lib/userView', () => ({ avatarUrl: vi.fn(async (key: string | null) => key && `url:${key}`) }));
 
 import { listReviewers, setReviewers, updateNote } from './ReviewAssignmentService';
@@ -59,23 +59,23 @@ const person = (id: number, name: string) => ({
 });
 
 const supervisor = { id: 1, role: Role.SUPERVISOR };
-/** L'auteur de la version posée par `given` — celui qui vient de livrer. */
+/** The author of the version set by `given`: the artist who has just delivered it. */
 const author = { id: 9, role: Role.ARTIST };
 
-/** Une ligne d'assignation telle que le service la relit. */
+/** An assignment row, as the service reads it back. */
 const row = (id: number, name: string, note: string | null = null) => ({ note, reviewer: person(id, name) });
 
-/** Réglage du projet : rien n'est exigé, sauf mention contraire dans le test. */
+/** Project setting: nothing is required, unless the test says otherwise. */
 const rule = (requireNote = false, minNoteLength = 5) =>
   vi
     .mocked(resolveProjectSettingsById)
     .mockResolvedValue({ reviewRequest: { requireNote, minNoteLength } } as never);
 
 /**
- * Version vivante, état d'AVANT, puis liste relue APRÈS l'écriture.
+ * Live version: the state BEFORE, then the list re-read AFTER the write.
  *
- * `…Once` sur les deux lectures : la première sert à décider qui prévenir, la seconde est
- * la liste rendue. Les confondre ferait passer une consigne réécrite pour inchangée.
+ * `…Once` on both reads: the first decides whom to notify, the second is the rendered list.
+ * Confusing them would make a rewritten instruction look unchanged.
  */
 function given(before: { reviewerId: number; note: string | null }[], after: ReturnType<typeof row>[]) {
   vi.mocked(prisma.version.findFirst).mockResolvedValue({
@@ -99,8 +99,8 @@ const assignable = (ids: number[]) =>
     );
 
 /**
- * `clearAllMocks` efface les appels mais garde les valeurs posées avec `…Once` : un test
- * qui échoue avant d'avoir consommé les siennes les léguerait au suivant.
+ * `clearAllMocks` clears calls but keeps values set with `…Once`: a test that fails before
+ * consuming its own would leak them to the next one.
  */
 function resetDb() {
   vi.clearAllMocks();
@@ -119,7 +119,7 @@ function resetDb() {
 beforeEach(resetDb);
 
 describe('listReviewers', () => {
-  it('rend les personnes confiées, photo signée et consigne', async () => {
+  it('returns the assigned people, signed photo and instruction', async () => {
     vi.mocked(prisma.reviewAssignment.findMany).mockResolvedValue([
       { note: 'la lumière', reviewer: { ...person(4, 'alice'), avatarKey: 'a.png' } },
     ] as never);
@@ -130,7 +130,7 @@ describe('listReviewers', () => {
 });
 
 describe('setReviewers', () => {
-  it('remplace la liste, audite, émet, notifie et abonne les nouveaux', async () => {
+  it('replaces the list, audits, emits, notifies and subscribes newcomers', async () => {
     given([{ reviewerId: 4, note: null }], [row(4, 'alice'), row(5, 'bruno', 'le raccord')]);
     assignable([4, 5]);
 
@@ -147,7 +147,7 @@ describe('setReviewers', () => {
       expect.objectContaining({ action: 'version.reviewers', entityId: 42 }),
     );
     expect(emitToProject).toHaveBeenCalledWith(3, 'version:update', expect.objectContaining({ id: 42 }));
-    // Seul le nouveau venu est prévenu : Alice y était déjà, et rien n'a changé pour elle.
+    // Only the newcomer is notified: Alice was already assigned and nothing changed for her.
     expect(notify).toHaveBeenCalledTimes(1);
     expect(notify).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -156,14 +156,14 @@ describe('setReviewers', () => {
         messageKey: 'notification.reviewAssigned',
         params: { version: 'V03' },
         projectId: 3,
-        // Le premier média de la version : c'est ce qui rend la notification navigable.
+        // The version's first media: this is what makes the notification navigable.
         referenceId: 500,
       }),
     );
     expect(setWatch).toHaveBeenCalledWith(5, WatchTargetType.VERSION, 42, true);
   });
 
-  it('nettoie l’espace de bordure — sans quoi cinq espaces passeraient un plancher de cinq', async () => {
+  it('trims edge whitespace, otherwise five spaces would pass a minimum of five', async () => {
     given([], [row(4, 'alice', 'la lumière')]);
     assignable([4]);
     await setReviewers(supervisor, 3, 42, [{ userId: 4, note: '  la lumière  ' }]);
@@ -172,25 +172,25 @@ describe('setReviewers', () => {
     );
   });
 
-  it('signale une consigne réécrite, sans réabonner la personne', async () => {
+  it('flags a rewritten instruction, without resubscribing the person', async () => {
     given([{ reviewerId: 4, note: 'la lumière' }], [row(4, 'alice', 'le raccord')]);
     assignable([4]);
     await setReviewers(supervisor, 3, 42, [{ userId: 4, note: 'le raccord' }]);
     expect(notify).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 4, messageKey: 'notification.reviewNoteUpdated' }),
     );
-    // Se désabonner appartient au reviewer : une consigne réécrite ne le lui reprend pas.
+    // Unsubscribing belongs to the reviewer: a rewritten instruction does not take it back.
     expect(setWatch).not.toHaveBeenCalled();
   });
 
-  it('ne réveille personne quand la même liste est réenregistrée', async () => {
+  it('does not wake anyone when the same list is saved again', async () => {
     given([{ reviewerId: 4, note: 'la lumière' }], [row(4, 'alice', 'la lumière')]);
     assignable([4]);
     await setReviewers(supervisor, 3, 42, [{ userId: 4, note: 'la lumière' }]);
     expect(notify).not.toHaveBeenCalled();
   });
 
-  it('ne se notifie pas soi-même', async () => {
+  it('does not notify oneself', async () => {
     given([], [row(1, 'sup')]);
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       { id: 1, role: Role.SUPERVISOR, isService: false, disabledAt: null },
@@ -199,7 +199,7 @@ describe('setReviewers', () => {
     expect(notify).not.toHaveBeenCalled();
   });
 
-  it('retirer quelqu’un n’avertit personne', async () => {
+  it('removing someone notifies nobody', async () => {
     given(
       [
         { reviewerId: 4, note: null },
@@ -212,7 +212,7 @@ describe('setReviewers', () => {
     expect(notify).not.toHaveBeenCalled();
   });
 
-  it('refuse un client et un compte de service, sans rien écrire', async () => {
+  it('refuses a client and a service account, without writing anything', async () => {
     given([], []);
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       { id: 6, role: Role.CLIENT, isService: false, disabledAt: null },
@@ -232,7 +232,7 @@ describe('setReviewers', () => {
     expect(prisma.reviewAssignment.upsert).not.toHaveBeenCalled();
   });
 
-  it('dédoublonne la liste reçue — la dernière consigne gagne', async () => {
+  it('de-duplicates the received list; the last instruction wins', async () => {
     given([], [row(4, 'alice', 'le raccord')]);
     assignable([4]);
     await setReviewers(supervisor, 3, 42, [
@@ -245,7 +245,7 @@ describe('setReviewers', () => {
     );
   });
 
-  it('404 sur une version inconnue', async () => {
+  it('404 on an unknown version', async () => {
     vi.mocked(prisma.version.findFirst).mockResolvedValue(null);
     await expect(setReviewers(supervisor, 3, 999, [{ userId: 4 }])).rejects.toMatchObject({
       statusCode: 404,
@@ -253,8 +253,8 @@ describe('setReviewers', () => {
     expect(prisma.reviewAssignment.upsert).not.toHaveBeenCalled();
   });
 
-  describe('règle de consigne du projet', () => {
-    it('refuse une assignation sans consigne quand le projet l’exige', async () => {
+  describe('project instruction rule', () => {
+    it('refuses an assignment without instruction when the project requires one', async () => {
       given([], []);
       assignable([4]);
       rule(true);
@@ -264,7 +264,7 @@ describe('setReviewers', () => {
       expect(prisma.reviewAssignment.upsert).not.toHaveBeenCalled();
     });
 
-    it('refuse une consigne plus courte que le plancher', async () => {
+    it('refuses an instruction shorter than the minimum', async () => {
       given([], []);
       assignable([4]);
       rule(true, 10);
@@ -273,7 +273,7 @@ describe('setReviewers', () => {
       });
     });
 
-    it('applique le plancher même à une consigne facultative', async () => {
+    it('applies the minimum even to an optional instruction', async () => {
       given([], []);
       assignable([4]);
       rule(false, 10);
@@ -283,15 +283,15 @@ describe('setReviewers', () => {
     });
   });
 
-  describe('qui peut confier', () => {
-    it('laisse l’auteur de la version désigner ses ReViewers', async () => {
+  describe('who can assign', () => {
+    it('lets the version author assign its ReViewers', async () => {
       given([], [row(4, 'alice', 'la lumière')]);
       assignable([4]);
       vi.mocked(isProjectManager).mockResolvedValue(false);
       await expect(setReviewers(author, 3, 42, [{ userId: 4, note: 'la lumière' }])).resolves.toBeDefined();
     });
 
-    it('refuse quelqu’un qui n’est ni l’auteur ni gestionnaire du projet', async () => {
+    it('refuses someone who is neither the author nor a project manager', async () => {
       given([], []);
       assignable([4]);
       vi.mocked(isProjectManager).mockResolvedValue(false);
@@ -317,7 +317,7 @@ describe('updateNote', () => {
     vi.mocked(prisma.mediaObject.findFirst).mockResolvedValue({ id: 500 } as never);
   });
 
-  it('réécrit la consigne et prévient la personne', async () => {
+  it('rewrites the instruction and notifies the person', async () => {
     await updateNote(supervisor, 3, 42, 4, 'le raccord au 1042');
     expect(prisma.reviewAssignment.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ note: 'le raccord au 1042' }) }),
@@ -325,33 +325,33 @@ describe('updateNote', () => {
     expect(notify).toHaveBeenCalledWith(
       expect.objectContaining({ userId: 4, messageKey: 'notification.reviewNoteUpdated' }),
     );
-    // La liste n'a pas changé : l'audit ne doit pas faire croire le contraire.
+    // The list did not change: the audit must not suggest otherwise.
     expect(logAudit).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'version.reviewer_note', entityId: 42 }),
     );
   });
 
-  it('n’écrit rien — et ne notifie rien — quand la consigne est identique', async () => {
+  it('writes nothing, and notifies nothing, when the instruction is identical', async () => {
     await updateNote(supervisor, 3, 42, 4, 'la lumière');
     expect(prisma.reviewAssignment.update).not.toHaveBeenCalled();
     expect(notify).not.toHaveBeenCalled();
   });
 
-  it('efface la consigne quand le projet ne l’exige pas', async () => {
+  it('clears the instruction when the project does not require one', async () => {
     await updateNote(supervisor, 3, 42, 4, '   ');
     expect(prisma.reviewAssignment.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ note: null }) }),
     );
   });
 
-  it('refuse de l’effacer quand le projet l’exige', async () => {
+  it('refuses to clear it when the project requires one', async () => {
     rule(true);
     await expect(updateNote(supervisor, 3, 42, 4, '   ')).rejects.toMatchObject({
       code: 'REVIEW_NOTE_REQUIRED',
     });
   });
 
-  it('refuse de réécrire la consigne de quelqu’un qui n’est pas confié', async () => {
+  it('refuses to rewrite the instruction of someone who is not assigned', async () => {
     vi.mocked(prisma.reviewAssignment.findUnique).mockResolvedValue(null);
     await expect(updateNote(supervisor, 3, 42, 4, 'le raccord')).rejects.toMatchObject({
       statusCode: 404,

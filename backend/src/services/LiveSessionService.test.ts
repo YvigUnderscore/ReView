@@ -48,30 +48,30 @@ afterEach(() => {
   vi.useRealTimers();
 });
 
-/** Avance l'horloge sans déclencher de minuterie. */
+/** Advances the clock without triggering a timer. */
 const advance = (ms: number): void => {
   vi.setSystemTime(new Date(Date.now() + ms));
 };
 
-/** Simule un redémarrage (ou une seconde réplique) : état local vide, Redis intact. */
+/** Simulates a restart (or a second replica): empty local state, Redis intact. */
 async function asFreshReplica(): Promise<void> {
   resetLiveSessions();
   await __liveTesting.reloadAll();
 }
 
 describe('parseLiveKey (33.B)', () => {
-  it('accepte media:<id> et playlist:<id>', () => {
+  it('accepts media:<id> and playlist:<id>', () => {
     expect(parseLiveKey('media:12')).toEqual({ type: 'media', id: 12 });
     expect(parseLiveKey('playlist:3')).toEqual({ type: 'playlist', id: 3 });
   });
-  it('rejette les clés malformées', () => {
+  it('rejects malformed keys', () => {
     for (const bad of ['media:', 'media:0', 'media:-1', 'shot:4', 'media:1e3', 42, null, 'media:1;drop'])
       expect(parseLiveKey(bad)).toBeNull();
   });
 });
 
 describe('joinLive / leaveLive (33.B)', () => {
-  it('le premier arrivant devient pilote ET driver, les suivants spectateurs', async () => {
+  it('the first arrival becomes pilot AND driver, the following ones spectators', async () => {
     const s1 = await joinLive('media:1', p(10));
     expect(s1.state.pilotId).toBe(10);
     expect(s1.state.driverId).toBe(10);
@@ -82,13 +82,13 @@ describe('joinLive / leaveLive (33.B)', () => {
     expect(s2.state.participants.map((x) => x.id)).toEqual([10, 20]);
   });
 
-  it('re-join du même utilisateur : idempotent (pas de doublon)', async () => {
+  it('re-join of the same user: idempotent (no duplicate)', async () => {
     await joinLive('media:1', p(10));
     const s = await joinLive('media:1', p(10));
     expect(s.state.participants).toHaveLength(1);
   });
 
-  it('départ du pilote : la main passe au premier co-pilote sinon au plus ancien', async () => {
+  it('departure of the pilot: control passes to the first co-pilot, otherwise to the oldest', async () => {
     await joinLive('media:1', p(10));
     await joinLive('media:1', p(20));
     await joinLive('media:1', p(30));
@@ -99,13 +99,13 @@ describe('joinLive / leaveLive (33.B)', () => {
     expect(s?.driverId).toBe(30);
   });
 
-  it('dernier départ : la session est fermée', async () => {
+  it('last departure: the session is closed', async () => {
     await joinLive('media:1', p(10));
     expect(await leaveLive('media:1', 10)).toBeNull();
     expect(getLiveState('media:1')).toBeNull();
   });
 
-  it('leave d’un non-participant : no-op (null), la session survit', async () => {
+  it('leave by a non-participant: no-op (null), the session survives', async () => {
     await joinLive('media:1', p(10));
     expect(await leaveLive('media:1', 99)).toBeNull();
     expect(getLiveState('media:1')?.participants).toHaveLength(1);
@@ -118,27 +118,27 @@ describe('handoffLive (33.B)', () => {
     await joinLive('media:1', p(20));
   });
 
-  it('le pilote donne la main à un participant présent (driver suit)', async () => {
+  it('the pilot gives control to a participant present (driver follows)', async () => {
     const s = await handoffLive('media:1', 10, 20);
     expect(s?.pilotId).toBe(20);
     expect(s?.driverId).toBe(20);
   });
 
-  it('refusé si l’émetteur n’est pas pilote ou si la cible est absente', async () => {
+  it('refused if the emitter is not the pilot or if the target is absent', async () => {
     expect(await handoffLive('media:1', 20, 10)).toBeNull();
     expect(await handoffLive('media:1', 10, 99)).toBeNull();
     expect(getLiveState('media:1')?.pilotId).toBe(10);
   });
 });
 
-describe('co-pilotes & driver (retours CP-HUMAIN 33)', () => {
+describe('co-pilots & driver (CP-HUMAIN 33 feedback)', () => {
   beforeEach(async () => {
     await joinLive('media:1', p(10));
     await joinLive('media:1', p(20));
     await joinLive('media:1', p(30));
   });
 
-  it('seul le pilote nomme/retire un co-pilote (cible présente, pas lui-même)', async () => {
+  it('only the pilot names/removes a co-pilot (target present, not themselves)', async () => {
     expect(await setCoHost('media:1', 20, 30, true)).toBeNull();
     expect(await setCoHost('media:1', 10, 10, true)).toBeNull();
     expect(await setCoHost('media:1', 10, 99, true)).toBeNull();
@@ -148,19 +148,19 @@ describe('co-pilotes & driver (retours CP-HUMAIN 33)', () => {
     expect(canDriveLive('media:1', 30)).toBe(false);
   });
 
-  it('claimDrive : un co-pilote qui interagit devient driver ; un spectateur non', async () => {
+  it('claimDrive: a co-pilot who interacts becomes driver; a spectator does not', async () => {
     await setCoHost('media:1', 10, 20, true);
     expect(await claimDrive('media:1', 30)).toBeNull();
     const s = await claimDrive('media:1', 20);
     expect(s?.driverId).toBe(20);
     expect(isLiveDriver('media:1', 20)).toBe(true);
-    // Déjà driver → pas de nouvel état (pas de re-broadcast).
+    // Already driver → no new state (no re-broadcast).
     expect(await claimDrive('media:1', 20)).toBeNull();
-    // Le pilote peut reprendre la main en interagissant.
+    // The pilot can take control back by interacting.
     expect((await claimDrive('media:1', 10))?.driverId).toBe(10);
   });
 
-  it('retirer le co-pilotage du driver → la main revient au pilote', async () => {
+  it("removing the driver's co-piloting → control returns to the pilot", async () => {
     await setCoHost('media:1', 10, 20, true);
     await claimDrive('media:1', 20);
     const s = await setCoHost('media:1', 10, 20, false);
@@ -168,16 +168,16 @@ describe('co-pilotes & driver (retours CP-HUMAIN 33)', () => {
     expect(s?.driverId).toBe(10);
   });
 
-  it('départ du driver co-pilote → la main revient au pilote', async () => {
+  it('departure of the co-pilot driver → control returns to the pilot', async () => {
     await setCoHost('media:1', 10, 20, true);
     await claimDrive('media:1', 20);
     const s = await leaveLive('media:1', 20);
     expect(s?.driverId).toBe(10);
   });
 
-  // Chemin chaud : `live:sync` repasse ici plusieurs fois par seconde. Un aller-retour
-  // Redis à chaque trame saccaderait la lecture pour toute la salle.
-  it('claimDrive sur un driver déjà en place ne touche pas Redis', async () => {
+  // Hot path: `live:sync` comes back here several times per second. A Redis round trip on each frame would
+  // make playback stutter for the whole room.
+  it('claimDrive on a driver already in place does not touch Redis', async () => {
     await claimDrive('media:1', 20);
     const before = redis.commandCounts.get('SET') ?? 0;
     expect(await claimDrive('media:1', 10)).toBeNull();
@@ -185,10 +185,10 @@ describe('co-pilotes & driver (retours CP-HUMAIN 33)', () => {
   });
 });
 
-describe('méta & liste des sessions par projet (retours 33 — badges LIVE)', () => {
-  it('la méta est posée à la création et conservée aux joins suivants', async () => {
+describe('metadata & list of sessions per project (33 feedback — LIVE badges)', () => {
+  it('the metadata is set at creation and kept at the following joins', async () => {
     await joinLive('media:1', p(10), { projectId: 7, mediaId: 1, versionId: 3 });
-    await joinLive('media:1', p(20), { projectId: 99, mediaId: 1 }); // ignorée (déjà posée)
+    await joinLive('media:1', p(20), { projectId: 99, mediaId: 1 }); // ignored (already set)
     expect(getLiveProjectId('media:1')).toBe(7);
     const sessions = listLiveSessions(7);
     expect(sessions).toHaveLength(1);
@@ -201,7 +201,7 @@ describe('méta & liste des sessions par projet (retours 33 — badges LIVE)', (
     expect(sessions[0]?.pilot?.id).toBe(10);
   });
 
-  it('ne liste que le projet demandé ; session fermée → disparaît', async () => {
+  it('only lists the requested project; closed session → disappears', async () => {
     await joinLive('media:1', p(10), { projectId: 7, mediaId: 1 });
     await joinLive('playlist:2', p(20), { projectId: 8, playlistId: 2 });
     expect(listLiveSessions(7).map((s) => s.key)).toEqual(['media:1']);
@@ -211,8 +211,8 @@ describe('méta & liste des sessions par projet (retours 33 — badges LIVE)', (
   });
 });
 
-describe('grâce de déconnexion (retours 33 — F5 garde le rôle de pilote)', () => {
-  it('re-join pendant la grâce : le départ est annulé, le pilote garde la main', async () => {
+describe('disconnection grace (33 feedback — F5 keeps the pilot role)', () => {
+  it('re-join during the grace period: the departure is cancelled, the pilot keeps control', async () => {
     await joinLive('media:1', p(10));
     await joinLive('media:1', p(20));
     const onLeft = vi.fn();
@@ -226,7 +226,7 @@ describe('grâce de déconnexion (retours 33 — F5 garde le rôle de pilote)', 
     expect(getLiveState('media:1')?.pilotId).toBe(10);
   });
 
-  it('grâce échue : le départ est appliqué et notifié (main transmise)', async () => {
+  it('grace expired: the departure is applied and notified (control handed over)', async () => {
     await joinLive('media:1', p(10));
     await joinLive('media:1', p(20));
     const onLeft = vi.fn();
@@ -237,7 +237,7 @@ describe('grâce de déconnexion (retours 33 — F5 garde le rôle de pilote)', 
     expect(cancelLiveLeave('media:1', 10)).toBe(false);
   });
 
-  it('reprogrammation : un second schedule remplace le premier (un seul départ)', async () => {
+  it('rescheduling: a second schedule replaces the first (a single departure)', async () => {
     await joinLive('media:1', p(10));
     const onLeft = vi.fn();
     scheduleLiveLeave('media:1', 10, onLeft, 5000);
@@ -250,8 +250,8 @@ describe('grâce de déconnexion (retours 33 — F5 garde le rôle de pilote)', 
   });
 });
 
-describe('état partagé : redémarrage, seconde réplique, baux', () => {
-  it('une salle survit au redémarrage du serveur', async () => {
+describe('shared state: restart, second replica, leases', () => {
+  it('a room survives the server restarting', async () => {
     await joinLive('playlist:9', p(10), { projectId: 4, playlistId: 9 });
     await joinLive('playlist:9', p(20), { projectId: 4, playlistId: 9 });
     await setCoHost('playlist:9', 10, 20, true);
@@ -265,10 +265,10 @@ describe('état partagé : redémarrage, seconde réplique, baux', () => {
     expect(listLiveSessions(4).map((s) => s.key)).toEqual(['playlist:9']);
   });
 
-  it('un join venu d’une autre réplique n’est pas déclaré « créé » deux fois', async () => {
+  it('a join coming from another replica is not declared "created" twice', async () => {
     const first = await joinLive('media:5', p(10), { projectId: 1, mediaId: 5 });
     expect(first.created).toBe(true);
-    // Réplique neuve : son miroir est vide, mais Redis fait foi.
+    // Fresh replica: its mirror is empty, but Redis is authoritative.
     await asFreshReplica();
     resetLiveSessions();
     const second = await joinLive('media:5', p(20), { projectId: 1, mediaId: 5 });
@@ -276,19 +276,19 @@ describe('état partagé : redémarrage, seconde réplique, baux', () => {
     expect(second.state.pilotId).toBe(10);
   });
 
-  // Une réplique tuée ne peut plus retirer ses participants : sans bail, la salle resterait
-  // peuplée de fantômes, pilote compris — donc impilotable.
-  it('un participant dont le bail a expiré est retiré et la main passe', async () => {
+  // A killed replica can no longer remove its participants: without a lease, the room would remain populated
+  // with ghosts, pilot included — hence impossible to steer.
+  it('a participant whose lease has expired is removed and control passes on', async () => {
     await joinLive('media:6', p(10), { projectId: 2, mediaId: 6 });
     await joinLive('media:6', p(20), { projectId: 2, mediaId: 6 });
     advance(LIVE_PARTICIPANT_TTL_MS + 1);
-    // Un seul des deux se manifeste : l'autre était porté par la réplique disparue.
+    // Only one of the two shows up: the other was carried by the vanished replica.
     const state = (await joinLive('media:6', p(20), { projectId: 2, mediaId: 6 })).state;
     expect(state.participants.map((x) => x.id)).toEqual([20]);
     expect(state.pilotId).toBe(20);
   });
 
-  it('le battement de cœur renouvelle le bail des participants de ce process', async () => {
+  it("the heartbeat renews the lease of this process's participants", async () => {
     await joinLive('media:7', p(10));
     advance(LIVE_PARTICIPANT_TTL_MS - 1_000);
     await __redisTesting.runHeartbeat();
@@ -297,9 +297,9 @@ describe('état partagé : redémarrage, seconde réplique, baux', () => {
     expect(getLiveState('media:7')?.participants.map((x) => x.id)).toEqual([10]);
   });
 
-  it('une salle entièrement expirée est effacée de Redis et de l’index', async () => {
+  it('a fully expired room is erased from Redis and from the index', async () => {
     await joinLive('media:8', p(10), { projectId: 3, mediaId: 8 });
-    resetLiveSessions(); // la réplique qui la portait disparaît
+    resetLiveSessions(); // the replica carrying it disappears
     advance(LIVE_PARTICIPANT_TTL_MS + 1);
     await __liveTesting.reloadAll();
     expect(getLiveState('media:8')).toBeNull();
@@ -307,7 +307,7 @@ describe('état partagé : redémarrage, seconde réplique, baux', () => {
     expect(await redis.call('GET', 'review:live:s:media:8')).toBeNull();
   });
 
-  it('amorce les badges LIVE au démarrage, sans attendre un join local', async () => {
+  it('seeds the LIVE badges at start-up, without waiting for a local join', async () => {
     await joinLive('media:11', p(10), { projectId: 5, mediaId: 11 });
     resetLiveSessions();
     expect(listLiveSessions(5)).toEqual([]);
@@ -316,12 +316,12 @@ describe('état partagé : redémarrage, seconde réplique, baux', () => {
     expect(listLiveSessions(5).map((s) => s.key)).toEqual(['media:11']);
   });
 
-  it('publie la clé touchée pour que les autres répliques se resynchronisent', async () => {
+  it('publishes the touched key so that the other replicas resynchronise', async () => {
     await joinLive('media:9', p(10));
     expect(redis.published).toContainEqual({ channel: 'review:live', payload: 'media:9' });
   });
 
-  it('Redis muet : la salle se dégrade sans jeter ni bloquer', async () => {
+  it('Redis silent: the room degrades without throwing or blocking', async () => {
     redis.failing = true;
     const { state, created } = await joinLive('media:10', p(10));
     expect(created).toBe(false);

@@ -14,16 +14,16 @@ import { applyRoll, rollFromCamera } from '../three/cameraRoll';
 import { orbitInhibitors, inhibitOrbit } from './controlsLock';
 
 describe('moveDirection', () => {
-  it('mappe les codes physiques ZQSD/WASD + A/E (monter/descendre)', () => {
+  it('maps the physical ZQSD/WASD codes + A/E (up/down)', () => {
     expect(moveDirection(new Set(['KeyW']))).toEqual([0, 0, -1]);
     expect(moveDirection(new Set(['KeyS']))).toEqual([0, 0, 1]);
     expect(moveDirection(new Set(['KeyA']))).toEqual([-1, 0, 0]);
     expect(moveDirection(new Set(['KeyD']))).toEqual([1, 0, 0]);
-    expect(moveDirection(new Set(['KeyE']))).toEqual([0, 1, 0]); // monter
-    expect(moveDirection(new Set(['KeyQ']))).toEqual([0, -1, 0]); // descendre
+    expect(moveDirection(new Set(['KeyE']))).toEqual([0, 1, 0]); // up
+    expect(moveDirection(new Set(['KeyQ']))).toEqual([0, -1, 0]); // down
   });
 
-  it('normalise les diagonales et annule les directions opposées', () => {
+  it('normalizes diagonals and cancels opposite directions', () => {
     const [x, , z] = moveDirection(new Set(['KeyW', 'KeyD']));
     expect(Math.hypot(x, z)).toBeCloseTo(1);
     expect(x).toBeCloseTo(Math.SQRT1_2);
@@ -31,16 +31,16 @@ describe('moveDirection', () => {
     expect(moveDirection(new Set(['KeyW', 'KeyS']))).toEqual([0, 0, 0]);
   });
 
-  it('ignore les codes hors mapping', () => {
+  it('ignores codes outside the mapping', () => {
     expect(moveDirection(new Set(['KeyX', 'Space']))).toEqual([0, 0, 0]);
     expect(Object.keys(FLY_MOVE_MAPPING)).toHaveLength(6);
   });
 });
 
 /**
- * Three minimal : le vol n'utilise que trois vecteurs et un Euler. La caméra ne tourne pas dans
- * ces tests (`applyQuaternion` est l'identité), ce qui suffit — on mesure qui bouge et quand,
- * pas dans quelle direction (`moveDirection` s'en charge, juste au-dessus).
+ * Minimal three.js stub: flying only uses three vectors and an Euler. The camera does not rotate
+ * in these tests (`applyQuaternion` is the identity), which is enough: we measure who moves and
+ * when, not in which direction (`moveDirection` handles that, just above).
  */
 class V3 {
   constructor(
@@ -95,7 +95,7 @@ function setup() {
   return { dom, camera, controls, fly };
 }
 
-/** Appui du bouton droit sur le canvas : le vol commence. */
+/** Right button pressed on the canvas: flight starts. */
 const takeOff = (dom: HTMLElement) =>
   dom.dispatchEvent(new PointerEvent('pointerdown', { button: 2, bubbles: true, cancelable: true }));
 const land = (dom: HTMLElement) =>
@@ -107,17 +107,17 @@ afterEach(() => {
   document.body.innerHTML = '';
 });
 
-describe('le clavier appartient au vol, et seulement au vol', () => {
-  it('ignore une touche enfoncée AVANT le vol : on ne décolle jamais déjà en mouvement', () => {
+describe('the keyboard belongs to the fly, and only to the fly', () => {
+  it('ignores a key pressed BEFORE the flight: we never take off already moving', () => {
     const { dom, camera, fly } = setup();
-    press('KeyW'); // maintenue hors vol : rien ne bouge, et rien ne doit s'accumuler
+    press('KeyW'); // held outside the flight: nothing moves, and nothing must accumulate
     takeOff(dom);
     fly.update(1);
     expect(camera.position.z).toBe(5);
     fly.dispose();
   });
 
-  it('avance quand la touche est pressée PENDANT le vol', () => {
+  it('moves forward when the key is pressed DURING the flight', () => {
     const { dom, camera, fly } = setup();
     takeOff(dom);
     press('KeyW');
@@ -126,7 +126,7 @@ describe('le clavier appartient au vol, et seulement au vol', () => {
     fly.dispose();
   });
 
-  it('ignore une touche frappée dans un champ de saisie, même en vol', () => {
+  it('ignores a key typed in an input field, even during the flight', () => {
     const { dom, camera, fly } = setup();
     const field = document.createElement('textarea');
     document.body.appendChild(field);
@@ -137,15 +137,15 @@ describe('le clavier appartient au vol, et seulement au vol', () => {
     fly.dispose();
   });
 
-  it('nomme les touches du vol en un seul endroit', () => {
+  it('names the flight keys in a single place', () => {
     expect(isFlyMoveCode('KeyS')).toBe(true);
     expect(isFlyMoveCode('KeyX')).toBe(false);
     expect(Object.keys(FLY_MOVE_MAPPING).every(isFlyMoveCode)).toBe(true);
   });
 });
 
-describe('l’orbite est retenue par un compteur, pas par un booléen', () => {
-  it('gèle l’orbite au décollage et la rend à l’atterrissage', () => {
+describe('the orbit is held by a counter, not by a boolean', () => {
+  it('freezes the orbit on take-off and restores it on landing', () => {
     const { dom, controls, fly } = setup();
     takeOff(dom);
     expect(controls.enabled).toBe(false);
@@ -155,18 +155,18 @@ describe('l’orbite est retenue par un compteur, pas par un booléen', () => {
     fly.dispose();
   });
 
-  it('ne rend pas l’orbite quand un gizmo relâche le sien EN PLEIN VOL', () => {
+  it('does not restore the orbit when a gizmo releases its own MID-FLIGHT', () => {
     const { dom, controls, fly } = setup();
     takeOff(dom);
     const gizmo = inhibitOrbit(controls, 'gizmo-drag');
     gizmo();
-    expect(controls.enabled).toBe(false); // le défaut d'origine rendait l'orbite ici
+    expect(controls.enabled).toBe(false); // the original defect restored the orbit here
     land(dom);
     expect(controls.enabled).toBe(true);
     fly.dispose();
   });
 
-  it('rend son jeton au `dispose`, vol en cours', () => {
+  it('releases its token on `dispose`, while flying', () => {
     const { dom, controls, fly } = setup();
     takeOff(dom);
     fly.dispose();
@@ -176,17 +176,17 @@ describe('l’orbite est retenue par un compteur, pas par un booléen', () => {
 });
 
 /**
- * Le tilt (roulis du panneau Caméra) ne survit pas tout seul au vol : hors vol, il est porté par
- * l'orientation de la caméra (l'orbite le recompose à chaque tour, cf. `cameraRoll`), et pendant le
- * vol c'est la pose composée qui doit le reprendre. Sur du vrai Three : la pose de vol porte bien
- * le roulis, et l'orientation obtenue est celle que `lookAt` produirait avec le `up` d'`applyRoll`,
- * si bien que rien ne saute à l'atterrissage.
+ * The tilt (roll from the Camera panel) does not survive the flight on its own: outside the
+ * flight it is carried by the camera orientation (the orbit recomposes it on every turn, see
+ * `cameraRoll`), and during the flight the composed pose must carry it. With real three.js: the
+ * fly pose does carry the roll, and the resulting orientation is the one `lookAt` would produce
+ * with the `up` from `applyRoll`, so nothing jumps on landing.
  */
-describe('le tilt fait partie de la pose de vol', () => {
-  /** Roulis réellement affiché par une caméra (celui que lit le vol). */
+describe('the tilt is part of the fly pose', () => {
+  /** Roll actually displayed by a camera (the one the flight reads). */
   const shownRoll = (camera: three.PerspectiveCamera) => rollFromCamera(three, camera);
 
-  /** Caméra posée par l'orbite avec un tilt : exactement l'état d'avant le clic droit. */
+  /** Camera posed by the orbit with a tilt: exactly the state before the right click. */
   const tiltedCamera = (roll: number) => {
     const camera = new three.PerspectiveCamera(50, 16 / 9, 0.1, 100);
     camera.position.set(0, 1, 5);
@@ -195,19 +195,19 @@ describe('le tilt fait partie de la pose de vol', () => {
     return camera;
   };
 
-  it('compose le roulis en `z = -roll` (ordre YXZ)', () => {
+  it('composes the roll as `z = -roll` (YXZ order)', () => {
     expect(flyLookEuler({ x: 0, y: 0 }, { x: 0, y: 0 }, 0.4).z).toBeCloseTo(-0.4);
     expect(flyLookEuler({ x: 0, y: 0 }, { x: 0, y: 0 }, 0).z).toBe(0);
-    // Mouvement de souris non fini (pointeurs synthétiques) : la pose ne part pas en NaN.
+    // Non-finite mouse movement (synthetic pointers): the pose must not turn into NaN.
     const pose = flyLookEuler({ x: 0.2, y: 0.3 }, { x: Number.NaN, y: Number.NaN }, Number.NaN);
     expect(pose).toEqual({ x: 0.2, y: 0.3, z: 0 });
   });
 
-  it('garde le tilt affiché après un mouvement de souris (il tombait à zéro)', () => {
+  it('keeps the displayed tilt after a mouse movement (it used to drop to zero)', () => {
     const roll = (30 * Math.PI) / 180;
     const camera = tiltedCamera(roll);
-    expect(shownRoll(camera)).toBeCloseTo(roll, 4); // pose de départ : le tilt est bien là
-    // Ce que fait `onPointerMove` : relire le tilt, composer la pose, remettre `up` en phase.
+    expect(shownRoll(camera)).toBeCloseTo(roll, 4); // starting pose: the tilt is there
+    // What `onPointerMove` does: re-read the tilt, compose the pose, realign `up`.
     const euler = new three.Euler(0, 0, 0, 'YXZ').setFromQuaternion(camera.quaternion);
     const look = flyLookEuler(euler, { x: 40, y: 12 }, rollFromCamera(three, camera));
     euler.set(look.x, look.y, look.z, 'YXZ');
@@ -215,11 +215,11 @@ describe('le tilt fait partie de la pose de vol', () => {
     expect(shownRoll(camera)).toBeCloseTo(roll, 4);
   });
 
-  it('relit le tilt dans l’ORIENTATION, `up` étant laissé à plat par l’orbite', () => {
+  it('reads the tilt from the ORIENTATION, with `up` left flat by the orbit', () => {
     const roll = 0.35;
     const camera = tiltedCamera(roll);
-    // État réel d'avant le clic droit : la boucle d'orbite porte le tilt dans l'orientation et
-    // laisse `up` à plat. Le lire dans `up` rendait 0 — et le vol partait horizon droit.
+    // Real state before the right click: the orbit loop carries the tilt in the orientation and
+    // leaves `up` flat. Reading it from `up` returned 0, and the flight started with a level horizon.
     camera.up.set(0, 1, 0);
     expect(rollFromCamera(three, camera)).toBeCloseTo(roll, 4);
     const euler = new three.Euler(0, 0, 0, 'YXZ').setFromQuaternion(camera.quaternion);
@@ -229,7 +229,7 @@ describe('le tilt fait partie de la pose de vol', () => {
     expect(shownRoll(camera)).toBeCloseTo(roll, 4);
   });
 
-  it('remet `up` en phase : l’atterrissage (lookAt de l’orbite) ne fait pas sauter la vue', () => {
+  it('realigns `up`: landing (the orbit lookAt) does not make the view jump', () => {
     const roll = -0.5;
     const camera = tiltedCamera(roll);
     const euler = new three.Euler(0, 0, 0, 'YXZ').setFromQuaternion(camera.quaternion);
@@ -237,7 +237,7 @@ describe('le tilt fait partie de la pose de vol', () => {
     euler.set(look.x, look.y, look.z, 'YXZ');
     camera.quaternion.setFromEuler(euler);
     const flown = camera.quaternion.clone();
-    // Fin de vol : `up` remis en phase avec la nouvelle vue, puis lookAt sur la cible reprojetée.
+    // End of flight: `up` realigned with the new view, then lookAt on the reprojected target.
     const forward = new three.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
     applyRoll(three, camera, forward, roll);
     camera.lookAt(camera.position.clone().addScaledVector(forward, 4));

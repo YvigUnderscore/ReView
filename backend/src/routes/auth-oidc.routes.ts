@@ -8,14 +8,9 @@ import bcrypt from 'bcryptjs';
 import * as oidc from 'openid-client';
 import { prisma } from '../lib/prisma';
 import { env } from '../config/env';
+import { readCookie, setRefreshCookie } from '../lib/refreshCookie';
 import { getOidcConfig, getOidcLogoUrl, isOidcReady, type OidcConfig } from '../lib/oidcConfig';
-import {
-  JWT_ALGORITHM,
-  JWT_VERIFY_OPTIONS,
-  signAccessToken,
-  signRefreshToken,
-  signTwoFaToken,
-} from '../lib/jwt';
+import { JWT_ALGORITHM, JWT_VERIFY_OPTIONS, signRefreshToken, signTwoFaToken } from '../lib/jwt';
 import { createSession } from '../lib/sessions';
 import { logAudit } from '../services/AuditService';
 import { logger } from '../lib/logger';
@@ -23,10 +18,10 @@ import { notFound } from '../lib/errors';
 import { safeFetch } from '../lib/safeFetch';
 
 /**
- * SSO OIDC (36.A) — authorization code flow (Google par défaut). State + nonce sont
- * portés par un JWT court en cookie httpOnly (pas de session serveur avant login).
- * Retour SPA par fragment (jamais envoyé au serveur) : `/login#sso=<access>&refresh=<r>`,
- * `#tfa=<tmpToken>` si le compte a la 2FA, `#ssoerr=<message>` en échec.
+ * OIDC SSO (36.A): authorization code flow (Google by default). The state and nonce are carried by a
+ * short-lived JWT in an httpOnly cookie (no server session before login).
+ * SPA return via fragment (never sent to the server): `/login#sso=<access>&refresh=<r>`,
+ * `#tfa=<tmpToken>` if the account has 2FA, `#ssoerr=<message>` on failure.
  */
 const router = Router();
 
@@ -34,25 +29,24 @@ const COOKIE = 'oidc_state';
 let discoveryCache: { key: string; config: oidc.Configuration; until: number } | null = null;
 
 /**
- * Le cookie d'état est signé du même `JWT_SECRET` que les jetons de session : il reprend
- * donc l'algorithme déclaré une seule fois dans `lib/jwt`, des DEUX côtés. Un invariant
- * énoncé là-bas mais oublié ici ne protège rien — c'est le vérificateur le plus permissif
- * qui décide, et ce cookie porte toute la protection CSRF du flux de connexion.
+ * The state cookie is signed with the same `JWT_SECRET` as the session tokens: it therefore takes the
+ * algorithm declared once in `lib/jwt`, on BOTH sides. An invariant stated there but forgotten here
+ * protects nothing: it is the most permissive verifier that decides, and this cookie carries the whole
+ * CSRF protection of the login flow.
  */
 const STATE_SIGN_OPTIONS: SignOptions = { algorithm: JWT_ALGORITHM, expiresIn: '10m' };
-/** Contenu du cookie d'état tel qu'il est PRÉSENTÉ : rien n'en garantit la forme. */
+/** Content of the state cookie as it is PRESENTED: nothing guarantees its shape. */
 type OidcStateClaims = { kind?: string; state?: string; nonce?: string };
 
 const OIDC_TIMEOUT_MS = 10_000;
-/** Un document de découverte ou un JWKS se compte en kilo-octets : 1 Mio est déjà large. */
+/** A discovery document or a JWKS is measured in kilobytes: 1 MiB is already generous. */
 const OIDC_MAX_BYTES = 1024 * 1024;
 
 /**
- * L'issuer est une URL d'administration : le serveur va la chercher lui-même, depuis le
- * réseau applicatif. Toutes les requêtes d'openid-client (découverte, jetons, JWKS) passent
- * donc par `safeFetch` — garde anti-SSRF sur l'adresse résolue, délai d'attente, réponse
- * bornée. Les redirections sont suivies (deux au plus) parce que certains fournisseurs
- * normalisent la barre finale de l'issuer, mais chaque saut est revérifié.
+ * The issuer is an administration URL: the server fetches it itself, from the application network.
+ * All of openid-client's requests (discovery, tokens, JWKS) therefore go through `safeFetch`: anti-SSRF
+ * guard on the resolved address, timeout, bounded response. Redirects are followed (two at most)
+ * because some providers normalize the trailing slash of the issuer, but each hop is re-checked.
  */
 const oidcFetch: oidc.CustomFetch = (url, options) =>
   safeFetch(url, options, {
@@ -69,8 +63,8 @@ async function discovery(cfg: OidcConfig): Promise<oidc.Configuration> {
   const config = await oidc.discovery(new URL(cfg.issuer), cfg.clientId, cfg.clientSecret, undefined, {
     [oidc.customFetch]: oidcFetch,
   });
-  // La découverte ne propage pas toujours l'option : on la repose sur la configuration,
-  // qui sert ensuite à l'échange du code et à la lecture du JWKS.
+  // Discovery does not always propagate the option: we re-attach it to the configuration, which is
+  // then used for the code exchange and the JWKS read.
   config[oidc.customFetch] = oidcFetch;
   discoveryCache = { key, config, until: Date.now() + 10 * 60_000 };
   return config;
@@ -84,20 +78,10 @@ async function readyConfig(): Promise<OidcConfig> {
   return cfg;
 }
 
-/** Lit un cookie sans dépendance (pas de cookie-parser dans l'app). */
-function readCookie(header: string | undefined, name: string): string | null {
-  if (!header) return null;
-  for (const part of header.split(';')) {
-    const [k, ...rest] = part.trim().split('=');
-    if (k === name) return decodeURIComponent(rest.join('='));
-  }
-  return null;
-}
-
-// GET /api/auth/oidc/status — public : le front affiche (ou non) le bouton SSO, son logo,
-// et sait s'il doit encore proposer le formulaire email + mot de passe. `passwordLogin`
-// est l'état EFFECTIF : il suit la même règle que le refus côté /api/auth/login, sans quoi
-// la page de connexion cacherait un formulaire que le serveur accepte encore (ou l'inverse).
+// GET /api/auth/oidc/status — public: the front end shows (or not) the SSO button and its logo, and
+// knows whether it must still offer the email and password form. `passwordLogin` is the EFFECTIVE
+// state: it follows the same rule as the refusal on /api/auth/login, otherwise the login page would
+// hide a form that the server still accepts (or the reverse).
 router.get('/status', async (_req, res) => {
   const cfg = await getOidcConfig();
   const ready = isOidcReady(cfg);
@@ -109,7 +93,7 @@ router.get('/status', async (_req, res) => {
   });
 });
 
-// GET /api/auth/oidc/login — redirige vers le fournisseur (state+nonce en cookie signé)
+// GET /api/auth/oidc/login — redirects to the provider (state and nonce in a signed cookie)
 router.get('/login', async (_req, res) => {
   const cfg = await readyConfig();
   const config = await discovery(cfg);
@@ -131,23 +115,23 @@ router.get('/login', async (_req, res) => {
   res.redirect(url.href);
 });
 
-// GET /api/auth/oidc/callback — échange le code, connecte (ou provisionne) le compte
+// GET /api/auth/oidc/callback — exchanges the code, logs in (or provisions) the account
 router.get('/callback', async (req, res) => {
   const fail = (msg: string) => res.redirect(`/login#ssoerr=${encodeURIComponent(msg)}`);
   try {
     const cfg = await readyConfig();
     const raw = readCookie(req.headers.cookie, COOKIE);
     res.clearCookie(COOKIE, { path: '/api/auth/oidc' });
-    if (!raw) return fail('Session SSO expirée, réessayez');
+    if (!raw) return fail('SSO session expired, try again');
     let checks: { state: string; nonce: string };
     try {
-      // Sans `JWT_VERIFY_OPTIONS`, c'est celui qui PRÉSENTE le cookie qui choisit avec quel
-      // algorithme il a été signé (cf. `STATE_SIGN_OPTIONS` ci-dessus).
+      // Without `JWT_VERIFY_OPTIONS`, it is the party PRESENTING the cookie that chooses with which
+      // algorithm it was signed (cf. `STATE_SIGN_OPTIONS` above).
       const p = jwt.verify(raw, env.JWT_SECRET, JWT_VERIFY_OPTIONS) as OidcStateClaims;
       if (p.kind !== 'oidc' || !p.state || !p.nonce) return fail('Session SSO invalide');
       checks = { state: p.state, nonce: p.nonce };
     } catch {
-      return fail('Session SSO expirée, réessayez');
+      return fail('SSO session expired, try again');
     }
 
     const config = await discovery(cfg);
@@ -158,15 +142,15 @@ router.get('/callback', async (req, res) => {
     });
     const claims = tokens.claims();
     const email = typeof claims?.email === 'string' ? claims.email.toLowerCase() : null;
-    if (!email || claims?.email_verified !== true) return fail('Email non vérifié chez le fournisseur');
+    if (!email || claims?.email_verified !== true) return fail('Email not verified by the provider');
 
     let user = await prisma.user.findUnique({ where: { email } });
     if (!user) {
-      if (!cfg.autoProvision) return fail('Aucun compte pour cet email — contactez un admin');
+      if (!cfg.autoProvision) return fail('No account for this email — contact an administrator');
       user = await prisma.user.create({
         data: {
           email,
-          // Mot de passe local aléatoire (connexion par SSO ; réinitialisable par un admin).
+          // Random local password (SSO login; resettable by an admin).
           password: await bcrypt.hash(randomBytes(24).toString('hex'), 12),
           name: typeof claims?.name === 'string' ? claims.name.slice(0, 120) : null,
           role: 'ARTIST',
@@ -174,11 +158,11 @@ router.get('/callback', async (req, res) => {
       });
       logAudit({ userId: user.id, action: 'OIDC_PROVISION', entityType: 'User', entityId: user.id });
     }
-    // Offboarding (A1-01) : l'identité vit encore chez le fournisseur après le départ. Sans
-    // ce refus, le SSO rendait au partant, sans même un mot de passe, l'accès que la
-    // désactivation venait de lui retirer. Même message que « pas de compte » : de son point
-    // de vue c'est le même fait, et rien n'est dit de l'état du compte.
-    if (user.disabledAt) return fail('Aucun compte pour cet email — contactez un admin');
+    // Offboarding (A1-01): the identity still lives with the provider after the departure. Without this
+    // refusal, SSO handed the leaver, even without a password, the access that the deactivation had just
+    // withdrawn from them. Same message as "no account": from their point of view it is the same fact,
+    // and nothing is said about the state of the account.
+    if (user.disabledAt) return fail('No account for this email — contact an administrator');
 
     if (user.totpEnabledAt) {
       return res.redirect(`/login#tfa=${encodeURIComponent(signTwoFaToken(user.id))}`);
@@ -186,12 +170,13 @@ router.get('/callback', async (req, res) => {
     const sid = await createSession(user.id, req);
     const payload = { id: user.id, email: user.email, role: user.role, sid };
     logAudit({ userId: user.id, action: 'OIDC_LOGIN', entityType: 'User', entityId: user.id });
-    res.redirect(
-      `/login#sso=${encodeURIComponent(signAccessToken(payload))}&refresh=${encodeURIComponent(signRefreshToken(payload))}`,
-    );
+    // No token in the URL: the fragment lands in the browser history. The refresh token goes into its
+    // httpOnly cookie; the page obtains its access token from /api/auth/refresh (`sso=cookie`).
+    setRefreshCookie(req, res, signRefreshToken(payload));
+    res.redirect('/login#sso=cookie');
   } catch (err) {
-    logger.warn({ err }, '[oidc] callback en échec');
-    fail('Connexion SSO échouée');
+    logger.warn({ err }, '[oidc] callback failed');
+    fail('SSO login failed');
   }
 });
 

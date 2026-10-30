@@ -12,15 +12,14 @@ import SgSettingsContent from './SgSettingsContent';
 import { SettingsCard } from './SgSettingsPrimitives';
 
 /**
- * Réglages de l'échange avec ShotGrid.
+ * ShotGrid exchange settings.
  *
- * Sept sections nues étaient empilées dans un seul flux : rien ne disait où finissait
- * « médias » et où commençait « écritures », et retrouver un réglage demandait de lire tous
- * les libellés. Elles sont désormais des cartes, chacune avec son intention, réparties en
- * **deux colonnes sur écran large** — la matrice des droits d'un côté, ce qui circule de
- * l'autre. Un écran de réglages se parcourt du regard, il ne se lit pas.
+ * Seven bare sections were stacked in a single flow: nothing said where "media" ended and
+ * "writes" began, and finding a setting meant reading every label. They are now cards,
+ * each with its own purpose, laid out in **two columns on wide screens**: the rights
+ * matrix on one side, what flows on the other. A settings screen is scanned, not read.
  *
- * Chaque modification part immédiatement : pas de bouton « enregistrer » à oublier.
+ * Every change is applied immediately: there is no "save" button to forget.
  */
 export default function SgSettingsPanel({
   connection,
@@ -34,11 +33,11 @@ export default function SgSettingsPanel({
   const rotate = useRotateWebhookToken(connection.projectId);
   const s = connection.settings;
   /**
-   * L'état d'écriture vient de la mutation, pas d'un booléen local : le `finally` de ce
-   * dernier retombait à `false` alors qu'une seconde requête était encore en vol. Il
-   * verrouille tout le panneau, pas seulement la matrice — chaque contrôle reconstruit
-   * l'objet complet à partir des réglages affichés, donc n'importe lequel peut écraser
-   * l'écriture en cours s'il part d'un état périmé.
+   * The write state comes from the mutation, not from a local boolean: the `finally` of
+   * the latter fell back to `false` while a second request was still in flight. It locks
+   * the whole panel, not just the matrix: each control rebuilds the full object from the
+   * displayed settings, so any of them could overwrite the write in progress if it starts
+   * from a stale state.
    */
   const saving = update.isPending;
   const disabled = !canManage || saving;

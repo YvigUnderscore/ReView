@@ -4,54 +4,54 @@
 import { describe, it, expect } from 'vitest';
 import { CLIP_SLACK, VISIBLE_REPLIES, isClipped, plainLength, splitReplies } from './collapse';
 
-describe('mesure du contenu — le balisage ne compte pas', () => {
-  it('compte le texte brut, pas les balises', () => {
+describe('content measurement — markup is not counted', () => {
+  it('counts the plain text, not the tags', () => {
     expect(plainLength('<span class="text-primary">@yvig</span> ok')).toBe('@yvig ok'.length);
   });
 });
 
 /**
- * L'indicateur de repliage se décidait au nombre de caractères : la même remarque recevait la
- * même réponse dans une carte de 15 rem et dans le fil, bien plus large, et le clic ne révélait
- * rien. C'est le débordement de l'élément replié qu'on mesure désormais.
+ * The collapse indicator was decided by character count: the same note got the same answer
+ * in a 15rem card and in the much wider thread, and the click revealed nothing. We now measure
+ * the overflow of the collapsed element instead.
  */
-describe('isClipped — le repliage cache-t-il quelque chose ?', () => {
-  it('ne voit rien de caché quand tout le contenu tient', () => {
+describe('isClipped — does the collapse hide anything?', () => {
+  it('sees nothing hidden when all the content fits', () => {
     expect(isClipped({ scrollHeight: 48, clientHeight: 48 })).toBe(false);
   });
 
-  it('voit ce que le repliage masque', () => {
+  it('sees what the collapse hides', () => {
     expect(isClipped({ scrollHeight: 80, clientHeight: 48 })).toBe(true);
   });
 
-  it('ignore un écart qui ne cache aucun texte', () => {
+  it('ignores a gap that hides no text', () => {
     expect(isClipped({ scrollHeight: 48 + CLIP_SLACK, clientHeight: 48 })).toBe(false);
     expect(isClipped({ scrollHeight: 48 + CLIP_SLACK + 1, clientHeight: 48 })).toBe(true);
   });
 
-  it('ne conclut rien sans élément à mesurer', () => {
+  it('concludes nothing without an element to measure', () => {
     expect(isClipped(null)).toBe(false);
   });
 });
 
-describe('splitReplies — fil long', () => {
+describe('splitReplies — long thread', () => {
   const replies = (n: number) => Array.from({ length: n }, (_, i) => i);
 
-  it('rend tout un fil court', () => {
+  it('renders a whole short thread', () => {
     expect(splitReplies(replies(VISIBLE_REPLIES))).toEqual({
       hidden: [],
       shown: replies(VISIBLE_REPLIES),
     });
   });
 
-  it('ne rend que les dernières réponses au-delà du seuil', () => {
+  it('renders only the latest replies beyond the threshold', () => {
     const { hidden, shown } = splitReplies(replies(VISIBLE_REPLIES + 5));
     expect(hidden).toEqual([0, 1, 2, 3, 4]);
     expect(shown).toHaveLength(VISIBLE_REPLIES);
     expect(shown[shown.length - 1]).toBe(VISIBLE_REPLIES + 4);
   });
 
-  it('ne mute pas la liste reçue', () => {
+  it('does not mutate the received list', () => {
     const source = replies(3);
     splitReplies(source).shown.push(99);
     expect(source).toHaveLength(3);

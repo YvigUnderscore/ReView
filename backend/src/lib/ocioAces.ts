@@ -2,32 +2,31 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Analyse des configs OCIO ACES publiées par l'ASWF (39.B) — dépôt
- * `AcademySoftwareFoundation/OpenColorIO-Config-ACES`. Les assets de release nomment le type de
- * config et les versions, ex. `studio-config-v2.1.0_aces-v1.3_ocio-v2.3.ocio`. Module **pur**
- * (aucun I/O) : parsing des noms d'assets + choix de la config recommandée par défaut.
+ * Parsing of the OCIO ACES configs published by the ASWF (39.B) — repository `AcademySoftwareFoundation/OpenColorIO-Config-ACES`.
+ * Release assets name the config type and the versions, e.g. `studio-config-v2.1.0_aces-v1.3_ocio-v2.3.ocio`. **Pure**
+ * module (no I/O): parsing of the asset names + choice of the recommended config by default.
  */
 
 export type AcesConfigKind = 'studio' | 'cg';
 
-/** Version ACES retenue par défaut (demande produit). */
+/** ACES version selected by default (product request). */
 export const DEFAULT_ACES_VERSION = '1.3';
 
 export interface AcesAssetInfo {
   kind: AcesConfigKind;
-  /** Version de la config (ex. `2.1.0`). */
+  /** Config version (e.g. `2.1.0`). */
   configVersion: string;
-  /** Version ACES (ex. `1.3`). */
+  /** ACES version (e.g. `1.3`). */
   acesVersion: string;
-  /** Version OCIO ciblée (ex. `2.3`). */
+  /** Targeted OCIO version (e.g. `2.3`). */
   ocioVersion: string;
-  /** Nom d'asset d'origine (`… .ocio`). */
+  /** Original asset name (`… .ocio`). */
   assetName: string;
 }
 
 const ASSET_RE = /^(studio-config|cg-config)-v(\d+\.\d+\.\d+)_aces-v(\d+\.\d+)_ocio-v(\d+\.\d+)\.ocio$/;
 
-/** Parse un nom d'asset de release ACES ; renvoie `null` si le nom ne correspond pas. */
+/** Parses an ACES release asset name; returns `null` if the name does not match. */
 export function parseAcesAsset(name: string): AcesAssetInfo | null {
   const trimmed = name.trim();
   const m = ASSET_RE.exec(trimmed);
@@ -43,13 +42,13 @@ export function parseAcesAsset(name: string): AcesAssetInfo | null {
   };
 }
 
-/** Libellé lisible d'une config (ex. « Studio config — ACES 1.3 (config v2.1.0, OCIO 2.3) »). */
+/** Readable label of a config (e.g. "Studio config — ACES 1.3 (config v2.1.0, OCIO 2.3)"). */
 export function acesDisplayName(info: AcesAssetInfo): string {
   const kind = info.kind === 'studio' ? 'Studio config' : 'CG config';
   return `${kind} — ACES ${info.acesVersion} (config v${info.configVersion}, OCIO ${info.ocioVersion})`;
 }
 
-/** Compare deux versions pointées (`2.1.0` vs `2.10.0`) numériquement. >0 si `a`>`b`. */
+/** Compares two dotted versions (`2.1.0` vs `2.10.0`) numerically. >0 if `a` > `b`. */
 export function compareVersions(a: string, b: string): number {
   const pa = a.split('.').map(Number);
   const pb = b.split('.').map(Number);
@@ -61,8 +60,8 @@ export function compareVersions(a: string, b: string): number {
 }
 
 /**
- * Config recommandée par défaut parmi une liste d'assets : la **studio config ACES 1.3** de plus
- * haute version. À défaut, la studio config d'ACES le plus récent ; sinon le premier asset connu.
+ * Default recommended config among a list of assets: the **ACES 1.3 studio config** of the highest version.
+ * Failing that, the studio config of the most recent ACES; otherwise the first known asset.
  */
 export function pickRecommended(infos: AcesAssetInfo[]): AcesAssetInfo | null {
   if (infos.length === 0) return null;
@@ -79,7 +78,7 @@ export function pickRecommended(infos: AcesAssetInfo[]): AcesAssetInfo | null {
   return latestStudio[0] ?? infos[0] ?? null;
 }
 
-/** Vrai si l'asset est la config à proposer par défaut (studio ACES 1.3). */
+/** True if the asset is the config to offer by default (ACES 1.3 studio). */
 export function isDefaultCandidate(info: AcesAssetInfo): boolean {
   return info.kind === 'studio' && info.acesVersion === DEFAULT_ACES_VERSION;
 }

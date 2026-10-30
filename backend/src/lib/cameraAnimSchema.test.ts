@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { describe, expect, it } from 'vitest';
 import { cameraAnimShape, channelSchema, curveKeySchema } from './cameraAnimSchema';
 
-/** Le schéma tel que l'emploie la présentation persistée : au moins une clé, 256 au plus. */
+/** The schema as used by the persisted presentation: at least one key, 256 at most. */
 const presentationAnim = z.object(
   cameraAnimShape(channelSchema(curveKeySchema({ minTime: 0, maxTime: 3_600_000 }), { min: 1, max: 2 })),
 );
@@ -18,11 +18,11 @@ const anim = (keys: unknown[], extra: Record<string, unknown> = {}, over: Record
 });
 
 describe('cameraAnimSchema', () => {
-  it('accepte une clé de la forme d’origine (mode unifié seul)', () => {
+  it('accepts a key of the original shape (unified mode only)', () => {
     expect(presentationAnim.safeParse(anim([{ t: 0, v: 1, mode: 'auto' }])).success).toBe(true);
   });
 
-  it('conserve les côtés de tangente, la brisure et les poids', () => {
+  it('keeps the tangent sides, the break and the weights', () => {
     const key = {
       t: 500,
       v: -2,
@@ -36,12 +36,12 @@ describe('cameraAnimSchema', () => {
       wOut: 1.25,
     };
     const parsed = presentationAnim.parse(anim([key]));
-    // Sans ces champs au schéma, Zod les retirait en silence et la courbe changeait de forme
-    // d'un rechargement à l'autre.
+    // Without these fields in the schema, Zod would silently strip them and the curve would change shape
+    // from one reload to the next.
     expect(parsed.channels.px?.keys[0]).toEqual(key);
   });
 
-  it('conserve l’extrapolation du canal', () => {
+  it('keeps the extrapolation of the channel', () => {
     const parsed = presentationAnim.parse(
       anim([{ t: 0, v: 0, mode: 'auto' }], { pre: 'cycle', post: 'cycleOffset' }),
     );
@@ -49,7 +49,7 @@ describe('cameraAnimSchema', () => {
     expect(parsed.channels.px?.post).toBe('cycleOffset');
   });
 
-  it('refuse un profil, une extrapolation ou un poids hors domaine', () => {
+  it('refuses a profile, an extrapolation or a weight out of domain', () => {
     expect(presentationAnim.safeParse(anim([{ t: 0, v: 0, mode: 'nope' }])).success).toBe(false);
     expect(presentationAnim.safeParse(anim([{ t: 0, v: 0, mode: 'auto', modeOut: 'wobble' }])).success).toBe(
       false,
@@ -60,12 +60,12 @@ describe('cameraAnimSchema', () => {
     );
   });
 
-  it('accepte une animation avec et sans base, et garde la base entière', () => {
-    // Sans base : la forme d'avant la Phase 50 lot 13 reste servable telle quelle.
+  it('accepts an animation with and without a base, and keeps the base whole', () => {
+    // Without a base: the shape from before Phase 50 batch 13 remains servable as-is.
     const sans = presentationAnim.parse(anim([{ t: 0, v: 1, mode: 'auto' }]));
     expect(sans.base).toBeUndefined();
-    // Avec base : omise du schéma, `z.object` la retirerait en silence et la caméra du spectateur
-    // suivant retomberait sur l'origine du monde — canaux non clés sans repli.
+    // With a base: omitted from the schema, `z.object` would silently strip it and the next viewer's camera would fall back on the
+    // origin of the world — unkeyed channels with no fallback.
     const base = {
       position: { x: 9, y: 3, z: 4 },
       target: { x: 1, y: 0.5, z: -2 },
@@ -76,7 +76,7 @@ describe('cameraAnimSchema', () => {
     expect(avec.base).toEqual(base);
   });
 
-  it('refuse une base amputée ou hors domaine', () => {
+  it('refuses a truncated or out-of-domain base', () => {
     const ok = { position: { x: 0, y: 0, z: 0 }, target: { x: 1, y: 1, z: 1 } };
     expect(presentationAnim.safeParse(anim([{ t: 0, v: 1, mode: 'auto' }], {}, { base: ok })).success).toBe(
       true,
@@ -93,7 +93,7 @@ describe('cameraAnimSchema', () => {
     }
   });
 
-  it('tient les bornes de volume et de temps de son appelant', () => {
+  it('holds the volume and time bounds of its caller', () => {
     const key = { t: 0, v: 0, mode: 'auto' as const };
     expect(presentationAnim.safeParse(anim([])).success).toBe(false);
     expect(presentationAnim.safeParse(anim([key, key, key])).success).toBe(false);

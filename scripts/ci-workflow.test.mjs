@@ -2,18 +2,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Garde-fous sur l'intégration continue.
+ * Guardrails on continuous integration.
  *
- * La suite `scripts/validate.sh` est un principe protégé : la CI doit la rejouer telle
- * quelle, jamais un sous-ensemble. Ces contrôles verrouillent ce qu'un fichier YAML ne sait
- * pas dire de lui-même — que la commande n'est ni tronquée, ni neutralisée par un `|| true`,
- * que les deux paquets sont bien installés (le contrôle de fraîcheur des notices lit
- * `node_modules`), que la version de Node ne dérive pas de celle des images d'exécution,
- * et que `.github/` n'est pas ré-ignoré (le défaut relevé par l'audit du 2026-08-21 :
- * un workflow présent mais jamais commité).
+ * The `scripts/validate.sh` suite is a protected principle: CI must replay it as it is, never a subset.
+ * These checks lock down what a YAML file cannot say about itself — that the command is neither truncated
+ * nor neutralised by a `|| true`, that both packages are indeed installed (the notice freshness check reads
+ * `node_modules`), that the Node version does not drift from that of the runtime images, and that `.github/`
+ * is not re-ignored (the default flagged by the audit of 2026-08-21: a workflow present but never committed).
  *
- * Lecture textuelle assumée : aucun analyseur YAML n'est déclaré dans les dépendances du
- * dépôt, et une dépendance nouvelle pour un test de configuration serait disproportionnée.
+ * Deliberately textual reading: no YAML parser is declared among the repository's dependencies, and adding
+ * one for a configuration test would be disproportionate.
  */
 
 import { readFileSync } from 'node:fs';
@@ -24,7 +22,7 @@ import { describe, expect, it } from 'vitest';
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => readFileSync(path.join(ROOT, rel), 'utf8');
 
-/** Retire les lignes de commentaire : on contrôle la configuration, pas ce qu'elle raconte. */
+/** Strips the comment lines: we check the configuration, not what it says about itself. */
 export function stripComments(text) {
   return text
     .split('\n')
@@ -35,8 +33,8 @@ export function stripComments(text) {
 const WORKFLOW = stripComments(read('.github/workflows/validate.yml'));
 
 /**
- * Isole le bloc d'un job : de sa clé (deux espaces d'indentation) jusqu'à la clé de même
- * niveau qui suit, ou la fin du fichier.
+ * Isolates the block of a job: from its key (two spaces of indentation) up to the next key at
+ * the same level, or the end of the file.
  */
 export function jobBlock(text, id) {
   const start = text.indexOf(`\n  ${id}:\n`);
@@ -46,71 +44,71 @@ export function jobBlock(text, id) {
   return next === -1 ? rest : rest.slice(0, next + 1);
 }
 
-/** Majeure de Node exigée par une image (`FROM node:22-slim` → `22`). */
+/** Node major version required by an image (`FROM node:22-slim` → `22`). */
 export function dockerNodeMajor(dockerfile) {
   return dockerfile.match(/^FROM node:(\d+)/m)?.[1] ?? null;
 }
 
-describe('workflow de validation', () => {
-  it('se déclenche sur push et pull request', () => {
+describe('validation workflow', () => {
+  it('triggers on push and pull request', () => {
     expect(WORKFLOW).toMatch(/^on:$/m);
     expect(WORKFLOW).toMatch(/^ {2}push:$/m);
     expect(WORKFLOW).toMatch(/^ {2}pull_request:$/m);
   });
 
-  it('ne demande que la lecture du dépôt', () => {
+  it('only asks to read the repository', () => {
     expect(WORKFLOW).toMatch(/^permissions:\n {2}contents: read$/m);
   });
 
-  it('définit les deux jobs attendus', () => {
+  it('defines the two expected jobs', () => {
     expect(jobBlock(WORKFLOW, 'validate')).not.toBeNull();
     expect(jobBlock(WORKFLOW, 'integration')).not.toBeNull();
   });
 
-  it('joue la suite entière, jamais un sous-ensemble', () => {
+  it('runs the whole suite, never a subset', () => {
     const invocations = WORKFLOW.split('\n').filter((line) => line.includes('scripts/validate.sh'));
-    // Deux appels : la suite seule, puis la suite plus les tests d'intégration.
-    expect(invocations).toHaveLength(2);
+    // Three calls: the suite alone, plus the integration tests, plus the Playwright E2E path.
+    expect(invocations).toHaveLength(3);
     for (const line of invocations) {
-      expect(line).toMatch(/^ +run: bash scripts\/validate\.sh( --with-integration)?$/);
+      expect(line).toMatch(/^ +run: bash scripts\/validate\.sh( --with-integration| --with-e2e)?$/);
     }
     expect(jobBlock(WORKFLOW, 'validate')).toMatch(/run: bash scripts\/validate\.sh$/m);
     expect(jobBlock(WORKFLOW, 'integration')).toMatch(/run: bash scripts\/validate\.sh --with-integration$/m);
   });
 
-  it('rend le job unitaire bloquant', () => {
+  it('makes the unit job blocking', () => {
     expect(jobBlock(WORKFLOW, 'validate')).not.toMatch(/continue-on-error/);
   });
 
-  it('installe les deux paquets à partir des lockfiles', () => {
+  it('installs both packages from the lockfiles', () => {
     for (const id of ['validate', 'integration']) {
       const block = jobBlock(WORKFLOW, id);
       expect(block).toMatch(/run: npm ci\n +working-directory: backend/);
       expect(block).toMatch(/run: npm ci\n +working-directory: frontend/);
-      // `npm install` réécrirait le lockfile : la fraîcheur des notices ne voudrait plus rien dire.
+      // `npm install` would rewrite the lockfile: the freshness of the notices would mean nothing.
       expect(block).not.toMatch(/run: npm install/);
     }
   });
 
-  it('fournit à Postgres, Redis et MinIO leur pendant côté job', () => {
+  it('provides Postgres, Redis and MinIO with their counterpart on the job side', () => {
     const block = jobBlock(WORKFLOW, 'integration');
     expect(block).toMatch(/image: postgres:/);
     expect(block).toMatch(/image: redis:/);
     expect(block).toMatch(/npx prisma migrate deploy/);
   });
 
-  it('teste la MinIO que les studios exécutent, épinglée comme dans docker-compose.yml', () => {
-    // Le job tirait `minio/minio:latest` : le jour où ce dépôt a quitté le Docker Hub, il est
-    // tombé seul, alors que le compose désignait une autre version que celle testée.
+  it('tests the MinIO that studios run, pinned as in docker-compose.yml', () => {
+    // The job pulled `minio/minio:latest`: the day this repository left Docker Hub, it fell over
+    // on its own, while the compose file pointed to a different version from the one tested.
     const pinned = /^ {4}image: (\S+):\$\{MINIO_VERSION:-([^}]+)\}$/m.exec(read('docker-compose.yml'));
     expect(pinned).not.toBeNull();
     const block = jobBlock(WORKFLOW, 'integration');
     expect(block).toContain(`${pinned[1]}:${pinned[2]} server /data`);
-    // Le bucket se crée avec le `mc` de l'image serveur, pas avec une seconde image.
+    // The bucket is created with the `mc` of the server image, not with a second image.
     expect(block).toMatch(/docker exec [^\n]*\\\n +minio mc mb /);
   });
 
-  it('suit la version de Node des images d’exécution', () => {
+  it('follows the Node version of the runtime images', () => {
     const backend = dockerNodeMajor(read('backend/Dockerfile'));
     const frontend = dockerNodeMajor(read('frontend/Dockerfile'));
     expect(backend).toBe(frontend);
@@ -118,8 +116,8 @@ describe('workflow de validation', () => {
   });
 });
 
-describe('outillage de dépôt public', () => {
-  it('laisse .github commitable', () => {
+describe('public repository tooling', () => {
+  it('leaves .github committable', () => {
     const ignored = read('.gitignore')
       .split('\n')
       .map((line) => line.trim())
@@ -127,13 +125,13 @@ describe('outillage de dépôt public', () => {
     expect(ignored.some((line) => line.replace(/^\/+|\/+$/g, '') === '.github')).toBe(false);
   });
 
-  it('rappelle la suite de validation et le CLA dans le gabarit de pull request', () => {
+  it('reminds the validation suite and the CLA in the pull request template', () => {
     const template = read('.github/pull_request_template.md');
     expect(template).toMatch(/scripts\/validate\.sh/);
     expect(template).toMatch(/CLA\.md/);
   });
 
-  it('route les failles vers la politique de sécurité plutôt que vers un ticket public', () => {
+  it('routes vulnerabilities to the security policy rather than to a public ticket', () => {
     expect(read('.github/ISSUE_TEMPLATE/bug_report.yml')).toMatch(/SECURITY\.md/);
     expect(read('SECURITY.md')).toMatch(/Report a vulnerability/);
   });

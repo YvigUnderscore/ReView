@@ -7,7 +7,7 @@ vi.mock('../lib/prisma', () => ({
   prisma: { user: { findFirst: vi.fn(), update: vi.fn() } },
 }));
 vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: { getPresignedGetUrl: vi.fn() },
   StorageService: class {},
 }));
@@ -19,46 +19,45 @@ import { prisma } from '../lib/prisma';
 const update = vi.mocked(prisma.user.update);
 
 /**
- * A1-04 / A2-06 — la clé d'avatar était comparée à un PRÉFIXE sans délimiteur
- * (`key.startsWith('avatars/' + userId)`). Or `StorageService.avatarKey` produit
- * `avatars/<id><ext>`, sans barre oblique après l'identifiant : `'avatars/91.png'`
- * commence donc par `'avatars/9'`, et le compte 9 faisait servir la photo du compte 91.
+ * A1-04 / A2-06: the avatar key was compared to a PREFIX without a delimiter
+ * (`key.startsWith('avatars/' + userId)`). But `StorageService.avatarKey` produces
+ * `avatars/<id><ext>`, with no slash after the identifier: `'avatars/91.png'` therefore starts with
+ * `'avatars/9'`, and account 9 served the photo of account 91.
  *
- * L'impact direct est faible — un avatar est visible de tous les comptes authentifiés —,
- * mais c'est le contrôle qui, écrit correctement ailleurs (`DepartmentService.setImage`,
- * `EntityThumbnailService.set`), empêche de faire présigner un objet arbitraire du bucket.
- * Le laisser faux ici, c'est laisser le mauvais exemplaire à recopier : la route avait beau
- * avoir été durcie, le service — seul à écrire en base — restait la vraie source.
+ * The direct impact is low (an avatar is visible to all authenticated accounts), but it is the check written correctly
+ * elsewhere (`DepartmentService.setImage`, `EntityThumbnailService.set`) that prevents presigning an arbitrary object
+ * of the bucket. Leaving it wrong here leaves the bad copy to be duplicated: the route had been hardened, yet the service,
+ * the only one writing to the database, remained the real source.
  */
-describe('UserService.setAvatar — la clé doit désigner EXACTEMENT son propre avatar', () => {
+describe('UserService.setAvatar: the key must designate EXACTLY its own avatar', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     update.mockResolvedValue({ id: 9, email: 'a@b.c', avatarKey: null } as never);
   });
 
-  it('accepte la clé produite pour ce compte, dans les trois formats servis', async () => {
+  it('accepts the key produced for this account, in the three formats served', async () => {
     for (const key of ['avatars/9.png', 'avatars/9.jpg', 'avatars/9.webp']) {
       await setAvatar(9, key);
       expect(update).toHaveBeenCalledWith(expect.objectContaining({ data: { avatarKey: key } }));
     }
   });
 
-  it('accepte le retrait de la photo', async () => {
+  it('accepts removing the photo', async () => {
     await setAvatar(9, null);
     expect(update).toHaveBeenCalledWith(expect.objectContaining({ data: { avatarKey: null } }));
   });
 
-  it('refuse la clé d’un compte dont l’identifiant commence par le sien', async () => {
-    // Le défaut exact : 9 → 91, 1 → 12, 1 → 100.
+  it('refuses the key of an account whose identifier starts with its own', async () => {
+    // The exact edge case: 9 -> 91, 1 -> 12, 1 -> 100.
     await expect(setAvatar(9, 'avatars/91.png')).rejects.toMatchObject({ code: 'BAD_KEY' });
     await expect(setAvatar(1, 'avatars/12.png')).rejects.toMatchObject({ code: 'BAD_KEY' });
     await expect(setAvatar(1, 'avatars/100.webp')).rejects.toMatchObject({ code: 'BAD_KEY' });
     expect(update).not.toHaveBeenCalled();
   });
 
-  it('refuse une clé hors du dossier des avatars, ou sans extension connue', async () => {
-    // `avatars/` n'est qu'un préfixe du bucket : rien n'interdira demain qu'une autre clé
-    // le partage. La garde nomme donc la forme entière, pas son début.
+  it('refuses a key outside the avatars folder, or without a known extension', async () => {
+    // `avatars/` is only a prefix of the bucket: nothing will prevent tomorrow another key from sharing it.
+    // The guard therefore names the whole shape, not its beginning.
     await expect(setAvatar(9, 'derived/9/source.mp4')).rejects.toMatchObject({ code: 'BAD_KEY' });
     await expect(setAvatar(9, 'avatars/9/../12.png')).rejects.toMatchObject({ code: 'BAD_KEY' });
     await expect(setAvatar(9, 'avatars/9.exe')).rejects.toMatchObject({ code: 'BAD_KEY' });

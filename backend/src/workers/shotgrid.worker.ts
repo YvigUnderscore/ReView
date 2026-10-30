@@ -4,7 +4,7 @@
 import { Worker } from 'bullmq';
 import { redisConnectionOptions } from '../lib/redis';
 import { logger } from '../lib/logger';
-import { QUEUE_NAMES, type ShotgridJobData } from '../services/JobService';
+import { QUEUE_NAMES, type ShotgridJobData } from '../lib/queues';
 import {
   handleEvent,
   pollEvents,
@@ -16,14 +16,14 @@ import { catchUpOnBoot, scheduleShotgridJobs } from '../services/shotgrid/Shotgr
 import { registerWorkerShutdown } from './shutdown';
 
 /**
- * Travaux ShotGrid : application des événements reçus, relevé périodique, écritures
- * sortantes et réconciliation.
+ * ShotGrid jobs: applying received events, periodic polling, outgoing writes
+ * and reconciliation.
  *
- * La réconciliation mérite un mot. ReView n'est pas toujours joignable : une mise à
- * jour, une coupure réseau, un webhook que ShotGrid a fini par désactiver après cent
- * échecs — et le miroir dérive sans que personne ne s'en aperçoive. Deux filets :
- * un passage nocturne, et un rattrapage au démarrage de l'instance qui relit tout ce
- * qui a bougé pendant l'absence. ShotGrid fait autorité : au réveil, ReView se réaligne.
+ * Reconciliation deserves a word. ReView is not always reachable: an update,
+ * a network outage, a webhook that ShotGrid eventually disabled after a hundred
+ * failures, and the mirror drifts without anyone noticing. Two safety nets:
+ * a nightly pass, and a catch-up at instance startup that re-reads everything that
+ * changed during the absence. ShotGrid is authoritative: on wake-up, ReView realigns.
  */
 export const shotgridWorker = new Worker<ShotgridJobData, void, string>(
   QUEUE_NAMES.SHOTGRID,
@@ -43,29 +43,27 @@ export const shotgridWorker = new Worker<ShotgridJobData, void, string>(
         await runPush(data.connectionId, data.push as PushJob);
         return;
       default:
-        logger.warn({ data }, '[shotgrid.worker] type de travail inconnu');
+        logger.warn({ data }, '[shotgrid.worker] unknown job type');
     }
   },
   { connection: redisConnectionOptions, autorun: false, concurrency: 2 },
 );
 
 shotgridWorker.on('failed', (job, err) =>
-  logger.warn({ err, kind: job?.data.kind }, '[shotgrid.worker] échec'),
+  logger.warn({ err, kind: job?.data.kind }, '[shotgrid.worker] failed'),
 );
 
-// Réexport : le planificateur vit désormais dans un module sans effet de bord, pour que
-// le process API puisse le rappeler après un changement de réglages sans instancier ce
-// worker au passage.
+// Re-export: the scheduler now lives in a module with no side effects, so that
+// the API process can call it after a settings change without instantiating this
+// worker at the same time.
 export { catchUpOnBoot, scheduleShotgridJobs };
 
 export function startShotgridWorker(): void {
   void shotgridWorker.run();
   registerWorkerShutdown('shotgrid.worker', shotgridWorker);
   void scheduleShotgridJobs().catch((err) =>
-    logger.error({ err }, '[shotgrid.worker] pose des travaux périodiques impossible'),
+    logger.error({ err }, '[shotgrid.worker] could not schedule the periodic jobs'),
   );
-  void catchUpOnBoot().catch((err) =>
-    logger.error({ err }, '[shotgrid.worker] rattrapage au démarrage impossible'),
-  );
-  logger.info('[shotgrid.worker] démarré.');
+  void catchUpOnBoot().catch((err) => logger.error({ err }, '[shotgrid.worker] startup catch-up failed'));
+  logger.info('[shotgrid.worker] started.');
 }

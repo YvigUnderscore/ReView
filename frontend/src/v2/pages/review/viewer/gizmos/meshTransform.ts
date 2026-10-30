@@ -3,7 +3,7 @@
 
 import type { SplatTransform } from '../../reviewTypes';
 
-/** Formes structurelles minimales d'un mesh Three (évite de dépendre de THREE dans les tests). */
+/** Minimal structural shapes of a Three mesh (avoids depending on THREE in tests). */
 interface Vec3Like {
   toArray(): number[];
 }
@@ -20,8 +20,8 @@ export interface TransformableMesh {
 }
 
 /**
- * Lit la transformation TRS (position/quaternion/échelle) d'un mesh manipulé par le gizmo.
- * Fonction pure — le `SplatMesh` (dérivé de THREE.Object3D) satisfait `TransformableMesh`.
+ * Reads the TRS transform (position/quaternion/scale) of a mesh manipulated by the gizmo.
+ * Pure function: `SplatMesh` (derived from THREE.Object3D) satisfies `TransformableMesh`.
  */
 export function readMeshTransform(mesh: TransformableMesh): SplatTransform {
   return {

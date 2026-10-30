@@ -4,10 +4,10 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
 /**
- * PERF-10 — coût des mises à jour de l'import CSV, mesuré en **nombre d'écritures** émises
- * dans la transaction. C'est la bonne unité : ce qui gêne n'est pas la durée de l'import
- * mais le temps pendant lequel il tient ses verrous, et ce temps est proportionnel au
- * nombre d'allers-retours avec PostgreSQL.
+ * PERF-10 — cost of the CSV import's updates, measured in **number of writes** emitted in the transaction.
+ * This is the right unit: what hurts is not the duration of the import
+ * but the time during which it holds its locks, and this time is proportional to the number of round trips
+ * with PostgreSQL.
  */
 
 const tx = {
@@ -53,7 +53,7 @@ const mocked = prisma as unknown as {
 
 const user = { id: 9, role: 'ADMIN' as const };
 
-/** Jour ISO décalé de `offset` jours à partir du 1er septembre 2026. */
+/** ISO day shifted by `offset` days from 1 September 2026. */
 const day = (offset: number) => new Date(Date.UTC(2026, 8, 1 + offset)).toISOString().slice(0, 10);
 
 interface ExistingShot {
@@ -70,9 +70,9 @@ interface ExistingShot {
 }
 
 /**
- * Projet déjà en base — `shots` plans, `tasksPerShot` tâches chacun — et le CSV de suivi
- * qui les réimporte en ne changeant qu'une échéance. `dueFor` décide si le fichier porte
- * la même date partout (balayage, cas fréquent) ou une par plan (replanification).
+ * Project already in the database — `shots` shots, `tasksPerShot` tasks each — and the tracking CSV which
+ * re-imports them by changing only one deadline. `dueFor` decides whether
+ * the file carries the same date everywhere (sweep, the frequent case) or one per shot (re-scheduling).
  */
 function fixture(shots: number, tasksPerShot: number, dueFor: (i: number) => string) {
   const existingShots: ExistingShot[] = [];
@@ -116,12 +116,12 @@ function fixture(shots: number, tasksPerShot: number, dueFor: (i: number) => str
 
 type ManyCall = { where: { id: { in: number[] } }; data: Record<string, unknown> };
 
-/** Toutes les lignes visées par les `updateMany` d'une entité, dans l'ordre d'émission. */
+/** All the rows targeted by an entity's `updateMany`, in emission order. */
 const writtenIds = (calls: unknown[][]) => calls.flatMap((c) => (c[0] as ManyCall).where.id.in);
 
 /**
- * Le groupement rendu ligne à ligne : `id → charge utile`. C'est la forme qu'écrivaient
- * les `update` unitaires, donc celle qu'il faut comparer pour prouver l'équivalence.
+ * The grouping rendered row by row: `id → payload`. This is the shape the unit `update` calls used to write,
+ * hence the one to compare to prove equivalence.
  */
 function writtenPerRow(calls: unknown[][]): Map<number, unknown> {
   const out = new Map<number, unknown>();
@@ -154,22 +154,22 @@ beforeEach(() => {
   mocked.$transaction.mockImplementation(async (fn: (c: typeof tx) => Promise<void>) => fn(tx));
 });
 
-describe('import CSV — coût des mises à jour', () => {
-  it('replanification (400 plans, 2 000 tâches, une échéance par plan) : 2 000 écritures → 400', async () => {
+describe('CSV import: cost of updates', () => {
+  it('re-scheduling (400 shots, 2,000 tasks, one deadline per shot): 2,000 writes → 400', async () => {
     const { csv, taskCount } = fixture(400, 5, (i) => day(i));
     const report = await commit(user, 1, csv);
 
     expect(taskCount).toBe(2000);
-    expect(report.counts.tasksToUpdate).toBe(2000); // 2 000 `tx.task.update` avant le correctif
+    expect(report.counts.tasksToUpdate).toBe(2000); // 2,000 `tx.task.update` before the fix
     expect(tx.task.update).not.toHaveBeenCalled();
-    // Une écriture par échéance distincte : les cinq tâches d'un plan partagent la leur.
+    // One write per distinct deadline: the five tasks of a shot share theirs.
     expect(tx.task.updateMany).toHaveBeenCalledTimes(400);
-    // Et exactement les mêmes lignes qu'avant, ni plus ni moins.
+    // And exactly the same rows as before, no more and no fewer.
     expect(writtenIds(tx.task.updateMany.mock.calls)).toHaveLength(2000);
     expect(new Set(writtenIds(tx.task.updateMany.mock.calls)).size).toBe(2000);
 
-    // Équivalence de sortie, déduite du fichier et non de l'implémentation : la tâche
-    // numéro `id` appartient au plan `(id - 1) / 5`, dont le CSV porte l'échéance.
+    // Output equivalence, deduced from the file and not from the implementation: task number `id` belongs to
+    // shot `(id - 1) / 5`, whose deadline the CSV carries.
     const written = writtenPerRow(tx.task.updateMany.mock.calls);
     const expected = new Map(
       Array.from({ length: 2000 }, (_, i) => [
@@ -180,14 +180,14 @@ describe('import CSV — coût des mises à jour', () => {
     expect(written).toEqual(expected);
   });
 
-  it('balayage homogène (même échéance partout) : 2 000 écritures → 4 lots de 500', async () => {
+  it('homogeneous sweep (same deadline everywhere): 2,000 writes → 4 batches of 500', async () => {
     const { csv } = fixture(400, 5, () => day(0));
     await commit(user, 1, csv);
     expect(tx.task.updateMany).toHaveBeenCalledTimes(4);
     expect(writtenIds(tx.task.updateMany.mock.calls)).toHaveLength(2000);
   });
 
-  it('écrit la date à minuit UTC, une seule fois pour tout le groupe', async () => {
+  it('writes the date at midnight UTC, once for the whole group', async () => {
     const { csv } = fixture(3, 2, () => '15/09/2026');
     await commit(user, 1, csv);
     expect(tx.task.updateMany).toHaveBeenCalledTimes(1);
@@ -197,7 +197,7 @@ describe('import CSV — coût des mises à jour', () => {
     });
   });
 
-  it('regroupe aussi les plans : un seul updateMany pour un renommage commun', async () => {
+  it('also groups shots: a single updateMany for a common rename', async () => {
     fixture(3, 1, () => day(0));
     const lines = ['sequence,shot,name'];
     for (let i = 0; i < 3; i++) lines.push(`SQ010,SH${String(i).padStart(4, '0')},Rooftop`);
@@ -210,7 +210,7 @@ describe('import CSV — coût des mises à jour', () => {
     });
   });
 
-  it('regroupe le rattachement des séquences à un épisode', async () => {
+  it('groups the attachment of sequences to an episode', async () => {
     mocked.project.findFirst.mockResolvedValue({ id: 1, startFrame: 1001, episodesEnabled: true });
     mocked.episode.findMany.mockResolvedValue([{ id: 20, code: 'EP01', deletedAt: null }]);
     mocked.sequence.findMany.mockResolvedValue([
@@ -229,9 +229,9 @@ describe('import CSV — coût des mises à jour', () => {
     });
   });
 
-  it('une ligne disparue entre le plan et l’écriture fait avorter l’import', async () => {
+  it('a row that vanished between the plan and the write aborts the import', async () => {
     const { csv } = fixture(3, 1, () => day(0));
-    tx.task.updateMany.mockResolvedValue({ count: 2 }); // une des trois lignes n'existe plus
+    tx.task.updateMany.mockResolvedValue({ count: 2 }); // one of the three rows no longer exists
     await expect(commit(user, 1, csv)).rejects.toMatchObject({ code: 'IMPORT_RACE', statusCode: 409 });
   });
 });
@@ -242,13 +242,13 @@ describe('applyGroupedUpdates', () => {
     return Promise.resolve({ count: ids.length });
   };
 
-  it('ne fait rien sans mise à jour', async () => {
+  it('does nothing without an update', async () => {
     const seen: { ids: number[]; data: unknown }[] = [];
     await applyGroupedUpdates([], write(seen), 'Task');
     expect(seen).toEqual([]);
   });
 
-  it('regroupe quel que soit l’ordre des clés de la charge utile', async () => {
+  it('groups regardless of the order of the payload keys', async () => {
     const seen: { ids: number[]; data: unknown }[] = [];
     await applyGroupedUpdates(
       [
@@ -262,7 +262,7 @@ describe('applyGroupedUpdates', () => {
     expect(seen[0]!.ids).toEqual([1, 2]);
   });
 
-  it('referme le lot quand un identifiant revient, pour que la dernière écriture l’emporte', async () => {
+  it('closes the batch when an identifier comes back, so that the last write wins', async () => {
     const seen: { ids: number[]; data: unknown }[] = [];
     await applyGroupedUpdates(
       [
@@ -273,13 +273,13 @@ describe('applyGroupedUpdates', () => {
       write(seen),
       'Shot',
     );
-    // Les deux premières partent ensemble, la reprise sur l'id 1 vient après : l'ordre
-    // qui décide de la valeur finale est conservé.
+    // The first two leave together, the retake on id 1 comes after: the order that decides the final value is
+    // preserved.
     expect(seen.map((s) => s.ids)).toEqual([[1], [2], [1]]);
     expect(seen.at(-1)!.data).toEqual({ name: 'c' });
   });
 
-  it('découpe un groupe au-delà de 500 identifiants', async () => {
+  it('splits a group beyond 500 identifiers', async () => {
     const seen: { ids: number[]; data: unknown }[] = [];
     const updates = Array.from({ length: 1200 }, (_, i) => ({ id: i + 1, data: { name: 'a' } }));
     await applyGroupedUpdates(updates, write(seen), 'Shot');

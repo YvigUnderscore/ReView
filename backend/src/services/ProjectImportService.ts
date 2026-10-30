@@ -20,70 +20,66 @@ import {
 } from './ProjectImportPlan';
 
 /**
- * Entrée d'un studio dans ReView par un fichier CSV.
+ * A studio's entry into ReView through a CSV file.
  *
- * Trois garanties, dans cet ordre :
+ * Three guarantees, in this order:
  *
- * 1. **Aperçu avant écriture.** `preview` rend le plan exact — créations, mises à jour,
- *    lignes inchangées, lignes rejetées et leur motif — sans toucher à la base.
- * 2. **Idempotence.** L'identité métier (`(projet, séquence, code)` pour un plan,
- *    `(plan, nom)` pour une tâche) est celle des index d'unicité : rejouer le fichier
- *    reconstruit le même plan, entièrement « inchangé ». Une colonne absente n'efface
- *    jamais une valeur — un import n'est pas un remplacement.
- * 3. **Écritures groupées, transaction bornée.** Un long-métrage, c'est deux mille plans
- *    et dix mille tâches : tout ce qui se crée passe par `createMany`, tout ce qui se
- *    modifie par `updateMany` regroupé par charge utile (`applyGroupedUpdates`), et la
- *    transaction porte un `timeout` explicite (les 5 s par défaut de Prisma la feraient
- *    avorter après avoir tout écrit puis tout annulé). Ce groupement n'est pas une course
- *    à la vitesse : il raccourcit la durée pendant laquelle l'import tient ses verrous.
+ * 1. **Preview before writing.** `preview` returns the exact plan — creations, updates, unchanged rows,
+ * rejected rows and their reason — without touching the database.
+ * 2. **Idempotence.** The business identity (`(project, sequence, code)` for a shot, `(shot, name)` for a
+ * task) is that of the uniqueness indexes: replaying the file rebuilds
+ * the same plan, entirely "unchanged". An absent column never erases a value — an import is not a
+ * replacement.
+ * 3. **Grouped writes, bounded transaction.** A feature film is two thousand shots and ten thousand tasks:
+ * everything that is created goes through `createMany`, everything that is modified through `updateMany`
+ * grouped by payload (`applyGroupedUpdates`), and the transaction carries an explicit `timeout` (Prisma's 5 s
+ * default would make it abort after having written everything and rolled everything back). This grouping is
+ * not a race for speed: it shortens the time during which the import holds its locks.
  */
 
 type SessionUser = { id: number; role: Role };
 
-/** Deux minutes : la même enveloppe que la duplication de projet, pour la même raison. */
+/** Two minutes: the same envelope as project duplication, for the same reason. */
 const IMPORT_TX = { timeout: 120_000, maxWait: 15_000 };
 
-/** PostgreSQL plafonne à 65 535 paramètres par requête : on écrit par lots. */
+/** PostgreSQL caps at 65,535 parameters per query: we write in batches. */
 function chunked<T>(items: T[], size = 500): T[][] {
   const out: T[][] = [];
   for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
   return out;
 }
 
-/** Une mise à jour planifiée : la ligne visée et ce qu'on y écrit. */
+/** A planned update: the targeted row and what is written to it. */
 interface PlannedUpdate<D> {
   id: number;
   data: D;
 }
 
 /**
- * Clé de regroupement d'une charge utile. Les clés sont triées pour que deux retouches
- * identiques écrites dans un ordre différent (`{name, endFrame}` et `{endFrame, name}`)
- * tombent bien dans le même groupe. Les charges sont plates et sérialisables — champs
- * scalaires, dates, `null` — ce que le typage de `ShotPatch`/`TaskPatch` garantit.
+ * Grouping key of a payload. The keys are sorted so that two identical retouches written in a different order
+ * (`{name, endFrame}` and `{endFrame, name}`) indeed fall into the same group. The payloads are flat and
+ * serialisable — scalar fields, dates, `null` — which the typing of `ShotPatch`/`TaskPatch` guarantees.
  */
 const payloadKey = (data: object): string => JSON.stringify(data, Object.keys(data).sort());
 
 /**
- * Applique des mises à jour en les groupant par charge utile identique.
+ * Applies updates by grouping them by identical payload.
  *
- * Les créations étaient déjà groupées ; les mises à jour restaient unitaires et
- * séquentielles **à l'intérieur** de la transaction d'import. Or ce qui coûte ici n'est
- * pas la vitesse de l'import : c'est la durée pendant laquelle il tient ses verrous de
- * ligne et une connexion du pool, pendant laquelle toute autre écriture sur ces plans
- * (une version publiée, une synchronisation ShotGrid) attend. Un réimport de suivi écrit
- * massivement la même valeur — même statut, même échéance de département — donc quelques
- * `updateMany` remplacent des milliers d'allers-retours.
+ * The creations were already grouped; the updates remained unitary and sequential **inside** the import
+ * transaction. What costs here is not the speed of the import: it is the time during
+ * which it holds its row locks and a pool connection, during which any other write on these shots (a
+ * published version, a ShotGrid sync) waits. A follow-up re-import massively writes
+ * the same value — same status, same department deadline — so a few `updateMany` replace thousands of round
+ * trips.
  *
- * Deux invariants à ne pas perdre :
+ * Two invariants not to lose:
  *
- * - **Le résultat est le même.** Dans un groupe, les identifiants sont distincts : les
- *   lignes touchées sont disjointes, l'ordre entre elles n'a donc aucun effet. Si un même
- *   identifiant revenait, on referme le lot avant de repartir, ce qui conserve « la
- *   dernière écriture l'emporte ».
- * - **L'échec reste un échec.** `update` levait `P2025` quand la ligne avait disparu entre
- *   le plan et l'écriture, et faisait avorter tout l'import ; `updateMany` l'ignorerait en
- *   silence. On compare donc le nombre de lignes touchées au nombre demandé.
+ * - **The result is the same.** Within a group, the identifiers are distinct: the rows touched are disjoint,
+ * so the order between them has no effect. If the same identifier came back,
+ *   we close the batch before starting again, which preserves "the last write wins".
+ * - **Failure remains a failure.** `update` threw `P2025` when the row had vanished between the plan and the
+ * write, and aborted the whole import; `updateMany` would ignore it
+ *   silently. We therefore compare the number of rows touched with the number requested.
  */
 export async function applyGroupedUpdates<D extends object>(
   updates: PlannedUpdate<D>[],
@@ -98,7 +94,7 @@ export async function applyGroupedUpdates<D extends object>(
       for (const ids of chunked(group.ids)) {
         const { count } = await write(ids, group.data);
         if (count !== ids.length) {
-          // Concaténation : l'entité nomme une table, pas un texte d'interface.
+          // Concatenation: the entity names a table, not interface text.
           throw conflict(entity + ' changed during import, nothing was written', 'IMPORT_RACE');
         }
       }
@@ -118,25 +114,25 @@ export async function applyGroupedUpdates<D extends object>(
   await flush();
 }
 
-/** Le rapport rendu à l'appelant : le plan, sans les charges utiles d'écriture. */
+/** The report returned to the caller: the plan, without the write payloads. */
 export interface ImportReport {
   committed: boolean;
   counts: ImportCounts;
   columns: { index: number; header: string; field: CsvField | null; manual: boolean }[];
   issues: CsvIssue[];
   rows: RowOutcome[];
-  /** Le fichier a-t-il plus de lignes que le rapport n'en détaille ? */
+  /** Does the file have more rows than the report details? */
   truncated: boolean;
 }
 
-/** Bornes de la réponse : un fichier de vingt mille lignes ne rentre pas dans un JSON d'écran. */
+/** Bounds of the response: a file of twenty thousand rows does not fit in a screen's JSON. */
 const MAX_REPORT_ROWS = 1000;
 const MAX_REPORT_ISSUES = 2000;
 
 const isoDay = (d: Date | null) => (d === null ? null : d.toISOString().slice(0, 10));
 const atUtcMidnight = (iso: string) => new Date(`${iso}T00:00:00.000Z`);
 
-/** État du projet nécessaire au calcul du plan — une passe de lectures, aucune boucle. */
+/** Project state needed to compute the plan — one pass of reads, no loop. */
 export async function loadContext(projectId: number): Promise<ImportContext> {
   const project = await prisma.project.findFirst({
     where: { id: projectId, deletedAt: null },
@@ -146,9 +142,9 @@ export async function loadContext(projectId: number): Promise<ImportContext> {
 
   const [episodes, sequences, shots, tasks, shotStatuses, taskStatuses, departments, members] =
     await Promise.all([
-      // La corbeille est lue avec le reste : le soft-delete ne libère pas la clé
-      // d'unicité, et une ligne qui viserait une entité supprimée doit être refusée à
-      // l'aperçu plutôt que de faire tomber l'écriture groupée sur un P2002.
+      // The trash is read along with the rest: soft delete does not release the uniqueness key, and a row
+      // targeting a deleted entity must be refused at preview rather than let the grouped write fail on a
+      // P2002.
       prisma.episode.findMany({
         where: { projectId },
         select: { id: true, code: true, deletedAt: true },
@@ -203,8 +199,8 @@ export async function loadContext(projectId: number): Promise<ImportContext> {
     episodes: episodes.map(withTrashFlag),
     sequences: sequences.map(withTrashFlag),
     shots: shots.map(withTrashFlag),
-    // `shotId` est nullable au schéma (une tâche peut porter un asset) ; le filtre de
-    // lecture garantit le contraire, la garde ne fait que le dire au typage.
+    // `shotId` is nullable in the schema (a task may carry an asset); the read filter guarantees the
+    // opposite, the guard merely states it to the type checker.
     tasks: tasks.flatMap((t) =>
       t.shotId === null
         ? []
@@ -218,10 +214,9 @@ export async function loadContext(projectId: number): Promise<ImportContext> {
 }
 
 /**
- * Personnes qu'un fichier peut désigner : les membres du projet, plus les comptes
- * globaux (admin/superviseur) qui n'ont pas besoin d'appartenance pour travailler. Les
- * identités machine et les comptes désactivés en sont exclus — leur assigner du travail
- * ne veut rien dire.
+ * People a file may designate: the project's members, plus global accounts (admin/supervisor) who need no
+ * membership to work. Machine identities and disabled accounts are excluded — assigning work to them means
+ * nothing.
  */
 async function listAssignableMembers(projectId: number) {
   const users = await prisma.user.findMany({
@@ -241,7 +236,7 @@ async function listAssignableMembers(projectId: number) {
   }));
 }
 
-/** Réduit le plan à ce qui s'affiche et se télécharge, bornes comprises. */
+/** Reduces the plan to what is displayed and downloaded, bounds included. */
 function toReport(plan: ImportPlan, columns: ImportReport['columns'], committed: boolean): ImportReport {
   return {
     committed,
@@ -256,7 +251,7 @@ function toReport(plan: ImportPlan, columns: ImportReport['columns'], committed:
   };
 }
 
-/** Lit le fichier et calcule le plan sans rien écrire. */
+/** Reads the file and computes the plan without writing anything. */
 export async function preview(
   projectId: number,
   csv: string,
@@ -268,8 +263,8 @@ export async function preview(
 }
 
 /**
- * Applique le fichier. Le plan est recalculé sur l'état courant juste avant d'écrire :
- * l'aperçu vu à l'écran n'engage rien, seul ce recalcul décide.
+ * Applies the file. The plan is recomputed against the current state just before writing: the preview seen on
+ * screen commits to nothing, only this recomputation decides.
  */
 export async function commit(
   user: SessionUser,
@@ -339,8 +334,8 @@ async function writeSequences(
     });
     for (const s of created) byCode.set(lower(s.code), s.id);
   }
-  // Un fichier rattache en général tout un bloc de séquences au même épisode : autant de
-  // `update` identiques, que le regroupement ramène à un `updateMany` par épisode.
+  // A file generally attaches a whole block of sequences to the same episode: as many identical `update`s,
+  // which grouping reduces to one `updateMany` per episode.
   const episodeMoves: PlannedUpdate<{ episodeId: number }>[] = [];
   for (const update of plan.sequenceEpisodeUpdates) {
     const episodeId = update.episodeCode ? (episodeIdByCode.get(lower(update.episodeCode)) ?? null) : null;
@@ -380,8 +375,8 @@ async function writeShots(
       })),
       select: { id: true, code: true, sequenceId: true },
     });
-    // Le rattachement se fait par `(séquence, code)` — l'identité métier du plan — et
-    // jamais sur l'ordre de retour de l'écriture groupée, qu'aucun contrat ne garantit.
+    // Attachment is made by `(sequence, code)` — the business identity of the shot — and never on the return
+    // order of the grouped write, which no contract guarantees.
     for (const row of created) {
       const sequenceCode = row.sequenceId === null ? null : (codeById.get(row.sequenceId) ?? null);
       byKey.set(shotKey({ sequenceCode, code: row.code }), row.id);
@@ -415,9 +410,8 @@ async function writeTasks(tx: Tx, plan: ImportPlan, shotIdByKey: Map<string, num
   }
   for (const batch of chunked(rows)) await tx.task.createMany({ data: batch });
 
-  // Les dates sont converties AVANT le regroupement : deux tâches dues le même jour
-  // doivent tomber dans le même groupe, ce que compareraient mal une chaîne ISO et son
-  // équivalent minuit UTC.
+  // Dates are converted BEFORE grouping: two tasks due on the same day must fall into the same group, which
+  // an ISO string and its midnight-UTC equivalent would compare poorly.
   const taskUpdates = plan.taskUpdates.map(({ id, data }) => {
     const { startDate, dueDate, ...rest } = data;
     return {
@@ -437,8 +431,8 @@ async function writeTasks(tx: Tx, plan: ImportPlan, shotIdByKey: Map<string, num
 }
 
 /**
- * Gabarit téléchargeable : l'en-tête complet et deux lignes d'exemple. C'est la réponse
- * la plus courte à « quel format attendez-vous ? », et il se ré-importe tel quel.
+ * Downloadable template: the full header and two sample rows. It is the shortest answer to "what format do
+ * you expect?", and it re-imports as is.
  */
 export function template(): string {
   const header = CSV_FIELDS.map((f) => TEMPLATE_HEADERS[f]).join(',');
@@ -449,7 +443,7 @@ export function template(): string {
   return [header, ...rows].join('\n');
 }
 
-/** Nom de colonne écrit dans le gabarit — celui que la documentation cite. */
+/** Column name written into the template — the one the documentation cites. */
 const TEMPLATE_HEADERS: Record<CsvField, string> = {
   episode: 'episode',
   sequence: 'sequence',

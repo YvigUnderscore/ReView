@@ -5,9 +5,9 @@ import { describe, expect, it } from 'vitest';
 import { SPEAKING_CALLS, VISIBLE_PROPS, isKeyProp, isMessageKeyType } from './check-raw-keys.mjs';
 
 /**
- * Le cœur du contrôle est un prédicat sur les *types* TypeScript ; on lui présente donc des
- * types factices qui n'implémentent que ce qu'il interroge (union, littéral de chaîne, valeur).
- * Pas besoin du vérificateur complet pour prouver la règle.
+ * The heart of the check is a predicate on TypeScript *types*; so we feed it stub types that
+ * only implement what it queries (union, string literal, value).
+ * No need for the full checker to prove the rule.
  */
 const literal = (value) => ({ isUnion: () => false, isStringLiteral: () => true, value });
 const union = (...parts) => ({ isUnion: () => true, types: parts });
@@ -16,53 +16,55 @@ const widened = () => ({ isUnion: () => false, isStringLiteral: () => false });
 const KEYS = new Set(['task.status.todo', 'task.status.done', 'projects.title']);
 
 describe('isMessageKeyType', () => {
-  it('signale un littéral qui est une clé du catalogue', () => {
+  it('reports a literal that is a catalogue key', () => {
     expect(isMessageKeyType(literal('task.status.todo'), KEYS)).toBe(true);
   });
 
-  it('laisse passer un littéral absent du catalogue', () => {
-    expect(isMessageKeyType(literal('À faire'), KEYS)).toBe(false);
+  it('lets through a literal absent from the catalogue', () => {
+    expect(isMessageKeyType(literal('To do'), KEYS)).toBe(false);
   });
 
-  it('signale une union dont toutes les branches sont des clés', () => {
+  it('reports a union whose branches are all keys', () => {
     expect(isMessageKeyType(union(literal('task.status.todo'), literal('task.status.done')), KEYS)).toBe(
       true,
     );
   });
 
-  it('laisse passer une union dont une seule branche est une clé', () => {
-    expect(isMessageKeyType(union(literal('task.status.todo'), literal('déjà traduit')), KEYS)).toBe(false);
+  it('lets through a union where only one branch is a key', () => {
+    expect(isMessageKeyType(union(literal('task.status.todo'), literal('already translated')), KEYS)).toBe(
+      false,
+    );
   });
 
-  it('laisse passer un type `string` élargi — il peut déjà porter la traduction', () => {
+  it('lets through a widened `string` type — it may already carry the translation', () => {
     expect(isMessageKeyType(widened(), KEYS)).toBe(false);
   });
 
-  it('laisse passer une union vide plutôt que de la déclarer entièrement clé', () => {
+  it('lets through an empty union rather than declaring it entirely keys', () => {
     expect(isMessageKeyType(union(), KEYS)).toBe(false);
   });
 });
 
 describe('isKeyProp', () => {
-  it('reconnaît les props qui transportent volontairement une clé', () => {
+  it('recognises the props that deliberately carry a key', () => {
     expect(isKeyProp('labelKey')).toBe(true);
     expect(isKeyProp('emptyKey')).toBe(true);
   });
 
-  it('ne confond pas avec une prop de libellé ordinaire', () => {
+  it('does not confuse them with an ordinary label prop', () => {
     expect(isKeyProp('label')).toBe(false);
     expect(isKeyProp('keyboard')).toBe(false);
   });
 });
 
 describe('inventaires', () => {
-  it('couvre les props visibles usuelles', () => {
+  it('covers the usual visible props', () => {
     for (const prop of ['label', 'title', 'placeholder', 'alt', 'aria-label']) {
       expect(VISIBLE_PROPS.has(prop), prop).toBe(true);
     }
   });
 
-  it('couvre les fonctions qui parlent à l’utilisateur', () => {
+  it('covers the functions that speak to the user', () => {
     for (const call of ['toast', 'alert', 'confirm', 'error', 'success']) {
       expect(SPEAKING_CALLS.has(call), call).toBe(true);
     }

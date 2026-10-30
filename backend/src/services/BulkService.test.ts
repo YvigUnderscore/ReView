@@ -16,7 +16,7 @@ vi.mock('../lib/prisma', () => ({
   },
 }));
 vi.mock('../middleware/rbac', () => ({ checkProjectAccess: vi.fn() }));
-// Seule la lecture du rôle effectif est simulée : `canManageProject` reste la vraie règle.
+// Only the read of the effective role is simulated: `canManageProject` remains the real rule.
 vi.mock('../lib/projectRoles', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/projectRoles')>()),
   effectiveProjectRole: vi.fn(),
@@ -66,7 +66,7 @@ const admin = { id: 1, role: Role.ADMIN };
 const artist = { id: 3, role: Role.ARTIST };
 const supervisor = { id: 5, role: Role.SUPERVISOR };
 
-/** Version rattachée au projet 7 par la chaîne task → shot, comme en base. */
+/** Version attached to project 7 through the task -> shot chain, as in the database. */
 const versionRow = (id: number, authorId: number) => ({
   id,
   authorId,
@@ -74,7 +74,7 @@ const versionRow = (id: number, authorId: number) => ({
   task: { shot: { projectId: 7 }, asset: null },
 });
 
-/** Média rattaché au projet 7 par la même chaîne. */
+/** Media attached to project 7 through the same chain. */
 const mediaRow = (id: number, uploaderId: number | null, projectId = 7) => ({
   id,
   uploaderId,
@@ -93,109 +93,109 @@ beforeEach(() => {
   vi.mocked(prisma.project.findMany).mockResolvedValue([{ id: 1 }, { id: 2 }] as never);
 });
 
-describe('BulkService.bulkDelete — RBAC par domaine', () => {
-  it('refuse la suppression de séquences à un artiste (non manager)', async () => {
+describe('BulkService.bulkDelete: RBAC per domain', () => {
+  it('refuses deleting sequences to an artist (non-manager)', async () => {
     await expect(bulkDelete(artist, 'sequences', [1, 2])).rejects.toMatchObject({ statusCode: 403 });
     expect(softDeleteSequences).not.toHaveBeenCalled();
   });
 
-  it('autorise un admin à supprimer des séquences en lot', async () => {
+  it('lets an admin delete sequences in bulk', async () => {
     const n = await bulkDelete(admin, 'sequences', [1, 2, 3]);
     expect(n).toBe(3);
     expect(softDeleteSequences).toHaveBeenCalledWith([1, 2, 3]);
   });
 
-  it('refuse un id introuvable, sans rien modifier', async () => {
+  it('refuses an unknown id, changing nothing', async () => {
     vi.mocked(prisma.sequence.findMany).mockResolvedValue([{ id: 1, projectId: 7 }] as never);
     await expect(bulkDelete(admin, 'sequences', [1, 404])).rejects.toMatchObject({ statusCode: 404 });
     expect(softDeleteSequences).not.toHaveBeenCalled();
   });
 
-  it('autorise l’auteur d’une version à la supprimer même sans être manager', async () => {
+  it('lets the author of a version delete it even without being a manager', async () => {
     vi.mocked(prisma.version.findMany).mockResolvedValue([versionRow(9, 3)] as never);
     await bulkDelete(artist, 'versions', [9]);
     expect(softDeleteVersions).toHaveBeenCalledWith([9]);
   });
 
-  it('refuse la suppression d’une version d’autrui à un non-manager', async () => {
+  it("refuses deleting someone else's version to a non-manager", async () => {
     vi.mocked(prisma.version.findMany).mockResolvedValue([versionRow(9, 99)] as never);
     await expect(bulkDelete(artist, 'versions', [9])).rejects.toMatchObject({ statusCode: 403 });
     expect(softDeleteVersions).not.toHaveBeenCalled();
   });
 
   /**
-   * La garde de `MediaService` reste l'autorité : elle est appelée pour chaque PROJET
-   * rencontré, pas pour chaque identifiant — c'est exactement ce que le lot mutualise.
-   * Ce qui dépend du média, lui, continue d'être vérifié un par un (cas suivants).
+   * The `MediaService` guard remains the authority: it is called for each PROJECT encountered, not for each
+   * identifier, which is exactly what the batch pools. What depends on the media itself is still checked one
+   * by one (following cases).
    */
-  it('délègue les médias à assertMediaManage, une fois par projet', async () => {
+  it('delegates media to assertMediaManage, once per project', async () => {
     vi.mocked(prisma.mediaObject.findMany).mockResolvedValue([mediaRow(4, 3), mediaRow(5, 3)] as never);
     await bulkDelete(artist, 'media', [4, 5]);
     expect(assertMediaManage).toHaveBeenCalledTimes(1);
     expect(assertMediaManage).toHaveBeenCalledWith(4, artist);
   });
 
-  it('appelle la garde pour chaque projet distinct de la sélection', async () => {
+  it('calls the guard for each distinct project in the selection', async () => {
     vi.mocked(prisma.mediaObject.findMany).mockResolvedValue([mediaRow(4, 3, 7), mediaRow(5, 3, 8)] as never);
     await bulkDelete(artist, 'media', [4, 5]);
     expect(assertMediaManage).toHaveBeenCalledTimes(2);
     expect(assertMediaManage).toHaveBeenCalledWith(5, artist);
   });
 
-  it('refuse un média déposé par quelqu’un d’autre à un non-manager du projet', async () => {
+  it('refuses a media uploaded by someone else to a non-manager of the project', async () => {
     vi.mocked(prisma.mediaObject.findMany).mockResolvedValue([mediaRow(4, 3), mediaRow(5, 99)] as never);
     await expect(bulkDelete(artist, 'media', [4, 5])).rejects.toMatchObject({ statusCode: 403 });
   });
 
-  it('laisse un gérant du projet supprimer le média d’autrui', async () => {
+  it("lets a project manager delete someone else's media", async () => {
     vi.mocked(effectiveProjectRole).mockResolvedValue(Role.SUPERVISOR);
     vi.mocked(prisma.mediaObject.findMany).mockResolvedValue([mediaRow(4, 3), mediaRow(5, 99)] as never);
     await expect(bulkDelete(artist, 'media', [4, 5])).resolves.toBe(2);
   });
 
-  it('refuse un média introuvable', async () => {
+  it('refuses an unknown media', async () => {
     vi.mocked(prisma.mediaObject.findMany).mockResolvedValue([mediaRow(4, 3)] as never);
     await expect(bulkDelete(artist, 'media', [4, 404])).rejects.toMatchObject({ statusCode: 404 });
   });
 });
 
-describe('BulkService.bulkPurge — corbeille admin', () => {
-  it('refuse la purge de projets à un artiste (non manager)', async () => {
+describe('BulkService.bulkPurge: admin trash', () => {
+  it('refuses purging projects to an artist (non-manager)', async () => {
     await expect(bulkPurge(artist, 'projects', [1, 2])).rejects.toMatchObject({ statusCode: 403 });
     expect(purgeProjects).not.toHaveBeenCalled();
   });
 
-  it('purge les projets sélectionnés en un seul lot pour un admin', async () => {
+  it('purges the selected projects in a single batch for an admin', async () => {
     const n = await bulkPurge(admin, 'projects', [1, 2]);
     expect(n).toBe(2);
-    // Une passe pour toute la sélection, au lieu d'une purge unitaire bouclée.
+    // One pass for the whole selection, instead of a looped single purge.
     expect(purgeProjects).toHaveBeenCalledTimes(1);
     expect(purgeProjects).toHaveBeenCalledWith([1, 2]);
   });
 
-  // La route unitaire `DELETE /api/projects/:projectId/purge` est réservée aux ADMIN.
-  // La voie groupée ne demandait qu'un « gestionnaire » — donc aussi un SUPERVISOR, dont
-  // l'accès projet est global : n'importe quel projet pouvait être détruit définitivement.
-  it('refuse la purge d’un projet à un superviseur (réservée aux admins)', async () => {
+  // The single route `DELETE /api/projects/:projectId/purge` is reserved to ADMIN. The batch path only asked
+  // for a "manager", which includes SUPERVISOR, whose project access is global: any project could be
+  // destroyed permanently.
+  it('refuses purging a project to a supervisor (reserved to admins)', async () => {
     vi.mocked(prisma.project.findMany).mockResolvedValue([{ id: 1 }] as never);
     await expect(bulkPurge(supervisor, 'projects', [1])).rejects.toMatchObject({ statusCode: 403 });
     expect(purgeProjects).not.toHaveBeenCalled();
   });
 
-  // La suppression douce (corbeille) reste bien ouverte au superviseur : seule la
-  // destruction irréversible est remontée au niveau admin.
-  it('laisse un superviseur mettre un projet à la corbeille', async () => {
+  // Soft deletion (trash) remains open to the supervisor: only the irreversible destruction is raised to
+  // admin level.
+  it('lets a supervisor move a project to the trash', async () => {
     vi.mocked(prisma.project.findMany).mockResolvedValue([{ id: 1 }] as never);
     await expect(bulkDelete(supervisor, 'projects', [1])).resolves.toBe(1);
   });
 });
 
 describe('BulkService.bulkMoveShots', () => {
-  it('refuse un non-manager', async () => {
+  it('refuses a non-manager', async () => {
     await expect(bulkMoveShots(artist, [1], 2)).rejects.toMatchObject({ statusCode: 403 });
   });
 
-  it('refuse des shots de projets différents', async () => {
+  it('refuses shots from different projects', async () => {
     vi.mocked(prisma.shot.findMany).mockResolvedValue([
       { id: 1, projectId: 7 },
       { id: 2, projectId: 8 },
@@ -203,7 +203,7 @@ describe('BulkService.bulkMoveShots', () => {
     await expect(bulkMoveShots(admin, [1, 2], null)).rejects.toMatchObject({ statusCode: 403 });
   });
 
-  it('déplace des shots du même projet vers une séquence valide', async () => {
+  it('moves shots of the same project into a valid sequence', async () => {
     vi.mocked(prisma.shot.findMany).mockResolvedValue([
       { id: 1, projectId: 7 },
       { id: 2, projectId: 7 },

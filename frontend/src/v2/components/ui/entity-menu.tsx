@@ -25,7 +25,7 @@ import {
 } from '../../lib/menuSpec';
 import { useT } from '../../i18n';
 
-/** Rend une liste d'entrées déclarées (`lib/menuSpec`) avec la primitive Radix. */
+/** Renders a list of declared entries (`lib/menuSpec`) with the Radix primitive. */
 function MenuEntries({ entries }: { entries: MenuEntry[] }) {
   return (
     <>
@@ -91,17 +91,17 @@ function MenuEntries({ entries }: { entries: MenuEntry[] }) {
 }
 
 /**
- * Menu contextuel d'une entité (A3).
+ * Context menu for an entity (A3).
  *
- * Enveloppe un élément et lui attache le menu décrit par `entries`. Deux apports par
- * rapport à l'usage direct de la primitive :
+ * Wraps an element and attaches the menu described by `entries`. Two additions compared
+ * to using the primitive directly:
  *
- * - **Clavier** : Radix n'ouvre pas ses menus contextuels au clavier. La touche Menu et
- *   Shift+F10 les ouvrent ici, sinon toute action réservée au clic droit serait hors
- *   d'atteinte de qui n'utilise pas la souris.
- * - **Imbrication** : un menu imbriqué dans un autre (widget dans une page, marqueur dans
- *   une barre de temps) doit arrêter la propagation, sans quoi les deux s'ouvrent. Le
- *   motif était recopié à la main à chaque fois ; `nested` s'en charge.
+ * - **Keyboard**: Radix does not open its context menus from the keyboard. The Menu key and
+ *   Shift+F10 open them here, otherwise any action reserved for right click would be out of
+ *   reach for anyone not using a mouse.
+ * - **Nesting**: a menu nested inside another (widget in a page, marker in a timeline bar)
+ *   must stop propagation, otherwise both open. The pattern was copied by hand each time;
+ *   `nested` handles it.
  */
 export default function EntityContextMenu({
   entries,
@@ -116,8 +116,8 @@ export default function EntityContextMenu({
   const hostRef = useRef<HTMLDivElement>(null);
   const tidy = tidyMenu(entries);
 
-  // Écouteur natif plutôt que `onKeyDown` en JSX : le conteneur n'est pas lui-même
-  // interactif (c'est son contenu qui l'est), lui coller un rôle ARIA serait mentir.
+  // Native listener rather than `onKeyDown` in JSX: the container is not itself interactive
+  // (its content is), and giving it an ARIA role would be a lie.
   useEffect(() => {
     const host = hostRef.current;
     if (!host || tidy.length === 0) return;

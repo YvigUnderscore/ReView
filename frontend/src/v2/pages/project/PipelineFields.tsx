@@ -7,9 +7,9 @@ import type { PipelineForm } from './pipelineForm';
 import { useT } from '../../i18n';
 
 /**
- * Champs de réglage pipeline (résolution + cadence) avec bascule hériter/personnaliser.
- * En mode hérité, affiche la valeur du parent ; en mode personnalisé, édite l'override.
- * Réutilisé par l'édition de séquence et de shot (Phase 19).
+ * Pipeline settings fields (resolution and frame rate), with an inherit/customize toggle.
+ * In inherited mode, displays the parent's value; in customized mode, edits the override.
+ * Reused by sequence and shot editing (Phase 19).
  */
 export default function PipelineFields({
   inherited,

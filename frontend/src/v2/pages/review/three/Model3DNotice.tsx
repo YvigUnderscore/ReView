@@ -3,16 +3,16 @@
 
 import { Undo2 } from 'lucide-react';
 import PoiNotice from '../poi/PoiNotice';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
- * Bandeau d'état du viewer 3D, au-dessus de la scène : ce que le viewer attend de vous, ou la
- * sortie de ce qu'il vous montre. Un seul à la fois, dans cet ordre de priorité.
+ * Status banner of the 3D viewer, above the scene: what the viewer expects from you, or the
+ * output of what it shows you. Only one at a time, in this order of priority.
  *
- *  1. **Placement d'un point d'intérêt** — l'outil est armé, le viewer attend un clic. Le même
- *     bandeau sert au splat (`poi/PoiNotice`) : la consigne du geste ne se dit pas deux fois.
- *  2. **Scène proposée par un commentaire** (46.T) — on navigue dans la scène d'un autre ; le
- *     bouton (ou Échap) la relâche.
+ *  1. **Placing a point of interest**: the tool is armed, the viewer waits for a click. The same
+ *     banner serves the splat (`poi/PoiNotice`): the gesture's instruction is not said twice.
+ *  2. **Scene proposed by a comment** (46.T): we navigate in someone else's scene; the
+ *     button (or Escape) releases it.
  */
 export default function Model3DNotice({
   placingPoi,

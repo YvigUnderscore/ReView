@@ -12,7 +12,7 @@ import {
 } from 'react';
 import { ImagePlus, PencilLine } from 'lucide-react';
 import { toast } from 'sonner';
-import { ATTACHMENT_ACCEPT, MAX_COMMENT_ATTACHMENTS } from '../../../lib/commentAttachments';
+import { ATTACHMENT_ACCEPT, MAX_COMMENT_ATTACHMENTS } from '../../lib/commentAttachments';
 import AttachmentDraftList from '../../components/comments/AttachmentDraftList';
 import { removeDraft, toDrafts } from '../../components/comments/attachmentDrafts';
 import { useObjectUrls } from '../../components/comments/useObjectUrls';
@@ -31,10 +31,10 @@ import type { PoiDraftState } from './poi/usePoiDraft';
 import type { PoiPoint } from './poi/poiPoints';
 import { useT, type MessageKey } from '../../i18n';
 
-/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+/** Translator passed to the label tables, recomputed on every render. */
 type Tr = (key: MessageKey) => string;
 
-/** Filtre de résolution du fil (32.A). */
+/** Thread resolution filter (32.A). */
 type ResolutionFilter = 'all' | 'open' | 'resolved';
 const filters = (t: Tr): { value: ResolutionFilter; label: string }[] => [
   { value: 'all', label: t('comments.filter.all') },
@@ -43,10 +43,10 @@ const filters = (t: Tr): { value: ResolutionFilter; label: string }[] => [
 ];
 
 /**
- * Panneau latéral des commentaires : liste (avec skeleton de chargement) + composer (texte,
- * images jointes, rangées des points d'intérêt, indicateurs d'annotation/caméra/plage).
- * L'envoi est délégué à `onSubmit` (l'orchestrateur joint timestamp, caméra
- * et annotations) ; le panneau ne vide sa saisie que si l'envoi a réussi.
+ * Side comments panel: the list (with a loading skeleton) and the composer (text,
+ * attached images, rows of points of interest, annotation/camera/range indicators).
+ * Submission is delegated to `onSubmit` (the orchestrator attaches the timestamp, camera
+ * and annotations); the panel only clears its input when the submission succeeds.
  */
 export default function CommentsPanel({
   comments,
@@ -78,32 +78,32 @@ export default function CommentsPanel({
   startFrame: number;
   selectedId: number | null;
   onSelect: (c: ReviewComment) => void;
-  /** Marqueurs de timeline (vidéo) — séparateurs cliquables du fil (retours 34). */
+  /** Timeline markers (video) — clickable separators in the thread (feedback 34). */
   markers?: TimelineMarker[];
   onMarkerSeek?: (m: TimelineMarker) => void;
   composerRef: RefObject<HTMLTextAreaElement | null>;
   hints: {
     annotation: boolean;
     camera: boolean;
-    /** Animation caméra jointe (mode layout) : elle sera rejouée à la sélection du commentaire. */
+    /** Attached camera animation (layout mode): replayed when the comment is selected. */
     cameraAnim?: boolean;
     references?: number;
-    /** Boucle I/O active (34.A) : le commentaire portera la plage in→out. */
+    /** Active I/O loop (34.A): the comment carries the in→out range. */
     range?: boolean;
   };
   onSubmit: (content: string, files: File[]) => Promise<boolean>;
-  /** Mode annotation actif (bouton « Annoter » sous le champ, Phase 24). */
+  /** Annotation mode active ("Annotate" button below the field, Phase 24). */
   annotating?: boolean;
   onToggleAnnotate?: () => void;
-  /** Points d'intérêt en préparation : une rangée par point, au-dessus du champ de texte. */
+  /** Points of interest being prepared: one row per point, above the text field. */
   poi?: PoiDraftState;
-  /** Retour caméra sur un point relu (numéro cliqué dans une carte du fil). */
+  /** Camera return to a reviewed point (number clicked in a thread card). */
   onPoiFocus?: (point: PoiPoint, index: number) => void;
-  /** Entrées de clic droit propres à l'écran (montage : renvoyer sur la review du shot). */
+  /** Right-click entries specific to this screen (edit: return to the shot review). */
   extraActions?: (comment: ReviewComment) => ReactNode;
 }) {
   const t = useT();
-  // Brouillon local (32.C) : le texte en cours survit à un rechargement/navigation.
+  // Local draft (32.C): the text being typed survives a reload/navigation.
   const [content, setContent] = useState(() => loadDraft(mediaObjectId)?.content ?? '');
   const [filter, setFilter] = useState<ResolutionFilter>('all');
   const [attachFiles, setAttachFiles] = useState<File[]>([]);
@@ -118,14 +118,14 @@ export default function CommentsPanel({
     setAttachFiles((fs) => [...fs, ...files].slice(0, MAX_COMMENT_ATTACHMENTS));
   };
   const onPasteImage = useImagePaste(addFiles);
-  // Vignettes de ce qu'on est en train de joindre : le nom de fichier seul ne permettait pas
-  // de vérifier son envoi (« image (3).png »).
+  // Thumbnails of what is being attached: the file name alone did not allow
+  // checking that it was sent ("image (3).png").
   const drafts = toDrafts([], attachFiles, useObjectUrls(attachFiles));
   const dropDraft = (id: string) => setAttachFiles((fs) => removeDraft(id, fs, []).files);
-  // Autocomplete des mentions @membre (32.B).
+  // Autocomplete for @member mentions (32.B).
   const mentions = useMentions(content, setContent, composerRef);
 
-  // Une annotation (dessin, point d'intérêt, référence) suffit : le texte est optionnel.
+  // An annotation (drawing, point of interest, reference) is enough: the text is optional.
   const hasPayload = hints.annotation || (poi?.points.length ?? 0) > 0 || (hints.references ?? 0) > 0;
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -142,8 +142,8 @@ export default function CommentsPanel({
     }
   };
 
-  // Entrée = saut de ligne (défaut textarea) ; Ctrl/Cmd+Entrée = envoi.
-  // Le menu de mentions consomme flèches/Entrée/Tab/Échap quand il est ouvert.
+  // Enter = new line (textarea default); Ctrl/Cmd+Enter = send.
+  // The mention menu consumes arrows/Enter/Tab/Escape while it is open.
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
     if (mentions.onKeyDown(e)) return;
     if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) {
@@ -171,7 +171,7 @@ export default function CommentsPanel({
             </span>
           )}
         </span>
-        {/* Filtre ouverts/résolus (32.A) */}
+        {/* Open/resolved filter (32.A) */}
         <div className="flex rounded-md border border-border p-0.5">
           {filters(t).map((f) => (
             <button
@@ -221,13 +221,13 @@ export default function CommentsPanel({
             🖼 {t('comment.referencesAttached', { count: hints.references ?? 0 })}
           </p>
         )}
-        {/* Points d'intérêt en préparation : leur texte et leurs images se règlent ici, où l'on
-            lit ce qui va partir — un seul commentaire les emporte tous. */}
+        {/* Points of interest being prepared: their text and images are edited here, where
+            the user reads what is about to go out — a single comment carries them all. */}
         {poi && <PoiDraftRows poi={poi} />}
         {hints.range && <p className="mb-1.5 text-xs text-primary">{t('review.rangeAttached')}</p>}
         {hints.camera && <p className="mb-1.5 text-xs text-primary">{t('review.camViewSaved')}</p>}
-        {/* L'animation caméra ne se voyait nulle part une fois le toast passé : on envoyait en
-            croyant l'avoir jointe. Le composeur énumère ce qui part, elle en fait partie. */}
+        {/* The camera animation was nowhere visible once the toast was gone: users sent it
+            believing it was attached. The composer lists what is sent, and this is part of it. */}
         {hints.cameraAnim && <p className="mb-1.5 text-xs text-primary">{t('review.camera.animAttached')}</p>}
         <div className="relative">
           <MentionMenu mentions={mentions} />
@@ -269,7 +269,7 @@ export default function CommentsPanel({
             >
               <ImagePlus size={16} />
             </button>
-            {/* Note vocale (32.F) : jointe comme pièce audio, lue inline dans le fil. */}
+            {/* Voice note (32.F): attached as an audio file, played inline in the thread. */}
             <VoiceRecorderButton onRecorded={(f) => addFiles([f])} />
             {onToggleAnnotate && (
               <button

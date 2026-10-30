@@ -8,32 +8,30 @@ import { signAccessToken } from './jwt';
 import { env } from '../config/env';
 
 describe('shareAccess', () => {
-  it('signe et vérifie une session pour le bon lien', () => {
+  it('signs and verifies a session for the right link', () => {
     const token = signShareSession(42);
     expect(verifyShareSession(token, 42)).toBe(true);
   });
 
-  it('refuse une session pour un autre lien', () => {
+  it('refuses a session for another link', () => {
     const token = signShareSession(42);
     expect(verifyShareSession(token, 43)).toBe(false);
   });
 
-  it('refuse un jeton absent ou invalide', () => {
+  it('refuses an absent or invalid token', () => {
     expect(verifyShareSession(undefined, 1)).toBe(false);
     expect(verifyShareSession('pas-un-jwt', 1)).toBe(false);
   });
 
-  it('refuse un JWT utilisateur classique (kind ≠ share)', () => {
-    // Un accès token de connexion ne doit pas ouvrir une session de partage.
+  it('refuses an ordinary user JWT (kind ≠ share)', () => {
+    // A login access token must not open a share session.
     const userToken = signAccessToken({ id: 1, email: 'a@b.c', role: 'ADMIN', sid: 'sid-test' });
     expect(verifyShareSession(userToken, 1)).toBe(false);
   });
 
-  it('signe en HS256, et refuse tout autre algorithme à la vérification', () => {
-    // Sans l'option `algorithms`, jsonwebtoken accepte HS256/384/512 : c'est alors le
-    // porteur du jeton qui choisit avec quel algorithme on le vérifie. La première
-    // assertion constate cette latitude ; la seconde fige le fait qu'on ne la laisse pas
-    // à la session de partage, qui ouvre un lien déjà passé par mot de passe et quota.
+  it('signs with HS256, and refuses any other algorithm at verification', () => {
+    // Without the `algorithms` option, jsonwebtoken accepts HS256/384/512: it is then the token's bearer who chooses the algorithm used to verify it. The first
+    // assertion notes this latitude; the second pins down the fact that it is not left to the share session, which opens a link already past password and quota.
     const forged = jwt.sign({ kind: 'share', linkId: 42 }, env.JWT_SECRET, { algorithm: 'HS512' });
     expect(jwt.verify(forged, env.JWT_SECRET)).toMatchObject({ kind: 'share', linkId: 42 });
     expect(verifyShareSession(forged, 42)).toBe(false);
@@ -46,17 +44,17 @@ describe('shareAccess', () => {
 
   describe('shareState', () => {
     const base = { revoked: false, expiresAt: null, maxViews: null, viewCount: 0 };
-    it('ok par défaut', () => {
+    it('ok by default', () => {
       expect(shareState(base)).toBe('ok');
     });
-    it('revoked prioritaire', () => {
+    it('revoked takes precedence', () => {
       expect(shareState({ ...base, revoked: true })).toBe('revoked');
     });
-    it('expired si expiresAt passé', () => {
+    it('expired if expiresAt has passed', () => {
       expect(shareState({ ...base, expiresAt: new Date(Date.now() - 1000) })).toBe('expired');
       expect(shareState({ ...base, expiresAt: new Date(Date.now() + 60_000) })).toBe('ok');
     });
-    it('exhausted si viewCount ≥ maxViews', () => {
+    it('exhausted if viewCount ≥ maxViews', () => {
       expect(shareState({ ...base, maxViews: 3, viewCount: 3 })).toBe('exhausted');
       expect(shareState({ ...base, maxViews: 3, viewCount: 2 })).toBe('ok');
     });

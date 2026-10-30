@@ -2,34 +2,34 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Réglages du gizmo TRS contextualisés par cible (11.G) : le splat entier et les volumes de
- * crop ne se manipulent pas pareil — espace, snaps et taille de poignées sont mémorisés
- * séparément (localStorage) et survivent au rechargement.
+ * TRS gizmo settings, contextualised per target (11.G): the whole splat and the crop volumes
+ * are not manipulated the same way — space, snaps and handle size are remembered separately
+ * (localStorage) and survive a reload.
  */
 
 export type GizmoTargetKind = 'splat' | 'volume';
 
 export interface GizmoSettings {
   space: 'local' | 'world';
-  /** Pas d'accrochage translation (unités scène), null = libre. */
+  /** Translation snap step (scene units), null = free. */
   translationSnap: number | null;
-  /** Pas d'accrochage rotation (degrés), null = libre. */
+  /** Rotation snap step (degrees), null = free. */
   rotationSnapDeg: number | null;
-  /** Pas d'accrochage échelle (facteur), null = libre. */
+  /** Scale snap step (factor), null = free. */
   scaleSnap: number | null;
-  /** Taille des poignées du gizmo (TransformControls.size). */
+  /** Gizmo handle size (TransformControls.size). */
   size: number;
 }
 
 export const DEFAULT_GIZMO_SETTINGS: Record<GizmoTargetKind, GizmoSettings> = {
   splat: { space: 'local', translationSnap: null, rotationSnapDeg: null, scaleSnap: null, size: 1 },
-  // Volume : poignées plus discrètes (l'objet manipulé est petit devant la scène).
+  // Volume: subtler handles (the manipulated object is small relative to the scene).
   volume: { space: 'local', translationSnap: null, rotationSnapDeg: null, scaleSnap: null, size: 0.75 },
 };
 
 const storageKey = (kind: GizmoTargetKind) => `review:splat:gizmo:${kind}`;
 
-/** Charge les réglages mémorisés (fusionnés aux défauts — tolérant aux versions antérieures). */
+/** Loads the remembered settings (merged with the defaults — tolerant of older versions). */
 export function loadGizmoSettings(kind: GizmoTargetKind): GizmoSettings {
   try {
     const raw = localStorage.getItem(storageKey(kind));
@@ -52,7 +52,7 @@ export function saveGizmoSettings(kind: GizmoTargetKind, settings: GizmoSettings
   try {
     localStorage.setItem(storageKey(kind), JSON.stringify(settings));
   } catch {
-    // Stockage indisponible (quota, navigation privée) : réglages de session seulement.
+    // Storage unavailable (quota, private browsing): session-only settings.
   }
 }
 

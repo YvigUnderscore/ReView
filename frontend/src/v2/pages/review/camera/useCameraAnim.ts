@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { isEditable } from '../../../lib/shortcuts';
+import { isEditable } from '@/v2/lib/shortcuts';
 import type { SplatCamera } from '../reviewTypes';
 import { isFlyMoveCode } from '../viewer/flyControls';
 import {
@@ -41,8 +41,8 @@ import { useCameraAutoKey } from './useCameraAutoKey';
 import { useCurveSelection } from './useCurveSelection';
 
 /**
- * Contrôleur caméra minimal requis par le lecteur/éditeur d'animation — commun **3D et splat** :
- * boucle de rendu, application/capture de pose, canvas (auto-pause au moindre input).
+ * Minimal camera controller required by the animation player/editor — shared by **3D and splat**:
+ * render loop, pose apply/capture, canvas (auto-pause on any input).
  */
 export interface CameraController {
   subscribeFrame(cb: (dt: number) => void): () => void;
@@ -54,11 +54,11 @@ export interface CameraController {
 const HISTORY_LIMIT = 100;
 
 /**
- * Lecteur + éditeur d'animation caméra par F-curves (Phase 17, v2 ; Phase 27) : transport
- * (play/pause/scrub, boucle **0→durée réglable**), échantillonnage Hermite par frame, **reprise en
- * main auto** (tout input met en pause), édition des clés (poser depuis la vue, **multi-sélection**
- * + déplacement groupé, tangentes, suppression de lot) et undo/redo local. **Auto-key** optionnel :
- * tout geste caméra pose une clé au temps de lecture. La lecture s'appuie sur `subscribeFrame`.
+ * Camera animation player + editor over F-curves (Phase 17, v2; Phase 27): transport
+ * (play/pause/scrub, loop **0→adjustable duration**), per-frame Hermite sampling, **automatic
+ * takeover** (any input pauses), key editing (set from the view, **multi-selection** + grouped
+ * move, tangents, batch delete) and local undo/redo. Optional **auto-key**: any camera gesture
+ * sets a key at the playback time. Playback relies on `subscribeFrame`.
  */
 export function useCameraAnim(controller: CameraController) {
   const { subscribeFrame, restoreCamera, captureCamera, getDom } = controller;
@@ -73,10 +73,10 @@ export function useCameraAnim(controller: CameraController) {
   const timeRef = useRef(0);
   const animRef = useRef(anim);
   /**
-   * Repli **hérité** des canaux sans clé : il ne sert plus qu'aux animations qui ne portent pas
-   * leur propre base (`CameraAnimV2.base`) — celles enregistrées avant elle, dont le rejeu ne doit
-   * pas changer. Une animation neuve emporte sa base, et c'est elle qui l'emporte à
-   * l'échantillonnage (`channels/model.animBase`).
+   * **Legacy** fallback for keyless channels: it is only used by animations that do not carry
+   * their own base (`CameraAnimV2.base`) — those recorded before it, whose replay must not
+   * change. A new animation carries its base, and that is the one that wins at sampling
+   * (`channels/model.animBase`).
    */
   const baseRef = useRef<SplatCamera>({ position: { x: 0, y: 0, z: 0 }, target: { x: 0, y: 0, z: 0 } });
   useEffect(() => {
@@ -84,15 +84,15 @@ export function useCameraAnim(controller: CameraController) {
   }, [anim]);
 
   /**
-   * Toute écriture susceptible de créer la **première** clé passe par ici : une animation neuve y
-   * adopte la vue courante comme base persistée, si bien que ses canaux sans clé valent la même
-   * chose pour le lecteur, pour le rig de scène et pour tout spectateur. Sans base, une animation
-   * construite au gizmo (position clée, cible non clée) voyait sa cible sauter à l'origine du monde
-   * au premier scrub. Une animation héritée est rendue telle quelle : son rejeu ne change pas.
+   * Every write that may create the **first** key goes through here: a new animation adopts the
+   * current view as its persisted base, so its keyless channels are the same for the player, for
+   * the scene rig and for every viewer. Without a base, an animation built with the gizmo (position
+   * keyed, target unkeyed) saw its target jump to the world origin on the first scrub. A legacy
+   * animation is returned as is: its replay does not change.
    *
-   * La réf est mise à jour **sur-le-champ** : dans un même tour d'événements, le geste du gizmo
-   * enchaîne `beginStroke` → `scrub` → écriture de clés, et l'effet de synchronisation d'`animRef`
-   * n'a pas encore tourné — le scrub échantillonnerait donc encore sans la base.
+   * The ref is updated **immediately**: within a single event turn, the gizmo gesture chains
+   * `beginStroke` → `scrub` → key writes, and the sync effect of `animRef` has not run yet — so
+   * the scrub would still sample without the base.
    */
   const seedBase = useCallback(
     (view?: SplatCamera) => {
@@ -105,7 +105,7 @@ export function useCameraAnim(controller: CameraController) {
     [captureCamera],
   );
 
-  // ── Édition avec historique : chaque mutation empile l'état courant (undo). ──
+  // ── Editing with history: each mutation pushes the current state (undo). ──
   const pushHistory = useCallback(() => {
     setPast((p) => [...p.slice(-HISTORY_LIMIT + 1), animRef.current]);
     setFuture([]);
@@ -118,8 +118,8 @@ export function useCameraAnim(controller: CameraController) {
     [pushHistory],
   );
 
-  // Multi-sélection de clés (graph editor) et presse-papier — la dernière clé sélectionnée est
-  // « primaire » (poignées de tangente, caméra-objet). Phase 27, 40.E.
+  // Key multi-selection (graph editor) and clipboard — the last selected key is "primary"
+  // (tangent handles, camera-object). Phase 27, 40.E.
   const {
     selection,
     setSelection,
@@ -133,15 +133,15 @@ export function useCameraAnim(controller: CameraController) {
     canPaste,
   } = useCurveSelection({ animRef, timeRef, commit });
 
-  // Geste continu (drag d'une/plusieurs clés/tangente) : un seul snapshot au début, puis mises à
-  // jour live sans empiler — un undo annule tout le geste.
+  // Continuous gesture (drag of one/several keys/tangent): a single snapshot at the start, then
+  // live updates without stacking — one undo cancels the whole gesture.
   const beginStroke = useCallback(() => {
     pushHistory();
     seedBase();
   }, [pushHistory, seedBase]);
   /**
-   * Déplacement groupé (multi-sélection) recalculé depuis le baseline capturé au début du drag :
-   * les index restent cohérents pendant tout le geste (Phase 27).
+   * Grouped move (multi-selection) recomputed from the baseline captured at the start of the drag:
+   * the indices stay consistent for the whole gesture (Phase 27).
    */
   const strokeMoveKeys = useCallback(
     (baseline: CameraAnimV2, moves: Array<{ channel: ChannelId; index: number; t: number; v: number }>) =>
@@ -149,16 +149,16 @@ export function useCameraAnim(controller: CameraController) {
     [],
   );
   /**
-   * Pente (et poids) d'un côté de tangente, en direct pendant le drag d'une poignée. Le côté
-   * opposé est matérialisé par `setTangentSlope` : sans cela, tirer UNE poignée faisait lire
-   * l'autre comme nulle et aplatissait la courbe.
+   * Slope (and weight) of one tangent side, live during the drag of a handle. The opposite side
+   * is materialized by `setTangentSlope`: without it, pulling ONE handle made the other read as
+   * zero and flattened the curve.
    */
   const strokeSetTangent = useCallback(
     (channel: ChannelId, index: number, side: TangentSide, slope: number, weight?: number) =>
       setAnimState(setTangentSlope(animRef.current, channel, index, side, slope, weight)),
     [],
   );
-  /** Écrit/écrase plusieurs canaux au temps `t` (drag de la caméra-objet — auto-key). Live. */
+  /** Writes/overwrites several channels at time `t` (camera-object drag — auto-key). Live. */
   const strokeUpsertAt = useCallback(
     (t: number, values: Partial<Record<ChannelId, number>>) => {
       let next = seedBase();
@@ -191,7 +191,7 @@ export function useCameraAnim(controller: CameraController) {
     });
   }, []);
 
-  // Remplace toute l'animation (présentation persistée, preset, import) — capture la pose de base.
+  // Replaces the whole animation (persisted presentation, preset, import) — captures the base pose.
   const setAnim = useCallback(
     (next: CameraAnimV2) => {
       timeRef.current = 0;
@@ -207,13 +207,13 @@ export function useCameraAnim(controller: CameraController) {
   );
 
   const setLoop = useCallback((loop: boolean) => commit({ ...animRef.current, loop }), [commit]);
-  /** Durée de lecture réglable (0/undefined = automatique = dernier temps de clé). */
+  /** Adjustable playback duration (0/undefined = automatic = last key time). */
   const setDuration = useCallback(
     (ms: number | undefined) => commit(setAnimDuration(animRef.current, ms)),
     [commit],
   );
 
-  // Boucle de lecture : avance le temps, échantillonne la pose, l'applique à la caméra.
+  // Playback loop: advances the time, samples the pose, applies it to the camera.
   useEffect(() => {
     if (!playing) return;
     return subscribeFrame((dt) => {
@@ -222,13 +222,13 @@ export function useCameraAnim(controller: CameraController) {
       restoreCamera(sampleAnimV2(a, timeRef.current, baseRef.current));
       const duration = animPlayDuration(a);
       if (!a.loop && timeRef.current >= duration) setPlaying(false);
-      // Playhead fluide : l'UI suit chaque frame (React 18 groupe les rendus) — le throttle à
-      // 100 ms faisait avancer la tête de lecture par saccades.
+      // Smooth playhead: the UI follows every frame (React 18 batches renders) — a 100 ms throttle
+      // made the playhead advance in jerks.
       setTimeMs(a.loop ? timeRef.current % Math.max(duration, 1) : timeRef.current);
     });
   }, [playing, subscribeFrame, restoreCamera]);
 
-  // Reprise en main automatique : orbite/molette/vol pendant la lecture → pause.
+  // Automatic takeover: orbit/wheel/flight during playback → pause.
   useEffect(() => {
     if (!playing) return;
     const dom = getDom();
@@ -238,8 +238,8 @@ export function useCameraAnim(controller: CameraController) {
       setAutoPaused(true);
     };
     const onKey = (e: KeyboardEvent) => {
-      // Même référence des touches de vol que `flyControls`, et même garde de saisie : sans elle,
-      // taper « was » dans un commentaire mettait la lecture en pause.
+      // Same flight key reference as `flyControls`, and same input guard: without it,
+      // typing "was" in a comment would pause playback.
       if (isFlyMoveCode(e.code) && !isEditable(e.target)) pause();
     };
     dom.addEventListener('pointerdown', pause);
@@ -261,7 +261,7 @@ export function useCameraAnim(controller: CameraController) {
     setAutoPaused(false);
   }, []);
 
-  /** Positionne la lecture (et la caméra) à `t` ms — scrub/playhead. */
+  /** Positions playback (and the camera) at `t` ms — scrub/playhead. */
   const scrub = useCallback(
     (t: number) => {
       timeRef.current = t;
@@ -271,7 +271,7 @@ export function useCameraAnim(controller: CameraController) {
     [restoreCamera],
   );
 
-  /** Pose une clé sur tous les canaux au temps `t` (défaut : fin de la lecture), depuis la vue. */
+  /** Sets a key on all channels at time `t` (default: end of playback), from the view. */
   const insertKeyAtView = useCallback(
     (t?: number) => {
       const view = captureCamera();
@@ -283,18 +283,17 @@ export function useCameraAnim(controller: CameraController) {
     [captureCamera, commit, seedBase],
   );
 
-  /** Ajoute une clé sur un canal précis (double-clic sur une courbe du graph editor). */
+  /** Adds a key on a specific channel (double-click on a curve in the graph editor). */
   const addKey = useCallback(
     (channel: ChannelId, t: number, v: number) => commit(upsertKey(seedBase(), channel, Math.max(0, t), v)),
     [commit, seedBase],
   );
 
   /**
-   * Pose une clé sur **un seul canal** au playhead, depuis la vue courante (ligne du dopesheet).
-   * Si la vue ne porte pas la valeur (fov/roll absents de la capture), retombe sur la valeur
-   * échantillonnée du canal — poser une clé n'altère alors pas la courbe. Un canal VIDE
-   * s'échantillonne depuis la base, jamais depuis zéro : sans cela, une clé de focale posée sur
-   * une animation neuve écrivait 0°.
+   * Sets a key on **a single channel** at the playhead, from the current view (dopesheet row).
+   * If the view does not carry the value (fov/roll absent from the capture), it falls back to the
+   * channel's sampled value — setting a key then does not alter the curve. An EMPTY channel is
+   * sampled from the base, never from zero: otherwise a focal key set on a new animation wrote 0°.
    */
   const insertChannelKeyAtView = useCallback(
     (channel: ChannelId, t?: number) => {
@@ -308,40 +307,40 @@ export function useCameraAnim(controller: CameraController) {
     [captureCamera, commit, seedBase],
   );
 
-  /** Retime en direct une colonne du dopesheet (drag d'un losange de la règle). Live — appeler
-   *  `beginStroke` au début du geste pour un undo unique. */
+  /** Retimes a dopesheet column live (drag of a diamond on the ruler). Live — call
+   *  `beginStroke` at the start of the gesture for a single undo. */
   const strokeMoveColumn = useCallback((fromT: number, toT: number) => {
     const delta = Math.round(toT) - Math.round(fromT);
     if (delta !== 0) setAnimState(moveColumn(animRef.current, Math.round(fromT), delta));
   }, []);
 
-  /** Supprime toutes les clés d'une colonne du dopesheet (Alt+clic sur un losange). */
+  /** Removes all keys of a dopesheet column (Alt+click on a diamond). */
   const removeColumn = useCallback(
     (t: number) => commit(deleteColumn(animRef.current, Math.round(t))),
     [commit],
   );
 
-  /** Applique un profil de tangente à **toute** une courbe (clic droit sur la ligne du canal). */
+  /** Applies a tangent profile to **a whole** curve (right-click on the channel row). */
   const applyChannelTangent = useCallback(
     (channel: ChannelId, type: TangentType, target?: TangentTarget) =>
       commit(setTangentType(animRef.current, channelRefs(animRef.current, channel), type, target)),
     [commit],
   );
 
-  /** Extrapolation d'un canal hors de ses clés (pré/post-infinity) — persistée avec l'animation. */
+  /** Extrapolation of a channel outside its keys (pre/post-infinity) — persisted with the animation. */
   const setExtrapolation = useCallback(
     (channel: ChannelId, patch: { pre?: Extrapolation; post?: Extrapolation }) =>
       commit(setChannelExtrapolation(animRef.current, channel, patch)),
     [commit],
   );
 
-  /** Sélectionne toutes les clés d'une courbe (puis les outils de tangente s'y appliquent). */
+  /** Selects all keys of a curve (the tangent tools then apply to them). */
   const selectChannel = useCallback(
     (channel: ChannelId) => setSelection(channelRefs(animRef.current, channel)),
     [setSelection],
   );
 
-  // Auto-key (Phase 27) : tout geste caméra pose une clé de la vue au temps de lecture.
+  // Auto-key (Phase 27): any camera gesture sets a key from the view at the playback time.
   useCameraAutoKey(autoKey, getDom, insertKeyAtView);
 
   return {

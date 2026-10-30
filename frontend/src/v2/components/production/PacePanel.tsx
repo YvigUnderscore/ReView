@@ -6,16 +6,15 @@ import { intlLocale, useT, type MessageKey } from '../../i18n';
 import { readPace, type PaceUnit, type ProjectionUnavailable } from './productionWire';
 
 /**
- * Rythme et projection (C6).
+ * Pace and projection (C6).
  *
- * Le panneau annonçait une fin de production au 14 décembre 2028 : l'avancement se comptait
- * en **tâches** et le rythme en **médias publiés**, et la projection divisait l'un par
- * l'autre. Le serveur sépare désormais les deux séries et déclare leur unité ; l'écran
- * n'en nomme aucune qu'il ne connaisse pas, et une projection indisponible **dit sa raison**
- * au lieu d'afficher une date.
+ * The panel announced a production end on 14 December 2028: progress was counted in **tasks** and pace in **published
+ * media**, and the projection divided one by the other. The server now separates the two series and declares their unit;
+ * the screen names none it does not know, and an unavailable projection **states its reason** instead of displaying a
+ * date.
  *
- * La projection reste rendue avec le rythme qui la produit : une date seule se lirait comme
- * un engagement, alors qu'elle ne vaut que l'hypothèse d'un rythme constant.
+ * The projection stays rendered with the pace that produces it: a date alone would be read as a commitment, whereas it is
+ * only worth the assumption of a constant pace.
  */
 
 const PER_WEEK_KEY: Record<PaceUnit, MessageKey> = {

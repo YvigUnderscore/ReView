@@ -7,13 +7,13 @@ import { raycastModelPoint } from './objectHotspot';
 import type { SceneRuntime } from './useModel3DThree';
 
 /**
- * Points d'intérêt du viewer 3D : l'adaptateur du hook PARTAGÉ (`poi/usePoiMarkers`), celui-là
- * même que le splat utilise. Il ne dit que ce qui distingue vraiment les deux viewers — l'objet
- * qui porte les points (le groupe du modèle), le rayon englobant, et le rayon de surface, qui
- * interroge ici des triangles.
+ * Points of interest of the 3D viewer: the adapter of the SHARED hook (`poi/usePoiMarkers`), the very
+ * one the splat uses. It only states what really distinguishes the two viewers — the object carrying
+ * the points (the model's group), the bounding radius, and the surface radius, which here queries
+ * triangles.
  *
- * Les refs sont lues **au moment de l'appel** : le viewer remonte à chaque changement de fichier,
- * et une poignée capturée une fois pour toutes viserait une scène disparue.
+ * The refs are read **at call time**: the viewer remounts on every file change, and a handle captured
+ * once and for all would target a vanished scene.
  */
 export function useModelPoi(
   runtimeRef: RefObject<SceneRuntime | null>,

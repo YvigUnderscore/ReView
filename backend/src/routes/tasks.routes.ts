@@ -4,7 +4,7 @@
 import { Router, type Request } from 'express';
 import { z } from 'zod';
 import { TaskType, TaskStatus } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { resolveProjectIdForTask, resolveProjectIdForShot, resolveProjectIdForAsset } from '../lib/pipeline';
@@ -19,7 +19,7 @@ router.use(authenticate);
 
 const idParam = z.object({ id: z.coerce.number().int() });
 
-/** Résout le projet d'une tâche + assertion d'accès (RBAC) → renvoie le projectId. */
+/** Resolves a task's project and access assertion (RBAC), returns the projectId. */
 async function resolveTaskAccess(req: Request, id: number): Promise<number> {
   const projectId = await resolveProjectIdForTask(id);
   if (!projectId) throw notFound('Task not found');
@@ -28,13 +28,13 @@ async function resolveTaskAccess(req: Request, id: number): Promise<number> {
 }
 
 /**
- * GET /api/tasks/board?projectId=[&limit=][&cursor=] — les tâches du projet (C4).
+ * GET /api/tasks/board?projectId=[&limit=][&cursor=]: the project's tasks (C4).
  *
- * `cursor` reprend après la dernière tâche servie : à dix mille tâches, le board se
- * remplit en plusieurs appels bornés au lieu d'une réponse unique qu'aucun navigateur
- * n'aime recevoir. Sans curseur, le comportement est celui d'avant.
+ * `cursor` resumes after the last task served: with ten thousand tasks, the board fills in several bounded
+ * calls instead of one single response that no browser likes to receive. Without a cursor, the behavior is
+ * that of before.
  *
- * Déclarée avant `/:id` pour que « board » ne soit pas lu comme un identifiant.
+ * Declared before `/:id` so that "board" is not read as an identifier.
  */
 router.get(
   '/board',
@@ -54,7 +54,7 @@ router.get(
   },
 );
 
-// GET /api/tasks?shotId=X | ?assetId=Y — paginé (10.D1)
+// GET /api/tasks?shotId=X | ?assetId=Y — paginated (10.D1)
 router.get(
   '/',
   validate({
@@ -62,9 +62,8 @@ router.get(
       .object({
         shotId: z.coerce.number().int().optional(),
         assetId: z.coerce.number().int().optional(),
-        // Toutes les tâches du projet, quel que soit leur parent : c'est ce qu'il faut
-        // pour proposer une destination d'upload sur un projet où un asset traverse
-        // cinq étapes et chaque plan autant.
+        // All the project's tasks, whatever their parent: that is what is needed to offer an upload
+        // destination on a project where an asset goes through five steps and each shot as many.
         projectId: z.coerce.number().int().optional(),
       })
       .merge(cursorPaginationQuery)
@@ -80,8 +79,8 @@ router.get(
 
     if (asked !== undefined && !shotId && !assetId) {
       await assertProjectAccess(req, asked);
-      // Liste consommée d'un bloc (destinations d'upload) : page large par défaut, mais
-      // `total`/`truncated`/`nextCursor` disent enfin ce qui n'a pas été servi.
+      // List consumed in one block (upload destinations): wide page by default, but
+      // `total`, `truncated` and `nextCursor` finally say what has not been served.
       const p = readPagination(req.query, { defaultPageSize: MAX_PAGE_SIZE });
       const { items, total, truncated, nextCursor } = await TaskService.listForProject(asked, p);
       return res.json({ tasks: items, total, truncated, nextCursor });
@@ -96,7 +95,7 @@ router.get(
   },
 );
 
-// POST /api/tasks (admin/superviseur) — rattachée à un Shot XOR un Asset
+// POST /api/tasks (admin and supervisor) — attached to a Shot XOR an Asset
 router.post(
   '/',
   validate({
@@ -105,7 +104,7 @@ router.post(
         name: z.string().min(1).max(160),
         type: z.nativeEnum(TaskType).default(TaskType.OTHER),
         department: z.string().min(1).max(40).nullable().optional(),
-        // Consigne de la tâche (Phase 50) — ce qu'il y a à faire, en texte simple.
+        // Task brief (Phase 50): what there is to do, in plain text.
         description: taskDescriptionField,
         shotId: z.number().int().optional(),
         assetId: z.number().int().optional(),
@@ -125,12 +124,11 @@ router.post(
         : await resolveProjectIdForAsset(body.assetId!);
     if (!projectId) throw notFound('Parent shot or asset not found');
     await assertProjectAccess(req, projectId);
-    // Droits lus sur le rôle EFFECTIF (38.E) : le contrôle portait sur le rôle **global**,
-    // si bien qu'un lead supervisant son projet — rôle donné par membership — se voyait
-    // refuser la création d'une tâche que le service lui accorde. C'était le seul chemin
-    // de création hors ShotGrid : le pipe d'un projet autonome lui restait fermé.
-    await assertProjectManage(req.user!.id, req.user!.role, projectId);
-    res.status(201).json({ task: await TaskService.create(req.user!, projectId, req.body) });
+    // Rights read on the EFFECTIVE role (38.E): the check read the GLOBAL role, so a lead supervising their
+    // project (a role given by membership) was refused the creation of a task that the service grants them.
+    // It was the only creation path outside ShotGrid: a standalone project's pipe stayed closed to them.
+    await assertProjectManage(requireUser(req).id, requireUser(req).role, projectId);
+    res.status(201).json({ task: await TaskService.create(requireUser(req), projectId, req.body) });
   },
 );
 
@@ -141,7 +139,7 @@ router.get('/:id', validate({ params: idParam }), async (req, res) => {
   res.json({ task: await TaskService.getDetail(id) });
 });
 
-// PATCH /api/tasks/:id — superviseur/admin : tous champs ; assigné : statut uniquement
+// PATCH /api/tasks/:id — supervisor and admin: all fields; assignee: status only
 router.patch(
   '/:id',
   validate({
@@ -152,15 +150,15 @@ router.patch(
       department: z.string().min(1).max(40).nullable().optional(),
       description: taskDescriptionField,
       status: z.nativeEnum(TaskStatus).optional(),
-      // Statut personnalisable (Phase 48) : les deux formes sont acceptées et alignées
-      // par le service — le kanban envoie l'une, les anciens clients l'autre.
+      // Customizable status (Phase 48): both forms are accepted and aligned by the service: the kanban sends
+      // one, older clients the other.
       pipelineStatusId: z.number().int().nullable().optional(),
       assigneeId: z.number().int().nullable().optional(),
       order: z.number().int().optional(),
-      // Planification (43.C) : début + échéance (superviseurs) — null pour effacer.
+      // Scheduling (43.C): start and due date (supervisors), null to clear.
       startDate: z.coerce.date().nullable().optional(),
       dueDate: z.coerce.date().nullable().optional(),
-      // Checklist (38.F) : [{ text, done }] — cochable par l'assigné.
+      // Checklist (38.F): [{ text, done }], tickable by the assignee.
       checklist: z
         .array(z.object({ text: z.string().min(1).max(200), done: z.boolean() }))
         .max(100)
@@ -170,15 +168,15 @@ router.patch(
   async (req, res) => {
     const id = Number(req.params.id);
     const projectId = await resolveTaskAccess(req, id);
-    res.json({ task: await TaskService.update(req.user!, projectId, id, req.body) });
+    res.json({ task: await TaskService.update(requireUser(req), projectId, id, req.body) });
   },
 );
 
-// DELETE /api/tasks/:id (admin/superviseur)
+// DELETE /api/tasks/:id (admin and supervisor)
 router.delete('/:id', validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   const projectId = await resolveTaskAccess(req, id);
-  await TaskService.remove(req.user!, projectId, id);
+  await TaskService.remove(requireUser(req), projectId, id);
   res.status(204).end();
 });
 

@@ -5,21 +5,20 @@ import type { ReactNode } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { FileSpreadsheet, Loader2, Printer } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button } from '../../../components/ui/button';
+import { Button } from '@/v2/components/ui/button';
 import { Group } from '../chrome/DockGroup';
-import { downloadNotes, type NotesExportRequest, type NotesFormat } from '../../../lib/notesExport';
-import { useT } from '../../../i18n';
+import { downloadNotes, type NotesExportRequest, type NotesFormat } from '@/v2/lib/notesExport';
+import { useT } from '@/v2/i18n';
 
 /**
- * Sortie des notes depuis le panneau Export du dock.
+ * Notes output from the dock's Export panel.
  *
- * Deux formats seulement ici : le tableur, que la production attend, et la planche
- * imprimable, qui montre chaque note sur sa frame. L'EDL et l'OTIO n'ont de sens que sur
- * une suite de clips — ils se déclenchent depuis une playlist ou un montage, avec le même
- * `downloadNotes`.
+ * Only two formats here: the spreadsheet, which production expects, and the printable contact sheet,
+ * which shows each note on its frame. EDL and OTIO only make sense on a sequence of clips: they are
+ * triggered from a playlist or an edit, with the same `downloadNotes`.
  *
- * Le panneau Export existe déjà : y poser deux entrées n'ajoute aucune surface à
- * l'interface, c'est l'endroit où l'on cherche un export.
+ * The Export panel already exists: adding two entries there adds no surface to the interface; it is
+ * where one looks for an export.
  */
 export default function NotesExportPanel({ scope, id }: { scope: NotesExportRequest['scope']; id: number }) {
   const t = useT();

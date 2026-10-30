@@ -1,67 +1,66 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { CommentAttachment } from '../../../../lib/commentAttachments';
+import type { CommentAttachment } from '@/v2/lib/commentAttachments';
 import type { SdfVolumeData, SplatEdits, SplatTransform } from '../reviewTypes';
 
 /**
- * Proposition d'édition de nuage jointe à un commentaire (Phase 50, lot 14) — la part
- * `splat-edit`, jumelle de `scene-override` pour le splat.
+ * Cloud-edit proposal attached to a comment (Phase 50, lot 14): the `splat-edit` part, twin of
+ * `scene-override` for the splat.
  *
- * C'est le même contrat que côté serveur (`lib/commentPayload`) vu de l'autre bout, et il
- * porte le geste ENTIER : la transformation TRS du nuage, les volumes de crop, le flip
- * d'orientation — **et les suppressions**, qui sont l'essentiel du travail sur un nuage.
+ * It is the same contract as the server side (`lib/commentPayload`) seen from the other end, and it
+ * carries the WHOLE gesture: the TRS transform of the cloud, the crop volumes, the orientation flip,
+ * **and the deletions**, which are the bulk of the work on a cloud.
  *
- * Les deux blobs (masque de suppression par indice, ops de sous-ensemble) ne tiennent pas
- * dans une annotation : ils partent comme pièces jointes du commentaire, et la part n'en
- * garde que la clé. La lecture ne résout cette clé que dans les pièces jointes DU MÊME
- * commentaire — déjà filtrées par préfixe côté serveur : une clé étrangère ne donne donc
- * aucune URL.
+ * The two blobs (deletion mask per index, subset ops) do not fit in an annotation: they go as
+ * attachments of the comment, and the part keeps only their key. Reading resolves this key only
+ * among the attachments OF THE SAME comment, already filtered by prefix on the server side: a
+ * foreign key therefore gives no URL.
  *
- * L'écriture est stricte (Zod côté serveur) ; la LECTURE, elle, tolère l'inattendu : la
- * colonne est du JSON libre, et une part abîmée ou écrite par une version antérieure ne doit
- * pas faire tomber la lecture du commentaire qui la porte.
+ * Writing is strict (Zod on the server side); READING, for its part, tolerates the unexpected: the
+ * column is free JSON, and a damaged part, or one written by an earlier version, must not break the
+ * reading of the comment that carries it.
  */
 
-/** Un blob de la proposition tel que l'éditeur le produit, avant téléversement. */
+/** A blob of the proposal as the editor produces it, before upload. */
 export interface SplatEditBlob {
   bytes: Uint8Array;
-  /** Splats masqués, ou ops rejouées — de l'affichage, jamais de l'autorité. */
+  /** Masked splats, or replayed ops: for display, never for authority. */
   count: number;
 }
 
-/** Le même blob une fois déposé : ce que la part porte réellement. */
+/** The same blob once deposited: what the part actually carries. */
 export interface SplatEditBlobRef {
   key: string;
   count: number;
 }
 
-/** Ce que l'éditeur propose pour le prochain commentaire : le borné + les deux binaires. */
+/** What the editor proposes for the next comment: the bounded part plus the two binaries. */
 export interface SplatEditDraft {
   edits: SplatEdits;
   mask: SplatEditBlob | null;
   subset: SplatEditBlob | null;
 }
 
-/** La part relue, clés comprises. */
+/** The part read back, keys included. */
 export interface SplatEditPartData extends SplatEdits {
   mask: SplatEditBlobRef | null;
   subset: SplatEditBlobRef | null;
 }
 
 /**
- * La proposition telle qu'elle se REJOUE : le borné, plus les URL présignées des deux blobs,
- * résolues dans les pièces jointes du commentaire porteur.
+ * The proposal as it is REPLAYED: the bounded part, plus the presigned URLs of the two blobs,
+ * resolved among the attachments of the carrying comment.
  */
 export interface SplatEditProposal extends SplatEdits {
   maskUrl: string | null;
   subsetUrl: string | null;
-  /** Comptes déclarés par l'auteur — pour le dire à l'écran, pas pour rejouer. */
+  /** Counts declared by the author: to show on screen, not to replay. */
   maskCount: number;
   subsetCount: number;
 }
 
-/** Triplet (ou quadruplet) de nombres finis — la forme que les gizmos produisent. */
+/** Triplet (or quadruplet) of finite numbers: the shape the gizmos produce. */
 function isTuple(value: unknown, length: number): boolean {
   return (
     Array.isArray(value) &&
@@ -70,13 +69,13 @@ function isTuple(value: unknown, length: number): boolean {
   );
 }
 
-/** Transformation TRS lisible : position, quaternion et échelle au complet. */
+/** Readable TRS transform: position, quaternion and scale in full. */
 function isSplatTransform(value: unknown): value is SplatTransform {
   const trs = value as SplatTransform | null | undefined;
   return !!trs && isTuple(trs.position, 3) && isTuple(trs.quaternion, 4) && isTuple(trs.scale, 3);
 }
 
-/** Volume de crop lisible : forme et mode connus, TRS complète. */
+/** Readable crop volume: shape and mode known, full TRS. */
 function isSdfVolume(value: unknown): value is SdfVolumeData {
   const vol = value as SdfVolumeData | null | undefined;
   return (
@@ -87,16 +86,16 @@ function isSdfVolume(value: unknown): value is SdfVolumeData {
   );
 }
 
-/** Référence de blob lisible : une clé non vide et un compte positif. */
+/** Readable blob reference: a non-empty key and a positive count. */
 function isBlobRef(value: unknown): value is SplatEditBlobRef {
   const ref = value as SplatEditBlobRef | null | undefined;
   return !!ref && typeof ref.key === 'string' && ref.key.length > 0 && typeof ref.count === 'number';
 }
 
 /**
- * Relit la part `splat-edit` d'une annotation déjà découpée en parts. Rend `null` quand il n'y
- * a rien de rejouable — une part vide ne doit pas faire croire à une proposition, sans quoi le
- * bandeau du viewer s'allumerait pour un commentaire qui ne propose rien.
+ * Reads the `splat-edit` part of an annotation already split into parts. Returns `null` when there
+ * is nothing replayable: an empty part must not make a proposal appear, otherwise the viewer's
+ * banner would light up for a comment that proposes nothing.
  */
 export function readSplatEditPart(parts: Array<{ type?: string }>): SplatEditPartData | null {
   const part = parts.find((x) => x?.type === 'splat-edit') as Partial<SplatEditPartData> | undefined;
@@ -111,20 +110,20 @@ export function readSplatEditPart(parts: Array<{ type?: string }>): SplatEditPar
 }
 
 /**
- * Proposition prête à rejouer : les clés de blobs sont remplacées par les URL présignées des
- * pièces jointes du commentaire porteur.
+ * Proposal ready to replay: blob keys are replaced by the presigned URLs of the attachments of the
+ * carrying comment.
  *
- * Une clé introuvable donne une URL nulle — et non une erreur : la pièce a pu être retirée du
- * commentaire depuis. Le reste de la proposition se rejoue quand même.
+ * A key not found gives a null URL, not an error: the attachment may have been removed from the
+ * comment since. The rest of the proposal still replays.
  */
 /**
- * Clés MinIO des deux binaires d'une proposition, lues directement dans l'annotation.
+ * MinIO keys of the two binaries of a proposal, read directly from the annotation.
  *
- * Elles sont déposées comme pièces jointes ordinaires du commentaire — c'est ce qui leur donne
- * gratuitement le stockage, la présignature et surtout la PURGE. Le revers est qu'elles
- * s'afficheraient sous le commentaire comme des fichiers à télécharger (`splat-mask.bin`), ce
- * qu'elles ne sont pas : personne n'ouvre un bitset. La liste des pièces jointes les écarte donc
- * par cette clé, et par elle seule — un fichier `.bin` que quelqu'un joint vraiment reste offert.
+ * They are deposited as ordinary attachments of the comment: that is what gives them, for free,
+ * storage, presigning and above all the PURGE. The downside is that they would appear under the
+ * comment as files to download (`splat-mask.bin`), which they are not: nobody opens a bitset. The
+ * attachment list therefore excludes them by this key, and by this key alone: a `.bin` file that
+ * someone really attaches stays offered.
  */
 export function splatEditBlobKeys(annotation: unknown): string[] {
   if (!Array.isArray(annotation)) return [];
@@ -150,7 +149,7 @@ export function resolveSplatEditProposal(
   };
 }
 
-/** L'édition en cours a-t-elle quelque chose à proposer ? (sinon rien ne part, ni blob ni part) */
+/** Does the current edit have anything to propose? (otherwise nothing is sent: neither blob nor part) */
 export function hasSplatEditProposal(draft: SplatEditDraft | null): boolean {
   if (!draft) return false;
   return (
@@ -163,11 +162,11 @@ export function hasSplatEditProposal(draft: SplatEditDraft | null): boolean {
 }
 
 /**
- * Part à joindre au prochain commentaire, ou `null` quand l'édition en cours n'a rien à dire.
+ * Part to attach to the next comment, or `null` when the current edit has nothing to say.
  *
- * Symétrique de la lecture : ce qui part est exactement ce qui se rejoue, et rien de plus —
- * d'où la recopie champ par champ plutôt qu'un étalement de l'objet de l'éditeur, qui
- * emporterait vers un schéma `strict()` tout champ interne ajouté demain.
+ * Symmetric to the reading: what is sent is exactly what is replayed, and nothing more. Hence the
+ * field-by-field copy rather than spreading the editor's object, which would carry into a
+ * `strict()` schema any internal field added tomorrow.
  */
 export function buildSplatEditPart(
   edits: SplatEdits | null,
@@ -175,9 +174,9 @@ export function buildSplatEditPart(
 ): Record<string, unknown> | null {
   const mask = refs?.mask ?? null;
   const subset = refs?.subset ?? null;
-  // Une TRS d'identité ne propose rien : la joindre ferait s'allumer le bandeau du lecteur pour
-  // un commentaire qui ne déplace rien. Un masque, lui, EST une proposition à lui seul — c'est
-  // le nettoyage d'un nuage, le geste le plus courant du viewer splat.
+  // An identity TRS proposes nothing: attaching it would light the reader's banner for a comment
+  // that moves nothing. A mask, on the other hand, IS a proposal on its own: it is the cleaning of
+  // a cloud, the most common gesture of the splat viewer.
   const moves = !!edits && isSplatTransform(edits.transform) && !isIdentity(edits.transform);
   const volumes = edits?.volumes.filter(isSdfVolume) ?? [];
   if (!moves && volumes.length === 0 && edits?.baseFlip !== false && !mask && !subset) return null;
@@ -192,11 +191,11 @@ export function buildSplatEditPart(
 }
 
 /**
- * La transformation laisse-t-elle le nuage exactement où il était ?
+ * Does the transform leave the cloud exactly where it was?
  *
- * La valeur d'identité est écrite ici plutôt qu'importée de `reviewTypes` : ce module est
- * lui-même lu par `reviewTypes`, et n'en importer que des TYPES garde la dépendance
- * entièrement effacée à la compilation — aucun cycle à l'exécution.
+ * The identity value is written here rather than imported from `reviewTypes`: this module is itself
+ * read by `reviewTypes`, and importing only TYPES from it keeps the dependency entirely erased at
+ * compile time: no runtime cycle.
  */
 function isIdentity(trs: SplatTransform): boolean {
   const [qx, qy, qz, qw] = trs.quaternion;

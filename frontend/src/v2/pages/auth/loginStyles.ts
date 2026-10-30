@@ -5,27 +5,27 @@ import type { CSSProperties } from 'react';
 import type { LoginAppearance } from '../../lib/branding';
 
 /**
- * Styles de l'habillage de connexion — fonctions pures partagées par la page réelle
- * (`AuthLayout`) et l'aperçu de l'admin, pour que ce que l'admin voit soit exactement ce
- * que verront ses utilisateurs.
+ * Login-styling helpers — pure functions shared by the real page
+ * (`AuthLayout`) and the admin preview, so that what the admin sees is exactly what
+ * their users will see.
  */
 
-/** Couche image : fond, cadrage, flou. `null` s'il n'y a pas d'image. */
+/** Image layer: background, framing, blur. `null` if there is no image. */
 export function backdropStyle(login: LoginAppearance): CSSProperties | null {
   if (!login.bgUrl) return null;
   return {
-    // URL entre guillemets, guillemets internes retirés : une URL présignée porte des
-    // paramètres de requête et ne doit pas pouvoir refermer la fonction `url()`.
+    // URL in quotes, inner quotes removed: a presigned URL carries query
+    // parameters and must not be able to close the `url()` function.
     backgroundImage: `url("${login.bgUrl.replace(/["\\]/g, '')}")`,
     backgroundSize: login.bgFit,
     backgroundPosition: 'center',
     backgroundRepeat: 'no-repeat',
-    // Le flou déborde du cadre : l'échelle évite le liseré transparent sur les bords.
+    // The blur overflows the frame: the scale avoids a transparent fringe at the edges.
     ...(login.blur > 0 ? { filter: `blur(${login.blur}px)`, transform: 'scale(1.06)' } : {}),
   };
 }
 
-/** Voile posé sur l'image pour garder le formulaire lisible. `null` si opacité nulle. */
+/** Veil laid over the image to keep the form readable. `null` if opacity is zero. */
 export function overlayStyle(login: LoginAppearance): CSSProperties | null {
   if (!login.bgUrl || login.overlay <= 0) return null;
   return { backgroundColor: `hsl(var(--background) / ${login.overlay})` };

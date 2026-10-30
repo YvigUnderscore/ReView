@@ -7,13 +7,13 @@ import { toast } from 'sonner';
 import ToastHost, { TOAST_TOP_OFFSET } from './ToastHost';
 
 /**
- * Les toasts tombaient en bas à droite, sur le coin le plus chargé de l'application. Ces cas
- * verrouillent le déplacement demandé : en haut, au centre, et SOUS la barre du haut — un
- * toast qui démarrerait plus haut recouvrirait la recherche et la cloche, c'est-à-dire
- * précisément ce qu'on essaie de ne plus masquer.
+ * Toasts used to fall at the bottom right, on the busiest corner of the application. These cases
+ * lock in the requested move: at the top, centred, and BELOW the top bar. A
+ * toast that started higher would cover the search and the bell, which is exactly
+ * what we are trying no longer to hide.
  */
 
-/** happy-dom ne rend pas toujours une propriété personnalisée : l'attribut fait foi. */
+/** happy-dom does not always render a custom property: the attribute is authoritative. */
 const cssVar = (el: HTMLElement, name: string): string =>
   el.style.getPropertyValue(name) ||
   (el.getAttribute('style') ?? '')
@@ -22,7 +22,7 @@ const cssVar = (el: HTMLElement, name: string): string =>
     ?.split(':')[1] ||
   '';
 
-/** Monte l'hôte et lève un toast : sans toast, sonner ne rend aucune pile à mesurer. */
+/** Mounts the host and raises a toast: without a toast, sonner renders no stack to measure. */
 async function mountWithToast(message: string): Promise<HTMLElement> {
   render(<ToastHost theme="dark" />);
   act(() => {
@@ -35,17 +35,17 @@ async function mountWithToast(message: string): Promise<HTMLElement> {
 }
 
 describe('ToastHost', () => {
-  it('pose la pile en haut et au centre, plus dans le coin bas droit', async () => {
+  it('places the stack at the top and centred, no longer in the bottom-right corner', async () => {
     const list = await mountWithToast('sh010_v003 published');
     expect(list.dataset.yPosition).toBe('top');
     expect(list.dataset.xPosition).toBe('center');
   });
 
-  it('la décale sous la barre du haut, en fenêtre large comme en fenêtre téléphone', async () => {
+  it('offsets it below the top bar, in wide window as in phone window', async () => {
     const list = await mountWithToast('sh020_v001 published');
     expect(cssVar(list, '--offset-top').trim()).toBe(TOAST_TOP_OFFSET);
     expect(cssVar(list, '--mobile-offset-top').trim()).toBe(TOAST_TOP_OFFSET);
-    // La rangée d'en-tête mesure 3,5 rem (`h-14`) : en deçà, le toast tomberait dessus.
+    // The header row measures 3.5 rem (`h-14`): above that, the toast would fall on it.
     expect(Number.parseFloat(TOAST_TOP_OFFSET)).toBeGreaterThan(3.5);
   });
 });

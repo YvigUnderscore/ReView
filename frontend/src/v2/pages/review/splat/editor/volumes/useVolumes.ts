@@ -3,11 +3,11 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type * as THREE from 'three';
-import type { SdfVolumeData } from '../../../reviewTypes';
+import type { SdfVolumeData } from '@/v2/pages/review/reviewTypes';
 import type { SplatViewer } from '../../useSplat';
-import { readMeshTransform } from '../../../viewer/gizmos/meshTransform';
+import { readMeshTransform } from '@/v2/pages/review/viewer/gizmos/meshTransform';
 import type { EditOp } from '../operations/history';
-import { t } from '../../../../../i18n';
+import { t } from '@/v2/i18n';
 import {
   applyVolumeData,
   createVolume,
@@ -20,7 +20,7 @@ import {
   type VolumeShape,
 } from './cropVolume';
 
-/** Volume de crop tel que présenté à l'UI (les objets Three vivent dans un ref). */
+/** Crop volume as presented to the UI (the Three objects live in a ref). */
 export interface VolumeItem {
   id: number;
   shape: VolumeShape;
@@ -28,28 +28,28 @@ export interface VolumeItem {
 }
 
 /**
- * Volumes de crop de l'éditeur de splat (10.G) : liste des volumes actifs, volume sélectionné
- * (le gizmo s'y attache pour le déplacer/tourner/redimensionner), bascule creuser/isoler,
- * ajout/retrait annulables (via l'historique fourni). Les objets Spark/Three vivent dans un
- * ref (`VolumeRuntime`) ; la sérialisation pour persistance arrive au chantier H5.
+ * Crop volumes of the splat editor (10.G): list of active volumes, selected volume (the gizmo
+ * attaches to it to move, rotate and resize it), carve/isolate toggle, and undoable add/remove
+ * (via the supplied history). The Spark/Three objects live in a ref (`VolumeRuntime`);
+ * serialization for persistence arrives in workstream H5.
  */
 export function useVolumes(
   splat: SplatViewer,
   pushHistory: (op: EditOp) => void,
   onChanged: () => void,
-  /** Volumes persistés à recréer au chargement de l'éditeur (null = aucun). */
+  /** Persisted volumes to recreate when the editor loads (null = none). */
   initial: SdfVolumeData[] | null,
 ) {
   const { getSceneHandle, ready } = splat;
   const [volumes, setVolumes] = useState<VolumeItem[]>([]);
-  // Volume actif (gizmo attaché à son SDF) — id + objet, posés ensemble dans les handlers
-  // (pas de lecture du ref `runtimes` pendant le render, règle react-hooks/refs).
+  // Active volume (gizmo attached to its SDF): id and object, set together in the handlers
+  // (no reading of the `runtimes` ref during render, react-hooks/refs rule).
   const [active, setActive] = useState<{ id: number; sdf: THREE.Object3D } | null>(null);
   const runtimes = useRef(new Map<number, VolumeRuntime>());
   const nextId = useRef(1);
   const initedRef = useRef(false);
 
-  // Recrée les volumes persistés (une fois le viewer prêt) — hors historique, sans dirty.
+  // Recreates the persisted volumes (once the viewer is ready): outside the history, without dirty.
   useEffect(() => {
     if (initedRef.current || !ready || !initial?.length) return;
     initedRef.current = true;
@@ -127,7 +127,7 @@ export function useVolumes(
     [getSceneHandle, pushHistory, volumes, onChanged],
   );
 
-  /** Bascule creuser ↔ isoler (hors historique : réversible d'un clic). */
+  /** Carve ↔ isolate toggle (outside the history: reversible in one click). */
   const toggleMode = useCallback(
     (id: number) => {
       const runtime = runtimes.current.get(id);
@@ -145,7 +145,7 @@ export function useVolumes(
     [onChanged],
   );
 
-  /** Sérialise les volumes (TRS local du SDF + forme + mode) pour la persistance (H5). */
+  /** Serializes the volumes (local TRS of the SDF, shape and mode) for persistence (H5). */
   const serialize = useCallback(
     (): SdfVolumeData[] =>
       volumes.flatMap((v) => {
@@ -156,14 +156,14 @@ export function useVolumes(
     [volumes],
   );
 
-  /** Sélectionne (ou désélectionne) le volume — le gizmo s'attache à son SDF. */
+  /** Selects (or deselects) the volume: the gizmo attaches to its SDF. */
   const select = useCallback((id: number) => {
     const runtime = runtimes.current.get(id);
     if (!runtime) return;
     setActive((a) => (a?.id === id ? null : { id, sdf: runtime.sdf }));
   }, []);
 
-  // Démontage de l'éditeur : libération définitive de tous les volumes.
+  // Editor unmount: final release of all volumes.
   useEffect(() => {
     const map = runtimes.current;
     return () => {
@@ -182,8 +182,8 @@ export function useVolumes(
     select,
     serialize,
     /**
-     * Objets Three vivants, par identifiant — lus par la suspension de l'éditeur (lot 14), qui
-     * les détache de la scène le temps qu'un commentaire montre la sienne, puis les rend.
+     * Live Three objects, by identifier: read by the editor's suspension (lot 14), which detaches
+     * them from the scene while a comment shows its own, then gives them back.
      */
     runtimesRef: runtimes,
   };

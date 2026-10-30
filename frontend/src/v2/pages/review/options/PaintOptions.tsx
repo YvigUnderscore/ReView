@@ -2,28 +2,28 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Eraser, Redo2, Undo2 } from 'lucide-react';
-import { IconButton } from '../../../components/ui/icon-button';
-import { NumberField } from '../../../components/ui/number-field';
+import { IconButton } from '@/v2/components/ui/icon-button';
+import { NumberField } from '@/v2/components/ui/number-field';
 import type { ReviewTool } from '../chrome/tools';
 import type { SplatPaintState } from '../splat/paint/useSplatPaint';
 import { MAX_STROKE_PX, MIN_STROKE_PX } from '../splat/paint/strokes';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
-/** Couleurs de trait de la brosse 3D — données d'annotation, pas des tokens de thème. */
+/** Stroke colours of the 3D brush: annotation data, not theme tokens. */
 const INK = ['#ff4d4d', '#ffb020', '#3ddc68', '#38b6ff'];
 
 /**
- * Réglages de la brosse de surface et de la gomme de trait, dans la barre d'options — **les
- * mêmes dans les deux viewers spatiaux** (lot 13). Ils vivaient dans la seule barre du splat ;
- * la brosse servant désormais aussi le modèle 3D, les recopier aurait garanti la divergence.
+ * Settings of the surface brush and of the stroke eraser, in the options bar: **the same in both
+ * spatial viewers** (batch 13). They used to live only in the splat's bar. Since the brush now also
+ * serves the 3D model, copying them would have guaranteed divergence.
  *
- * Ce qui s'affiche dépend de l'outil armé, pas du média : la brosse montre son encre et son
- * épaisseur, la gomme sa consigne. Les deux partagent la pile de traits en préparation, donc
- * annuler / rétablir / tout effacer, et le compte de ce qui partira avec le commentaire.
+ * What is displayed depends on the armed tool, not on the media: the brush shows its ink and
+ * thickness, the eraser its instruction. Both share the pending stroke stack, hence undo / redo /
+ * clear-all, and the count of what will leave with the comment.
  */
 export default function PaintOptions({ tool, paint }: { tool: ReviewTool; paint: SplatPaintState }) {
   const t = useT();
-  // La gomme n'a ni encre ni épaisseur à régler : sa consigne suffit, et elle dit le geste.
+  // The eraser has no ink or thickness to set: its instruction is enough, and it names the gesture.
   const erasing = tool.id === 'paint-erase';
   return (
     <>
@@ -48,8 +48,8 @@ export default function PaintOptions({ tool, paint }: { tool: ReviewTool; paint:
               />
             ))}
           </span>
-          {/* L'unité dit vrai : l'épaisseur est tenue en pixels d'écran par `LineMaterial` — la
-              même mesure que l'anneau du curseur — et ne dépend pas de la distance à la surface. */}
+          {/* The unit is truthful: thickness is held in screen pixels by `LineMaterial`, the same
+              measure as the cursor ring, and does not depend on the distance to the surface. */}
           <NumberField
             label={t('review.thickness')}
             value={paint.width}
@@ -69,7 +69,7 @@ export default function PaintOptions({ tool, paint }: { tool: ReviewTool; paint:
         onClick={paint.undoStroke}
         disabled={paint.pendingCount === 0}
       />
-      {/* Le bouton d'annulation n'avait pas de réciproque : un trait annulé était perdu. */}
+      {/* The cancel button had no counterpart: a cancelled stroke was lost. */}
       <IconButton
         icon={Redo2}
         label={t('review.redoStroke')}

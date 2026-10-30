@@ -10,20 +10,17 @@ import { haystack, matchesQuery } from './settingsFilter';
 import { useSettingsSearch } from './settingsSearchContext';
 
 /**
- * La carte de réglages — une seule, pour les trois familles.
+ * The settings card: a single one, for the three families.
  *
- * Il en existait trois conventions : `Panel` (titre en capitales grises) dans
- * l'administration, `Card` + `<h2 class="text-sm font-semibold">` dans le profil, et
- * `Card` + `<div class="text-sm font-medium">` + une ligne d'aide recopiée dans chaque
- * section de projet. Trois dessins pour un même objet, sur des écrans qu'on ouvre l'un
- * après l'autre.
+ * There used to be three conventions: `Panel` (grey capitalised title) in administration, `Card` with an `<h2>` in the
+ * profile, and `Card` with a `<div>` plus a copied help line in each project section. Three drawings for the same object,
+ * on screens one opens one after the other.
  *
- * La carte porte aussi sa **couleur** et sa **recherche** : la pastille d'icône teinte le
- * panneau sans le repeindre, et `keywords` dit les mots par lesquels on vient chercher ce
- * réglage — « filigrane » pour les burn-ins, « fuseau » pour la langue.
+ * The card also carries its **colour** and its **search**: the icon dot tints the panel without repainting it, and `keywords`
+ * lists the words one searches this setting by: "watermark" for burn-ins, "timezone" for the language.
  */
 
-/** Tons disponibles — tous pris dans les tokens du thème, jamais dans la palette brute. */
+/** Available tones: all taken from the theme tokens, never from the raw palette. */
 export const SETTINGS_TONES = {
   neutral: { chip: 'bg-secondary text-muted-foreground', rail: 'border-l-border' },
   primary: { chip: 'bg-primary/10 text-primary', rail: 'border-l-primary/50' },
@@ -38,18 +35,18 @@ export type SettingsTone = keyof typeof SETTINGS_TONES;
 
 export interface SettingsCardProps {
   title: string;
-  /** L'intention du panneau, en une ligne. Ce n'est pas l'aide d'un champ. */
+  /** The panel's intent, in one line. This is not a field's help. */
   hint?: string;
   icon?: LucideIcon;
   tone?: SettingsTone;
   /**
-   * Mots par lesquels on cherche ce réglage, au-delà de son titre — en anglais **et** en
-   * français, comme l'index des sections d'administration. Non affichés.
+   * Words one searches this setting by, beyond its title, in English **and** in French, like the index of the
+   * administration sections. Not displayed.
    */
   keywords?: readonly string[];
-  /** Commandes de l'en-tête (bascule, bouton d'ajout). */
+  /** Header commands (toggle, add button). */
   actions?: ReactNode;
-  /** Note de bas de panneau, un cran plus petite que l'aide. */
+  /** Panel footer note, one step smaller than the help. */
   footnote?: string;
   children: ReactNode;
   className?: string;

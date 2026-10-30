@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { clampOffsetFrames, MAX_COMPARE_OFFSET_FRAMES, useCompareOffset } from './compareOffset';
 import { useVideoSync } from './useVideoSync';
 
-/** Faux lecteur : le hook n'utilise que le temps, la pause, la vitesse et les événements. */
+/** Fake player: the hook only uses time, pause, speed and events. */
 class FakeVideo extends EventTarget {
   currentTime = 0;
   duration = 60;
@@ -32,11 +32,11 @@ const mount = (master: FakeVideo, slave: FakeVideo) =>
   renderHook(() => useVideoSync(refTo(master), refTo(slave), true));
 
 beforeEach(() => useCompareOffset.getState().reset());
-// `globals` désactivé dans la config vitest : le démontage est à notre charge.
+// `globals` disabled in the vitest config: teardown is our responsibility.
 afterEach(() => cleanup());
 
 describe('clampOffsetFrames', () => {
-  it('arrondit à la frame et borne le décalage', () => {
+  it('rounds to the frame and bounds the offset', () => {
     expect(clampOffsetFrames(2.4)).toBe(2);
     expect(clampOffsetFrames(-1000)).toBe(-MAX_COMPARE_OFFSET_FRAMES);
     expect(clampOffsetFrames(1000)).toBe(MAX_COMPARE_OFFSET_FRAMES);
@@ -44,8 +44,8 @@ describe('clampOffsetFrames', () => {
   });
 });
 
-describe('useVideoSync — décalage réglable entre les versions comparées', () => {
-  it('sans décalage, l’esclave recopie le temps du maître', () => {
+describe('useVideoSync — adjustable offset between the compared versions', () => {
+  it('without offset, the slave copies the master time', () => {
     const master = new FakeVideo();
     const slave = new FakeVideo();
     master.currentTime = 12;
@@ -53,7 +53,7 @@ describe('useVideoSync — décalage réglable entre les versions comparées', (
     expect(slave.currentTime).toBe(12);
   });
 
-  it('applique le décalage posé en frames : v02 retimée de deux frames', () => {
+  it('applies the offset set in frames: v02 retimed by two frames', () => {
     const master = new FakeVideo();
     const slave = new FakeVideo();
     master.currentTime = 10;
@@ -62,7 +62,7 @@ describe('useVideoSync — décalage réglable entre les versions comparées', (
     expect(slave.currentTime).toBeCloseTo(10 + 2 / 24, 6);
   });
 
-  it('suit le maître au seek, décalage compris', () => {
+  it('follows the master on seek, offset included', () => {
     const master = new FakeVideo();
     const slave = new FakeVideo();
     act(() => useCompareOffset.getState().set(-12, 24));
@@ -72,7 +72,7 @@ describe('useVideoSync — décalage réglable entre les versions comparées', (
     expect(slave.currentTime).toBeCloseTo(4.5, 6);
   });
 
-  it('ne sort jamais des bornes du média esclave', () => {
+  it('never goes beyond the bounds of the slave media', () => {
     const master = new FakeVideo();
     const slave = new FakeVideo();
     slave.duration = 4;
@@ -87,20 +87,20 @@ describe('useVideoSync — décalage réglable entre les versions comparées', (
     expect(slave.currentTime).toBe(0);
   });
 
-  it('corrige la dérive vers la position décalée, pas vers celle du maître', () => {
+  it('corrects drift toward the offset position, not toward the master position', () => {
     const master = new FakeVideo();
     const slave = new FakeVideo();
     act(() => useCompareOffset.getState().set(24, 24)); // +1 s
     master.currentTime = 20;
     mount(master, slave);
     master.paused = false;
-    // L'esclave a décroché d'une demi-seconde : le recalage vise 21 s, pas 20 s.
+    // The slave has drifted by half a second: the resync targets 21 s, not 20 s.
     slave.currentTime = 21.5;
     act(() => master.emit('timeupdate'));
     expect(slave.currentTime).toBe(21);
   });
 
-  it('un changement de décalage recale immédiatement l’esclave', () => {
+  it('a change of offset resyncs the slave immediately', () => {
     const master = new FakeVideo();
     const slave = new FakeVideo();
     master.currentTime = 8;

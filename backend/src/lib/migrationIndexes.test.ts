@@ -6,30 +6,27 @@ import { readdirSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 
 /**
- * Ce que les index posés en SQL doivent respecter pour SERVIR l'application.
+ * Schema-level guards on the indexes written in SQL, to SERVE the application.
  *
- * Un index peut être parfaitement écrit et rester inerte : ces contrôles gardent la seule
- * règle qui l'a décidé ici, découverte en mesurant et non en lisant.
+ * An index can be perfectly written and remain inert: these checks guard the only rule that decided it here,
+ * discovered by measuring rather than by reading.
  *
- * **Le piège de l'enum.** Prisma n'écrit pas `status = 'READY'` mais
- * `status = CAST($n::text AS "MediaStatus")`. La fonction d'entrée d'un enum (`enum_in`) est
- * STABLE et non IMMUTABLE : Postgres ne sait donc pas prouver que la requête implique le
- * prédicat d'un index partiel qui, lui, compare à une constante. Un index partiel fondé sur
- * `status` (ou sur un booléen, que Prisma passe aussi en paramètre) n'est jamais utilisé par
- * l'application — il coûte à chaque écriture et ne rend rien. Seules les nullités
- * (`IS NULL`, `IS NOT NULL`) sont écrites littéralement par Prisma, donc prouvables.
- * Vérifié : le plan de `MediaService.listPublished` passe du `Seq Scan` + `top-N heapsort`
- * (4 466 blocs lus) au parcours ordonné (1 337 blocs, 1,0 ms) selon que le prédicat s'en
- * tient aux nullités ou non — à prédicat « mieux ciblé », aucun effet.
+ * **The enum trap.** Prisma does not write `status = 'READY'` but `status = CAST($n::text AS "MediaStatus")`. An enum's
+ * input function (`enum_in`) is STABLE and not IMMUTABLE: Postgres therefore cannot prove that the query implies the
+ * predicate of a partial index that compares against a constant. A partial index based on `status` (or on a boolean,
+ * which Prisma also passes as a parameter) is never used by the application — it costs on every write and yields
+ * nothing. Only nullity tests (`IS NULL`, `IS NOT NULL`) are written literally by Prisma, hence provable.
+ * Verified: the plan of `MediaService.listPublished` goes from `Seq Scan` + `top-N heapsort` (4,466 blocks read) to the
+ * ordered index walk (1,337 blocks, 1.0 ms) depending on whether the predicate sticks to nullity tests or not — with a
+ * "better targeted" predicate, no effect.
  *
- * Ces tests lisent les fichiers de migration : ils ne mesurent pas un plan (c'est le rôle
- * d'`EXPLAIN`, dont les relevés sont consignés dans l'en-tête de chaque migration), ils
- * empêchent de reposer le piège.
+ * These tests read the migration files: they do not measure a plan (that is the role of `EXPLAIN`, whose readings are
+ * recorded in the header of each migration), they prevent the trap from being walked into again.
  */
 
 const MIGRATIONS = path.join(process.cwd(), 'prisma', 'migrations');
 
-/** Le SQL de toutes les migrations, concaténé, commentaires retirés. */
+/** The SQL of all migrations, concatenated, comments stripped. */
 function allMigrationSql(): string {
   return readdirSync(MIGRATIONS, { withFileTypes: true })
     .filter((entry) => entry.isDirectory())
@@ -38,7 +35,7 @@ function allMigrationSql(): string {
     .replace(/--[^\n]*/g, '');
 }
 
-/** Prédicat de chaque `CREATE INDEX … WHERE …` du dépôt, tel qu'il est écrit. */
+/** Predicate of each `CREATE INDEX … WHERE …` in the repository, as written. */
 function partialIndexPredicates(): { index: string; predicate: string }[] {
   const statements = allMigrationSql().split(';');
   const found: { index: string; predicate: string }[] = [];
@@ -50,8 +47,8 @@ function partialIndexPredicates(): { index: string; predicate: string }[] {
   return found;
 }
 
-describe('index partiels — leur prédicat doit être prouvable depuis Prisma', () => {
-  it('ne se fonde que sur des nullités, jamais sur un enum ni sur un booléen', () => {
+describe('partial indexes — their predicate must be provable from Prisma', () => {
+  it('relies only on nullity tests, never on an enum or a boolean', () => {
     const nullity = /^"?[A-Za-z_][A-Za-z0-9_]*"?\s+IS\s+(NOT\s+)?NULL$/i;
     const offenders = partialIndexPredicates().filter(({ predicate }) =>
       predicate
@@ -62,27 +59,27 @@ describe('index partiels — leur prédicat doit être prouvable depuis Prisma',
     expect(offenders).toEqual([]);
   });
 
-  it('couvre au moins un prédicat, sinon le contrôle ne contrôle rien', () => {
+  it('covers at least one predicate, otherwise the check checks nothing', () => {
     expect(partialIndexPredicates().length).toBeGreaterThan(0);
   });
 });
 
-describe('MediaObject — l’index des listings porte l’ordre, pas un filtre qui ne filtre rien', () => {
+describe('MediaObject — the listings index carries the order, not a filter that filters nothing', () => {
   const sql = allMigrationSql().replace(/\s+/g, ' ');
 
-  it('retire l’index à quatre colonnes que les deux listings n’ont jamais emprunté', () => {
+  it('removes the four-column index that the two listings never borrowed', () => {
     expect(sql).toContain('DROP INDEX IF EXISTS "MediaObject_deletedAt_published_status_createdAt_idx"');
   });
 
-  it('pose l’ordre des listings sur « createdAt » décroissant, corbeille exclue', () => {
+  it('sets the listing order on "createdAt" descending, trash excluded', () => {
     expect(sql).toMatch(
       /CREATE INDEX IF NOT EXISTS "MediaObject_alive_recent_idx" ON "MediaObject" \("createdAt" DESC, "id" DESC\) WHERE "deletedAt" IS NULL/,
     );
   });
 
-  it('laisse au balayage de purge de corbeille de quoi travailler', () => {
-    // Retirer l'index à quatre colonnes privait `lib/trash.ts` de son seul appui sur
-    // `deletedAt` : mesuré, sa requête repassait de 3 à 37 blocs lus.
+  it('leaves the trash purge sweep something to work with', () => {
+    // Removing the four-column index deprived `lib/trash.ts` of its only support on `deletedAt`: measured, its query
+    // went from 3 to 37 blocks read.
     expect(sql).toMatch(
       /CREATE INDEX IF NOT EXISTS "MediaObject_trashed_idx" ON "MediaObject" \("deletedAt"\) WHERE "deletedAt" IS NOT NULL/,
     );

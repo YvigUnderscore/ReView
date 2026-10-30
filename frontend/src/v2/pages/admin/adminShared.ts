@@ -4,7 +4,7 @@
 import type { Project, Role } from '../../types/api';
 import { intlLocale, t, type Tr } from '../../i18n';
 
-/** Types et helpers partagés par les sections de l'administration (10.C6). */
+/** Types and helpers shared by the administration sections (10.C6). */
 export interface Stats {
   users: { total: number; byRole: Record<string, number>; online: number };
   pipeline: { projects: number; sequences: number; shots: number; assets: number; versions: number };
@@ -47,11 +47,11 @@ export interface AuditRow {
   user?: AuditUser | null;
 }
 
-/** Libellé lisible d'une action d'audit (`PROJECT_DELETE` → « Projet supprimé »). */
+/** Human-readable label for an audit action (`PROJECT_DELETE` → "Project deleted"). */
 /**
- * Actions dont le découpage `SUJET_VERBE` ne rend pas compte : leur libellé est écrit en
- * toutes lettres. Des **fonctions** prenant `t`, jamais une table de chaînes — une table de
- * module figerait la langue au chargement du fichier.
+ * Actions that the `SUBJECT_VERB` split does not account for: their label is written out in
+ * full. **Functions** taking `t`, never a string table: a module-level table would freeze the
+ * language at file load.
  */
 const AUDIT_EXPLICIT: Record<string, (t: Tr) => string> = {
   VERSION_DECISION: (t) => t('audit.versionDecision'),
@@ -59,14 +59,14 @@ const AUDIT_EXPLICIT: Record<string, (t: Tr) => string> = {
 };
 
 /**
- * Libellé lisible d'une action du journal d'audit.
+ * Human-readable label for an audit log action.
  *
- * Le décodage repose sur la convention `SUJET_VERBE` en SCREAMING_SNAKE. Deux actions
- * récentes étaient écrites en notation pointée (`version.decision`) : sans underscore, le
- * sujet ressortait vide, le verbe restait introuvable, **et la clé brute était imprimée deux
- * fois** — l'écran affichait « version.decision.bulk version.decision.bulk ». La source est
- * corrigée côté serveur ; les deux gardes ci-dessous font que ce mode d'échec ne peut plus se
- * reproduire, y compris sur les lignes déjà écrites en base.
+ * Decoding relies on the `SUBJECT_VERB` convention in SCREAMING_SNAKE. Two
+ * recent actions were written in dotted notation (`version.decision`): without underscores, the
+ * subject came out empty, the verb was not found, **and the raw key was printed
+ * twice**: the screen showed "version.decision.bulk version.decision.bulk". The source is
+ * fixed server-side; the two guards below ensure this failure mode can no longer
+ * occur, including on rows already written in the database.
  */
 export function auditActionLabel(action: string, t: Tr): string {
   const explicit = AUDIT_EXPLICIT[action] ?? AUDIT_EXPLICIT[normalizeAuditAction(action)];
@@ -89,8 +89,8 @@ export function auditActionLabel(action: string, t: Tr): string {
     FAIL: t('audit.fail'),
     MOVE: t('audit.move'),
   };
-  // Action en un seul morceau : il n'y a ni sujet ni verbe à en tirer. La rendre telle quelle
-  // UNE fois vaut mieux que de la concaténer avec elle-même.
+  // One-piece action: there is no subject or verb to extract from it. Rendering it as is
+  // ONCE is better than concatenating it with itself.
   if (parts.length < 2) return action;
   const verb = parts[parts.length - 1];
   const subject = parts.slice(0, -1).join(' ');
@@ -99,22 +99,22 @@ export function auditActionLabel(action: string, t: Tr): string {
 }
 
 /**
- * Ramène une action en notation pointée à la convention du journal.
+ * Brings an action in dotted notation back to the log convention.
  *
- * Les lignes déjà écrites en base portent `version.decision` : elles doivent rester lisibles
- * après correction de la source, sans migration obligatoire.
+ * Rows already written to the database carry `version.decision`: they must remain readable
+ * after the source is fixed, without a mandatory migration.
  */
 export function normalizeAuditAction(action: string): string {
   return action.includes('.') ? action.replace(/\./g, '_').toUpperCase() : action;
 }
 
 /**
- * Libellé d'un statut de version (`VersionStatus`).
+ * Label of a version status (`VersionStatus`).
  *
- * La colonne « Publication » rendait l'enum Prisma **brut** — des badges `DRAFT` et `REVIEW`
- * en majuscules à côté d'un `published` en minuscules, et de l'anglais dans les quatorze
- * langues. Une fonction, jamais une table de module : une table figerait la langue au
- * chargement du fichier (règle i18n n° 5).
+ * The "Publication" column rendered the **raw** Prisma enum: `DRAFT` and `REVIEW` badges
+ * in capitals next to a lowercase `published`, and English in all fourteen
+ * languages. A function, never a module table: a table would freeze the language at
+ * file load (i18n rule no. 5).
  */
 export function versionStatusLabel(status: string, t: Tr): string {
   switch (status) {
@@ -125,12 +125,12 @@ export function versionStatusLabel(status: string, t: Tr): string {
     case 'PUBLISHED':
       return t('version.status.published');
     default:
-      // Un statut ajouté au schéma sans passer ici : lisible plutôt que criard.
+      // A status added to the schema without going through here: readable rather than shouting.
       return status.charAt(0) + status.slice(1).toLowerCase();
   }
 }
 
-/** Lien de navigation vers l'entité concernée par une entrée d'audit (ou `null`). */
+/** Navigation link to the entity concerned by an audit entry (or `null`). */
 export function auditEntityLink(entityType: string | null, entityId: number | null): string | null {
   if (!entityType || !entityId) return null;
   const routes: Record<string, string> = {
@@ -144,18 +144,18 @@ export function auditEntityLink(entityType: string | null, entityId: number | nu
 export type TrashProject = Pick<Project, 'id' | 'name' | 'status'> & { deletedAt: string };
 
 /**
- * Unité de saisie des tailles en administration.
+ * Size input unit in administration.
  *
- * Les symboles étaient écrits `'Mo' | 'Go'` : le sélecteur affichait du français à un
- * lecteur japonais, et la modale « New user » disait « Quota (GB) » deux écrans plus loin.
- * La base était décimale (1e6/1e9) là où `formatBytes` compte en 1024 — on saisissait « 1 Go »
- * et l'écran d'à côté relisait « 0,93 Go » sur la même valeur.
+ * The symbols were written `'Mo' | 'Go'`: the selector showed French to a Japanese
+ * reader, and the "New user" modal said "Quota (GB)" two screens later. The base was decimal
+ * (1e6/1e9) where `formatBytes` counts in 1024: we entered "1 Go" and the screen next door
+ * reread "0.93 Go" for the same value.
  */
 export type SizeUnit = 'MB' | 'GB';
 
 const UNIT_MULT: Record<SizeUnit, number> = { MB: 1024 ** 2, GB: 1024 ** 3 };
 
-/** Convertit une saisie (nombre en MB/GB, décimale `.` ou `,`) en octets. `null` si invalide. */
+/** Converts an input (number in MB/GB, decimal `.` or `,`) to bytes. `null` if invalid. */
 export function parseSizeToBytes(value: string, unit: SizeUnit): number | null {
   const trimmed = value.trim();
   if (!trimmed) return null;
@@ -164,7 +164,7 @@ export function parseSizeToBytes(value: string, unit: SizeUnit): number | null {
   return Math.round(n * UNIT_MULT[unit]);
 }
 
-/** Octets → { value, unit } éditable : GB dès 1 Gio, sinon MB (2 décimales, sans zéros inutiles). */
+/** Bytes → editable { value, unit }: GB from 1 GiB, otherwise MB (2 decimals, no useless zeros). */
 export function bytesToUnit(bytes: number): { value: string; unit: SizeUnit } {
   const unit: SizeUnit = bytes >= UNIT_MULT.GB ? 'GB' : 'MB';
   const v = bytes / UNIT_MULT[unit];
@@ -173,17 +173,17 @@ export function bytesToUnit(bytes: number): { value: string; unit: SizeUnit } {
 export const ROLES: Role[] = ['ADMIN', 'SUPERVISOR', 'ARTIST', 'CLIENT'];
 
 /**
- * Taille de fichier — réexportée depuis `lib/formatBytes`, qui la rend dans la langue du
- * lecteur via `Intl.NumberFormat`.
+ * File size: re-exported from `lib/formatBytes`, which renders it in the reader's
+ * language via `Intl.NumberFormat`.
  *
- * L'implémentation qui vivait ici écrivait « Ko », « Mo » et « Go » **en dur, en français**,
- * dans les sept écrans d'administration qui l'utilisent — y compris avec l'interface en
- * anglais. Elle comptait de surcroît en base 1000 quand `formatBytes` compte en 1024 : deux
- * écrans donnaient deux tailles différentes pour le même fichier. Le commentaire d'en-tête de
- * `lib/formatBytes` annonçait ce remplacement ; il n'avait jamais été fait.
+ * The implementation that lived here wrote "Ko", "Mo" and "Go" **hard-coded, in French**,
+ * in the seven admin screens that use it, including with the interface in
+ * English. It also counted in base 1000 where `formatBytes` counts in 1024: two
+ * screens gave two different sizes for the same file. The header comment of
+ * `lib/formatBytes` announced this replacement; it had never been done.
  */
-export { formatBytes as fmtBytes } from '../../../lib/formatBytes';
-/** Date+heure courtes localisées (listes denses de l'admin). */
+export { formatBytes as fmtBytes } from '../../lib/formatBytes';
+/** Short localized date+time (dense admin lists). */
 export const fmtDateTime = (iso: string) =>
   new Date(iso).toLocaleString(intlLocale(), {
     day: '2-digit',

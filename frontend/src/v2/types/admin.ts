@@ -14,11 +14,11 @@ import type {
 } from './api';
 
 /**
- * Types de l'explorateur d'administration (refonte admin) — miroir des réponses
- * de backend/src/routes/admin-explorer.routes.ts. Module séparé (budget api.ts).
+ * Types of the administration explorer (admin redesign) — mirror of the responses of
+ * backend/src/routes/admin-explorer.routes.ts. Separate module (api.ts size budget).
  */
 
-/** Enveloppe de pagination standard du backend (lib/pagination). */
+/** Standard pagination envelope of the backend (lib/pagination). */
 export interface Paginated<T> {
   items: T[];
   total: number;
@@ -26,7 +26,7 @@ export interface Paginated<T> {
   pageSize: number;
 }
 
-// ── Fiche utilisateur (GET /api/admin/users/:id) ─────────────────────────────
+// ── User record (GET /api/admin/users/:id) ───────────────────────────────────
 export interface AdminUserSession {
   id: string;
   userAgent: string | null;
@@ -68,7 +68,7 @@ export interface AdminUserDetail {
   counts: { media: number; versions: number; comments: number; tasks: number };
 }
 
-// ── Projets (GET /api/admin/projects[/:id]) ──────────────────────────────────
+// ── Projects (GET /api/admin/projects[/:id]) ─────────────────────────────────
 export interface AdminProjectRow {
   id: number;
   name: string;
@@ -128,7 +128,7 @@ export interface AdminProjectDetail {
   stats: { versions: number; media: number; mediaBytes: number; comments: number; assets: number };
 }
 
-// ── Versions globales (GET /api/admin/versions) ──────────────────────────────
+// ── Global versions (GET /api/admin/versions) ────────────────────────────────
 export interface AdminVersionRow {
   id: number;
   name: string;
@@ -144,7 +144,7 @@ export interface AdminVersionRow {
   firstMediaId: number | null;
 }
 
-// ── Commentaires globaux (GET /api/admin/comments) ───────────────────────────
+// ── Global comments (GET /api/admin/comments) ────────────────────────────────
 export interface AdminCommentRow {
   id: number;
   content: string;
@@ -159,7 +159,7 @@ export interface AdminCommentRow {
   replyCount: number;
 }
 
-// ── Cartographie stockage (GET /api/admin/storage) ───────────────────────────
+// ── Storage mapping (GET /api/admin/storage) ─────────────────────────────────
 export interface StorageAgg {
   count: number;
   bytes: number;
@@ -183,11 +183,11 @@ export interface AdminStorageReport {
 }
 
 /**
- * GET /api/studio — la ligne du studio, telle que l'administration la lit.
+ * GET /api/studio — the studio row, as the administration reads it.
  *
- * Le nom et le webhook Discord voyagent ensemble sur cette route et se réglaient nulle
- * part : deux écrans les éditent désormais, sous une seule définition. En redéclarer une
- * moitié par écran aurait suffi à en faire diverger le type au premier champ ajouté.
+ * The name and the Discord webhook travel together on this route and were set nowhere: two
+ * screens now edit them, under a single definition. Redeclaring one half per screen would have
+ * been enough to make the type diverge at the first field added.
  */
 export interface StudioRow {
   id: number;

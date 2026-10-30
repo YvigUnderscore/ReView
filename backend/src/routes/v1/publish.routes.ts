@@ -15,17 +15,18 @@ import * as PublishFlowService from '../../services/PublishFlowService';
 import * as Resolve from '../../services/PipelineResolveService';
 import { parsePipelinePath } from '../../lib/pipelinePath';
 import { idParam, requireMediaProject } from './helpers';
+import { requireUser } from '../../middleware/auth';
 
 /**
- * Publication depuis un DCC (API v1) — deux appels, décrits dans `PublishFlowService`.
+ * Publishing from a DCC (API v1): two calls, described in `PublishFlowService`.
  *
- * L'idempotence est branchée ici : c'est l'écriture la plus coûteuse à rejouer à
- * l'aveugle (une version en double dans une review), et celle qui part le plus souvent
- * d'un poste dont la connexion au studio n'est pas garantie.
+ * Idempotency is wired here: this is the write most costly to replay blindly (a duplicate version
+ * in a review), and the one most often sent from a workstation whose connection to the studio is
+ * not guaranteed.
  *
- * Les deux appels exigent `versions:write` **et** `media:write` : la publication crée une
- * version, mais elle ouvre aussi un dépôt dans le stockage puis y attache un média. Un
- * token qui ne porte que le premier écrivait dans le second sans l'avoir demandé.
+ * Both calls require `versions:write` **and** `media:write`: publishing creates a version, but it
+ * also opens a storage upload and then attaches a media to it. A token carrying only the first
+ * would otherwise write into the second without having asked for it.
  */
 const router = Router();
 
@@ -34,7 +35,7 @@ const sha256 = z
   .regex(/^[0-9a-f]{64}$/i)
   .transform((s) => s.toLowerCase());
 
-// POST /api/v1/publish — ouvre la publication et renvoie l'URL d'envoi
+// POST /api/v1/publish: opens the publication and returns the upload URL
 router.post(
   '/',
   requireScope('versions:write', 'media:write'),
@@ -57,8 +58,8 @@ router.post(
           endFrame: z.number().int().optional(),
         })
         .optional(),
-      // Scène USD : la sélection est connue du DCC dès la publication. La donner ici évite
-      // une conversion Blender complète refaite pour rien via `usd/recompose`.
+      // USD scene: the selection is known to the DCC at publish time. Giving it here avoids a full
+      // Blender conversion being redone for nothing via `usd/recompose`.
       usd: usdRequestSchema
         .optional()
         .describe(
@@ -70,17 +71,17 @@ router.post(
   }),
   async (req, res) => {
     const body = req.body as PublishFlowService.StartPublishInput;
-    // L'accès est vérifié AVANT que quoi que ce soit ne soit créé : le chemin est résolu
-    // une première fois pour son seul projet, sans effet de bord.
+    // Access is checked BEFORE anything is created: the path is resolved once for its project only,
+    // with no side effects.
     const project = await Resolve.resolveProject(parsePipelinePath(body.path).project);
     await assertProjectAccess(req, project.id);
     assertTokenProject(req, project.id);
 
-    res.status(201).json(await PublishFlowService.start(req.user!, body));
+    res.status(201).json(await PublishFlowService.start(requireUser(req), body));
   },
 );
 
-// POST /api/v1/publish/:id/complete — finalise l'envoi et publie
+// POST /api/v1/publish/:id/complete: finalizes the upload and publishes
 router.post(
   '/:id/complete',
   requireScope('versions:write', 'media:write'),
@@ -109,7 +110,7 @@ router.post(
     const mediaId = Number(req.params.id);
     await requireMediaProject(req, mediaId);
     const body = req.body as PublishFlowService.CompletePublishInput;
-    res.json(await PublishFlowService.complete(req.user!, mediaId, body));
+    res.json(await PublishFlowService.complete(requireUser(req), mediaId, body));
   },
 );
 

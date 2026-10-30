@@ -7,11 +7,10 @@ import { qk } from './query';
 import type { PlaylistDetail, PlaylistSummary } from '../types/api';
 
 /**
- * Playlists (C5) — côté client.
+ * Playlists (C5) — client side.
  *
- * Le catalogue de candidats est la brique qui manquait : il n'existait aucune recherche
- * d'entités réutilisable, et monter une playlist de dailies obligeait à ouvrir chaque plan
- * un par un pour y cliquer « ajouter ».
+ * The candidate catalogue was the missing piece: no reusable entity search existed, and building a
+ * dailies playlist meant opening each shot one by one to click "add".
  */
 
 export interface PlaylistCandidate {
@@ -66,15 +65,15 @@ export function useCandidates(projectId: number, filters: CandidateFilters) {
         .get<{ candidates: PlaylistCandidate[] }>(`/api/playlists/candidates?${params.toString()}`)
         .then((d) => d.candidates),
     enabled: projectId > 0,
-    // Le catalogue est une aide à la sélection : le rafraîchir à chaque frappe n'apporte
-    // rien, et la requête est déjà relancée quand les filtres changent.
+    // The catalogue is a selection aid: refreshing it on every keystroke brings nothing,
+    // and the query is already re-run when the filters change.
     staleTime: 30_000,
   });
 }
 
 /**
- * Dernière version publiée de chaque plan d'une séquence — la matière d'une playlist de
- * dailies. Appel direct plutôt que hook : la page de séquence n'en a besoin qu'au clic.
+ * Latest published version of each shot in a sequence — the material of a dailies playlist.
+ * Direct call rather than a hook: the sequence page only needs it on click.
  */
 export function fetchSequenceCandidates(projectId: number, sequenceId: number): Promise<PlaylistCandidate[]> {
   const params = new URLSearchParams({
@@ -88,7 +87,7 @@ export function fetchSequenceCandidates(projectId: number, sequenceId: number): 
     .then((d) => d.candidates);
 }
 
-/** Invalide la playlist et la liste qui la contient — le compteur d'items en dépend. */
+/** Invalidates the playlist and the list that contains it — the item counter depends on it. */
 function invalidate(qc: ReturnType<typeof useQueryClient>, playlistId: number, projectId: number) {
   void qc.invalidateQueries({ queryKey: qk.playlist(playlistId) });
   void qc.invalidateQueries({ queryKey: qk.playlists(projectId) });
@@ -104,7 +103,7 @@ export function useAddToPlaylist(playlistId: number, projectId: number) {
 }
 
 /**
- * Retirer, réordonner et renommer ne vivent plus ici : les trois se défont, et leur annulation
- * est indissociable de l'écriture — voir `pages/playlist/usePlaylistUndo`. Trois mutations nues
- * traînaient à côté, que plus personne n'appelait.
+ * Removing, reordering and renaming no longer live here: all three are undoable, and their undo is
+ * inseparable from the write — see `pages/playlist/usePlaylistUndo`. Three bare mutations lingered
+ * alongside, that nobody called any more.
  */

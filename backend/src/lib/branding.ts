@@ -2,22 +2,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { z } from 'zod';
-import { storage } from '../services/StorageService';
+import { storage } from './storage';
 
 /**
- * Images d'habillage du studio (logo, fond de connexion, logo du bouton SSO).
+ * Studio branding images (logo, login background, SSO button logo).
  *
- * Les trois suivent la même règle, et c'est pour cela qu'elles partagent ce module :
- * elles sont servies depuis l'origine de l'app, donc pas de SVG — un SVG est un document
- * scriptable, et un logo téléversé par un admin ne vaut pas qu'on lui prête l'origine.
+ * All three follow the same rule, which is why they share this module: they are served from the
+ * app's origin, so no SVG: an SVG is a scriptable document, and a logo uploaded by an admin does
+ * not warrant inheriting the origin.
  */
 
-/** Types acceptés à l'upload d'une image d'habillage — la même liste pour les trois. */
+/** Types accepted on upload of a branding image: the same list for all three. */
 export const brandingUploadSchema = z.object({
   contentType: z.string().regex(/^image\/(png|jpe?g|webp)$/),
 });
 
-/** Clé horodatée + URL présignée (15 min) pour déposer une image d'habillage. */
+/** Timestamped key + presigned URL (15 min) for uploading a branding image. */
 export async function presignBrandingUpload(
   prefix: string,
   contentType: string,

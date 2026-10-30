@@ -4,14 +4,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * A1-05 — les trois chemins d'assignation refusent les mêmes personnes.
+ * A1-05: the three assignment paths refuse the same people.
  *
- * `EntityAssigneeService.assertAssignable` refuse un compte de service, un compte
- * désactivé et quelqu'un qui ne contribue pas au projet ; l'assignation d'entité et
- * l'assignation de review l'appellent. Les tâches, elles, écrivaient `assigneeId` tel
- * quel — à la création, par `setAssignee` (chemin du lot et du clic droit), par `update`
- * et par l'API v1. Ces tests figent le passage des quatre par la garde commune : sans
- * elle, ils écrivent en base et notifient une personne étrangère au projet.
+ * `EntityAssigneeService.assertAssignable` refuses a service account, a deactivated account and someone who does
+ * not contribute to the project; entity assignment and review assignment both call it. Tasks, however, wrote
+ * `assigneeId` as is: on creation, through `setAssignee` (batch and right-click path), through `update`, and through
+ * the v1 API. These tests pin the four paths to the common guard: without it, they write to the database and
+ * notify someone outside the project.
  */
 vi.mock('../lib/prisma', () => ({
   prisma: {
@@ -65,7 +64,7 @@ const taskRow = {
   asset: null,
 };
 
-/** Ce que rend la garde commune pour quelqu'un qui n'est pas du projet. */
+/** What the common guard returns for someone who is not on the project. */
 const refuse = () =>
   assertAssignable.mockRejectedValue(
     badRequest('This person cannot be assigned work on this project', 'NOT_ASSIGNABLE'),
@@ -84,8 +83,8 @@ beforeEach(() => {
   } as never);
 });
 
-describe('TaskService — assignation soumise à la garde commune (A1-05)', () => {
-  it('create : refuse et n’écrit rien', async () => {
+describe('TaskService: assignment subject to the common guard (A1-05)', () => {
+  it('create: refuses and writes nothing', async () => {
     refuse();
     await expect(
       create(supervisor, PROJECT, {
@@ -100,7 +99,7 @@ describe('TaskService — assignation soumise à la garde commune (A1-05)', () =
     expect(notify).not.toHaveBeenCalled();
   });
 
-  it('setAssignee : refuse et n’écrit rien (chemin du lot et du clic droit)', async () => {
+  it('setAssignee: refuses and writes nothing (batch and right-click path)', async () => {
     refuse();
     await expect(setAssignee(supervisor, PROJECT, 1, OUTSIDER)).rejects.toThrow(/cannot be assigned/);
     expect(assertAssignable).toHaveBeenCalledWith(PROJECT, [OUTSIDER]);
@@ -108,7 +107,7 @@ describe('TaskService — assignation soumise à la garde commune (A1-05)', () =
     expect(notify).not.toHaveBeenCalled();
   });
 
-  it('update : refuse et n’écrit rien', async () => {
+  it('update: refuses and writes nothing', async () => {
     refuse();
     await expect(update(supervisor, PROJECT, 1, { assigneeId: OUTSIDER })).rejects.toThrow(
       /cannot be assigned/,
@@ -117,7 +116,7 @@ describe('TaskService — assignation soumise à la garde commune (A1-05)', () =
     expect(prisma.task.update).not.toHaveBeenCalled();
   });
 
-  it('applyApiPatch (v1) : refuse et n’écrit rien', async () => {
+  it('applyApiPatch (v1): refuses and writes nothing', async () => {
     refuse();
     await expect(applyApiPatch(supervisor.id, PROJECT, 1, { assigneeId: OUTSIDER })).rejects.toThrow(
       /cannot be assigned/,
@@ -126,13 +125,13 @@ describe('TaskService — assignation soumise à la garde commune (A1-05)', () =
     expect(prisma.task.update).not.toHaveBeenCalled();
   });
 
-  it('désassigner ne consulte pas la garde — `null` n’est personne', async () => {
+  it('unassigning does not consult the guard: `null` is nobody', async () => {
     await setAssignee(supervisor, PROJECT, 1, null);
     expect(assertAssignable).not.toHaveBeenCalled();
     expect(prisma.task.update).toHaveBeenCalled();
   });
 
-  it('un assigné acceptable passe, sur les quatre chemins', async () => {
+  it('an acceptable assignee passes, on all four paths', async () => {
     await create(supervisor, PROJECT, { name: 'comp', type: TaskType.COMPOSITING, shotId: 7, assigneeId: 4 });
     await setAssignee(supervisor, PROJECT, 1, 4);
     await update(supervisor, PROJECT, 1, { assigneeId: 4 });

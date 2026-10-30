@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, expect, it } from 'vitest';
-import { hasMessage } from '../../../i18n';
+import { hasMessage } from '@/v2/i18n';
 import { modesFor, switcherModesFor, type ModeId } from './modes';
 import { toolsFor, viewActionsFor } from './tools';
 import {
@@ -12,11 +12,11 @@ import {
   type ChromeKeyContext,
   type KeyToken,
 } from './shortcuts';
-import type { MediaKind } from '../../../types/api';
+import type { MediaKind } from '@/v2/types/api';
 
 const KINDS: MediaKind[] = ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT'];
 
-/** Contexte de frappe d'un viewer de review : le rail complet du type de média. */
+/** Keystroke context of a review viewer: the full rail of the media type. */
 const ctx = (kind: MediaKind, mode: ModeId = 'explore', tool = 'nav'): ChromeKeyContext => ({
   kind,
   mode,
@@ -25,33 +25,33 @@ const ctx = (kind: MediaKind, mode: ModeId = 'explore', tool = 'nav'): ChromeKey
   toolsOf: (m) => toolsFor(m, kind),
 });
 
-describe('chromeCommandFor — une frappe, une commande', () => {
-  it('Tab bascule le dock, Échap ne répond que s’il y a un outil à désarmer', () => {
+describe('chromeCommandFor — one keystroke, one command', () => {
+  it('Tab toggles the dock, Escape only answers when there is a tool to disarm', () => {
     expect(chromeCommandFor('Tab', ctx('VIDEO'))).toEqual({ action: 'panel' });
     expect(chromeCommandFor('Escape', ctx('VIDEO'))).toBeNull();
     expect(chromeCommandFor('Escape', ctx('VIDEO', 'annotate', 'draw'))).toEqual({ action: 'rest' });
   });
 
-  it('les chiffres suivent la bascule de mode, et s’arrêtent avec elle', () => {
+  it('the digits follow the mode toggle, and stop with it', () => {
     const modes = switcherModesFor('VIDEO');
     expect(chromeCommandFor('1', ctx('VIDEO'))).toEqual({ action: 'mode', mode: modes[0].value });
     expect(chromeCommandFor('2', ctx('VIDEO'))).toEqual({ action: 'mode', mode: modes[1].value });
-    // Deux modes en vidéo : le troisième chiffre ne s'arme sur rien.
+    // Two modes in video: the third digit arms nothing.
     expect(chromeCommandFor('3', ctx('VIDEO'))).toBeNull();
     expect(chromeCommandFor('0', ctx('VIDEO'))).toBeNull();
   });
 
-  it('une lettre d’outil bascule vers le mode qui le porte', () => {
+  it('a tool letter switches to the mode that carries it', () => {
     expect(chromeCommandFor('d', ctx('VIDEO'))).toEqual({ action: 'tool', mode: 'annotate', tool: 'draw' });
     expect(chromeCommandFor('T', ctx('SPLAT'))).toEqual({ action: 'tool', mode: 'clean', tool: 'translate' });
   });
 
   /**
-   * `G` armait le polygone ET amorçait la séquence de navigation globale (`g` puis une lettre).
-   * Le leader n'étant pas reconfigurable, l'outil a changé de touche : `G` ne doit plus rien
-   * armer dans aucun viewer.
+   * `G` used to arm the polygon AND start the global navigation sequence (`g` then a letter).
+   * The leader is not reconfigurable, so the tool changed key: `G` must no longer arm anything
+   * in any viewer.
    */
-  it('G n’arme plus aucun outil : la touche appartient au leader de navigation', () => {
+  it('G no longer arms any tool: the key belongs to the navigation leader', () => {
     for (const kind of KINDS)
       for (const mode of modesFor(kind)) expect(chromeCommandFor('g', ctx(kind, mode.value))).toBeNull();
     expect(chromeCommandFor('p', ctx('VIDEO'))).toEqual({
@@ -61,17 +61,17 @@ describe('chromeCommandFor — une frappe, une commande', () => {
     });
   });
 
-  it('les outils supprimés ne sont plus armables au clavier', () => {
-    // « Zoom » (Z) sur les médias plats, « Région » (B) en 3D : masqués du rail par tous les
-    // viewers, donc sans implémentation — et pourtant armables au clavier.
+  it('removed tools are no longer armable from the keyboard', () => {
+    // "Zoom" (Z) on flat media, "Region" (B) in 3D: hidden from the rail by every
+    // viewer, so without an implementation — and yet armable from the keyboard.
     for (const kind of ['VIDEO', 'IMAGE'] as const) expect(chromeCommandFor('z', ctx(kind))).toBeNull();
-    // « Barre de wipe » (W) : le mode « Compare » arme déjà le wipe, l'outil redisait le mode
-    // depuis le rail sans rien armer de plus. La touche ne doit donc plus rien atteindre,
-    // depuis aucun mode — c'est exactement le défaut que le registre a soldé.
+    // "Wipe bar" (W): the "Compare" mode already arms the wipe, the tool repeated the mode
+    // from the rail without arming anything more. The key must therefore no longer reach anything,
+    // from any mode — exactly the defect the registry settled.
     for (const kind of ['VIDEO', 'IMAGE'] as const)
       for (const mode of modesFor(kind)) expect(chromeCommandFor('w', ctx(kind, mode.value))).toBeNull();
     expect(chromeCommandFor('b', ctx('MODEL_3D'))).toBeNull();
-    // Le splat garde sa sélection rectangle sur la même lettre.
+    // The splat keeps its rectangle selection on the same letter.
     expect(chromeCommandFor('b', ctx('SPLAT'))).toEqual({
       action: 'tool',
       mode: 'clean',
@@ -80,13 +80,13 @@ describe('chromeCommandFor — une frappe, une commande', () => {
   });
 
   /**
-   * RÉÉCRIT en connaissance de cause (Phase 50, lot 13). Le cas précédent verrouillait
-   * « le painter 3D reste au splat » — la restriction `kind: 'SPLAT'` posée au lot 8, alors que
-   * la demande disait « dans les outils d'annotation 3D/splat ». Elle n'a donc jamais fermé un
-   * trou : elle a acté un manque, et sur un modèle le mode « Annoter » n'offrait que la
-   * navigation et l'épingle. La brosse et sa gomme servent maintenant les deux types spatiaux.
+   * REWRITTEN knowingly (Phase 50, batch 13). The previous case locked in "the 3D painter stays on
+   * the splat" — the `kind: 'SPLAT'` restriction set in batch 8, although the request said "in the
+   * 3D/splat annotation tools". It therefore never closed a hole: it recorded a gap, and on a model
+   * the "Annotate" mode only offered navigation and the pin. The brush and its eraser now serve both
+   * spatial types.
    */
-  it('la brosse de surface et sa gomme s’arment sur les DEUX types spatiaux', () => {
+  it('the surface brush and its eraser arm on BOTH spatial types', () => {
     for (const kind of ['SPLAT', 'MODEL_3D'] as const) {
       expect(chromeCommandFor('p', ctx(kind, 'annotate'))).toEqual({
         action: 'tool',
@@ -98,7 +98,7 @@ describe('chromeCommandFor — une frappe, une commande', () => {
         mode: 'annotate',
         tool: 'paint-erase',
       });
-      // Et depuis n'importe quel mode : la lettre bascule vers celui qui porte l'outil.
+      // And from any mode: the letter switches to the one carrying the tool.
       expect(chromeCommandFor('p', ctx(kind, 'explore'))).toEqual({
         action: 'tool',
         mode: 'annotate',
@@ -107,17 +107,17 @@ describe('chromeCommandFor — une frappe, une commande', () => {
     }
   });
 
-  it('le mode « Annoter » d’un modèle ne se réduit plus à la navigation et l’épingle', () => {
+  it('a model\'s "Annotate" mode no longer reduces to navigation and the pin', () => {
     const ids = toolsFor('annotate', 'MODEL_3D').map((tool) => tool.id);
     expect(ids).toContain('paint');
     expect(ids).toContain('paint-erase');
-    // Les outils de nuage, eux, restent propres au splat : ils masquent des splats.
+    // The cloud tools, however, remain specific to the splat: they hide splats.
     expect(toolsFor('clean', 'MODEL_3D').map((tool) => tool.id)).not.toContain('sel-rect');
   });
 
-  it('aucun outil du rail n’est sans lettre, et aucune lettre ne sert deux outils d’un mode', () => {
-    // Le défaut soldé au lot 4 : une lettre orpheline, ou deux outils d'un même mode sur la même
-    // touche — la seconde n'aurait jamais répondu, `chromeCommandFor` rendant la première.
+  it('no rail tool is without a letter, and no letter serves two tools of a mode', () => {
+    // The defect settled in batch 4: an orphan letter, or two tools of the same mode on the same
+    // key — the second would never have answered, `chromeCommandFor` returning the first.
     for (const kind of KINDS)
       for (const mode of modesFor(kind)) {
         const tools = toolsFor(mode.value, kind);
@@ -128,11 +128,11 @@ describe('chromeCommandFor — une frappe, une commande', () => {
   });
 
   /**
-   * Le déplacement de forme était sur `M`, la touche du transport vidéo : le transport la
-   * gardait en coupant la remontée, et le bouton du rail annonçait un raccourci qui, sur une
-   * vidéo, n'armait jamais rien. L'outil est passé sur `S`.
+   * Shape move used to be on `M`, the video transport's key: the transport kept it by stopping the
+   * event bubbling, and the rail button announced a shortcut that, on a video, never armed anything.
+   * The tool moved to `S`.
    */
-  it('M appartient au transport : la lettre n’arme aucun outil, S déplace les formes', () => {
+  it('M belongs to the transport: the letter arms no tool, S moves the shapes', () => {
     for (const kind of ['VIDEO', 'IMAGE'] as const) {
       expect(chromeCommandFor('m', ctx(kind))).toBeNull();
       expect(chromeCommandFor('s', ctx(kind))).toEqual({
@@ -143,24 +143,24 @@ describe('chromeCommandFor — une frappe, une commande', () => {
     }
   });
 
-  it('aucune touche d’outil plat ne redouble le transport vidéo', () => {
-    // Espace, J/K/L, I/O (boucle), M (commentaire), [ ] et \ (décalage A/B) appartiennent au
-    // lecteur ; `G` au leader de navigation globale.
+  it('no flat tool key duplicates the video transport', () => {
+    // Space, J/K/L, I/O (loop), M (comment), [ ] and \ (A/B offset) belong to the
+    // player; `G` to the global navigation leader.
     const taken = ['J', 'K', 'L', 'I', 'O', 'M', 'G', '[', ']', '\\'];
     for (const kind of ['VIDEO', 'IMAGE'] as const)
       for (const mode of modesFor(kind))
         for (const tool of toolsFor(mode.value, kind)) expect(taken).not.toContain(tool.key);
   });
 
-  it('le rail du mode Compare n’a plus que l’état de repos', () => {
-    // Le mode compare, et lui seul, perd son outil : « Annoter » garde tout son tracé.
+  it('the Compare mode rail only has the idle state left', () => {
+    // The compare mode, and it alone, loses its tool: "Annotate" keeps its whole stroke set.
     for (const kind of ['VIDEO', 'IMAGE'] as const) {
       expect(toolsFor('compare', kind).map((tool) => tool.id)).toEqual(['nav']);
       expect(toolsFor('annotate', kind).length).toBeGreaterThan(1);
     }
   });
 
-  it('un rail restreint restreint le clavier — le montage n’a ni compare ni wipe', () => {
+  it('a restricted rail restricts the keyboard — the edit mount has neither compare nor wipe', () => {
     const montage: ChromeKeyContext = {
       kind: 'VIDEO',
       mode: 'explore',
@@ -178,15 +178,15 @@ const groups = reviewShortcutGroups();
 const allShortcuts = groups.flatMap((g) => g.shortcuts);
 const charsOf = (keys: KeyToken[]) => keys.flatMap((k) => ('char' in k ? [k.char] : []));
 
-describe('registre des raccourcis — l’aide ne peut plus diverger du code', () => {
-  it('chaque entrée nomme le gestionnaire qui l’exécute', () => {
+describe('shortcut registry — the help can no longer diverge from the code', () => {
+  it('each entry names the handler that executes it', () => {
     expect(allShortcuts.length).toBeGreaterThan(20);
     for (const s of allShortcuts) expect(s.handler).toMatch(/^[A-Za-z][A-Za-z0-9]*$/);
   });
 
-  it('toutes les touches d’outils du rail sont décrites, sans en inventer', () => {
-    // Dérivées de `tools.ts` : toute lettre du rail figure au registre, et le registre n'a pas
-    // d'outil que le rail ne propose pas. C'est là que l'aide et le code divergeaient.
+  it('all rail tool keys are described, without inventing any', () => {
+    // Derived from `tools.ts`: every rail letter appears in the registry, and the registry has no
+    // tool the rail does not offer. This is where the help and the code used to diverge.
     const described = new Set(allShortcuts.map((s) => s.labelKey));
     for (const kind of KINDS)
       for (const mode of modesFor(kind))
@@ -195,7 +195,7 @@ describe('registre des raccourcis — l’aide ne peut plus diverger du code', (
       for (const action of viewActionsFor(kind)) expect(described.has(action.labelKey)).toBe(true);
   });
 
-  it('tous les libellés et noms de touches existent au catalogue anglais', () => {
+  it('all labels and key names exist in the English catalogue', () => {
     for (const g of groups) {
       expect(hasMessage(g.titleKey)).toBe(true);
       for (const s of g.shortcuts) {
@@ -206,16 +206,16 @@ describe('registre des raccourcis — l’aide ne peut plus diverger du code', (
   });
 
   /**
-   * Le garde-fou de la règle i18n : un nom de touche qui se traduit (« Espace », « Maj »,
-   * « Suppr », « Clic droit », « ZQSD ») doit passer par `nameKey`. Un `char` ne peut donc être
-   * qu'un caractère, ou l'un des trois modificateurs identiques dans toutes les langues.
+   * The i18n rule's safeguard: a key name that gets translated ("Space", "Shift", "Delete",
+   * "Right click", "ZQSD") must go through `nameKey`. A `char` can therefore only be a character,
+   * or one of the three modifiers identical across all languages.
    */
-  it('aucun nom de touche traduisible n’est écrit en clair', () => {
+  it('no translatable key name is written as plain text', () => {
     for (const char of allShortcuts.flatMap((s) => charsOf(s.keys)))
       expect(NEUTRAL_KEY_NAMES.includes(char) || /^[^\p{L}]*\p{L}?[^\p{L}]*$/u.test(char)).toBe(true);
   });
 
-  it('un libellé par rangée dans un groupe — l’aide s’en sert comme identité de liste', () => {
+  it('one label per row in a group — the help uses it as list identity', () => {
     for (const g of groups) {
       const labels = g.shortcuts.map((s) => s.labelKey);
       expect(new Set(labels).size).toBe(labels.length);

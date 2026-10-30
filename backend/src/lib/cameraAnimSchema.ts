@@ -4,38 +4,34 @@
 import { z } from 'zod';
 
 /**
- * Forme validée d'une animation caméra « par canaux » v2 (Phase 17 ; côtés de tangente séparés,
- * pondération et pré/post-infinity en Phase 50, lot 7).
+ * Validated shape of a "by channels" v2 camera animation (Phase 17; separate tangent sides, weighting and pre/post-infinity in Phase 50, batch 7).
  *
- * Elle était écrite **deux fois** : dans la route de présentation persistée et dans le payload de
- * commentaire — deux schémas qu'il fallait penser à faire évoluer ensemble. Ils ne le sont plus :
- * les deux appelants dérivent d'ici, avec leurs propres bornes (une présentation est bornée à 256
- * clés par canal, une animation jointe à un commentaire à 2 000).
+ * It used to be written **twice**: in the persisted presentation route and in the comment payload — two schemas that had to be evolved together.
+ * They no longer are: both callers derive from here, with their own bounds (a presentation is bounded to 256 keys per channel, an animation
+ * attached to a comment to 2,000).
  *
- * Le champ manquant ne serait pas une erreur visible : `z.object` **retire** silencieusement ce
- * qu'il ne connaît pas, donc un profil de tangente nouveau serait enregistré sans son côté séparé
- * et la courbe changerait de forme d'un rechargement à l'autre. Tout nouveau champ de clé — et
- * tout nouveau champ d'animation, comme la base de la Phase 50 lot 13 — se déclare ici, en
- * `optional()`, le jour où il est écrit côté client.
+ * A missing field would not be a visible error: `z.object` **strips** silently what it does not know, so a new tangent profile would be saved
+ * without its separate side and the curve would change shape from one reload to the next. Every new key field — and every new animation field,
+ * such as the base of Phase 50 batch 13 — is declared here, as `optional()`, the day it is written on the client side.
  */
 
 const finite = z.number().finite();
 
-/** Canaux animables — miroir de `CHANNEL_IDS` côté front. */
+/** Animatable channels — mirror of `CHANNEL_IDS` on the front end. */
 export const CHANNEL_ID_VALUES = ['px', 'py', 'pz', 'tx', 'ty', 'tz', 'fov', 'roll'] as const;
-/** Mode unifié legacy d'une clé (forme d'origine de la v2, toujours écrite). */
+/** Legacy unified mode of a key (original v2 shape, still written). */
 export const TANGENT_MODE_VALUES = ['auto', 'linear', 'step', 'free'] as const;
-/** Type de tangente d'un côté de clé. */
+/** Tangent type of one side of a key. */
 export const TANGENT_TYPE_VALUES = ['auto', 'linear', 'flat', 'step', 'free'] as const;
-/** Extrapolation d'un canal hors de ses clés. */
+/** Extrapolation of a channel beyond its keys. */
 export const EXTRAPOLATION_VALUES = ['constant', 'cycle', 'cycleOffset', 'linear', 'oscillate'] as const;
 
-/** Clé d'une F-curve. `maxValue` absent = toute valeur finie (présentation persistée). */
+/** Key of an F-curve. `maxValue` absent = any finite value (persisted presentation). */
 export function curveKeySchema(opts: { minTime: number; maxTime: number; maxValue?: number }) {
   const value = opts.maxValue == null ? finite : finite.min(-opts.maxValue).max(opts.maxValue);
   const tangentType = z.enum(TANGENT_TYPE_VALUES);
   return z.object({
-    t: finite.min(opts.minTime).max(opts.maxTime), // ms depuis le début
+    t: finite.min(opts.minTime).max(opts.maxTime), // ms from the start
     v: value,
     tin: finite.optional(),
     tout: finite.optional(),
@@ -43,13 +39,13 @@ export function curveKeySchema(opts: { minTime: number; maxTime: number; maxValu
     modeIn: tangentType.optional(),
     modeOut: tangentType.optional(),
     broken: z.boolean().optional(),
-    // Pondérations : le client les borne plus serré (0,05 à 1,5) et reclampe à la lecture.
+    // Weights: the client bounds them more tightly (0.05 to 1.5) and clamps on read.
     wIn: finite.min(0).max(3).optional(),
     wOut: finite.min(0).max(3).optional(),
   });
 }
 
-/** Canal : ses clés triées et son extrapolation de part et d'autre. */
+/** Channel: its sorted keys and its extrapolation on either side. */
 export function channelSchema(keys: z.ZodTypeAny, bounds: { min?: number; max: number }) {
   const extrapolation = z.enum(EXTRAPOLATION_VALUES);
   return z.object({
@@ -65,12 +61,10 @@ export function channelSchema(keys: z.ZodTypeAny, bounds: { min?: number; max: n
 const vec3 = z.object({ x: finite, y: finite, z: finite });
 
 /**
- * Pose de repli persistée **avec** l'animation (Phase 50, lot 13) : les canaux sans clé la lisent à
- * l'échantillonnage, chez tout spectateur et à l'export. Facultative — une animation enregistrée
- * avant elle n'en porte pas et garde le repli dynamique du client, dont le rejeu ne change pas.
- * Bornes reprises de la pose caméra de la présentation (`media-splat.routes`) : c'est la même vue,
- * capturée par le même viewer. Elle ne porte que les grandeurs échantillonnées — ni aspect, ni
- * profondeur de champ : la base n'est pas une deuxième présentation.
+ * Persisted fallback pose **with** the animation (Phase 50, batch 13): channels without keys read it at sampling time, on every viewer and at export.
+ * Optional — an animation saved before it carries none and keeps the client's dynamic fallback, whose replay does not change.
+ * Bounds taken from the camera pose of the presentation (`media-splat.routes`): it is the same view, captured by the same viewer. It only carries the
+ * sampled quantities — neither aspect nor depth of field: the base is not a second presentation.
  */
 const cameraAnimBase = z.object({
   position: vec3,
@@ -79,7 +73,7 @@ const cameraAnimBase = z.object({
   roll: finite.min(-Math.PI).max(Math.PI).optional(),
 });
 
-/** Animation complète (hors discriminant `type` du payload de commentaire). */
+/** Full animation (excluding the `type` discriminant of the comment payload). */
 export function cameraAnimShape<C extends z.ZodType>(channels: C) {
   return {
     version: z.literal(2),

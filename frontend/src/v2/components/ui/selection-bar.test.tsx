@@ -6,13 +6,13 @@ import { act, render, screen } from '@testing-library/react';
 import SelectionBar from './selection-bar';
 
 /**
- * Le retrait de la barre, quand framer-motion n'est plus là pour le tenir.
+ * The bar's removal, when framer-motion is no longer there to hold it.
  *
- * `AnimatePresence` gardait le nœud monté le temps de la sortie **et** gelait ce qu'il
- * affichait. C'est ce second point qui se perd sans y penser : à la dernière image, la page
- * a déjà vidé la sélection, et une barre naïve annoncerait « 0 sélectionnés » pendant qu'elle
- * redescend. Ces cas-là verrouillent les deux : elle reste 180 ms, et elle continue
- * d'annoncer le dernier compte réel.
+ * `AnimatePresence` kept the node mounted for the duration of the exit **and** froze what it
+ * displayed. It is this second point that is lost without thinking: by the last frame the
+ * page has already cleared the selection, and a naive bar would announce "0 selected" while it
+ * slides back down. These cases lock both: it stays 180 ms, and it keeps announcing the last
+ * real count.
  */
 
 const ACTIONS = [{ label: 'Supprimer', onClick: () => {} }];
@@ -22,33 +22,33 @@ afterEach(() => {
 });
 
 describe('SelectionBar', () => {
-  it('n’existe pas tant que rien n’est sélectionné', () => {
+  it('does not exist as long as nothing is selected', () => {
     render(<SelectionBar count={0} actions={ACTIONS} onClear={() => {}} label="plans" />);
     expect(screen.queryByText('plans')).not.toBeInTheDocument();
   });
 
-  it('apparaît par le bas dès la première sélection', () => {
+  it('slides up from the bottom on the first selection', () => {
     render(<SelectionBar count={3} actions={ACTIONS} onClear={() => {}} label="plans" />);
     expect(screen.getByText('3')).toBeInTheDocument();
     expect(screen.getByText('plans').closest('div.fixed')).toHaveClass('animate-in');
   });
 
-  it('reste montée le temps de redescendre, en gardant le dernier compte affiché', () => {
+  it('stays mounted while sliding back down, keeping the last count displayed', () => {
     vi.useFakeTimers();
     const { rerender } = render(
       <SelectionBar count={3} actions={ACTIONS} onClear={() => {}} label="plans" />,
     );
 
-    // Ce que fait la page quand on vide la sélection : le compte tombe à zéro d'un coup.
+    // What the page does when the selection is emptied: the count drops to zero at once.
     act(() => {
       rerender(<SelectionBar count={0} actions={ACTIONS} onClear={() => {}} label="plans" />);
     });
     const bar = screen.getByText('plans').closest('div.fixed');
     expect(bar).toHaveClass('animate-out');
-    // Le gel : « 3 », pas « 0 ».
+    // The freeze: "3", not "0".
     expect(screen.getByText('3')).toBeInTheDocument();
 
-    // Juste avant la fin de l'animation, elle est encore là.
+    // Just before the end of the animation, it is still there.
     act(() => {
       vi.advanceTimersByTime(179);
     });
@@ -60,7 +60,7 @@ describe('SelectionBar', () => {
     expect(screen.queryByText('plans')).not.toBeInTheDocument();
   });
 
-  it('reprend l’apparition si une sélection repart avant la fin du retrait', () => {
+  it('slides in again if a selection restarts before the removal ends', () => {
     vi.useFakeTimers();
     const { rerender } = render(
       <SelectionBar count={2} actions={ACTIONS} onClear={() => {}} label="plans" />,
@@ -73,7 +73,7 @@ describe('SelectionBar', () => {
       rerender(<SelectionBar count={5} actions={ACTIONS} onClear={() => {}} label="plans" />);
     });
 
-    // Le compte à rebours du retrait a été annulé : passé son terme, la barre est toujours là.
+    // The removal countdown was cancelled: past its term, the bar is still there.
     act(() => {
       vi.advanceTimersByTime(300);
     });

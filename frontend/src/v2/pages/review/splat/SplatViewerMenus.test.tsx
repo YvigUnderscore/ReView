@@ -8,18 +8,17 @@ import { splatEditTools } from './splatChrome';
 import { panelsFor } from '../chrome/panels';
 import type { SplatCompareState } from './compare/useSplatCompare';
 import type { SplatEditorState } from './editor/useSplatEditor';
-import { t } from '../../../i18n';
+import { t } from '@/v2/i18n';
 
 /**
- * Les réglages de RENDU du splat vivent sur le viewer (Phase 50, lot 12), dans le même langage
- * que le popover de rendu du modèle 3D (lot 6) : l'onglet « Affichage » du dock a disparu avec
- * eux, et c'est l'état de l'éditeur — celui-là même qui les applique à la scène — qui les porte.
+ * The splat's RENDER settings live on the viewer (Phase 50, batch 12), in the same language as the render
+ * popover of the 3D model (batch 6): the "Display" tab of the dock disappeared along with them, and it is
+ * the editor's state (the very one that applies them to the scene) that carries them.
  *
- * Les cas du popover « Édition » ont été RETIRÉS en connaissance de cause au lot 13 : ce popover
- * n'existe plus. Il portait les outils du mode « Nettoyer », or l'utilisateur avait demandé de
- * retirer le SEGMENT de l'en-tête, pas de ranger les outils derrière un clic. Ils sont revenus au
- * rail (`splatChrome.splatEditRail`, vérifié par `splatChrome.test.ts` et `ToolRail.test.tsx`), et
- * le dernier cas ci-dessous verrouille l'absence du doublon.
+ * The cases of the "Edit" popover were DELIBERATELY REMOVED in batch 13: this popover no longer exists. It
+ * carried the tools of the "Clean up" mode, whereas the user had asked for the SEGMENT to be removed from the
+ * header, not for the tools to be filed behind a click. They came back to the rail (`splatChrome.splatEditRail`,
+ * verified by `splatChrome.test.ts` and `ToolRail.test.tsx`), and the last case below locks in the absence of the duplicate.
  */
 
 const editorState = (over: Partial<SplatEditorState> = {}) =>
@@ -49,15 +48,15 @@ function mount(opts: { showEdit?: boolean; editor?: SplatEditorState; compare?: 
 const openRender = () => fireEvent.click(screen.getByRole('button', { name: t('viewer.render.title') }));
 
 describe('dock du splat', () => {
-  it('n’a plus d’onglet « Affichage » — les réglages de rendu sont sur le viewer', () => {
-    // Le libellé de l'onglet a été retiré des catalogues avec lui : c'est la composition du
-    // dock qui l'atteste, seule source de vérité des onglets.
+  it('no longer has a "Display" tab: the render settings are on the viewer', () => {
+    // The tab's label was removed from the catalogues along with it: the composition of the dock attests
+    // to it, being the sole source of truth for tabs.
     expect(panelsFor('SPLAT').map((p) => p.id)).toEqual(['camera', 'scene', 'info', 'export']);
   });
 });
 
-describe('SplatViewerMenus — menu de rendu', () => {
-  it('porte les trois modes de rendu du nuage et passe par l’état de l’éditeur', () => {
+describe('SplatViewerMenus — render menu', () => {
+  it('carries the three render modes of the cloud and goes through the editor state', () => {
     const setRenderMode = vi.fn();
     mount({ editor: editorState({ setRenderMode }) });
     openRender();
@@ -68,7 +67,7 @@ describe('SplatViewerMenus — menu de rendu', () => {
     expect(setRenderMode).toHaveBeenCalledWith('points');
   });
 
-  it('garde l’orientation du fichier, qui est une édition', () => {
+  it('keeps the orientation of the file, which is an edit', () => {
     const toggleBaseFlip = vi.fn();
     mount({ editor: editorState({ toggleBaseFlip }) });
     openRender();
@@ -76,16 +75,16 @@ describe('SplatViewerMenus — menu de rendu', () => {
     expect(toggleBaseFlip).toHaveBeenCalled();
   });
 
-  it('ne propose ni rendu du nuage ni orientation sans éditeur', () => {
+  it('offers neither cloud rendering nor orientation without an editor', () => {
     mount({ showEdit: false });
     openRender();
     expect(screen.queryByRole('group', { name: t('viewer.render.cloud') })).not.toBeInTheDocument();
     expect(screen.queryByRole('switch', { name: t('viewer.upAxis.hint') })).not.toBeInTheDocument();
-    // La teinte d'inspection, elle, ne s'enregistre pas : elle reste offerte à tout le monde.
+    // The inspection tint, for its part, is not recorded: it remains on offer to everyone.
     expect(screen.getByRole('combobox')).toBeInTheDocument();
   });
 
-  it('offre l’échelle brute dès que la comparaison porte deux nuages', () => {
+  it('offers the raw scale as soon as the comparison carries two clouds', () => {
     const toggleNormalized = vi.fn();
     mount({
       compare: { enabled: true, normalized: true, toggleNormalized } as unknown as SplatCompareState,
@@ -96,11 +95,11 @@ describe('SplatViewerMenus — menu de rendu', () => {
   });
 });
 
-describe('le viewer ne double plus le rail', () => {
-  it('n’a plus de menu « Édition » : ses outils sont au rail, à un clic', () => {
+describe('the viewer no longer duplicates the rail', () => {
+  it('no longer has an "Edit" menu: its tools are on the rail, one click away', () => {
     mount();
     expect(screen.queryByRole('button', { name: t('viewer.edit.title') })).not.toBeInTheDocument();
-    // Et aucun de ses outils n'est atteignable ici : un seul emplacement les porte.
+    // And none of its tools is reachable here: a single location carries them.
     for (const tool of splatEditTools())
       expect(screen.queryByRole('button', { name: t(tool.labelKey) })).not.toBeInTheDocument();
   });

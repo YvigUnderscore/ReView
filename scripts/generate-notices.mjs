@@ -2,32 +2,32 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Génère THIRD-PARTY-NOTICES.md — l'attribution des composants tiers redistribués.
+ * Generates THIRD-PARTY-NOTICES.md — the attribution of the redistributed third-party components.
  *
- *   node scripts/generate-notices.mjs           # (re)génère le fichier
- *   node scripts/generate-notices.mjs --check   # n'écrit rien, échoue s'il est périmé
+ *   node scripts/generate-notices.mjs           # (re)generates the file
+ *   node scripts/generate-notices.mjs --check   # writes nothing, fails if it is stale
  *
- * Pourquoi : MIT, BSD, ISC et OFL exigent que leur notice de copyright accompagne toute
- * redistribution. ReView redistribue ses dépendances (bundle du navigateur, image Docker),
- * cette obligation s'applique donc, licence du projet mise à part.
+ * Why: MIT, BSD, ISC and OFL require their copyright notice to accompany every
+ * redistribution. ReView redistributes its dependencies (browser bundle, Docker image),
+ * so this obligation applies, the project's own licence aside.
  *
- * Seul l'arbre de **production** est retenu : les devDependencies (vite, eslint, vitest…)
- * ne sont jamais distribuées et n'ont donc aucune notice à porter.
+ * Only the **production** tree is kept: devDependencies (vite, eslint, vitest…)
+ * are never distributed and therefore have no notice to carry.
  *
- * Zéro dépendance : la résolution npm est rejouée à la main sur les package-lock.json.
+ * Zero dependencies: npm resolution is replayed by hand over the package-lock.json files.
  *
- * **Limite fermée en F-lot8.** Parcourir l'arbre du lockfile ne voit que ce qui est
- * *déclaré*. Un paquet qui recopie le code d'un tiers dans son propre build (mermaid
- * embarque js-yaml 4.1.1, Prisma embarque execa, glob, fs-extra…) échappait complètement
- * au générateur : ce code partait en production sans notice. `collectVendored` le repère
- * désormais aux marqueurs que les bundlers laissent (`nom@version/node_modules/nom/…`) et
- * le fichier produit le dit — y compris quand la licence n'a pas pu être établie.
+ * **Limit closed in F-lot8.** Walking the lockfile tree only sees what is
+ * *declared*. A package that copies a third party's code into its own build (mermaid
+ * bundles js-yaml 4.1.1, Prisma bundles execa, glob, fs-extra…) escaped entirely
+ * the generator: that code shipped to production without a notice. `collectVendored` now spots it
+ * from the markers bundlers leave (`name@version/node_modules/name/…`) and
+ * the output file says so — including when the licence could not be established.
  */
 import { readFile, readdir, stat, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-/** Paquets scannés, dans l'ordre d'apparition dans le fichier. */
+/** Scanned packages, in the order they appear in the file. */
 export const WORKSPACES = [
   { dir: 'backend', label: 'Backend (Node.js runtime)' },
   { dir: 'frontend', label: 'Frontend (browser bundle)' },
@@ -36,26 +36,26 @@ export const WORKSPACES = [
 const LICENSE_FILE = /^(LICEN[CS]E|COPYING|NOTICE)($|[.\-_])/i;
 
 /**
- * Paquets qui omettent le champ `license` de leur package.json alors que leur fichier de
- * licence lève toute ambiguïté. Vérifié à la main, un par un — sans quoi le récapitulatif
- * afficherait un « UNKNOWN » trompeur.
+ * Packages that omit the `license` field of their package.json although their licence file
+ * removes any ambiguity. Checked by hand, one by one — otherwise the summary would show a
+ * misleading "UNKNOWN".
  */
 export const LICENSE_OVERRIDES = {
-  // Fichier `license` du paquet : « The MIT License (MIT) — Copyright (c) 2019-present
-  // Fabio Spampinato, Andrew Maney ». Tiré par mermaid ← @excalidraw/excalidraw.
+  // The package's `license` file: "The MIT License (MIT) — Copyright (c) 2019-present
+  // Fabio Spampinato, Andrew Maney". Pulled in by mermaid ← @excalidraw/excalidraw.
   'khroma@2.1.0': 'MIT',
 };
 
 /**
- * Licences acceptables pour une dépendance de production : permissives, domaine public,
- * MPL-2.0 (compatible par sa clause 3.3) et les copyleft explicitement compatibles avec
- * l'AGPLv3 — donc « or later » à partir de GPL-2.0, jamais les variantes « only ».
+ * Acceptable licences for a production dependency: permissive, public domain,
+ * MPL-2.0 (compatible through its clause 3.3) and the copyleft licences explicitly compatible with
+ * AGPLv3 — hence "or later" from GPL-2.0 on, never the "only" variants.
  *
- * Toute licence hors de cette liste (propriétaire, BSL, Elastic, Commons Clause, SSPL,
- * GPL-2.0-only, ou paquet sans licence identifiable) fait échouer le script : la règle
- * « toute dépendance doit être compatible AGPL » est ainsi outillée et non plus seulement
- * écrite. Un paquet dont le champ `license` manque mais dont le fichier LICENSE tranche
- * passe par LICENSE_OVERRIDES, après vérification à la main.
+ * Any licence outside this list (proprietary, BSL, Elastic, Commons Clause, SSPL,
+ * GPL-2.0-only, or a package with no identifiable licence) makes the script fail: the rule
+ * "every dependency must be AGPL-compatible" is thus tooled rather than merely
+ * written. A package whose `license` field is missing but whose LICENSE file settles it
+ * goes through LICENSE_OVERRIDES, after a manual check.
  */
 export const ALLOWED_LICENSES = new Set([
   '0BSD',
@@ -83,12 +83,12 @@ export const ALLOWED_LICENSES = new Set([
 ]);
 
 /**
- * Évalue une expression SPDX contre `ALLOWED_LICENSES` : `MIT`, `(MIT AND Zlib)`,
+ * Evaluates an SPDX expression against `ALLOWED_LICENSES`: `MIT`, `(MIT AND Zlib)`,
  * `(MPL-2.0 OR Apache-2.0)`, `Apache-2.0 WITH LLVM-exception`.
  *
- * `OR` laisse le choix — une seule branche acceptable suffit. `AND` impose de respecter
- * les deux — toutes doivent l'être. Une exception (`WITH`) ne fait que lever des
- * obligations : seule la licence qu'elle accompagne est examinée.
+ * `OR` leaves the choice — a single acceptable branch is enough. `AND` requires honouring
+ * both — all of them must be acceptable. An exception (`WITH`) only lifts
+ * obligations: only the licence it accompanies is examined.
  */
 export function isAllowedLicense(expression) {
   if (typeof expression !== 'string' || !expression.trim()) return false;
@@ -105,7 +105,7 @@ export function isAllowedLicense(expression) {
       return inner;
     }
     if (token === ')' || token === 'AND' || token === 'OR') return false;
-    if (tokens[pos] === 'WITH') pos += 2; // l'exception nommée n'ajoute aucune obligation
+    if (tokens[pos] === 'WITH') pos += 2; // the named exception adds no obligation
     const id = token.endsWith('+') ? `${token.slice(0, -1)}-or-later` : token;
     return ALLOWED_LICENSES.has(id);
   };
@@ -131,8 +131,8 @@ export function isAllowedLicense(expression) {
 }
 
 /**
- * Rejoue la résolution npm : depuis un dossier, un paquet est cherché dans le
- * node_modules local puis en remontant les parents.
+ * Replays npm resolution: from a folder, a package is looked up in the
+ * local node_modules, then up through the parents.
  */
 export function resolveEntry(packages, from, name) {
   let dir = from;
@@ -146,7 +146,7 @@ export function resolveEntry(packages, from, name) {
 }
 
 /**
- * Clés du lockfile constituant l'arbre de production : on part des dependencies du
+ * Lockfile keys making up the production tree: we start from the dependencies of the
  * paquet racine et on suit dependencies/optionalDependencies/peerDependencies.
  */
 export function productionTree(lock) {
@@ -175,12 +175,12 @@ export function productionTree(lock) {
   return [...seen].sort();
 }
 
-/** Nom npm d'une clé de lockfile (`node_modules/a/node_modules/b` → `b`). */
+/** npm name of a lockfile key (`node_modules/a/node_modules/b` → `b`). */
 export function packageName(key) {
   return key.slice(key.lastIndexOf('node_modules/') + 'node_modules/'.length);
 }
 
-/** URL de dépôt lisible, quelle que soit la forme du champ `repository`. */
+/** Readable repository URL, whatever the shape of the `repository` field. */
 export function repositoryUrl(pkg) {
   const repo = pkg?.repository;
   const raw = typeof repo === 'string' ? repo : repo?.url;
@@ -192,7 +192,7 @@ export function repositoryUrl(pkg) {
     .replace(/^github:/, 'https://github.com/');
 }
 
-/** Expression de licence déclarée, y compris la forme historique `licenses: [...]`. */
+/** Declared licence expression, including the historical `licenses: [...]` form. */
 export function declaredLicense(pkg) {
   if (typeof pkg?.license === 'string') return pkg.license;
   if (pkg?.license?.type) return pkg.license.type;
@@ -200,7 +200,7 @@ export function declaredLicense(pkg) {
   return null;
 }
 
-/** Lit le texte de licence livré par le paquet, s'il en fournit un. */
+/** Reads the licence text shipped by the package, if it provides one. */
 async function readLicenseText(dir) {
   let entries;
   try {
@@ -214,20 +214,20 @@ async function readLicenseText(dir) {
     const full = path.join(dir, name);
     try {
       if (!(await stat(full)).isFile()) continue;
-      // Fins de ligne normalisées en LF : plusieurs paquets livrent leur LICENSE en CRLF
-      // (color-name, fluent-ffmpeg, tslib…). Sans cette normalisation, le fichier produit
-      // contient des CR que git retire au commit (`.gitattributes` : `text eol=lf`), et la
-      // comparaison de fraîcheur de validate.sh ne peut jamais réussir en CI.
+      // Line endings normalised to LF: several packages ship their LICENSE in CRLF
+      // (color-name, fluent-ffmpeg, tslib…). Without this normalisation, the output file
+      // would contain CRs that git strips on commit (`.gitattributes`: `text eol=lf`), and the
+      // freshness comparison of validate.sh could never succeed in CI.
       const text = (await readFile(full, 'utf8')).replace(/\r\n/g, '\n').trim();
       if (text) chunks.push({ name, text });
     } catch {
-      /* illisible : on garde au moins l'identifiant SPDX */
+      /* unreadable: at least keep the SPDX identifier */
     }
   }
   return chunks.length ? chunks : null;
 }
 
-/** Collecte les métadonnées d'attribution d'un workspace. */
+/** Collects the attribution metadata of a workspace. */
 export async function collectWorkspace(repoRoot, workspace, lock, tree) {
   if (!lock) {
     const lockPath = path.join(repoRoot, workspace.dir, 'package-lock.json');
@@ -238,18 +238,17 @@ export async function collectWorkspace(repoRoot, workspace, lock, tree) {
   for (const key of tree ?? productionTree(lock)) {
     const dir = path.join(repoRoot, workspace.dir, key);
     /*
-     * Binaire natif restreint à une plateforme : on ne lit rien de `node_modules`.
+     * Native binary restricted to one platform: we read nothing from `node_modules`.
      *
-     * npm n'installe que la variante de la machine courante — `@esbuild/win32-x64` ici,
-     * `@esbuild/linux-x64` sur le runner. Le générateur trouvait donc le `package.json` de
-     * l'une et pas des autres, et n'écrivait le champ « Source » que pour celle-là : le
-     * fichier produit dépendait de l'OS de build, et la comparaison de fraîcheur de
-     * `validate.sh` ne pouvait pas réussir des deux côtés à la fois. C'est ce qui faisait
-     * échouer toutes les exécutions de la CI, sur une seule ligne de différence
-     * (`@msgpackr-extract/msgpackr-extract-*`).
+     * npm only installs the variant for the current machine — `@esbuild/win32-x64` here,
+     * `@esbuild/linux-x64` on the runner. The generator therefore found the `package.json` of
+     * one and not of the others, and only wrote the "Source" field for that one: the output
+     * file depended on the build OS, and the freshness comparison of `validate.sh` could not
+     * succeed on both sides at once. That is what made every CI run fail, over a single line of
+     * difference (`@msgpackr-extract/msgpackr-extract-*`).
      *
-     * Le lockfile, lui, décrit les 53 à 59 variantes à l'identique partout : nom, version
-     * et licence suffisent à l'attribution, et la sortie redevient déterministe.
+     * The lockfile, for its part, describes the 53 to 59 variants identically everywhere: name, version
+     * and licence are enough for attribution, and the output becomes deterministic again.
      */
     const locked = lock.packages[key] ?? {};
     const platformSpecific = Array.isArray(locked.os) || Array.isArray(locked.cpu);
@@ -258,7 +257,7 @@ export async function collectWorkspace(repoRoot, workspace, lock, tree) {
       try {
         pkg = JSON.parse(await readFile(path.join(dir, 'package.json'), 'utf8'));
       } catch {
-        /* paquet non installé : on se contente de ce que dit le lockfile */
+        /* package not installed: we settle for what the lockfile says */
       }
     }
     const name = packageName(key);
@@ -271,8 +270,8 @@ export async function collectWorkspace(repoRoot, workspace, lock, tree) {
       version,
       license: declaredLicense(pkg) ?? locked.license ?? LICENSE_OVERRIDES[id] ?? 'UNKNOWN',
       repository: repositoryUrl(pkg),
-      // Même raison que ci-dessus : le texte de licence n'existe sur disque que pour la
-      // variante installée. Le lire rendrait la sortie dépendante de la plateforme.
+      // Same reason as above: the licence text only exists on disk for the installed
+      // variant. Reading it would make the output platform-dependent.
       texts: platformSpecific ? null : await readLicenseText(dir),
     });
   }
@@ -280,36 +279,36 @@ export async function collectWorkspace(repoRoot, workspace, lock, tree) {
 }
 
 /* ------------------------------------------------------------------------------------ *
- * Code tiers recopié à l'intérieur d'un paquet (« vendored »)
+ * Third-party code copied inside a package ("vendored")
  * ------------------------------------------------------------------------------------ */
 
 /**
- * Licences de copies internes vérifiées à la main, quand ni l'une ni l'autre des deux
- * heuristiques ci-dessous ne tranche. Même contrat que `LICENSE_OVERRIDES` : on n'y inscrit
- * que ce qu'on a réellement lu dans le dépôt du projet concerné.
+ * Licences of internal copies checked by hand, when neither of the two heuristics below
+ * settles it. Same contract as `LICENSE_OVERRIDES`: we only record here what we actually read in
+ * the repository of the project concerned.
  */
 export const VENDORED_LICENSES = {};
 
-/** Fichiers susceptibles de contenir du code empaqueté (pas les `.map`, jamais livrées). */
+/** Files likely to contain bundled code (not the `.map` files, never shipped). */
 const SHIPPED_CODE = /\.(m|c)?js$/;
 
-/** Prédécoupage rapide : inutile de décoder un fichier qui ne cite aucun `node_modules`. */
+/** Quick pre-cut: no need to decode a file that cites no `node_modules`. */
 const NODE_MODULES = Buffer.from('/node_modules/');
 
 /**
- * Marqueur de module empaqueté laissé par esbuild/rollup quand le paquet a été construit
- * avec pnpm : `.pnpm/js-yaml@4.1.1/node_modules/js-yaml/dist/js-yaml.mjs`. Le suffixe
- * `_peer@x` des installations à pairs est toléré. pnpm encode `@scope/nom` en
- * `@scope+nom` côté magasin : les deux graphies doivent donc désigner le même paquet.
+ * Bundled-module marker left by esbuild/rollup when the package was built
+ * with pnpm: `.pnpm/js-yaml@4.1.1/node_modules/js-yaml/dist/js-yaml.mjs`. The suffix
+ * `_peer@x` of peer installations is tolerated. pnpm encodes `@scope/nom` as
+ * `@scope+nom` in its store: the two spellings must therefore designate the same package.
  */
 const VENDORED_MARKER = /(@?[\w.+-]+)@(\d[\w.+-]*)(?:_[^/]*)?\/node_modules\/((?:@[\w.-]+\/)?[\w.-]+)\//g;
 
 /**
- * Identifiants `nom@version` du code tiers recopié dans un texte source.
+ * `name@version` identifiers of the third-party code copied into a source text.
  *
- * Volontairement restreint aux marqueurs **versionnés** : un commentaire de bundler sans
- * version (`../node_modules/foo/index.js`) ne permet ni d'attribuer une licence ni de
- * distinguer une copie d'un simple chemin cité. Mieux vaut ne pas prétendre le voir.
+ * Deliberately restricted to **versioned** markers: a bundler comment without a
+ * version (`../node_modules/foo/index.js`) allows neither attributing a licence nor
+ * telling a copy apart from a mere cited path. Better not to claim to see it.
  */
 export function vendoredIdsFrom(text) {
   const out = new Set();
@@ -320,7 +319,7 @@ export function vendoredIdsFrom(text) {
   return out;
 }
 
-/** Parcourt un paquet installé sans descendre dans ses `node_modules` imbriqués. */
+/** Walks an installed package without descending into its nested `node_modules`. */
 async function* shippedFiles(dir) {
   const stack = [dir];
   while (stack.length) {
@@ -329,7 +328,7 @@ async function* shippedFiles(dir) {
     try {
       entries = await readdir(cur, { withFileTypes: true });
     } catch {
-      continue; // paquet non installé : rien à scanner
+      continue; // package not installed: nothing to scan
     }
     for (const entry of entries) {
       if (entry.name === 'node_modules') continue;
@@ -341,18 +340,18 @@ async function* shippedFiles(dir) {
 }
 
 /**
- * Copies internes trouvées dans l'arbre de production d'un workspace : `id` → paquets
- * hôtes. Une copie déjà présente dans l'arbre sous la même version est ignorée — elle a
- * déjà sa notice. C'est bien la **version** qui compte : le lockfile du frontend porte
- * js-yaml 4.3.1 (via eslint, donc jamais distribué) quand mermaid en recopie 4.1.1.
+ * Internal copies found in a workspace's production tree: `id` → host packages
+ * hosts. A copy already present in the tree under the same version is ignored — it already has
+ * its notice. It is indeed the **version** that counts: the frontend lockfile carries
+ * js-yaml 4.3.1 (via eslint, hence never distributed) while mermaid copies 4.1.1.
  */
 export async function collectVendored(repoRoot, workspace, lock, tree) {
   const shipped = new Set(tree.map((k) => `${packageName(k)}@${lock.packages[k]?.version ?? '?'}`));
   const found = new Map();
   for (const key of tree) {
     const locked = lock.packages[key] ?? {};
-    // Même raison qu'au-dessus : un binaire natif n'est installé que pour la plateforme
-    // courante. Le scanner rendrait un résultat différent sous Windows et sous Linux.
+    // Same reason as above: a native binary is only installed for the current
+    // platform. The scanner would return a different result under Windows and under Linux.
     if (Array.isArray(locked.os) || Array.isArray(locked.cpu)) continue;
     const host = packageName(key);
     for await (const file of shippedFiles(path.join(repoRoot, workspace.dir, key))) {
@@ -373,7 +372,7 @@ export async function collectVendored(repoRoot, workspace, lock, tree) {
   return found;
 }
 
-/** Index licence des deux lockfiles, dev comprises : une copie interne peut venir de n'importe où. */
+/** Licence index of both lockfiles, dev included: an internal copy can come from anywhere. */
 export function lockLicenseIndex(locks) {
   const byId = new Map();
   const byName = new Map();
@@ -390,9 +389,9 @@ export function lockLicenseIndex(locks) {
 }
 
 /**
- * Licence d'une copie interne, et sur quoi elle repose — c'est cette seconde information
- * qui rend le signalement honnête : une licence lue sur *une autre version* du même paquet
- * est une présomption, pas une vérification.
+ * Licence of an internal copy, and what it rests on — that second piece of information
+ * is what makes the report honest: a licence read from *another version* of the same package
+ * is a presumption, not a verification.
  */
 export function vendoredLicense(id, index) {
   const name = id.slice(0, id.lastIndexOf('@'));
@@ -405,7 +404,7 @@ export function vendoredLicense(id, index) {
   return { license: null, basis: 'not determined' };
 }
 
-/** Assemble la liste triée des copies internes d'un workspace, licence comprise. */
+/** Assembles the sorted list of a workspace's internal copies, licence included. */
 export function describeVendored(found, index, workspaceLabel) {
   return [...found.entries()]
     .map(([id, hosts]) => ({
@@ -417,16 +416,16 @@ export function describeVendored(found, index, workspaceLabel) {
     .sort((a, b) => a.id.localeCompare(b.id));
 }
 
-/** Encadre un texte sans risquer de casser le Markdown. */
+/** Fences a text without risking breaking the Markdown. */
 function fence(text) {
   const ticks = '`'.repeat(Math.max(3, ...(text.match(/`+/g) ?? ['']).map((m) => m.length + 1)));
   return `${ticks}text\n${text}\n${ticks}`;
 }
 
 /**
- * Chapitre des copies internes. Rédigé pour dire deux choses : ce que le scan a trouvé,
- * et ce qu'il ne peut pas voir. Une liste qui se présenterait comme exhaustive sans l'être
- * serait pire que pas de liste du tout.
+ * Internal copies section. Written to say two things: what the scan found,
+ * and what it cannot see. A list that presented itself as exhaustive without being so
+ * would be worse than no list at all.
  */
 export function renderVendored(vendored) {
   if (!vendored.length) return [];
@@ -519,7 +518,7 @@ export function renderNotices(sections, vendored = []) {
   return `${out.join('\n').trimEnd()}\n`;
 }
 
-/** Compare en ignorant les fins de ligne (le dépôt est cloné sous Windows comme sous Linux). */
+/** Compares while ignoring line endings (the repository is cloned under Windows as well as Linux). */
 const normalize = (text) => text.replace(/\r\n/g, '\n');
 
 async function main() {
@@ -541,7 +540,7 @@ async function main() {
     });
   }
 
-  // Code tiers recopié dans un paquet : invisible du lockfile, donc du reste de ce script.
+  // Third-party code copied into a package: invisible from the lockfile, hence from the rest of this script.
   const index = lockLicenseIndex(locks);
   const vendored = [];
   for (const [i, workspace] of WORKSPACES.entries()) {
@@ -550,11 +549,11 @@ async function main() {
   }
   vendored.sort((a, b) => a.id.localeCompare(b.id) || a.workspace.localeCompare(b.workspace));
 
-  // Garde-fou de compatibilité : une dépendance sous licence non compatible AGPL ne doit
-  // pas se contenter d'apparaître dans les notices, elle doit arrêter la validation. Une
-  // copie interne dont la licence est établie y est soumise au même titre ; celle dont la
-  // licence reste indéterminée est signalée dans le fichier, pas transformée en blocage
-  // sur une présomption.
+  // Compatibility guardrail: a dependency under a licence not compatible with the AGPL must
+  // not merely appear in the notices, it must stop the validation. An
+  // internal copy whose licence is established is subject to it in the same way; one whose
+  // licence remains undetermined is reported in the file, not turned into a block
+  // on a presumption.
   const rejected = [
     ...sections.flatMap((section) => section.packages),
     ...vendored.filter((v) => v.license),

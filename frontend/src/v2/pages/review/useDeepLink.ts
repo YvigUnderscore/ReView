@@ -7,9 +7,9 @@ import type { MediaResp } from './reviewTypes';
 import { frameToTime, parseDeepLink } from './deepLink';
 
 /**
- * Applique le lien profond de la review (32.E) une seule fois à l'arrivée :
- * `?frame=` → seek vidéo (dès les métadonnées chargées), `?comment=` → sélection
- * complète du commentaire (seek + annotation + caméra) et scroll vers sa carte.
+ * Applies the review's deep link (32.E) only once, on arrival:
+ * `?frame=` → video seek (as soon as metadata is loaded), `?comment=` → full selection of the comment
+ * (seek + annotation + camera) and scroll to its card.
  */
 export function useDeepLink({
   data,

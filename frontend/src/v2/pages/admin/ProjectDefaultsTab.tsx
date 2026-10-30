@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { QueryState } from '../../components/ui/query-state';
@@ -26,16 +26,16 @@ import type { Nomenclature, ProjectSettings } from '../../types/api';
 import { useT } from '../../i18n';
 
 /**
- * Défauts de projet : ce dont hérite un projet tant qu'il ne s'en approprie pas.
+ * Project defaults: what a project inherits as long as it does not take ownership.
  *
- * L'écran n'exposait que trois des sept sections réellement héritables — numérotation,
- * format, départements. Les quatre autres (convention de nommage, éclairage 3D, couleur,
- * burn-ins) apparaissaient côté projet, badge « HÉRITÉ DU STUDIO » à l'appui, en désignant
- * un studio qu'aucun écran ne permettait de régler. Les sept sont ici.
+ * The screen only exposed three of the seven truly inheritable sections — numbering,
+ * format, departments. The other four (naming convention, 3D lighting, colour,
+ * burn-ins) appeared on the project side, with a "INHERITED FROM THE STUDIO" badge, pointing
+ * to a studio that no screen allowed setting. All seven are here.
  *
- * La septième, les burn-ins, ne se règle pas ici : le template studio vit dans
- * « Diffusion », qui en est le propriétaire. L'écran y renvoie plutôt que d'en offrir une
- * seconde copie — deux champs pour une valeur, c'est une valeur qu'on croit avoir changée.
+ * The seventh, burn-ins, is not set here: the studio template lives in
+ * "Distribution", which owns it. The screen links there rather than offering a
+ * second copy — two fields for one value is a value one believes one has changed.
  */
 export default function ProjectDefaultsTab() {
   const t = useT();
@@ -58,15 +58,15 @@ export default function ProjectDefaultsTab() {
       setDraft(fresh);
       await qc.invalidateQueries({ queryKey: qk.admin('project-defaults') });
     }
-    // Lu avant l'enregistrement : `commit` vide le brouillon.
+    // Read before saving: `commit` empties the draft.
     const touchedDraftMode = settings.draft[DRAFT_MODE_KEY] !== undefined;
     await settings.commit();
-    // `draftMode` voyage avec l'identité publique du studio : sans cette invalidation,
-    // l'interface garderait l'ancien parcours jusqu'au prochain rechargement complet.
+    // `draftMode` travels with the studio's public identity: without this invalidation,
+    // the interface would keep the old behaviour until the next full reload.
     if (touchedDraftMode) await qc.invalidateQueries({ queryKey: qk.branding });
   }, t('defaults.saved'));
 
-  // Amorce l'édition depuis les valeurs serveur (ajustement d'état pendant le render).
+  // Seeds the edit from the server values (state adjustment during render).
   if (saved && !draft) setDraft(saved);
   if (!draft || !saved) return <QueryState query={defaultsQ} skeleton={<SkeletonRows count={3} />} />;
 
@@ -122,8 +122,8 @@ export default function ProjectDefaultsTab() {
           onChange={(naming) => setDraft((d) => d && { ...d, naming })}
         />
 
-        {/* Publication et consigne se lisent ensemble : l'une dit quand le média devient
-            visible, l'autre ce qu'il faut écrire pour le déposer. */}
+        {/* Publication and brief are read together: one says when the media becomes
+            visible, the other what to write to file it. */}
         <DraftModeField value={draftMode} onChange={(v) => settings.setValue(DRAFT_MODE_KEY, v)} />
 
         <ProjectReviewRequestSection

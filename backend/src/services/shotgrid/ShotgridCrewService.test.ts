@@ -21,30 +21,30 @@ const person = (over: Partial<CrewPerson> & { sgId: number }): CrewPerson => ({
   linkedByHand: false,
   projectRole: null,
   userRole: null,
-  // Département venu du site (lot 10) : la fabrique suit la forme de `CrewPerson`.
+  // Department coming from the site (batch 10): the factory follows the shape of `CrewPerson`.
   sgDepartment: null,
   department: null,
   ...over,
 });
 
 describe('eligibility', () => {
-  it('refuse une personne sans adresse', () => {
-    // Il n'y a rien à quoi envoyer l'invitation.
+  it('refuses a person without an address', () => {
+    // There is nothing to send the invitation to.
     expect(eligibility({ email: null, sgStatus: 'act' })).toBe(false);
   });
 
-  it('refuse une personne désactivée sur le site', () => {
-    // Elle a quitté le studio : lui ouvrir un accès dirait le contraire du site.
+  it('refuses a person deactivated on the site', () => {
+    // They left the studio: opening access would say the opposite of the site.
     expect(eligibility({ email: 'a@b.c', sgStatus: 'dis' })).toBe(false);
   });
 
-  it('accepte quand le site ne déclare pas de statut', () => {
+  it('accepts when the site declares no status', () => {
     expect(eligibility({ email: 'a@b.c', sgStatus: null })).toBe(true);
   });
 });
 
 describe('crewState', () => {
-  it('distingue les quatre situations', () => {
+  it('tells the four situations apart', () => {
     const ok = { email: 'a@b.c', sgStatus: 'act' };
     expect(crewState(ok, { userId: 5, isMember: true })).toBe('member');
     expect(crewState(ok, { userId: 5, isMember: false })).toBe('account');
@@ -54,7 +54,7 @@ describe('crewState', () => {
 });
 
 describe('dedupeCrew', () => {
-  it('garde l’actif quand deux comptes du site partagent une adresse', () => {
+  it('keeps the active one when two site accounts share an address', () => {
     const kept = dedupeCrew([
       { email: 'a@b.c', sgStatus: 'dis', sgId: 1 },
       { email: 'a@b.c', sgStatus: 'act', sgId: 2 },
@@ -63,7 +63,7 @@ describe('dedupeCrew', () => {
     expect(kept[0]!.sgId).toBe(2);
   });
 
-  it('ne fusionne jamais deux personnes sans adresse', () => {
+  it('never merges two people without an address', () => {
     expect(
       dedupeCrew([
         { email: null, sgStatus: 'act', sgId: 1 },
@@ -80,19 +80,19 @@ describe('planInvites', () => {
     person({ sgId: 3, state: 'member', userId: 30 }),
   ];
 
-  it('sépare créations, ajouts et sans-effet', () => {
+  it('separates creations, additions and no-ops', () => {
     const plan = planInvites(crew, [1, 2, 3], { canCreateAccounts: true });
     expect(plan.create.map((p) => p.sgId)).toEqual([1]);
     expect(plan.add.map((p) => p.sgId)).toEqual([2]);
     expect(plan.skip.map((p) => p.sgId)).toEqual([3]);
   });
 
-  it('refuse le lot entier quand l’acteur ne peut pas créer de compte', () => {
-    // Refuser d'emblée plutôt que d'en créer trois puis d'échouer au quatrième.
+  it('refuses the whole batch when the actor cannot create accounts', () => {
+    // Refuse up front rather than create three and fail on the fourth.
     expect(() => planInvites(crew, [1, 2], { canCreateAccounts: false })).toThrow();
   });
 
-  it('laisse passer les seuls ajouts pour un superviseur de projet', () => {
+  it('lets only additions through for a project supervisor', () => {
     const plan = planInvites(crew, [2, 3], { canCreateAccounts: false });
     expect(plan.add.map((p) => p.sgId)).toEqual([2]);
   });

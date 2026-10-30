@@ -11,10 +11,11 @@ const { access, manage, resolveShot, resolveAsset, create } = vi.hoisted(() => (
   create: vi.fn(),
 }));
 
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: { user?: unknown }, _res: unknown, next: () => void) => {
-    // Rôle GLOBAL d'artiste : c'est le cas qui décide ici — la personne peut très bien
-    // superviser ce projet-là par son membership.
+    // GLOBAL artist role: this is the case that decides here: the person may very well supervise that
+    // project through their membership.
     req.user = { id: 42, role: 'ARTIST', email: 'a@b.c' };
     next();
   },
@@ -54,13 +55,12 @@ beforeEach(() => {
 });
 
 /**
- * Créer une tâche ne demande pas ShotGrid — c'est le seul chemin dont dispose un projet
- * autonome. Le contrôle portait pourtant sur le rôle **global** du compte : un lead
- * supervisant son projet par membership se voyait refuser la création, et son pipe restait
- * vide faute de site distant pour l'alimenter.
+ * Creating a task does not require ShotGrid: it is the only path available to a standalone project. The
+ * check nonetheless read the account's GLOBAL role: a lead supervising their project through membership
+ * was refused the creation, and their pipe stayed empty for lack of a remote site to feed it.
  */
-describe('POST /api/tasks — droits lus sur le rôle effectif', () => {
-  it('accepte un superviseur de projet dont le rôle global est ARTIST', async () => {
+describe('POST /api/tasks — rights read on the effective role', () => {
+  it('accepts a project supervisor whose global role is ARTIST', async () => {
     const res = await request(app).post('/api/tasks').send({ name: 'ANIM', shotId: 12 });
     expect(res.status).toBe(201);
     expect(manage).toHaveBeenCalledWith(42, 'ARTIST', 461);
@@ -71,14 +71,14 @@ describe('POST /api/tasks — droits lus sur le rôle effectif', () => {
     );
   });
 
-  it('refuse quand le rôle effectif ne gère pas le projet', async () => {
+  it('rejects when the effective role does not manage the project', async () => {
     manage.mockRejectedValue(forbidden('Managing the project is reserved to supervisors'));
     const res = await request(app).post('/api/tasks').send({ name: 'ANIM', assetId: 5 });
     expect(res.status).toBe(403);
     expect(create).not.toHaveBeenCalled();
   });
 
-  it('vérifie l’appartenance au projet avant les droits de gestion', async () => {
+  it('checks project membership before management rights', async () => {
     access.mockRejectedValue(forbidden('No access to this project'));
     const res = await request(app).post('/api/tasks').send({ name: 'ANIM', shotId: 12 });
     expect(res.status).toBe(403);
@@ -86,14 +86,14 @@ describe('POST /api/tasks — droits lus sur le rôle effectif', () => {
     expect(create).not.toHaveBeenCalled();
   });
 
-  it('refuse un parent absent avant tout contrôle de droits', async () => {
+  it('rejects a missing parent before any rights check', async () => {
     resolveShot.mockResolvedValue(null);
     const res = await request(app).post('/api/tasks').send({ name: 'ANIM', shotId: 999 });
     expect(res.status).toBe(404);
     expect(create).not.toHaveBeenCalled();
   });
 
-  it('exige exactement un parent — ni les deux, ni aucun', async () => {
+  it('requires exactly one parent: neither both nor none', async () => {
     const both = await request(app).post('/api/tasks').send({ name: 'ANIM', shotId: 1, assetId: 2 });
     const none = await request(app).post('/api/tasks').send({ name: 'ANIM' });
     expect(both.status).toBe(400);

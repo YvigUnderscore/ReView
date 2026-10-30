@@ -4,39 +4,38 @@
 import { docWords } from './docsSearch';
 
 /**
- * Surlignage du terme cherché dans la page ouverte.
+ * Highlights the searched term in the open page.
  *
- * Le sommaire dit *quelle* page répond ; il ne disait pas *où*. Sur une page de quarante
- * paragraphes, « watermark » se cherchait ensuite à l'œil, ou au Ctrl+F du navigateur —
- * lequel ne voit pas les chapitres repliés et ignore les accents.
+ * The table of contents says *which* page answers, but not *where*. On a page of forty
+ * paragraphs, "watermark" then had to be searched by eye, or with the browser's Ctrl+F, which
+ * does not see collapsed chapters and ignores accents.
  *
- * **Le surlignage se pose sur le DOM, jamais sur la chaîne HTML.** Un `replace()` sur le
- * texte source repeindrait un nom de classe, un `href`, un identifiant d'ancre : le mot
- * « note » surlignerait `class="doc-callout"`, et un `<mark>` ouvert au milieu d'une balise
- * casserait le reste de la page. Ici on ne touche qu'aux **nœuds de texte** : les attributs,
- * les ancres (`id`) et la structure sont hors d'atteinte, et le contenu du surlignage est
- * posé par `textContent` — la saisie de l'utilisateur ne peut donc rien injecter, même en
- * tapant `<img onerror=…>`.
+ * **The highlight is applied to the DOM, never to the HTML string.** A `replace()` on the source
+ * text would repaint a class name, an `href` or an anchor identifier: the word "note" would
+ * highlight `class="doc-callout"`, and an unclosed `<mark>` in the middle of a tag would break
+ * the rest of the page. Here only the **text nodes** are touched: attributes, anchors (`id`) and
+ * structure are out of reach, and the highlight content is set through `textContent`, so user
+ * input cannot inject anything, even when typing `<img onerror=…>`.
  */
 
-/** Nœud de texte / élément, sans dépendre de la présence du global `Node` côté test. */
+/** Text node or element, without depending on the presence of the global `Node` in tests. */
 const TEXT_NODE = 3;
 const ELEMENT_NODE = 1;
 
 /**
- * En deçà de deux caractères, on ne surligne pas : une seule lettre repeindrait la page
- * entière, ce qui revient à ne rien signaler du tout. Le *filtre* du sommaire, lui, accepte
- * la lettre seule — filtrer soixante-dix pages n'a pas le même coût que peindre une page.
+ * Below two characters, nothing is highlighted: a single letter would repaint the whole page,
+ * which amounts to signalling nothing at all. The table-of-contents *filter*, however, accepts
+ * a lone letter: filtering seventy pages does not cost the same as painting a page.
  */
 export const MIN_HIGHLIGHT_WORD = 2;
 
 /**
- * Repli caractère par caractère — minuscules et accents retirés, **longueur inchangée**.
+ * Character-by-character folding: lowercase and accents removed, **length unchanged**.
  *
- * C'est la condition du surlignage : une position trouvée dans le texte replié doit désigner
- * exactement les mêmes caractères dans le texte d'origine. `normalize('NFD')` décompose et
- * allonge, donc décale tout ; on replie donc chaque caractère isolément, et on garde
- * l'original chaque fois que son repli n'a pas la même longueur.
+ * This is the condition for highlighting: a position found in the folded text must designate
+ * exactly the same characters in the original text. `normalize('NFD')` decomposes and lengthens,
+ * hence shifts everything, so each character is folded in isolation, and the original is kept
+ * whenever its fold does not have the same length.
  */
 export function foldKeepingLength(text: string): string {
   let out = '';
@@ -55,7 +54,7 @@ interface Span {
   end: number;
 }
 
-/** Occurrences des mots cherchés, fusionnées quand elles se chevauchent, de gauche à droite. */
+/** Occurrences of the searched words, merged when they overlap, from left to right. */
 export function matchSpans(text: string, words: string[]): Span[] {
   const folded = foldKeepingLength(text);
   const found: Span[] = [];
@@ -74,7 +73,7 @@ export function matchSpans(text: string, words: string[]): Span[] {
   return merged;
 }
 
-/** Tous les nœuds de texte du sous-arbre, relevés avant toute modification. */
+/** All text nodes of the subtree, collected before any modification. */
 function textNodes(root: Node): Text[] {
   const out: Text[] = [];
   const visit = (node: Node) => {
@@ -87,7 +86,7 @@ function textNodes(root: Node): Text[] {
   return out;
 }
 
-/** Remplace un nœud de texte par ses fragments, les occurrences enveloppées de `<mark>`. */
+/** Replaces a text node with its fragments, the occurrences wrapped in `<mark>`. */
 function markNode(node: Text, spans: Span[], firstHit: boolean): void {
   const text = node.data;
   const fragment = document.createDocumentFragment();
@@ -97,7 +96,7 @@ function markNode(node: Text, spans: Span[], firstHit: boolean): void {
     const mark = document.createElement('mark');
     mark.className = 'doc-hit';
     if (firstHit && index === 0) mark.setAttribute('data-doc-hit', 'first');
-    // `textContent` : le terme cherché redevient du texte, jamais du balisage.
+    // `textContent`: the searched term becomes text again, never markup.
     mark.textContent = text.slice(span.start, span.end);
     fragment.appendChild(mark);
     cursor = span.end;
@@ -108,14 +107,14 @@ function markNode(node: Text, spans: Span[], firstHit: boolean): void {
 
 export interface DocHighlight {
   html: string;
-  /** Nombre d'occurrences surlignées — ce que le lecteur voit annoncé en tête de page. */
+  /** Number of highlighted occurrences: what the reader sees announced at the top of the page. */
   count: number;
 }
 
 /**
- * Pose le surlignage sur le HTML déjà rendu par `renderDocHtml`. Une recherche vide (ou
- * réduite à des mots d'une lettre) rend la page inchangée : le surlignage se retire en
- * effaçant le champ, il n'y a rien à défaire.
+ * Applies the highlight to the HTML already rendered by `renderDocHtml`. An empty search (or one
+ * reduced to single-letter words) renders the page unchanged: the highlight is removed by
+ * clearing the field, so there is nothing to undo.
  */
 export function highlightDocHtml(html: string, query: string): DocHighlight {
   const words = docWords(query).filter((word) => word.length >= MIN_HIGHLIGHT_WORD);

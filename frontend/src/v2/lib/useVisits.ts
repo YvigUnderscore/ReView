@@ -8,48 +8,48 @@ import { api } from '../../lib/apiClient';
 import { useT } from '../i18n';
 
 /**
- * L'acquittement de visite, côté client (Phase 50, lot 9).
+ * Visit acknowledgement, client side (Phase 50, batch 9).
  *
- * Le calcul de la lueur appartient au serveur : le client ne fait que dire « je l'ai
- * ouvert » et redemander les listes. Rien n'est déduit ici — deux personnes ouvrant le même
- * plan n'éteignent que leur propre carte, et une lueur calculée côté client se serait
- * remise à mentir au premier changement venu d'ailleurs.
+ * The glow computation belongs to the server: the client only says "I opened
+ * it" and re-requests the lists. Nothing is inferred here: two people opening the same
+ * shot only switch off their own card, and a glow computed client-side would
+ * have lied again at the first change from elsewhere.
  */
 
-/** Les niveaux qu'une carte sait allumer — miroir de l'énumération acceptée par la route. */
+/** The levels a card can light up: mirror of the enum accepted by the route. */
 export type VisitTarget = 'PROJECT' | 'SEQUENCE' | 'SHOT' | 'ASSET' | 'TASK' | 'MEDIA';
 
-/** Les listes qui portent un « tout marquer comme lu ». */
+/** The lists that carry a "mark all as read". */
 export type VisitListTarget = 'SEQUENCE' | 'SHOT' | 'ASSET';
 
 /**
- * Les caches qui portent un `unseen`, invalidés d'un bloc dès qu'une visite est acquittée.
+ * Caches that carry an `unseen` flag, invalidated in one go as soon as a visit is acknowledged.
  *
- * Invalidation par **préfixe** et non par clé exacte : un plan visité s'éteint dans l'onglet
- * Plans du projet, dans la fiche de sa séquence, et dans la liste d'un autre projet ouverte
- * dans un autre onglet du navigateur. Énumérer les clés exactes aurait demandé de connaître
- * ici le projet et la séquence de l'entité — soit une occasion, par écran, d'en oublier une,
- * et une carte qui reste allumée juste après qu'on l'a fermée.
+ * Invalidation by **prefix** and not by exact key: a visited shot switches off in the
+ * project's Shots tab, on its sequence page, and in another project's list open
+ * in another browser tab. Enumerating exact keys would have required knowing here
+ * the entity's project and sequence, which is one opportunity per screen to forget one,
+ * and a card that stays lit just after it was closed.
  */
 const GLOWING_LISTS: QueryKey[] = [['shots'], ['sequences'], ['sequence'], ['assets']];
 
-/** Redemande tout ce qui affiche une lueur. */
+/** Re-requests everything that displays a glow. */
 async function refreshGlow(invalidate: (key: QueryKey) => Promise<void>) {
   await Promise.all(GLOWING_LISTS.map((key) => invalidate(key)));
 }
 
 /**
- * « J'ouvre cette entité » : éteint sa lueur, une fois, au montage de sa page.
+ * "I open this entity": switches off its glow, once, when its page mounts.
  *
- * `id` peut arriver indéfini ou aberrant (paramètre d'URL en cours de résolution) : rien
- * n'est alors envoyé. Un acquittement qui échoue est **silencieux** — la lueur restera
- * allumée, ce qui est le pire qui puisse arriver, et cela ne vaut pas d'interrompre la
- * lecture d'une page par un message d'erreur sur une notion secondaire.
+ * `id` may arrive undefined or aberrant (URL parameter still resolving): nothing
+ * is then sent. An acknowledgement that fails is **silent**: the glow will stay
+ * lit, which is the worst that can happen, and it is not worth interrupting the
+ * reading of a page with an error message about a secondary concern.
  */
 export function useMarkVisited(target: VisitTarget, id: number | undefined, enabled = true) {
   const qc = useQueryClient();
-  // Un seul acquittement par entité et par montage : la page se re-rend à chaque
-  // chargement de données, et un effet non gardé aurait posté à chaque fois.
+  // A single acknowledgement per entity and per mount: the page re-renders on each
+  // data load, and an unguarded effect would have posted every time.
   const acknowledged = useRef<string | null>(null);
 
   useEffect(() => {
@@ -69,11 +69,11 @@ export function useMarkVisited(target: VisitTarget, id: number | undefined, enab
 }
 
 /**
- * « Tout marquer comme lu » pour une liste d'un projet.
+ * "Mark all as read" for a project's list.
  *
- * Le corps ne porte que le type et le projet : c'est le serveur qui établit les entités
- * concernées. Poster la liste des ids affichés aurait demandé d'en vérifier
- * l'appartenance une par une côté serveur, et aurait laissé allumé ce qu'un filtre cachait.
+ * The body carries only the type and the project: the server establishes the entities
+ * concerned. Posting the list of displayed ids would have required checking
+ * their membership one by one on the server, and would have left lit what a filter hid.
  */
 export function useMarkAllSeen(target: VisitListTarget, projectId: number) {
   const qc = useQueryClient();

@@ -5,7 +5,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { finalize } = vi.hoisted(() => ({ finalize: vi.fn() }));
 
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: { user?: unknown }, _res: unknown, next: () => void) => {
     req.user = { id: 7, role: 'ARTIST', email: 'a@b.c' };
     next();
@@ -34,29 +35,28 @@ beforeEach(() => {
 });
 
 /**
- * La consigne obligatoire s'appliquait à la publication ; elle s'applique maintenant à la
- * finalisation de l'upload (Phase 50). Le corps de `finalize` était jusqu'ici INEXISTANT :
- * tout ce qui finalise aujourd'hui — l'interface, un DCC via l'API v1, un test de bout en
- * bout — poste sans corps du tout. En Express 5, `req.body` vaut alors `undefined`, et un
- * `z.object({…})` nu le refuserait en 400 : plus un seul upload n'aboutirait. C'est
- * exactement la faute déjà corrigée sur `publish`, et c'est ce que ce fichier verrouille.
+ * The mandatory note applied to publication; it now applies to the finalization of the upload (Phase 50).
+ * The body of `finalize` was until now NONEXISTENT: everything that finalizes today (the interface, a DCC
+ * through the v1 API, an end-to-end test) posts no body at all. In Express 5, `req.body` is then
+ * `undefined`, and a bare `z.object({…})` would refuse it with a 400: not a single upload would complete.
+ * This is exactly the fault already fixed on `publish`, and this file locks it in.
  */
-describe('POST /api/media/:id/finalize — la consigne d’upload est facultative', () => {
-  it('finalise sans aucun corps (ni contenu, ni en-tête de type)', async () => {
+describe('POST /api/media/:id/finalize — the upload note is optional', () => {
+  it('finalizes without any body (no content, no type header)', async () => {
     const res = await request(app).post('/api/media/12/finalize');
 
     expect(res.status).toBe(200);
     expect(finalize).toHaveBeenCalledWith(expect.objectContaining({ id: 7 }), 12, undefined);
   });
 
-  it('finalise avec un corps vide (`{}`)', async () => {
+  it('finalizes with an empty body (`{}`)', async () => {
     const res = await request(app).post('/api/media/12/finalize').send({});
 
     expect(res.status).toBe(200);
     expect(finalize).toHaveBeenCalledWith(expect.objectContaining({ id: 7 }), 12, undefined);
   });
 
-  it('transmet la consigne quand elle est là', async () => {
+  it('passes the note on when it is there', async () => {
     const res = await request(app)
       .post('/api/media/12/finalize')
       .send({ note: 'Regarder le raccord au 1042' });
@@ -69,14 +69,14 @@ describe('POST /api/media/:id/finalize — la consigne d’upload est facultativ
     );
   });
 
-  it('refuse une consigne qui n’est pas du texte, sans appeler le service', async () => {
+  it('rejects a note that is not text, without calling the service', async () => {
     const res = await request(app).post('/api/media/12/finalize').send({ note: 42 });
 
     expect(res.status).toBe(400);
     expect(finalize).not.toHaveBeenCalled();
   });
 
-  it('remonte le refus du service — code métier, pas 500', async () => {
+  it("surfaces the service's refusal: business code, not 500", async () => {
     const { AppError } = await import('../lib/errors');
     finalize.mockRejectedValue(
       new AppError('This project requires a note with every upload', 400, 'UPLOAD_NOTE_REQUIRED'),

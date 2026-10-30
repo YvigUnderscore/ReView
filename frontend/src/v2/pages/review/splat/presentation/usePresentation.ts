@@ -16,7 +16,7 @@ import { createDebugColor, type DebugColorMode, type DebugColorRuntime } from '.
 import { createReveal, type RevealRuntime, type RevealType } from '../scene/effects/reveal';
 import { applyLod, createAutoLod, type LodMode } from '../scene/lod';
 import type { SplatViewer } from '../useSplat';
-import { useT } from '../../../../i18n';
+import { useT } from '@/v2/i18n';
 
 export interface RevealConfig {
   type: RevealType;
@@ -24,10 +24,10 @@ export interface RevealConfig {
 }
 
 /**
- * Présentation du splat (10.G-V5/V6) : caméra (rig + keyframes), effet de reveal (rejoué à
- * l'ouverture pour tous, re-jouable localement) et debug color (inspection locale, non
- * persistée). Le gestionnaire persiste l'ensemble via PATCH `/splat-presentation` ; les
- * spectateurs modifient tout en session sans écrire.
+ * Presentation of the splat (10.G-V5/V6): camera (rig and keyframes), reveal effect (replayed on
+ * opening for everyone, replayable locally) and debug colour (local inspection, not persisted).
+ * The manager persists everything via PATCH `/splat-presentation`; viewers change everything in
+ * session without writing.
  */
 export function usePresentation(
   splat: SplatViewer,
@@ -36,22 +36,22 @@ export function usePresentation(
 ) {
   const t = useT();
   const { ready, captureCamera, getSceneHandle, subscribeFrame, subscribeStats } = splat;
-  // Mode layout (Phase 27) : hors mode, le controller est transparent (caméra principale) ;
-  // en mode, le lecteur keyframe pilote la caméra layout rendue dans le PiP.
+  // Layout mode (Phase 27): outside the mode, the controller is transparent (main camera);
+  // in the mode, the keyframe player drives the layout camera rendered in the PiP.
   const layout = useSplatLayout(splat);
   const anim = useCameraAnim(layout.layoutController);
   const rig = useCameraRig(splat, data.splatPresentation, anim);
   const { busy, persist, remove } = useCameraPresentation(data.media.id, onSaved);
   const [reveal, setReveal] = useState<RevealConfig | null>(data.splatPresentation?.reveal ?? null);
-  // Compteur de lecture du reveal : > 0 → joue (initialisé à 1 si persisté → rejoué à l'ouverture).
+  // Reveal play counter: > 0 means playing (initialised to 1 if persisted, so it replays on opening).
   const [revealRun, setRevealRun] = useState(() => (data.splatPresentation?.reveal ? 1 : 0));
   const [debugMode, setDebugMode] = useState<DebugColorMode>('none');
   const [lodMode, setLodMode] = useState<LodMode>(data.splatPresentation?.lodDefault ?? 'auto');
 
   const replayReveal = useCallback(() => setRevealRun((v) => v + 1), []);
 
-  // LOD (V7) : modes on/off/streaming appliqués directement ; auto = machine à états sur le
-  // FPS échantillonné (< 15 fps pendant 5 s → LOD, hystérésis à 25 fps pour relâcher).
+  // LOD (V7): on/off/streaming modes applied directly; auto = state machine on the sampled FPS
+  // (< 15 fps for 5 s triggers LOD, hysteresis at 25 fps to release).
   useEffect(() => {
     if (!ready) return;
     const handle = getSceneHandle();
@@ -63,7 +63,7 @@ export function usePresentation(
     }
     const auto = createAutoLod();
     applyLod(spark, false, false);
-    // L'échantillonneur émet toutes les ~500 ms (fenêtre du sampler V1).
+    // The sampler emits roughly every 500 ms (V1 sampler window).
     const off = subscribeStats((stats) => {
       const was = auto.engaged;
       if (auto.step(stats.fps, 500) !== was) {
@@ -77,7 +77,7 @@ export function usePresentation(
     };
   }, [ready, lodMode, getSceneHandle, subscribeStats, t]);
 
-  // Lecture de l'effet de reveal (à l'ouverture et sur « Rejouer »).
+  // Plays the reveal effect (on opening and on "Replay").
   useEffect(() => {
     if (!ready || !reveal || revealRun === 0) return;
     const handle = getSceneHandle();
@@ -96,7 +96,7 @@ export function usePresentation(
         const u = Math.min(elapsed / reveal.durationMs, 1);
         runtime?.update(u);
         if (u >= 1) {
-          // Effet terminé : retire le modifier (rendu normal, plus de coût shader).
+          // Effect finished: removes the modifier (normal rendering, no more shader cost).
           offFrame?.();
           offFrame = null;
           runtime?.dispose();
@@ -111,7 +111,7 @@ export function usePresentation(
     };
   }, [ready, reveal, revealRun, getSceneHandle, subscribeFrame]);
 
-  // Debug color (inspection locale) : normales, ou profondeur (heatmap recalée chaque frame).
+  // Debug colour (local inspection): normals, or depth (heatmap recomputed every frame).
   useEffect(() => {
     if (!ready || debugMode === 'none') return;
     const handle = getSceneHandle();
@@ -131,7 +131,7 @@ export function usePresentation(
           mesh.updateMatrixWorld();
           sphere.applyMatrix4(mesh.matrixWorld);
         } catch {
-          // bbox indisponible : sphère unitaire par défaut
+          // bbox unavailable: default unit sphere
         }
         offFrame = subscribeFrame(() => {
           const dist = camera.position.distanceTo(sphere.center);
@@ -146,12 +146,12 @@ export function usePresentation(
     };
   }, [ready, debugMode, getSceneHandle, subscribeFrame]);
 
-  /** Enregistre la présentation : vue courante + DoF + reveal + animation (gestionnaire). */
+  /** Saves the presentation: current view, DoF, reveal and animation (manager). */
   const save = async () => {
     const view = captureCamera();
     const presentation: SplatPresentation = {};
-    // Le ratio du cadre n'est pas une valeur de caméra : on reconduit celui déjà enregistré
-    // (média déjà annoté) et on n'en grève aucun quand personne ne l'a choisi.
+    // The frame ratio is not a camera value: we carry over the one already saved
+    // (media already annotated) and charge none when nobody chose it.
     if (view) presentation.camera = cameraPoseFromView(view, data.splatPresentation?.camera?.aspect);
     if (rig.aperture > 0)
       presentation.dof = { focalDistance: rig.focalDistance(), apertureAngle: rig.aperture };
@@ -161,15 +161,15 @@ export function usePresentation(
     await persist(presentation);
   };
 
-  /** Efface la présentation persistée (retour au cadrage automatique). */
+  /** Clears the persisted presentation (back to automatic framing). */
   const clear = async () => {
     await remove();
     anim.setAnim(emptyAnim());
     setReveal(null);
   };
 
-  /** Preset orbite : un tour complet autour de la cible courante, en boucle — à la distance de la
-   *  vue. Avertit avant d'écraser une animation existante (Phase 27). */
+  /** Orbit preset: one full turn around the current target, looping, at the view distance.
+   * Warns before overwriting an existing animation (Phase 27). */
   const applyOrbitPreset = () => {
     const view = captureCamera();
     if (!view) return;

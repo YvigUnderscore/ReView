@@ -6,17 +6,17 @@ import { normalizeFilters, filtersEqual, upsertView, removeView } from './useSav
 import type { SavedView } from '../types/preferences';
 
 describe('useSavedViews — helpers (42.A5)', () => {
-  it('normalizeFilters retire les valeurs vides', () => {
+  it('normalizeFilters removes empty values', () => {
     expect(normalizeFilters({ a: '1', b: '', c: 'x' })).toEqual({ a: '1', c: 'x' });
   });
 
-  it('filtersEqual ignore les clés vides', () => {
+  it('filtersEqual ignores empty keys', () => {
     expect(filtersEqual({ a: '1', b: '' }, { a: '1' })).toBe(true);
     expect(filtersEqual({ a: '1' }, { a: '2' })).toBe(false);
     expect(filtersEqual({ a: '1' }, { a: '1', c: 'x' })).toBe(false);
   });
 
-  it('upsertView ajoute une vue et normalise ses filtres', () => {
+  it('upsertView adds a view and normalises its filters', () => {
     const next = upsertView([], 'Retards', { status: 'draft', kind: '' });
     expect(next).toHaveLength(1);
     expect(next[0].name).toBe('Retards');
@@ -24,7 +24,7 @@ describe('useSavedViews — helpers (42.A5)', () => {
     expect(next[0].id).toMatch(/^v/);
   });
 
-  it('upsertView remplace par nom (insensible casse/espaces) en gardant l’id', () => {
+  it('upsertView replaces by name (case/whitespace-insensitive) keeping the id', () => {
     const existing: SavedView[] = [{ id: 'v1', name: 'Retards', filters: { status: 'draft' } }];
     const next = upsertView(existing, '  retards ', { status: 'published' });
     expect(next).toHaveLength(1);
@@ -32,7 +32,7 @@ describe('useSavedViews — helpers (42.A5)', () => {
     expect(next[0].filters).toEqual({ status: 'published' });
   });
 
-  it('removeView supprime par id', () => {
+  it('removeView deletes by id', () => {
     const views: SavedView[] = [
       { id: 'v1', name: 'A', filters: {} },
       { id: 'v2', name: 'B', filters: {} },

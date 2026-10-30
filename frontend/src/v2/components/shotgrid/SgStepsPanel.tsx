@@ -10,15 +10,15 @@ import { useSgSteps } from '../../lib/shotgridTasksApi';
 import type { SgConnection } from '../../types/shotgrid';
 
 /**
- * Étapes de pipeline retenues pour ce projet.
+ * Pipeline stages kept for this project.
  *
- * ShotGrid ne propose, dans ses propres menus, que les étapes dont la visibilité est
- * activée sur le projet — mais il ne publie ce réglage nulle part : ni entité, ni champ
- * de projet sur `Step`, ni liste de valeurs dans le schéma. Le studio déclare donc ici ce
- * que son site sait sans le dire, une fois, et ReView s'y tient.
+ * ShotGrid only offers, in its own menus, the stages whose visibility is enabled on the
+ * project, but it does not publish that setting anywhere: no entity, no project field on
+ * `Step`, no value list in the schema. The studio therefore declares here what its site
+ * knows without saying so, once, and ReView sticks to it.
  *
- * Ne rien cocher n'est pas une erreur : on déduit alors les étapes des tasks déjà
- * présentes dans le projet, et à défaut on propose le catalogue du site.
+ * Ticking nothing is not an error: stages are then inferred from the tasks already in the
+ * project, and failing that the site catalogue is offered.
  */
 export default function SgStepsPanel({
   connection,
@@ -33,7 +33,7 @@ export default function SgStepsPanel({
   const [query, setQuery] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Le catalogue entier : c'est ici, et seulement ici, qu'on veut tout voir.
+  // The full catalogue: this is the one place, and the only one, where everything must be visible.
   const { data: steps = [], isLoading } = useSgSteps(
     connection.projectId,
     kind === 'asset' ? 'Asset' : 'Shot',
@@ -117,8 +117,8 @@ export default function SgStepsPanel({
                 <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: step.color }} />
               )}
               <span className="min-w-0 flex-1 truncate">{step.code}</span>
-              {/* Le code court est affiché même quand il répète le nom : c'est lui qui
-                  départage deux étapes homonymes, et il n'y a pas d'autre repère. */}
+              {/* The short code is shown even when it repeats the name: it is what tells apart
+                  two stages with the same name, and there is no other marker. */}
               {step.shortName && (
                 <span className="shrink-0 font-mono text-xs text-muted-foreground">{step.shortName}</span>
               )}

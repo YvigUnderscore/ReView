@@ -12,12 +12,11 @@ import type { Column } from './kanbanColumns';
 import type { BoardTask } from './kanbanTypes';
 
 /**
- * La colonne dense reste une cible de dépôt (vague 2 — échelle).
+ * The dense column remains a drop target (wave 2, scale).
  *
- * C'est le point délicat de la virtualisation : ne plus monter les cartes ne doit pas
- * faire disparaître la colonne du contexte de glisser-déposer, sinon un board de
- * long-métrage n'accepterait plus aucun dépôt. Et le compteur d'en-tête doit continuer
- * d'annoncer la colonne entière, pas la fenêtre montée.
+ * This is the delicate point of virtualization: no longer mounting the cards must not make the
+ * column disappear from the drag-and-drop context, or a feature-film board would accept no drop at
+ * all. And the header counter must keep announcing the whole column, not the mounted window.
  */
 
 (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -63,7 +62,7 @@ const makeTasks = (n: number): BoardTask[] =>
     sequenceId: null,
   }));
 
-/** Rapporte les zones de dépôt que dnd-kit connaît réellement. */
+/** Reports the drop zones that dnd-kit actually knows. */
 function DroppableProbe({ onRead }: { onRead: (ids: string[]) => void }) {
   const { droppableContainers } = useDndContext();
   onRead([...droppableContainers].map(([id]) => String(id)));
@@ -103,19 +102,19 @@ afterEach(() => {
 });
 
 describe('KanbanColumn', () => {
-  it('reste une zone de dépôt quand ses mille cartes ne sont plus montées', () => {
+  it('remains a drop zone when its thousand cards are no longer mounted', () => {
     const view = render(makeTasks(1000));
     expect(view.droppables()).toContain('42');
     expect(view.host.querySelectorAll('a[href^="/tasks/"]').length).toBeLessThan(40);
   });
 
-  it('annonce la colonne entière, pas la fenêtre montée', () => {
+  it('announces the whole column, not the mounted window', () => {
     const view = render(makeTasks(1000));
     expect(view.host.textContent).toContain('1000');
     expect(view.host.textContent).toContain('On Hold');
   });
 
-  it('monte tout et reste déposable quand la colonne est courte', () => {
+  it('mounts everything and remains droppable when the column is short', () => {
     const view = render(makeTasks(4));
     expect(view.droppables()).toContain('42');
     expect(view.host.querySelectorAll('a[href^="/tasks/"]')).toHaveLength(4);

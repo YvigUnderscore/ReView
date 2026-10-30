@@ -10,10 +10,10 @@ import { SettingsCard } from './settings/SettingsCard';
 import { SETTINGS_KEYWORDS } from './settings/settingsKeywords';
 
 /**
- * Frame de départ du projet (déplacée dans les réglages depuis la vue d'ensemble).
+ * Project start frame (moved into the settings from the overview).
  *
- * Elle n'appartient pas au brouillon de réglages : c'est un champ du projet lui-même, qui
- * s'enregistre seul — comme le quota de stockage, et avec le même retour d'écran.
+ * It does not belong to the settings draft: it is a field of the project itself, which
+ * saves on its own, like the storage quota, and with the same on-screen feedback.
  */
 export default function ProjectStartFrameSection({
   projectId,

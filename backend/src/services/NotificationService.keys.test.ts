@@ -6,15 +6,15 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 
 /**
- * Contrôle croisé : toute clé de message émise par le backend existe côté frontend.
+ * Cross-check: every message key emitted by the backend exists on the frontend.
  *
- * Le backend ne rend pas ses notifications, il n'en pose que la clé et ses paramètres ; le
- * navigateur les traduit. Une clé émise mais absente du catalogue s'affiche donc telle
- * quelle dans le panneau de notifications — c'est ce qui arrivait à
- * `notification.clientComment` : chaque retour d'un client produisait une ligne illisible.
+ * The backend does not render its notifications; it only sets the key and its parameters, and the browser
+ * translates them. A key that is emitted but absent from the catalogue would therefore be
+ * displayed as-is in the notifications panel — this is what happened with `notification.clientComment`: each
+ * client feedback produced an unreadable line.
  *
- * `check-untranslated.mjs` ne pouvait pas l'attraper : il cherche du texte en dur dans le
- * code, pas une clé émise ici et attendue là-bas.
+ * `check-untranslated.mjs` could not catch it: it searches for hard-coded text in the code, not for a key
+ * emitted here and expected there.
  */
 
 const BACKEND_SRC = path.join(__dirname, '..');
@@ -41,10 +41,10 @@ function sources(dir: string): string[] {
   return out;
 }
 
-describe('clés de message émises par le backend', () => {
+describe('message keys emitted by the backend', () => {
   const catalog = JSON.parse(readFileSync(FRONT_CATALOG, 'utf8')) as Record<string, unknown>;
 
-  // `messageKey: 'notification.x'` et les littéraux `'notification.x'` passés aux notifieurs.
+  // `messageKey: 'notification.x'` and the `'notification.x'` literals passed to the notifiers.
   const emitted = new Set<string>();
   for (const file of sources(BACKEND_SRC)) {
     const src = readFileSync(file, 'utf8');
@@ -53,12 +53,12 @@ describe('clés de message émises par le backend', () => {
     }
   }
 
-  it('en émet au moins dix (le détecteur trouve bien quelque chose)', () => {
+  it('emits at least ten (the detector does find something)', () => {
     expect(emitted.size).toBeGreaterThanOrEqual(10);
   });
 
   for (const key of [...emitted].sort()) {
-    it(`${key} existe dans le catalogue anglais`, () => {
+    it(`${key} exists in the English catalogue`, () => {
       expect(catalog[key], `${key} est émise par le backend mais absente de en.json`).toBeDefined();
     });
   }

@@ -2,31 +2,30 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useEffect, useRef } from 'react';
-import { isEditable } from '../../../lib/shortcuts';
+import { isEditable } from '@/v2/lib/shortcuts';
 
-/** Les deux commandes de vue des viewers plats — celles que le rail nomme `fit` et `reset`. */
+/** The two view commands of the flat viewers — the ones the rail names `fit` and `reset`. */
 export interface ViewCommands {
-  /** Ajuster à l'écran (`F`). */
+  /** Fit to screen (`F`). */
   fit: () => void;
-  /** Taille réelle, un pixel média pour un pixel écran (`H`). */
+  /** Actual size, one media pixel per screen pixel (`H`). */
   oneToOne: () => void;
 }
 
 /**
- * `F` / `H` sur les deux viewers plats — le pendant de `useFrameShortcuts`, qui rend le même
- * service en 3D et en splat.
+ * `F` / `H` on the two flat viewers — the counterpart of `useFrameShortcuts`, which provides the
+ * same service in 3D and splat.
  *
- * Les deux actions de vue étaient **déclarées** dans `chrome/tools.ts` (`action.fitMedia`,
- * `action.resetMedia`) et branchées nulle part : sur une image comme sur une vidéo, les deux
- * lettres ne faisaient rien. Elles remplacent aussi `0` et `1`, que le zoom du lecteur écoutait
- * : `1` ajustait l'échelle **et** basculait sur le premier mode de la bascule, deux réponses
- * pour une frappe.
+ * Both view actions were **declared** in `chrome/tools.ts` (`action.fitMedia`,
+ * `action.resetMedia`) and wired nowhere: on an image as on a video, the two letters did nothing.
+ * They also replace `0` and `1`, which the player's zoom listened to: `1` both adjusted the scale
+ * **and** switched to the first mode of the toggle, two responses for one keystroke.
  *
- * `null` désarme le hook — un pane de comparaison ne doit pas répondre à ces touches en plus du
- * viewer principal.
+ * `null` disarms the hook — a comparison pane must not respond to these keys in addition to the
+ * main viewer.
  */
 export function useViewShortcuts(commands: ViewCommands | null): void {
-  // Miroir : les fonctions changent d'identité à chaque rendu du viewer, l'abonnement non.
+  // Mirror: the functions change identity on every viewer render, the subscription does not.
   const ref = useRef(commands);
   useEffect(() => {
     ref.current = commands;

@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
@@ -29,17 +29,17 @@ import {
 import { Hint } from '../../components/ui/hint';
 
 /**
- * Rétention : combien de temps le studio garde ce qu'il a produit et ce qu'il a supprimé,
- * avant purge automatique. C'est la page qu'on ouvre pour répondre à une demande RGPD —
- * d'où l'affichage systématique de la valeur par défaut du produit à côté de celle en
- * vigueur.
+ * Retention: how long the studio keeps what it has produced and what it has deleted,
+ * before automatic purge. This is the page one opens to answer a GDPR request —
+ * hence the systematic display of the product default next to the one in
+ * force.
  *
- * La corbeille se vidait selon un délai réglé dans la section fourre-tout, à l'autre bout
- * de la barre latérale : deux écrans à connaître pour une seule question. Le délai de la
- * corbeille vit ici, avec les journaux ; l'écran « Corbeille » y renvoie.
+ * The trash used to empty according to a delay set in the catch-all section, at the other end
+ * of the sidebar: two screens to know for a single question. The trash delay
+ * lives here, with the logs; the "Trash" screen links back to it.
  */
 
-/** Libellé traduit — table recalculée à chaque rendu, jamais figée au chargement du module. */
+/** Translated label — table recomputed on each render, never frozen at module load. */
 const familyLabel = (t: Tr, f: RetentionFamily) => t(`retention.family.${f}` as MessageKey);
 
 interface Loaded {
@@ -47,7 +47,7 @@ interface Loaded {
   defaults: RetentionPolicy;
 }
 
-/** Une famille = une durée en jours. `0` conserve indéfiniment, et le dit. */
+/** A family = a duration in days. `0` keeps indefinitely, and says so. */
 function DaysRow({
   family,
   value,
@@ -98,9 +98,9 @@ export default function RetentionTab() {
   const [sweeping, setSweeping] = useState(false);
 
   /**
-   * Une seule barre pour deux routes : la politique des journaux (`/api/admin/retention`)
-   * et le délai de la corbeille (un réglage clé/valeur). Rien à l'écran ne dit qu'il s'agit
-   * de deux stockages différents — et rien ne devrait le dire.
+   * A single bar for two routes: the logs policy (`/api/admin/retention`)
+   * and the trash delay (a key/value setting). Nothing on screen says these are
+   * two different stores — and nothing should.
    */
   const { busy, save } = useSaveAction(async () => {
     if (draft && data && policyChanged(data.policy, draft)) {
@@ -186,8 +186,8 @@ export default function RetentionTab() {
           </div>
         </Panel>
 
-        {/* Balayer maintenant n'est pas un enregistrement : c'est une opération, qui reste à
-          côté des réglages qu'elle applique plutôt que dans la barre qui les valide. */}
+        {/* Sweeping now is not a save: it is an operation, which stays
+          beside the settings it applies rather than in the bar that validates them. */}
         <div className="flex flex-wrap gap-2">
           <Button size="sm" variant="outline" onClick={() => void run()} disabled={busy || sweeping}>
             {sweeping ? t('retention.running') : t('retention.run')}

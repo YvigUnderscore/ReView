@@ -6,18 +6,18 @@ import { Bold, Code, Italic, Link2, List, ListOrdered, Quote } from 'lucide-reac
 import { applyMark, type MarkKind } from '../noteEditorMarks';
 import { renderNoteHtml } from '../noteRender';
 import { isAcceptedNoteImage, useNoteImageResolver } from '../noteImages';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
+import { sanitizeHtml } from '@/v2/lib/sanitizeHtml';
 
 /**
- * Un paragraphe de la fiche.
+ * A paragraph of the note.
  *
- * Le bloc montre **le texte tel qu'il sera lu** tant qu'on ne l'édite pas, et bascule en
- * saisie au clic. C'est ce qui évite d'avoir à choisir entre un éditeur WYSIWYG — qui
- * imposerait de stocker autre chose que du markdown, et de le réinventer à la souris — et
- * une page de syntaxe brute, que personne n'a envie de lire.
+ * The block shows **the text as it will be read** until it is edited, and switches to input on click. This avoids having to
+ * choose between a WYSIWYG editor, which would force storing something other than markdown and reinventing it with the
+ * mouse, and a raw-syntax page that nobody wants to read.
  *
- * Pendant la saisie, la mise en forme se pose à la sélection : les boutons, ou Ctrl+B/I/K.
- * Les astérisques restent visibles à cet instant précis, et à cet instant seulement.
+ * While typing, the formatting applies to the selection: via the buttons, or Ctrl+B/I/K. The asterisks remain visible at
+ * that precise moment, and at that moment only.
  */
 
 const MARKS: { kind: MarkKind; icon: typeof Bold; labelKey: `note.mark.${MarkKind}` }[] = [
@@ -38,7 +38,7 @@ export default function NoteTextBlock({
 }: {
   value: string;
   onChange: (next: string) => void;
-  /** Une image collée dans le texte devient un bloc image, posé juste après. */
+  /** An image pasted into the text becomes an image block, placed just after it. */
   onImages: (files: File[]) => void;
   autoFocus?: boolean;
 }) {
@@ -47,7 +47,7 @@ export default function NoteTextBlock({
   const field = useRef<HTMLTextAreaElement>(null);
   const [editing, setEditing] = useState(Boolean(autoFocus));
 
-  // Hauteur au contenu : un brief n'a pas à se lire dans une fenêtre de quatre lignes.
+  // Height fits the content: a brief should not have to be read through a four-line window.
   useEffect(() => {
     const node = field.current;
     if (!node || !editing) return;
@@ -64,7 +64,7 @@ export default function NoteTextBlock({
     if (!node) return;
     const out = applyMark(value, node.selectionStart, node.selectionEnd, kind);
     onChange(out.value);
-    // La sélection se repose après le rendu, sinon React la ramènerait à la fin du texte.
+    // The selection is restored after rendering, otherwise React would move it back to the end of the text.
     requestAnimationFrame(() => {
       node.focus();
       node.setSelectionRange(out.selectionStart, out.selectionEnd);
@@ -91,8 +91,8 @@ export default function NoteTextBlock({
         {value.trim() ? (
           <span
             className="prose-note block text-sm leading-relaxed"
-            // Même rendu que la fiche lue — échappé et assaini par `renderNoteHtml`.
-            dangerouslySetInnerHTML={{ __html: renderNoteHtml(value, resolve) }}
+            // Same rendering as the read note: escaped and sanitised by `renderNoteHtml`.
+            dangerouslySetInnerHTML={{ __html: sanitizeHtml(renderNoteHtml(value, resolve)) }}
           />
         ) : (
           <span className="text-sm text-muted-foreground">{t('note.text.placeholder')}</span>
@@ -110,7 +110,7 @@ export default function NoteTextBlock({
             type="button"
             title={t(labelKey)}
             aria-label={t(labelKey)}
-            // Sans cela, le clic ferait perdre le focus au champ et la sélection avec lui.
+            // Without this, the click would make the field lose focus, and the selection with it.
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => mark(kind)}
             className="rounded p-1 text-muted-foreground transition-colors hover:bg-secondary/60 hover:text-foreground"

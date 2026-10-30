@@ -13,24 +13,24 @@ import type { AssigneeRef } from '../types/entities';
 import { useT } from '../i18n';
 
 /**
- * Deux gestes que le clic droit doit porter sur toute entité de pipeline.
+ * Two gestures that the right click must carry on every pipeline entity.
  *
- * **Personnes** — assigner quelqu'un demandait d'ouvrir la fiche, puis chaque tâche. Le
- * geste s'énonce depuis la carte, il doit s'y faire.
+ * **People** — assigning someone used to mean opening the sheet, then each task. The
+ * gesture is stated from the card, it must work from there.
  *
- * **Masquer** — réservé aux ADMIN, et volontairement sans retour depuis la carte : une
- * fois masqué, l'élément disparaît de la liste où l'on vient de cliquer. C'est exactement
- * ce qu'on a demandé ; c'est aussi pourquoi l'écran d'administration est le seul endroit
- * d'où on peut le faire réapparaître, et le message de confirmation le dit.
+ * **Hide** — reserved for ADMINs, and deliberately with no way back from the card: once
+ * hidden, the item disappears from the list one has just clicked in. That is exactly
+ * what was asked for; it is also why the administration screen is the only place
+ * from which it can be brought back, and the confirmation message says so.
  *
- * Les deux rendent une entrée **et** leur dialogue : un formulaire ne peut pas vivre dans
- * un menu qui se ferme au premier clic.
+ * Both render an entry **and** their dialog: a form cannot live in
+ * a menu that closes at the first click.
  */
 
-/** Ce qu'une entité doit exposer pour que ces gestes s'appliquent. */
+/** What an entity must expose for these gestures to apply. */
 export interface MenuTarget {
   id: number;
-  /** Nom lisible, pour le titre du dialogue. */
+  /** Readable name, for the dialog title. */
   label: string;
   assignees?: AssigneeRef[];
 }
@@ -42,7 +42,7 @@ export function useEntityMenus(projectId: number, kind: AssignKind) {
   const isAdmin = role === 'ADMIN';
   const [assigning, setAssigning] = useState<MenuTarget | null>(null);
 
-  /** `episodes` → `episode` : le segment d'URL est au pluriel, le type de l'API au singulier. */
+  /** `episodes` → `episode`: the URL segment is plural, the API type singular. */
   const singular = kind.slice(0, -1);
 
   const refresh = () => {
@@ -50,7 +50,7 @@ export function useEntityMenus(projectId: number, kind: AssignKind) {
     void qc.invalidateQueries({ queryKey: [singular] });
   };
 
-  /** Sous-menu « Personnes… » — absent sans droit de gestion. */
+  /** "People…" submenu — absent without management rights. */
   const peopleEntry = (target: MenuTarget, canManage: boolean): MenuEntry | null =>
     canManage
       ? {
@@ -62,11 +62,11 @@ export function useEntityMenus(projectId: number, kind: AssignKind) {
       : null;
 
   /**
-   * « Masquer » / « Afficher de nouveau ».
+   * "Hide" / "Show again".
    *
-   * Une carte visible ne peut proposer que « masquer » : si l'élément était masqué, il ne
-   * serait pas là. L'entrée inverse existe pour les écrans d'administration, qui listent
-   * précisément ce qui est masqué.
+   * A visible card can only offer "hide": if the item were hidden, it would not
+   * be there. The reverse entry exists for the administration screens, which list
+   * precisely what is hidden.
    */
   const hideEntry = (target: MenuTarget & { hidden?: boolean }): MenuEntry | null => {
     if (!isAdmin) return null;

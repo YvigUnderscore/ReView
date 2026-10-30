@@ -6,36 +6,33 @@ import { entriesOf, separator, type EntityItemAction, type MenuEntry } from '../
 import type { MessageKey } from '../../i18n';
 
 /**
- * Menu unique des cartes d'entité d'un projet — séquences, plans, assets.
+ * Single menu for the entity cards of a project: sequences, shots, assets.
  *
- * Deux systèmes coexistaient : des tables d'actions par onglet (`shotCardActions`,
- * `assetCardActions`) et, à côté, les entrées produites par les hooks de menu. Chaque
- * onglet en composait sa version, d'où trois vocabulaires pour trois gestes identiques —
- * « Modifier » ici et « Réglages » là, « Supprimer » ici et « Mettre à la corbeille » là,
- * l'épinglage en cinquième position sur un écran et en dernière sur un autre. Le clic
- * droit étant la voie principale du produit, cette dérive fait douter de ce qu'on
- * déclenche.
+ * Two systems coexisted: per-tab action tables (`shotCardActions`, `assetCardActions`) and, beside
+ * them, the entries produced by the menu hooks. Each tab composed its own version, hence three
+ * vocabularies for three identical gestures: "Edit" here and "Settings" there, "Delete" here and
+ * "Move to trash" there, pinning in fifth position on one screen and last on another. Right-click
+ * being the product's main route, this drift makes one doubt what one is triggering.
  *
- * Tout se décrit désormais ici, comme une donnée : l'ordre est le même quel que soit le
- * type d'entité, et une entrée absente (le suivi sur une séquence, l'omission hors d'un
- * plan) ne décale pas les autres. Quatre blocs :
+ * Everything is now described here, as data: the order is the same whatever the type of entity,
+ * and a missing entry (watching a sequence, omission outside a shot) does not shift the others.
+ * Four blocks:
  *
- * 1. **ouvrir** — la destination de la carte ;
- * 2. **état de l'entité** — statut, assignation, personnes, omission, visibilité, telles
- *    que les hooks les produisent ;
- * 3. **suivi personnel et lien externe** — l'épinglage aux favoris s'insère en tête de ce
- *    bloc, `EntityCard` le posant lui-même à partir de sa prop `favorite` ;
- * 4. **gestion** — réglages, rattachement, corbeille, en dernier parce que destructeur.
+ * 1. **open**: the card's destination;
+ * 2. **entity state**: status, assignment, people, omission, visibility, as the hooks produce them;
+ * 3. **personal tracking and external link**: pinning to favourites is inserted at the head of this
+ *    block, `EntityCard` setting it itself from its `favorite` prop;
+ * 4. **management**: settings, linking, trash, last because destructive.
  *
- * Le vocabulaire suit ce que l'action fait réellement : `DELETE /api/{shots,assets,
- * sequences}/:id` est un `softDelete` — l'entité part à la corbeille et se restaure —
- * donc « Mettre à la corbeille », jamais « Supprimer » ; le crayon ouvre le panneau de
- * réglages, donc « Réglages », jamais « Modifier ».
+ * The vocabulary follows what the action actually does: `DELETE /api/{shots,assets,
+ * sequences}/:id` is a `softDelete`, so the entity goes to the trash and can be restored. Hence
+ * "Move to trash", never "Delete". The pencil opens the settings panel, hence "Settings", never
+ * "Edit".
  */
 
 export type EntityMenuKind = 'sequence' | 'shot' | 'asset';
 
-/** Entrées produites par les hooks de menu, insérées à place fixe. */
+/** Entries produced by the menu hooks, inserted at a fixed position. */
 export interface EntityStateEntries {
   status?: MenuEntry | null;
   assign?: MenuEntry | null;
@@ -47,32 +44,32 @@ export interface EntityStateEntries {
 export interface EntityCardMenuInput {
   t: (key: MessageKey) => string;
   kind: EntityMenuKind;
-  /** Faux = spectateur : ni réglages, ni corbeille, ni rattachement. */
+  /** False means viewer: no settings, no trash, no linking. */
   canManage: boolean;
-  /** Fiche ShotGrid, présente seulement si l'entité y est reliée. */
+  /** ShotGrid sheet, present only if the entity is linked to it. */
   sgUrl?: string | null;
-  /** Suivi de notifications ; le suivi ne connaît que les plans et les assets. */
+  /** Watch (notification tracking); watching only covers shots and assets. */
   watch?: { watching: boolean; onToggle: () => void } | null;
   state?: EntityStateEntries;
   onOpen: () => void;
   onSettings: () => void;
   onTrash: () => void;
-  /** Rattacher un asset à des plans ou des séquences — assets seulement. */
+  /** Links an asset to shots or sequences: assets only. */
   onLink?: (() => void) | null;
 }
 
 export interface EntityCardMenu {
-  /** Boutons au survol de la carte. */
+  /** Buttons shown on hover over the card. */
   hoverActions: EntityItemAction[];
-  /** Prop `contextEntries` d'`EntityCard` — ce que les actions plates ne savent pas dire. */
+  /** `contextEntries` prop of `EntityCard`: what flat actions cannot express. */
   contextEntries: MenuEntry[];
-  /** Prop `contextActions` — l'épinglage aux favoris s'insère juste avant elles. */
+  /** `contextActions` prop: pinning to favourites is inserted just before them. */
   contextActions: EntityItemAction[];
 }
 
 /**
- * Libellé du suivi. Les séquences n'en ont pas : `WatchTargetType` ne connaît que
- * `SHOT`, `ASSET` et `VERSION` — proposer l'entrée promettrait ce que l'API ne tient pas.
+ * Label of the watch. Sequences have none: `WatchTargetType` only knows `SHOT`, `ASSET` and
+ * `VERSION`, and offering the entry would promise what the API does not keep.
  */
 export function watchLabel(
   t: (key: MessageKey) => string,
@@ -84,7 +81,7 @@ export function watchLabel(
   return null;
 }
 
-/** Libellé du lien ShotGrid, nommé par type d'entité comme les fiches distantes. */
+/** Label of the ShotGrid link, named by entity type like the remote sheets. */
 export function shotgridLabel(t: (key: MessageKey) => string, kind: EntityMenuKind): string {
   if (kind === 'shot') return t('shotgrid.openIn.shot');
   if (kind === 'asset') return t('shotgrid.openIn.asset');
@@ -94,9 +91,8 @@ export function shotgridLabel(t: (key: MessageKey) => string, kind: EntityMenuKi
 export function entityCardMenu(input: EntityCardMenuInput): EntityCardMenu {
   const { t, kind, canManage, sgUrl, watch, state, onLink } = input;
 
-  // Les mêmes gestes au survol et au clic droit : les décrire une fois interdit qu'ils
-  // se mettent à diverger, comme l'avaient fait « Supprimer » et « Mettre à la corbeille »
-  // sur une seule et même carte de séquence.
+  // The same gestures on hover and on right-click: describing them once prevents them from
+  // diverging, as "Delete" and "Move to trash" did on one and the same sequence card.
   const hoverActions: EntityItemAction[] = canManage
     ? [
         { icon: <Settings2 size={14} />, label: t('entity.settings.open'), onClick: input.onSettings },
@@ -109,8 +105,8 @@ export function entityCardMenu(input: EntityCardMenuInput): EntityCardMenu {
     { id: 'open', label: t('common.open'), icon: <FolderOpen size={14} />, onSelect: input.onOpen },
     separator('state'),
     ...entriesOf(state?.status, state?.assign, state?.people, state?.omit, state?.hide),
-    // Ferme le bloc d'état : l'épinglage aux favoris, ajouté par `EntityCard`, ouvre le
-    // suivant. Un séparateur en trop est retiré au rendu (`tidyMenu`).
+    // Closes the state block: the pinning to favourites, added by `EntityCard`, opens the next one.
+    // A surplus separator is removed at render time (`tidyMenu`).
     separator('actions'),
   ];
 

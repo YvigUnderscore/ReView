@@ -26,18 +26,18 @@ import * as PipelineStatusService from './PipelineStatusService';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
 
 /**
- * Logique métier des tâches (liste, création XOR Shot/Asset, mise à jour avec droits
- * différenciés, notifications d'assignation). L'accès projet (RBAC) est asserté dans
- * la route ; ces fonctions reçoivent le projectId résolu (10.D8).
+ * Business logic for tasks (list, creation XOR Shot/Asset, update with differentiated rights,
+ * assignment notifications). Project access (RBAC) is asserted in the route; these functions receive the
+ * resolved projectId (10.D8).
  *
- * Les droits se lisent sur le rôle EFFECTIF (38.E, `lib/projectRoles`) et jamais sur le
- * rôle global : le second modèle qui vivait ici refusait à un ARTIST promu SUPERVISOR sur
- * son projet d'y modifier ou d'y supprimer une tâche qu'il supervise pourtant.
+ * Rights are read from the EFFECTIVE role (38.E, `lib/projectRoles`) and never from the global role: the second
+ * model that lived here refused a supervisor promoted from ARTIST on their project from modifying or deleting a
+ * task they nonetheless supervise.
  */
 
 type SessionUser = { id: number; role: Role };
 
-/** Versions ramenées par la fiche d'une tâche — la plus récente d'abord. */
+/** Versions returned with a task's detail: most recent first. */
 const DETAIL_VERSIONS_LIMIT = 200;
 
 function emitTaskUpdate(projectId: number, t: { id: number; shotId: number | null; assetId: number | null }) {
@@ -47,16 +47,14 @@ function emitTaskUpdate(projectId: number, t: { id: number; shotId: number | nul
 type TaskEvent = 'task.created' | 'task.updated' | 'task.status_changed' | 'task.assigned';
 
 /**
- * Flux de changements (journal v1 + webhooks) — émis DEPUIS le service.
+ * Change stream (v1 journal + webhooks), emitted FROM the service.
  *
- * Il ne partait auparavant que de l'API v1 : un statut posé au clic droit, une assignation
- * par lot ou une tâche créée à l'écran ne produisaient ni ligne de journal ni webhook. Le
- * journal se présentait pourtant comme un flux de changements — il ne montrait que le
- * trafic machine. L'origine du changement n'a plus à compter.
+ * It used to come only from the v1 API: a status set by right-click, a batch assignment or a task created on
+ * screen produced neither a journal line nor a webhook. Yet the journal presented itself as a change stream: it
+ * only showed machine traffic. The origin of the change no longer matters.
  *
- * La représentation est celle de l'API v1 (`toTask`), la même que reçoit un abonné pour un
- * changement venu d'un DCC : un consommateur ne doit pas avoir à distinguer les deux. Elle
- * coûte une relecture par clé primaire, hors transaction.
+ * The representation is that of the v1 API (`toTask`), the same one a subscriber receives for a change coming
+ * from a DCC: a consumer must not have to tell the two apart. It costs one re-read by primary key, outside the transaction.
  */
 async function publishTaskEvents(
   projectId: number,
@@ -79,20 +77,18 @@ async function publishTaskEvents(
 }
 
 /**
- * Qui peut recevoir cette tâche.
+ * Who may receive this task.
  *
- * Même garde que l'assignation d'entité et que l'assignation de review
- * (`EntityAssigneeService.assertAssignable`), volontairement partagée : un compte de
- * service, un compte désactivé ou quelqu'un qui ne contribue pas à CE projet-là se voyait
- * confier une tâche — et notifier — par le seul chemin des tâches, qui ne vérifiait rien.
- * Trois chemins d'assignation, deux gardes : le troisième était la porte de service des
- * deux autres.
+ * Same guard as entity assignment and review assignment (`EntityAssigneeService.assertAssignable`), deliberately
+ * shared: a service account, a deactivated account, or someone not contributing to THIS project could be given a
+ * task, and notified of it, through the task path alone, which checked nothing.
+ * Three assignment paths, two guards: the third was the back door of the other two.
  */
 const assertTaskAssignee = async (projectId: number, assigneeId: number | null | undefined) => {
   if (assigneeId != null) await assertAssignable(projectId, [assigneeId]);
 };
 
-/** Notifie l'assigné d'une tâche (hors auto-assignation). */
+/** Notifies a task's assignee (except self-assignment). */
 async function notifyAssignee(
   assigneeId: number | null | undefined,
   actorId: number,
@@ -112,10 +108,10 @@ async function notifyAssignee(
 }
 
 /**
- * Tâches paginées d'un Shot ou d'un Asset.
+ * Paginated tasks of a Shot or an Asset.
  *
- * Départage sur `id` : les tâches d'un plan importé partagent toutes `order = 0`, et
- * sans clé de départage deux pages successives se recouvrent.
+ * Tie-broken on `id`: the tasks of an imported shot all share `order = 0`, and without a tie-break key two
+ * successive pages overlap.
  */
 export async function list(p: PaginationParams, shotId?: number, assetId?: number) {
   const where = shotId ? { shotId } : { assetId };
@@ -135,14 +131,13 @@ export async function list(p: PaginationParams, shotId?: number, assetId?: numbe
 }
 
 /**
- * Toutes les tâches d'un projet, avec l'entité qui les porte.
+ * All the tasks of a project, with the entity carrying them.
  *
- * Une Task n'a pas de `projectId` : elle pend à un shot ou à un asset, et c'est ce
- * parent qui appartient au projet. La liste passe donc par les deux chemins.
+ * A Task has no `projectId`: it hangs from a shot or an asset, and it is that parent which belongs to the project.
+ * The list therefore goes through both paths.
  *
- * Sert à proposer une destination d'upload : sur un projet ShotGrid, un asset traverse
- * cinq étapes (art, model, rig, groom, lookdev) et un plan autant — les voir toutes est
- * ce qui permet de ranger un rendu là où il a été produit.
+ * Used to propose an upload destination: on a ShotGrid project, an asset goes through five steps (art, model, rig,
+ * groom, lookdev) and a shot as many. Seeing them all is what lets a render be filed where it was produced.
  */
 export interface ProjectTaskRow {
   id: number;
@@ -155,9 +150,8 @@ export interface ProjectTaskRow {
 }
 
 /**
- * Le plafond ne renvoyait rien qui permette de savoir qu'il avait mordu : à dix mille
- * tâches, la liste des destinations d'upload en montrait cinq cents et se taisait. Le
- * total et le curseur de suite accompagnent désormais la page.
+ * The cap returned nothing that let the caller know it had bitten: at ten thousand tasks, the list of upload
+ * destinations showed five hundred and said nothing. The total and the continuation cursor now accompany the page.
  */
 export async function listForProject(
   projectId: number,
@@ -170,8 +164,8 @@ export async function listForProject(
   const [tasks, total] = await Promise.all([
     prisma.task.findMany({
       where: p ? withCursor(where, p, 'order', 'asc') : where,
-      // `id` en dernier départage : deux tâches homonymes sur deux plans (« comp ») ne
-      // doivent pas s'échanger de place entre deux pages.
+      // `id` as the final tie-break: two same-named tasks on two shots ("comp") must not swap places
+      // between two pages.
       orderBy: [{ order: 'asc' }, { name: 'asc' }, { id: 'asc' }],
       take,
       select: {
@@ -204,7 +198,7 @@ export async function listForProject(
   };
 }
 
-/** Une carte de kanban, avec tout ce qu'il faut pour la lire, la filtrer et la déplacer. */
+/** A kanban card, with everything needed to read, filter and move it. */
 export interface BoardTaskRow {
   id: number;
   name: string;
@@ -223,19 +217,18 @@ export interface BoardTaskRow {
 }
 
 /**
- * Toutes les tâches d'un projet, en une requête (C4).
+ * All the tasks of a project, in one query (C4).
  *
- * Le kanban en demandait une par plan **et** une par asset : cent cinquante appels HTTP
- * à l'ouverture d'un projet moyen, jusqu'à se faire limiter par le serveur. Sur le
- * long-métrage visé — deux mille plans — c'était irréalisable.
+ * The kanban used to ask for one per shot **and** one per asset: a hundred and fifty HTTP calls on opening an
+ * average project, enough to get rate-limited by the server. On the targeted feature film, two thousand shots,
+ * it was unworkable.
  *
- * La limite est explicite et le total est renvoyé : une troncature silencieuse ferait
- * lire « ce projet a 2000 tâches » à un board qui n'en montre que la moitié.
+ * The limit is explicit and the total is returned: a silent truncation would make a board showing half of them read
+ * "this project has 2000 tasks".
  *
- * `cursor` permet d'aller chercher la suite plutôt que de relever la limite : à dix mille
- * tâches, le board se remplit en cinq requêtes bornées au lieu d'une seule réponse de
- * plusieurs mégaoctets. Le tri se départage sur `id`, sans quoi les tâches à `order = 0`
- * — c'est-à-dire toutes celles d'un import ShotGrid — changeraient de page à chaque appel.
+ * `cursor` fetches the rest instead of raising the limit: at ten thousand tasks, the board fills in five bounded
+ * requests instead of one response of several megabytes. Sorting is tie-broken on `id`, otherwise tasks at `order = 0`,
+ * that is, all those of a ShotGrid import, would change page on every call.
  */
 export async function listForBoard(
   projectId: number,
@@ -276,7 +269,7 @@ export async function listForBoard(
       : t.asset
         ? { kind: 'asset' as const, id: t.asset.id, label: t.asset.name, sequenceId: null }
         : null;
-    // Une tâche sans parent vivant ne peut pas s'afficher : son plan est en corbeille.
+    // A task without a living parent cannot be displayed: its shot is in the trash.
     if (!parent) return [];
     return [
       {
@@ -298,9 +291,8 @@ export async function listForBoard(
     ];
   });
 
-  // Sans curseur, `truncated` garde son sens d'origine — le board affiche un
-  // avertissement. Avec un curseur, la question n'est plus « ai-je tout » mais « reste-t-il
-  // une page », et c'est une page pleine qui y répond.
+  // Without a cursor, `truncated` keeps its original meaning: the board shows a warning. With a cursor, the
+  // question is no longer "do I have everything?" but "is there another page left?", and a full page answers it.
   return {
     items,
     total,
@@ -312,9 +304,9 @@ export async function listForBoard(
 export interface CreateTaskInput {
   name: string;
   type: TaskType;
-  /** Département du pipe (clé des réglages projet) — porte l'ordre amont → aval. */
+  /** Department of the pipe (key of the project settings): carries the upstream-to-downstream order. */
   department?: string | null;
-  /** Consigne : ce qu'il y a à faire, tel que la production le rédige (Phase 50). */
+  /** Brief: what there is to do, as production writes it (Phase 50). */
   description?: string | null;
   shotId?: number;
   assetId?: number;
@@ -323,15 +315,14 @@ export interface CreateTaskInput {
 }
 
 export async function create(user: SessionUser, projectId: number, body: CreateTaskInput) {
-  await assertCanContribute(user.id, user.role, projectId); // 38.E : CLIENT = pas de tâche
+  await assertCanContribute(user.id, user.role, projectId); // 38.E: CLIENT = no task
   await assertProjectWritable(projectId); // 38.B
-  // Sans département explicite, le type fait office d'étape : il porte les mêmes clés
-  // que les départements par défaut, et une tâche sans étape se range en fourre-tout.
+  // Without an explicit department, the type serves as the step: it carries the same keys as the default
+  // departments, and a task without a step would fall into a catch-all bucket.
   const key = body.department ?? (body.type === TaskType.OTHER ? null : body.type);
   const department = await resolveDepartment(projectId, key);
-  // Politique de département (réglage studio) : un artiste crée dans ses étapes, et
-  // nulle part ailleurs. Sans elle, la liste proposée à l'écran valait promesse — mais
-  // rien n'empêchait un appel direct de la contourner.
+  // Department policy (studio setting): an artist creates within their steps, and nowhere else. Without it,
+  // the list offered on screen was only a promise, but nothing prevented a direct call from bypassing it.
   const ctx = await taskWriteContext(user, projectId);
   if (department.departmentId !== null) {
     const allowed = writableDepartments([{ id: department.departmentId }], ctx);
@@ -358,13 +349,12 @@ export async function create(user: SessionUser, projectId: number, body: CreateT
 }
 
 /**
- * Nom de tâche depuis un contenu de commentaire : texte sans balises, tronqué.
+ * Task name from a comment's content: text without tags, truncated.
  *
- * Ce n'est plus qu'un **repli** : le nom se demande dans un dialogue avant la création
- * (Phase 50) — un retour de review fait une mauvaise étiquette de tâche, et celle-ci se
- * lisait ensuite sur le kanban et dans ShotGrid. Le repli est rédigé en anglais, comme
- * tout ce qui s'écrit en base : la langue du lecteur se choisit à l'affichage, et un nom
- * stocké en français apparaissait tel quel dans les quatorze langues.
+ * This is now only a **fallback**: the name is asked for in a dialog before creation (Phase 50), since a review
+ * note makes a poor task label, and that label was then read on the kanban and in ShotGrid. The fallback is written
+ * in English, like everything written to the database: the reader's language is chosen at display time, and a name
+ * stored in French would have appeared as is in all fourteen languages.
  */
 export function taskNameFromComment(html: string): string {
   const text = html
@@ -375,30 +365,26 @@ export function taskNameFromComment(html: string): string {
   return text.length > 80 ? `${text.slice(0, 79)}…` : text;
 }
 
-/** Ce que le dialogue de création (Phase 50) apporte en plus du commentaire d'origine. */
+/** What the creation dialog (Phase 50) adds to the original comment. */
 export interface CommentTaskInput {
-  /** Nom choisi par la personne ; absent, le texte du commentaire fait le repli. */
+  /** Name chosen by the person; if absent, the comment text is the fallback. */
   name?: string;
   description?: string | null;
 }
 
 /**
- * Crée une tâche kanban depuis un commentaire de review (32.D) : rattachée au
- * shot/asset porteur de la version du média, assigné du commentaire repris,
- * lien retour via `sourceCommentId` (frame/annotation restaurées par ?comment=).
+ * Creates a kanban task from a review comment (32.D): attached to the shot/asset carrying the media's version,
+ * assigned to the comment's author, with a link back via `sourceCommentId` (frame/annotation restored by ?comment=).
  *
- * Quatre manques corrigés en Phase 50 :
- *  - **droits** : ce chemin ne vérifiait rien du tout, la route lisant le rôle GLOBAL du
- *    compte. Un superviseur nommé sur CE projet — rôle par membership — ne voyait pas
- *    l'entrée et se faisait refuser s'il l'appelait quand même, alors que la création
- *    classique lui est ouverte. Même porte pour les deux, lue sur le rôle EFFECTIF ;
- *  - **projet inscriptible** : une tâche naissait sur un projet archivé (38.B) ;
- *  - **étape et statut** : la tâche n'avait ni l'un ni l'autre. Sans statut du
- *    référentiel elle tombait dans la colonne de repli du kanban, et disparaissait du
- *    board dès que le projet changeait de vocabulaire ;
- *  - **site ShotGrid** : la tâche n'y était jamais créée, contrairement à tous les autres
- *    chemins de création. Elle part maintenant par la file d'écriture — l'action locale
- *    n'attend pas le site et ne dépend pas de lui.
+ * Four gaps corrected in Phase 50:
+ *  - **rights**: this path checked nothing at all, the route reading the account's GLOBAL role. A supervisor named on
+ *    THIS project (role by membership) did not see the entry and was refused if they called it anyway, whereas the
+ *    classic creation is open to them. Same gate for both, read on the EFFECTIVE role;
+ *  - **writable project**: a task was born on an archived project (38.B);
+ *  - **step and status**: the task had neither. Without a reference-list status it fell into the kanban's fallback
+ *    column, and disappeared from the board as soon as the project changed vocabulary;
+ *  - **ShotGrid site**: the task was never created there, unlike every other creation path. It now goes through the
+ *    write queue: the local action does not wait for the site and does not depend on it.
  */
 export async function createFromComment(
   user: SessionUser,
@@ -430,12 +416,11 @@ export async function createFromComment(
   const assetId = source?.assetId ?? version.assetId ?? null;
   if (!shotId && !assetId) throw badRequest('This media has no shot or asset attached');
 
-  // L'étape de la tâche qui porte la version relue : un retour sur un rendu de comp est
-  // du travail de comp. C'est elle qui décide de la place dans le pipe et de qui a le
-  // droit d'écrire sur la tâche — sans elle, le retour partait en fourre-tout.
+  // The step of the task carrying the reviewed version: a note on a comp render is comp work. It decides the
+  // place in the pipe and who may write to the task; without it, the note went into the catch-all bucket.
   const department = await resolveDepartment(projectId, source?.department ?? null);
-  // Statut d'entrée du projet, dans SON vocabulaire : `resolveStatusPair` aligne
-  // l'énumération et le référentiel, exactement comme pour une tâche modifiée à l'écran.
+  // The project's entry status, in ITS vocabulary: `resolveStatusPair` aligns the enumeration and the reference
+  // list, exactly as for a task modified on screen.
   const statusPair = await resolveStatusPair(projectId, { status: TaskStatus.TODO });
   const name = body.name?.trim() || taskNameFromComment(comment.content);
 
@@ -456,13 +441,12 @@ export async function createFromComment(
       include: { assignee: { select: { id: true, name: true } } },
     });
   } catch (err) {
-    // Un plan ne porte qu'une tâche par étape et par nom. Le nom venait du texte du
-    // retour, jamais deux fois le même en pratique ; il se choisit désormais, et deux
-    // retours nommés pareil sur la même étape se heurtent. La faute revient à qui l'a
-    // écrit, avec de quoi la corriger — le dialogue est encore là.
+    // A shot carries only one task per step and name. The name used to come from the text of the note, never
+    // the same twice in practice; it is now chosen, so two notes named alike on the same step collide. The fault lies
+    // with whoever wrote it, with what is needed to fix it: the dialog is still there.
     if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002')
-      // Le nom voyage dans les détails, pas dans le message : le client traduit par le
-      // code, et une phrase assemblée ici ne serait de toute façon lue par personne.
+      // The name travels in the details, not in the message: the client translates by code, and a sentence assembled
+      // here would in any case be read by nobody.
       throw new AppError('A task with this name already exists at this step', 409, 'TASK_NAME_TAKEN', {
         name,
       });
@@ -477,14 +461,14 @@ export async function createFromComment(
   return task;
 }
 
-/** Détail d'une tâche (assigné, versions, contexte shot/asset pour le fil d'ariane). */
+/** Task detail (assignee, versions, shot/asset context for the breadcrumb). */
 export async function getDetail(id: number) {
   const task = await prisma.task.findUnique({
     where: { id },
     include: {
       assignee: { select: { id: true, name: true, email: true } },
-      // Historique borné : une tâche de comp reprise deux cents fois ne doit pas faire
-      // grossir la fiche indéfiniment. `_count` dit le nombre réel de versions.
+      // Bounded history: a comp task reworked two hundred times must not make the sheet grow indefinitely.
+      // `_count` gives the real number of versions.
       versions: { orderBy: [{ createdAt: 'desc' }, { id: 'desc' }], take: DETAIL_VERSIONS_LIMIT },
       _count: { select: { versions: true } },
       shot: {
@@ -497,7 +481,7 @@ export async function getDetail(id: number) {
         },
       },
       asset: { select: { id: true, name: true, type: true, project: { select: { id: true, name: true } } } },
-      // Commentaire d'origine (32.D) : lien retour vers la review à la frame/annotation.
+      // Original comment (32.D): link back to the review at the frame/annotation.
       sourceComment: { select: { id: true, mediaObjectId: true } },
     },
   });
@@ -515,15 +499,14 @@ export interface UpdateTaskInput {
   type?: TaskType;
   department?: string | null;
   /**
-   * Consigne de la tâche (Phase 50) : ce qu'il y a à faire.
+   * Task brief (Phase 50): what there is to do.
    *
-   * Réservée aux managers, comme le nom ou le planning : c'est la production qui donne le
-   * travail. L'assigné la lit, il ne se la réécrit pas — la liste des champs qu'il peut
-   * toucher (statut, checklist) est inchangée.
+   * Reserved to managers, like the name or the schedule: it is production that assigns the work. The assignee reads it;
+   * they do not rewrite it: the list of fields they may touch (status, checklist) is unchanged.
    */
   description?: string | null;
   status?: TaskStatus;
-  /** Statut personnalisable (Phase 48) — écrit en parallèle de `status`. */
+  /** Customizable status (Phase 48): written in parallel with `status`. */
   pipelineStatusId?: number | null;
   assigneeId?: number | null;
   order?: number;
@@ -533,20 +516,17 @@ export interface UpdateTaskInput {
 }
 
 /**
- * Aligne la clé de département et la clé étrangère (B1).
+ * Aligns the department key and the foreign key (B1).
  *
- * La relation fait foi, la chaîne reste écrite en parallèle : c'est elle que lisent le pipe
- * (`lib/pipelineOrder.ts`), la nomenclature des versions et les snapshots de montage, qui
- * sont des comptes rendus figés et n'ont pas à suivre un renommage. Une étape inconnue du
- * projet — un `step` importé de ShotGrid, un chemin DCC — est créée plutôt que perdue :
- * elle existe puisque quelqu'un travaille dessus.
+ * The relation is authoritative; the string is written in parallel: it is what the pipe reads (`lib/pipelineOrder.ts`),
+ * the version nomenclature and the edit snapshots, which are frozen records and need not follow a rename. A step unknown
+ * to the project, an imported ShotGrid `step` or a DCC path, is created rather than lost: it exists since someone works on it.
  */
 /**
- * Le contexte de droits d'une personne sur une tâche : politique du studio, rôle effectif,
- * ses départements.
+ * A person's rights context on a task: studio policy, effective role, their departments.
  *
- * Une seule lecture pour les deux appelants (création et mise à jour) : les laisser
- * interroger la base chacun de son côté les aurait fait diverger au premier changement.
+ * A single read for both callers (creation and update): letting each query the database on its own would have made them
+ * diverge at the first change.
  */
 async function taskWriteContext(
   user: SessionUser,
@@ -579,8 +559,8 @@ async function resolveDepartment(
 }
 
 /**
- * Aligne `pipelineStatusId` et `status` d'après ce que l'appelant a fourni.
- * Le kanban envoie l'un ou l'autre selon l'écran d'origine ; la base porte les deux.
+ * Aligns `pipelineStatusId` and `status` according to what the caller provided.
+ * The kanban sends one or the other depending on the originating screen; the database holds both.
  */
 async function resolveStatusPair(
   projectId: number,
@@ -588,18 +568,17 @@ async function resolveStatusPair(
 ): Promise<{ status?: TaskStatus; pipelineStatusId?: number | null }> {
   if (body.pipelineStatusId !== undefined) {
     if (body.pipelineStatusId === null) return { pipelineStatusId: null };
-    // Le statut doit appartenir au vocabulaire de CE projet : rien n'empêchait jusqu'ici
-    // de poser sur une tâche un statut importé du site d'un autre projet.
+    // The status must belong to THIS project's vocabulary: until now nothing prevented setting on a task a status
+    // imported from another project's site.
     const offered = await PipelineStatusService.listForProject(projectId, 'task');
     const status = offered.find((s) => s.id === body.pipelineStatusId);
     if (!status) throw badRequest('Unknown pipeline status for this project');
     return { pipelineStatusId: status.id, status: status.legacyStatus ?? TaskStatus.TODO };
   }
   if (body.status !== undefined) {
-    // Le kanban envoie encore l'énumération à six valeurs. La correspondance se cherche
-    // dans le vocabulaire du projet et nulle part ailleurs : la reposer depuis le
-    // référentiel entier remplaçait « On Hold » par « Waiting to Start » — et l'écrivait
-    // sur le site ShotGrid du studio.
+    // The kanban still sends the six-value enumeration. The match is looked up in the project's vocabulary and
+    // nowhere else: re-deriving it from the whole reference list would have replaced "On Hold" with "Waiting to Start",
+    // and written that to the studio's ShotGrid site.
     const match = await PipelineStatusService.resolveByLegacy(projectId, 'task', body.status);
     return { status: body.status, ...(match ? { pipelineStatusId: match.id } : {}) };
   }
@@ -607,11 +586,10 @@ async function resolveStatusPair(
 }
 
 /**
- * Pose (ou retire) l'assigné d'une tâche — chemin unique, hors du `PATCH` général.
+ * Sets (or removes) a task's assignee: a single path, outside the general `PATCH`.
  *
- * L'assignation par lot et l'assignation d'un asset passent par ici : elles ne peuvent pas
- * emprunter `update()`, qui refuse à un non-manager tout autre champ que le statut, et qui
- * attend une session complète là où le lot ne connaît que l'acteur.
+ * Batch assignment and asset assignment go through here: they cannot borrow `update()`, which refuses a non-manager
+ * any field other than the status, and which expects a full session where the batch only knows the actor.
  */
 export async function setAssignee(
   user: SessionUser,
@@ -630,8 +608,8 @@ export async function setAssignee(
   });
   if (opts.notify !== false) await notifyAssignee(assigneeId, user.id, projectId, taskId, updated.name);
   emitTaskUpdate(projectId, updated);
-  // L'assignation par lot passe par ici : c'est le geste que la production suit de plus
-  // près, et il ne laissait aucune trace hors de l'écran.
+  // Batch assignment goes through here: it is the gesture production follows most closely, and it left no trace
+  // outside the screen.
   if (before?.assigneeId !== assigneeId)
     await publishTaskEvents(projectId, taskId, user.id, [
       { event: 'task.assigned', extra: { assigneeId, from: before?.assigneeId ?? null } },
@@ -650,9 +628,9 @@ export async function update(user: SessionUser, projectId: number, id: number, b
   const ctx = await taskWriteContext(user, projectId);
   const manager = ctx.isManager;
   if (!manager) {
-    // À quelles tâches la personne a accès : l'assigné toujours, et — sous la politique de
-    // département — les membres de l'étape. Ce qu'elle peut y *changer* reste borné au
-    // statut et à la checklist : la responsabilité d'une étape n'est pas celle du planning.
+    // Which tasks the person can access: always their assignments, and, under the department policy, the members
+    // of the step. What they can *change* remains limited to the status and the checklist: responsibility for a
+    // step is not that of the schedule.
     const reachable = canWriteTask({
       ...ctx,
       taskDepartmentId: task.departmentId,
@@ -665,11 +643,10 @@ export async function update(user: SessionUser, projectId: number, id: number, b
   }
   await assertTaskAssignee(projectId, body.assigneeId);
   const { checklist, department, ...rest } = body;
-  // Département : la clé et la relation avancent ensemble, comme le statut plus bas.
+  // Department: the key and the relation move together, as the status does below.
   const departmentPair = department !== undefined ? await resolveDepartment(projectId, department) : {};
-  // Statut : le référentiel personnalisable et l'énumération avancent ensemble, quel
-  // que soit celui des deux que l'appelant a fourni. Les laisser diverger ferait
-  // afficher un état au kanban et un autre sur la fiche.
+  // Status: the customizable reference list and the enumeration move together, whichever of the two the caller
+  // provided. Letting them diverge would show one state on the kanban and another on the sheet.
   const statusPair = await resolveStatusPair(projectId, body);
   const updated = await prisma.task.update({
     where: { id },
@@ -683,9 +660,8 @@ export async function update(user: SessionUser, projectId: number, id: number, b
   });
   await notifyAssignee(body.assigneeId, user.id, projectId, id, updated.name);
   emitTaskUpdate(projectId, updated);
-  // Flux de changements : le statut se distingue d'une modification quelconque — c'est lui
-  // que suivent les tableaux de production, et sans événement dédié chaque consommateur
-  // devrait comparer les états lui-même pour le retrouver.
+  // Change stream: a status change is distinguished from any other modification: it is what production boards
+  // follow, and without a dedicated event every consumer would have to compare states itself to find it.
   const statusChanged = updated.status !== task.status || updated.pipelineStatusId !== task.pipelineStatusId;
   await publishTaskEvents(projectId, id, user.id, [
     ...(statusChanged
@@ -706,8 +682,8 @@ export async function update(user: SessionUser, projectId: number, id: number, b
       : []),
     { event: 'task.updated' },
   ]);
-  // 48 : ce qui a changé remonte vers ShotGrid, domaine par domaine. Les dates partent
-  // ensemble — ShotGrid recalcule la durée à partir des deux.
+  // 48: what changed goes up to ShotGrid, domain by domain. Dates travel together: ShotGrid recalculates
+  // the duration from both.
   if (body.status !== undefined || body.pipelineStatusId !== undefined)
     await enqueuePush(projectId, { type: 'task-status', taskId: id, actorId: user.id });
   if (body.startDate !== undefined || body.dueDate !== undefined)
@@ -724,21 +700,18 @@ export interface ApiPatchInput {
 }
 
 /**
- * Mise à jour d'une tâche par l'API v1 : statut, assignation, échéance — le minimum
- * qu'un pipeline pilote depuis un DCC.
+ * Updates a task through the v1 API: status, assignment, due date: the minimum a pipeline drives from a DCC.
  *
- * Les droits sont assertés par la route (projet ouvert, contributeur) ; ce qui se joue ici
- * est le flux d'événements. Le changement de statut se distingue d'une mise à jour
- * quelconque : c'est lui que suivent les tableaux de production, et sans événement dédié
- * chaque client devrait comparer les états lui-même pour le retrouver.
+ * Rights are asserted by the route (project open, contributor); what is at stake here is the event stream. A status
+ * change is distinguished from any other update: it is what production boards follow, and without a dedicated event
+ * every client would have to compare states itself to find it.
  */
 export async function applyApiPatch(actorId: number, projectId: number, id: number, body: ApiPatchInput) {
   await assertTaskAssignee(projectId, body.assigneeId);
   const before = await prisma.task.findUnique({ where: { id }, select: { status: true } });
-  // Même résolution que l'interface : l'API n'écrivait que l'énumération historique, si
-  // bien qu'un `PATCH {status}` depuis un DCC laissait `pipelineStatusId` sur l'ancienne
-  // valeur. La fiche affichait un état, le kanban un autre, et rien ne partait vers
-  // ShotGrid — le statut posé par le pipeline n'existait que pour l'API.
+  // Same resolution as the interface: the API used to write only the historical enumeration, so that a
+  // `PATCH {status}` from a DCC left `pipelineStatusId` on the old value. The sheet showed one state, the kanban
+  // another, and nothing went to ShotGrid: the status set by the pipeline existed only for the API.
   const statusPair = await resolveStatusPair(projectId, body);
   const task = await prisma.task.update({
     where: { id },
@@ -767,8 +740,8 @@ export async function applyApiPatch(actorId: number, projectId: number, id: numb
     event('task.assigned', { task: view, assigneeId: body.assigneeId });
   }
   event('task.updated', { task: view });
-  // Les écrans ouverts et le site distant apprennent le changement comme pour une
-  // modification faite à la main : l'API v1 n'émettait ni l'un ni l'autre.
+  // Open screens and the remote site learn of the change as they would of a manual edit: the v1 API emitted
+  // neither one.
   emitTaskUpdate(projectId, { id, shotId: task.shot?.id ?? null, assetId: task.asset?.id ?? null });
   if (body.status !== undefined) await enqueuePush(projectId, { type: 'task-status', taskId: id, actorId });
   if (body.dueDate !== undefined) await enqueuePush(projectId, { type: 'task-dates', taskId: id, actorId });
@@ -778,17 +751,15 @@ export async function applyApiPatch(actorId: number, projectId: number, id: numb
 }
 
 /**
- * Supprime une tâche — seulement si elle est vide.
+ * Deletes a task, only if it is empty.
  *
- * `Version.taskId` est en `onDelete: Cascade` : la suppression emporte les versions de la
- * tâche, donc les médias publiés et tout le travail de review qui y est attaché. Cette
- * route n'avait aucune garde, et elle n'était appelée par aucun écran ; l'exposer au clic
- * droit du kanban sans elle aurait fait d'une entrée de menu une destruction silencieuse.
+ * `Version.taskId` is `onDelete: Cascade`: deletion takes the task's versions with it, hence the published media and
+ * all the review work attached to it. This route had no guard, and no screen called it; exposing it on the kanban's
+ * right-click without one would have turned a menu entry into a silent destruction.
  *
- * Même règle que le retrait d'une tâche mise à la corbeille côté ShotGrid
- * (`ShotgridPullService.retireTask`), volontairement identique : on ne supprime que les
- * tâches vides, et l'on dit combien de versions empêchent la suppression plutôt que de
- * laisser deviner. Les vider d'abord est un geste explicite, version par version.
+ * Same rule as the retirement of a task trashed on the ShotGrid side (`ShotgridPullService.retireTask`), deliberately
+ * identical: only empty tasks are deleted, and the number of versions preventing deletion is stated rather than left to
+ * guesswork. Emptying them first is an explicit gesture, version by version.
  */
 export async function remove(user: SessionUser, projectId: number, id: number) {
   await assertProjectManage(user.id, user.role, projectId);

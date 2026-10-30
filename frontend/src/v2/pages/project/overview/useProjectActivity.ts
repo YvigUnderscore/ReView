@@ -3,18 +3,18 @@
 
 import { useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../../lib/apiClient';
-import { qk } from '../../../lib/query';
-import { TASK_STATUS_PRIORITY } from '../../../lib/taskStatus';
-import type { TaskWithAssignee } from '../../../types/api';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
+import { TASK_STATUS_PRIORITY } from '@/v2/lib/taskStatus';
+import type { TaskWithAssignee } from '@/v2/types/api';
 
 /**
- * `GET /api/projects/:id/activity` — la réponse que se partagent trois blocs de la vue
- * d'ensemble : l'avancement, les dernières mises à jour et les tâches à traiter.
+ * `GET /api/projects/:id/activity`: the response shared by three blocks of the overview: progress,
+ * latest updates and tasks to handle.
  *
- * Une seule clé de cache pour les trois : TanStack ne lance qu'une requête, et masquer un
- * bloc n'en coûte ni n'en économise une. Le tri des tâches vit ici plutôt que dans le bloc
- * qui les liste, parce que l'avancement compte les mêmes lignes.
+ * A single cache key serves the three: TanStack only launches one request, and hiding a block
+ * neither costs one nor saves one. The sorting of tasks lives here rather than in the block that
+ * lists them, because progress counts the same rows.
  */
 
 export interface ActivityItem {
@@ -39,7 +39,7 @@ export interface ProjectActivity {
 
 export interface ProjectActivityState {
   recent: ActivityItem[];
-  /** Tâches du projet, les plus urgentes d'abord (priorité par statut). */
+  /** Project tasks, most urgent first (priority by status). */
   tasks: ActivityTask[];
   error: Error | null;
   isPending: boolean;

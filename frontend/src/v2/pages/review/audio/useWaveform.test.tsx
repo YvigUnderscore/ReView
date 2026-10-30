@@ -3,7 +3,7 @@
 
 import { screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { renderWithProviders } from '../../../../test/renderWithProviders';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import { useWaveform } from './useWaveform';
 
 const encode = (bytes: number[]): string => btoa(String.fromCharCode(...bytes));
@@ -22,17 +22,17 @@ const withMedia = (waveform: unknown) =>
   renderWithProviders(<Probe mediaId={7} />, { api: { 'GET /api/media/7': { waveform } } });
 
 describe('useWaveform', () => {
-  it('déplie la forme d’onde portée par le média', async () => {
+  it('unfolds the waveform carried by the media', async () => {
     withMedia({ version: 1, bins: 3, peaks: encode([0, 128, 255]) });
     await waitFor(() => expect(screen.getByTestId('state')).toHaveTextContent('true/true/3'));
   });
 
-  it('média muet : rien à afficher, et rien à proposer au clic droit', async () => {
+  it('silent media: nothing to display, and nothing to offer on right-click', async () => {
     withMedia(null);
     await waitFor(() => expect(screen.getByTestId('state')).toHaveTextContent('false/true/none'));
   });
 
-  it('masquer retient le choix et coupe le tracé sans oublier la piste', async () => {
+  it('hiding remembers the choice and cuts the trace without forgetting the track', async () => {
     const { user } = withMedia({ version: 1, bins: 3, peaks: encode([0, 128, 255]) });
     await waitFor(() => expect(screen.getByTestId('state')).toHaveTextContent('true/true/3'));
     await user.click(screen.getByRole('button'));

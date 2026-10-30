@@ -10,7 +10,7 @@ const tx = {
   task: { createMany: vi.fn(), update: vi.fn(), updateMany: vi.fn() },
 };
 
-/** `updateMany` honnête : il rend le nombre de lignes qu'il prétend avoir touchées. */
+/** Honest `updateMany`: it returns the number of rows it claims to have touched. */
 const countsMatched = (args: { where: { id: { in: number[] } } }) =>
   Promise.resolve({ count: args.where.id.in.length });
 
@@ -73,7 +73,7 @@ beforeEach(() => {
 });
 
 describe('template', () => {
-  it('se relit par l’import : le gabarit est un fichier valide', () => {
+  it('reads back through the import: the template is a valid file', () => {
     const parse = parseProjectCsv(template());
     expect(parse.issues).toEqual([]);
     expect(parse.entries.map((e) => e.shot)).toEqual(['SH0010', 'SH0020']);
@@ -83,7 +83,7 @@ describe('template', () => {
 });
 
 describe('preview', () => {
-  it('n’écrit rien et rend le plan', async () => {
+  it('writes nothing and returns the plan', async () => {
     const report = await preview(1, 'sequence,shot,tasks\nSQ010,SH0010,Anim');
     expect(report.committed).toBe(false);
     expect(mocked.$transaction).not.toHaveBeenCalled();
@@ -91,7 +91,7 @@ describe('preview', () => {
     expect(report.columns.map((c) => c.field)).toEqual(['sequence', 'shot', 'task']);
   });
 
-  it('borne le rapport et le signale', async () => {
+  it('bounds the report and flags it', async () => {
     const lines = ['shot'];
     for (let i = 0; i < 1200; i++) lines.push(`SH${String(i).padStart(4, '0')}`);
     const report = await preview(1, lines.join('\n'));
@@ -104,7 +104,7 @@ describe('preview', () => {
 describe('commit', () => {
   const user = { id: 9, role: 'ADMIN' as const };
 
-  it('écrit par lots dans une transaction bornée', async () => {
+  it('writes in batches within a bounded transaction', async () => {
     tx.sequence.createManyAndReturn.mockResolvedValue([{ id: 3, code: 'SQ010' }]);
     tx.shot.createManyAndReturn.mockResolvedValue([{ id: 8, code: 'SH0010', sequenceId: 3 }]);
 
@@ -117,20 +117,20 @@ describe('commit', () => {
     });
     expect(tx.sequence.createManyAndReturn).toHaveBeenCalledTimes(1);
     expect(tx.shot.createManyAndReturn).toHaveBeenCalledTimes(1);
-    // La tâche est rattachée au plan tout juste créé, par son couple (séquence, code).
+    // The task is attached to the just-created shot, by its (sequence, code) pair.
     expect(tx.task.createMany).toHaveBeenCalledWith({
       data: [expect.objectContaining({ shotId: 8, name: 'Anim' })],
     });
   });
 
-  it('découpe les écritures groupées au-delà de la taille de lot', async () => {
+  it('splits grouped writes beyond the batch size', async () => {
     const lines = ['shot'];
     for (let i = 0; i < 1100; i++) lines.push(`SH${String(i).padStart(4, '0')}`);
     await commit(user, 1, lines.join('\n'));
     expect(tx.shot.createManyAndReturn).toHaveBeenCalledTimes(3);
   });
 
-  it('ne réécrit rien quand le fichier est rejoué', async () => {
+  it('rewrites nothing when the file is replayed', async () => {
     mocked.sequence.findMany.mockResolvedValue([{ id: 3, code: 'SQ010', episodeId: null, deletedAt: null }]);
     mocked.shot.findMany.mockResolvedValue([
       {
@@ -171,7 +171,7 @@ describe('commit', () => {
     expect(tx.task.createMany).not.toHaveBeenCalled();
   });
 
-  it('écrit les dates de tâche à minuit UTC', async () => {
+  it('writes task dates at midnight UTC', async () => {
     tx.shot.createManyAndReturn.mockResolvedValue([{ id: 8, code: 'SH0010', sequenceId: null }]);
     await commit(user, 1, 'shot,tasks,due_date\nSH0010,Anim,15/09/2026');
     expect(tx.task.createMany).toHaveBeenCalledWith({

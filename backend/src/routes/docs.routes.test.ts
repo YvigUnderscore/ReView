@@ -18,25 +18,24 @@ const app = express().use('/api', docsRoutes);
 beforeEach(() => vi.clearAllMocks());
 
 /**
- * `/api/docs` est servi sans authentification : c'est une surface réseau au sens de
- * l'AGPL §13, au même titre que la page de connexion. Elle doit donc porter la mention
- * légale et l'offre du code source correspondant.
+ * `/api/docs` is served without authentication: it is a network surface in the sense of AGPL §13, just
+ * like the login page. It must therefore carry the legal notice and the offer of the corresponding source code.
  */
-describe('GET /api/docs — surface publique', () => {
-  it('porte copyright, licence, absence de garantie et lien source', async () => {
+describe('GET /api/docs — public surface', () => {
+  it('carries copyright, license, no-warranty notice and source link', async () => {
     findUnique.mockResolvedValue({ value: 'https://git.studio.tld/review' } as never);
     const res = await request(app).get('/api/docs');
     expect(res.status).toBe(200);
     expect(res.text).toContain('Copyright © 2026 Yvig Bidon');
     expect(res.text).toContain('AGPL-3.0');
-    // La mention est rendue dans la langue de base, comme le reste du produit — elle était
-    // écrite en dur en français, et disait donc autre chose que la même mention côté front.
+    // The notice is rendered in the base language, like the rest of the product: it was hard-coded in
+    // French, and therefore said something different from the same notice on the front end.
     expect(res.text).toContain('with no warranty');
     expect(res.text).toContain('>Source code</a>');
     expect(res.text).toContain('href="https://git.studio.tld/review"');
   });
 
-  it('rend la mention légale dans la langue du lecteur', async () => {
+  it("renders the legal notice in the reader's language", async () => {
     findUnique.mockResolvedValue(null);
     const fr = await request(app).get('/api/docs').set('Accept-Language', 'fr');
     expect(fr.text).toContain('Logiciel libre');
@@ -48,38 +47,38 @@ describe('GET /api/docs — surface publique', () => {
     expect(ja.text).toContain('<html lang="ja">');
   });
 
-  it('déclare Vary: Accept-Language — sinon un cache sert une langue à tout le monde', async () => {
+  it('declares Vary: Accept-Language, otherwise a cache serves one language to everyone', async () => {
     findUnique.mockResolvedValue(null);
     const res = await request(app).get('/api/docs');
     expect(res.headers.vary).toContain('Accept-Language');
   });
 
-  it('retombe sur le dépôt amont quand le réglage studio est vide', async () => {
+  it('falls back to the upstream repository when the studio setting is empty', async () => {
     findUnique.mockResolvedValue(null);
     const res = await request(app).get('/api/docs');
     expect(res.text).toContain('href="https://github.com/YvigUnderscore/ReView"');
   });
 
-  it('n’injecte pas une URL de réglage hostile dans l’attribut href', async () => {
+  it('does not inject a hostile setting URL into the href attribute', async () => {
     findUnique.mockResolvedValue({ value: 'javascript:alert(1)' } as never);
     const res = await request(app).get('/api/docs');
     expect(res.text).not.toContain('javascript:');
     expect(res.text).toContain('href="https://github.com/YvigUnderscore/ReView"');
   });
 
-  it('épingle Scalar sur une version exacte et vérifie son empreinte', async () => {
+  it('pins Scalar to an exact version and checks its fingerprint', async () => {
     findUnique.mockResolvedValue(null);
     const res = await request(app).get('/api/docs');
     const tag = /<script src="([^"]+)" integrity="([^"]+)" crossorigin="anonymous"><\/script>/.exec(res.text);
     expect(tag).not.toBeNull();
     const [, src, integrity] = tag!;
-    // `@latest` implicite = le code de demain, sans revue : la version doit être dans l'URL.
+    // `@latest` implicit means tomorrow's code, unreviewed: the version must be in the URL.
     expect(src).toMatch(/@scalar\/api-reference@\d+\.\d+\.\d+\//);
     expect(src).not.toMatch(/@scalar\/api-reference(["/]|@latest)/);
     expect(integrity).toMatch(/^sha(256|384|512)-[A-Za-z0-9+/]+={0,2}$/);
   });
 
-  it('n’autorise plus le script inline et borne la source au paquet épinglé', async () => {
+  it('no longer allows inline script and bounds the source to the pinned package', async () => {
     findUnique.mockResolvedValue(null);
     const res = await request(app).get('/api/docs');
     const header = String(res.headers['content-security-policy']);
@@ -92,9 +91,9 @@ describe('GET /api/docs — surface publique', () => {
 
     expect(directives['script-src']).not.toContain("'unsafe-inline'");
     expect(directives['script-src']).toContain('/npm/@scalar/api-reference@');
-    // Le CDN entier n'est plus une source de script : seule cette version l'est.
+    // The whole CDN is no longer a script source: only this version is.
     expect(directives['script-src']).not.toMatch(/cdn\.jsdelivr\.net\s*($|;)/);
-    // Plus de « n'importe quel https » (le schéma nu, sans hôte) pour les polices ni les images.
+    // No more "any https" (the bare scheme, without host) for fonts or images.
     expect(directives['font-src']).not.toMatch(/\shttps:(\s|$)/);
     expect(directives['img-src']).not.toMatch(/\shttps:(\s|$)/);
     expect(directives['connect-src']).toBe("connect-src 'self'");
@@ -102,7 +101,7 @@ describe('GET /api/docs — surface publique', () => {
     expect(directives['frame-ancestors']).toBe("frame-ancestors 'none'");
   });
 
-  it('tire un nonce par réponse, et c’est celui de la balise inline', async () => {
+  it('draws a nonce per response, and it is the one on the inline tag', async () => {
     findUnique.mockResolvedValue(null);
     const first = await request(app).get('/api/docs');
     const second = await request(app).get('/api/docs');
@@ -113,7 +112,7 @@ describe('GET /api/docs — surface publique', () => {
     expect(nonceOf(first)).not.toBe(nonceOf(second));
   });
 
-  it('déclare la licence dans le document OpenAPI, lui aussi public', async () => {
+  it('declares the license in the OpenAPI document, which is also public', async () => {
     const res = await request(app).get('/api/openapi.json');
     expect(res.status).toBe(200);
     expect(res.body.info.license).toEqual({

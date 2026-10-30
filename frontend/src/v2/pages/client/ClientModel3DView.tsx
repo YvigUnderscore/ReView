@@ -11,9 +11,9 @@ import ClientUnavailable from './ClientUnavailable';
 import type { ClientMediaSource } from './clientTypes';
 
 /**
- * Viewer 3D du partage client — le même pane que la review interne (`Model3DThreePane`),
- * alimenté par un hook en lecture seule. L'invité navigue (orbite, pan, vol) et rien d'autre :
- * aucun gizmo, aucune transformation de version, aucune recomposition USD n'est montée.
+ * 3D viewer of the client share: the same pane as the internal review (`Model3DThreePane`),
+ * fed by a read-only hook. The guest can navigate (orbit, pan, fly) and nothing else: no
+ * gizmo, no version transform and no USD recomposition is mounted.
  */
 export default function ClientModel3DView({
   source,
@@ -22,10 +22,10 @@ export default function ClientModel3DView({
   overlay,
 }: {
   source: ClientMediaSource | undefined;
-  /** L'URL présignée n'est pas encore arrivée — le pane affiche son état de chargement. */
+  /** The presigned URL has not arrived yet: the pane shows its loading state. */
   loading: boolean;
   watermark: ReactNode;
-  /** Overlay d'annotation : le pane l'ancre au cadre de livraison, pas au canvas WebGL. */
+  /** Annotation overlay: the pane anchors it to the delivery frame, not to the WebGL canvas. */
   overlay?: ReactNode;
 }) {
   const glb = resolveClientGlb(source);
@@ -33,8 +33,8 @@ export default function ClientModel3DView({
   useClientSceneOverride(viewer.ready, viewer.getSceneHandle, source);
   useHomeViewShortcut(viewer.homeView, viewer.ready);
 
-  // Rien à charger (GLB absent du partage) ou chargement en échec : l'invité reçoit un
-  // message qui lui parle, pas la consigne interne « relancer la conversion ».
+  // Nothing to load (GLB absent from the share) or loading failed: the guest gets a message
+  // addressed to them, not the internal instruction "re-run the conversion".
   const failed = viewer.loadError || (!loading && !glb);
 
   return (

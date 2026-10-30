@@ -6,40 +6,39 @@ import { redisConnectionOptions } from './redis';
 import { logger } from './logger';
 
 /**
- * Canal redis pub/sub worker → serveur (34.F) : le worker FFmpeg tourne dans un process
- * séparé et ne peut pas émettre de socket — il publie ici, le serveur (SocketService)
- * souscrit et relaie aux rooms concernées. Éphémère par design (pas de persistance) :
- * un client absent au moment de l'événement re-lira l'état via l'API.
+ * Redis pub/sub channel from worker to server (34.F). The FFmpeg worker runs in a separate process
+ * and cannot emit a socket: it publishes here, and the server (SocketService) subscribes and relays
+ * to the relevant rooms. Ephemeral by design (no persistence): a client absent at the time of the
+ * event will re-read the state via the API.
  */
 export const WORKER_EVENTS_CHANNEL = 'review:worker-events';
 
-/** Rendition HLS prête (échelle progressive) — `building=false` sur la dernière. */
+/** Ready HLS rendition (progressive ladder): `building=false` on the last one. */
 export interface WorkerHlsEvent {
   type: 'hls';
   mediaId: number;
   versionId: number;
   projectId: number | null;
-  /** Nombre de renditions déjà disponibles dans le master. */
+  /** Number of renditions already available in the master. */
   renditions: number;
   building: boolean;
 }
 
-/** Marqueurs auto posés par la scene detection (34.H) — la review invalide sa liste. */
+/** Automatic markers placed by scene detection (34.H): the review invalidates its list. */
 export interface WorkerMarkersEvent {
   type: 'markers';
   mediaId: number;
 }
 
 /**
- * Événement destiné à la room d'un projet, émis depuis le worker.
+ * Event meant for a project's room, emitted from the worker.
  *
- * `SocketService.emitToProject` fait `io?.to(...)`, et `io` n'existe que dans le process
- * web : appelé depuis le worker — ce que faisait la synchronisation ShotGrid — il ne
- * produisait rien du tout, en silence. Aucun écran ne se rafraîchissait après une
- * synchronisation, alors que le journal, lui, affichait bien ses compteurs.
+ * `SocketService.emitToProject` calls `io?.to(...)`, and `io` only exists in the web process:
+ * called from the worker, as the ShotGrid sync did, it silently produced nothing at all. No screen
+ * refreshed after a sync, even though the log did display its counters.
  *
- * La charge utile n'est pas typée plus finement : ce canal ne fait que transporter ce que
- * le serveur relaiera tel quel à la room.
+ * The payload is not typed more finely: this channel only carries what the server will relay as is
+ * to the room.
  */
 export interface WorkerProjectEvent {
   type: 'project';
@@ -52,7 +51,7 @@ export type WorkerEvent = WorkerHlsEvent | WorkerMarkersEvent | WorkerProjectEve
 
 export const encodeWorkerEvent = (e: WorkerEvent): string => JSON.stringify(e);
 
-/** Décodage défensif : un message inconnu/corrompu est ignoré (canal partagé). */
+/** Defensive decoding: an unknown or corrupted message is ignored (shared channel). */
 export function decodeWorkerEvent(raw: string): WorkerEvent | null {
   try {
     const e = JSON.parse(raw) as {
@@ -79,21 +78,21 @@ export function decodeWorkerEvent(raw: string): WorkerEvent | null {
 let pub: Redis | null = null;
 let sub: Redis | null = null;
 
-/** Publication côté worker — best effort : un échec redis ne condamne pas le transcodage. */
+/** Publishing on the worker side, best effort: a redis failure does not doom the transcoding. */
 export async function publishWorkerEvent(e: WorkerEvent): Promise<void> {
   try {
     pub ??= new Redis(redisConnectionOptions);
     await pub.publish(WORKER_EVENTS_CHANNEL, encodeWorkerEvent(e));
   } catch (err) {
-    logger.warn({ err }, '[workerEvents] publication échouée');
+    logger.warn({ err }, '[workerEvents] publish failed');
   }
 }
 
-/** Souscription côté serveur (connexion dédiée : un client redis en mode subscribe est exclusif). */
+/** Subscription on the server side (dedicated connection: a redis client in subscribe mode is exclusive). */
 export function subscribeWorkerEvents(onEvent: (e: WorkerEvent) => void): void {
   sub = new Redis(redisConnectionOptions);
   void sub.subscribe(WORKER_EVENTS_CHANNEL).catch((err: unknown) => {
-    logger.warn({ err }, '[workerEvents] souscription échouée');
+    logger.warn({ err }, '[workerEvents] subscription failed');
   });
   sub.on('message', (_channel: string, raw: string) => {
     const e = decodeWorkerEvent(raw);
@@ -102,9 +101,8 @@ export function subscribeWorkerEvents(onEvent: (e: WorkerEvent) => void): void {
 }
 
 /**
- * Ferme les connexions redis du canal (arrêt propre). Sans cela, le publieur du worker et
- * l'abonné du serveur maintiennent le process en vie après la fermeture du serveur HTTP,
- * jusqu'au SIGKILL de docker.
+ * Closes the channel's redis connections (clean shutdown). Without this, the worker's publisher and
+ * the server's subscriber keep the process alive after the HTTP server closes, until docker's SIGKILL.
  */
 export async function closeWorkerEvents(): Promise<void> {
   const clients = [pub, sub].filter((c): c is Redis => c !== null);
@@ -113,7 +111,7 @@ export async function closeWorkerEvents(): Promise<void> {
   await Promise.all(
     clients.map((c) =>
       c.quit().catch((err: unknown) => {
-        logger.warn({ err }, '[workerEvents] fermeture redis imparfaite');
+        logger.warn({ err }, '[workerEvents] unclean redis shutdown');
         c.disconnect();
       }),
     ),

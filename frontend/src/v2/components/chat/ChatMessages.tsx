@@ -6,16 +6,17 @@ import { Link } from 'react-router-dom';
 import { Trash2 } from 'lucide-react';
 import Avatar from '../Avatar';
 import { useChat } from '../../stores/useChat';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { timeAgo } from '../../lib/time';
 import { chatSystemText } from '../../lib/chatSystemText';
 import type { ChatMessage } from '../../types/chat';
 import { useT } from '../../i18n';
+import { notifyError } from '@/v2/lib/notifyError';
 
 /**
- * Fil de messages : du plus ancien en haut au plus récent en bas, collé au bas à
- * l'arrivée d'un message — sauf si l'on est remonté dans l'historique, auquel cas
- * un saut au dernier message ferait perdre la ligne qu'on était en train de lire.
+ * Message thread: oldest at the top, newest at the bottom, pinned to the bottom when a
+ * message arrives, unless the user scrolled up in history. In that case, jumping to the
+ * last message would lose the line they are reading.
  */
 export default function ChatMessages({ conversationId, selfId }: { conversationId: number; selfId: number }) {
   const t = useT();
@@ -59,8 +60,8 @@ export default function ChatMessages({ conversationId, selfId }: { conversationI
 function Row({ message, selfId }: { message: ChatMessage; selfId: number }) {
   const t = useT();
   if (message.isSystem) {
-    // Le message de service porte une clé, pas une phrase : il se traduit ici, à l'écran,
-    // dans la langue du lecteur — et non dans celle du serveur au moment de l'événement.
+    // The service message carries a key, not a sentence: it is translated here, on screen,
+    // in the reader's language rather than the server's language at the time of the event.
     return (
       <p className="py-1 text-center text-xs italic text-muted-foreground">{chatSystemText(t, message)}</p>
     );
@@ -84,7 +85,11 @@ function Row({ message, selfId }: { message: ChatMessage; selfId: number }) {
           <span className="shrink-0 text-2xs text-muted-foreground">{timeAgo(message.createdAt)}</span>
           {mine && (
             <button
-              onClick={() => void api.del(`/api/chat/messages/${message.id}`).catch(() => undefined)}
+              onClick={() =>
+                void api
+                  .del(`/api/chat/messages/${message.id}`)
+                  .catch((err) => notifyError(err, t('common.error.delete')))
+              }
               title={t('chat.delete')}
               className="ml-auto shrink-0 text-muted-foreground opacity-0 transition-opacity hover:text-destructive group-hover:opacity-100"
             >
@@ -92,8 +97,8 @@ function Row({ message, selfId }: { message: ChatMessage; selfId: number }) {
             </button>
           )}
         </div>
-        {/* Corps rendu en texte : `whitespace-pre-wrap` garde les retours à la ligne sans
-            ouvrir la porte au HTML — un message est écrit par un utilisateur. */}
+        {/* Body rendered as text: `whitespace-pre-wrap` keeps line breaks without
+            opening the door to HTML, since a message is written by a user. */}
         <p className="whitespace-pre-wrap break-words text-sm text-foreground/90">{message.body}</p>
       </div>
     </div>

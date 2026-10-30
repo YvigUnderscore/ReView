@@ -5,39 +5,39 @@ import type { CurveKey, Extrapolation } from './model';
 import { slopeIn, slopeOut } from './tangents';
 
 /**
- * Extrapolation d'une F-curve **hors** de ses clés (pré/post-infinity, façon DCC) — Phase 50, lot 7.
- * Pur et testable ; branché par `hermite.ts`, réglé par canal (`Channel.pre` / `Channel.post`).
+ * Extrapolation of an F-curve **outside** its keys (pre/post-infinity, DCC-style) — Phase 50, batch 7.
+ * Pure and testable; wired in by `hermite.ts`, set per channel (`Channel.pre` / `Channel.post`).
  *
- * **Le défaut reproduit exactement le comportement d'origine.** Avant ce lot, une courbe tenait sa
- * valeur extrême au-delà de ses clés, sans que rien ne soit persisté : `constant` — la valeur de
- * repli quand `pre`/`post` sont absents — fait strictement cela. Une présentation caméra
- * enregistrée avant ce lot se rejoue donc à l'identique, sans migration de données.
+ * **The default reproduces the original behavior exactly.** Before this batch, a curve held
+ * its extreme value beyond its keys, with nothing persisted: `constant` — the fallback when
+ * `pre`/`post` are absent — does exactly that. A camera presentation recorded before this
+ * batch therefore replays identically, without data migration.
  */
 
-/** Extrémité concernée. */
+/** The end concerned. */
 export type ExtrapolationSide = 'pre' | 'post';
 
-/** Ramène un temps hors bornes dans la période, en va-et-vient (`oscillate`) ou en cycle. */
+/** Brings an out-of-range time back into the period, as back-and-forth (`oscillate`) or as a cycle. */
 function wrap(t: number, t0: number, period: number, pingPong: boolean): number {
   const q = (t - t0) / period;
   const turn = Math.floor(q);
   const frac = q - turn;
-  // Va-et-vient : un tour sur deux se lit à l'envers. Le modulo négatif de JS impose le test
-  // sur la parité du tour, pas sur son signe.
+  // Back and forth: every other pass is read backwards. JS's negative modulo forces the test
+  // to check the parity of the pass, not its sign.
   const forward = !pingPong || Math.abs(turn % 2) === 0;
   return t0 + (forward ? frac : 1 - frac) * period;
 }
 
-/** Nombre de périodes franchies (négatif avant la première clé) — décalage de `cycleOffset`. */
+/** Number of periods crossed (negative before the first key) — the `cycleOffset` shift. */
 const turns = (t: number, t0: number, period: number): number => Math.floor((t - t0) / period);
 
 /**
- * Valeur d'une courbe au temps `t` **hors** de ses clés. `sampleInside` échantillonne la courbe
- * dans ses bornes (fourni par `hermite.ts`, qui possède l'interpolation).
+ * Value of a curve at time `t` **outside** its keys. `sampleInside` samples the curve within
+ * its bounds (provided by `hermite.ts`, which owns the interpolation).
  *
- * La prolongation `linear` suit la tangente qui touche l'intérieur de la courbe — côté sortant de
- * la première clé avant elle, côté entrant de la dernière après elle : c'est la continuation
- * naturelle de la courbe, définie pour tous les profils de tangente.
+ * The `linear` extension follows the tangent touching the inside of the curve — the outgoing
+ * side of the first key before it, the incoming side of the last key after it: this is the
+ * natural continuation of the curve, defined for every tangent profile.
  */
 export function extrapolateValue(
   keys: readonly CurveKey[],
@@ -55,7 +55,7 @@ export function extrapolateValue(
     return edge.v + slope * (t - edge.t);
   }
   const period = last.t - first.t;
-  // Une courbe sans étendue temporelle n'a pas de cycle à rejouer.
+  // A curve with no time span has no cycle to replay.
   if (!(period > 0)) return edge.v;
   if (kind === 'oscillate') return sampleInside(wrap(t, first.t, period, true));
   const inside = sampleInside(wrap(t, first.t, period, false));

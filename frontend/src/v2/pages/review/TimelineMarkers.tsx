@@ -16,12 +16,12 @@ import type { TimelineMarker } from '../../types/api';
 import type { TimelineMarkersApi } from './useTimelineMarkers';
 import { useT } from '../../i18n';
 
-/** Palette proposée pour les marqueurs (34.C) — libre côté API (hex), guidée côté UI. */
+/** Suggested palette for markers (34.C) — free on the API side (hex), guided on the UI side. */
 const MARKER_COLORS = ['#22d3ee', '#f472b6', '#facc15', '#4ade80', '#f87171', '#a78bfa'];
 
 /**
- * Ticks des marqueurs partagés sur la timeline (34.C) : trait coloré + fanion, tooltip
- * nom/auteur, clic = seek, clic droit = renommer/supprimer (auteur ou superviseur).
+ * Shared marker ticks on the timeline (34.C): colored line + flag, name/author tooltip,
+ * click = seek, right-click = rename/delete (author or supervisor).
  */
 export function MarkerTicks({
   api,
@@ -44,9 +44,9 @@ export function MarkerTicks({
         const t = m.frame / (fps || 24);
         if (t > duration) return null;
         const tick = (
-          // Zone de clic élargie (10 px) autour du trait de 4 px — survol et clic droit
-          // confortables. stopPropagation sur contextmenu : sans lui le menu de la barre
-          // (« Ajouter un marqueur ici… ») s'ouvrait aussi et rendait celui-ci inopérant.
+          // Click area widened (10 px) around the 4 px line — comfortable hover and right-click.
+          // stopPropagation on contextmenu: without it the bar's menu ("Add a marker here…")
+          // also opened and made this one inoperative.
           <button
             className="group absolute bottom-0 top-1/2 z-[15] flex w-2.5 -translate-x-1/2 justify-center"
             style={{ left: `calc(${(t / duration) * 100}% * (100% - 8px) / 100% + 4px)` }}
@@ -61,7 +61,7 @@ export function MarkerTicks({
               className="h-full w-1 rounded-t-sm opacity-90 group-hover:opacity-100"
               style={{ background: m.color }}
             />
-            {/* Tooltip custom : nom + auteur au survol (le title natif était trop discret). */}
+            {/* Custom tooltip: name + author on hover (the native title was too subtle). */}
             <span className="pointer-events-none absolute bottom-full left-1/2 z-30 mb-1.5 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-border bg-card px-2 py-0.5 text-2xs text-foreground shadow-lg group-hover:block">
               {m.name}
               {m.authorName ? <span className="text-muted-foreground"> — {m.authorName}</span> : null}
@@ -72,7 +72,7 @@ export function MarkerTicks({
         return (
           <ContextMenu key={m.id}>
             <ContextMenuTrigger asChild>{tick}</ContextMenuTrigger>
-            {/* Portalé dans le DOM mais enfant React de la barre : sans stopPropagation les
+            {/* Portaled into the DOM but a React child of the bar: without stopPropagation the
                 pointerdown des items remontent (arbre React) au onPointerDown de la barre,
                 qui seek + capture le pointer — et vole le pointerup qui déclenche l'item. */}
             <ContextMenuContent
@@ -94,8 +94,8 @@ export function MarkerTicks({
 }
 
 /**
- * Dialog de création/édition d'un marqueur : nom + palette de couleurs. Monté à chaque
- * ouverture (l'appelant le rend conditionnellement) — l'état initial vient des props.
+ * Dialog to create/edit a marker: name + color palette. Mounted on each opening (the caller
+ * renders it conditionally) — the initial state comes from the props.
  */
 export function MarkerDialog({
   onClose,
@@ -105,10 +105,10 @@ export function MarkerDialog({
   api,
 }: {
   onClose: () => void;
-  /** Frame visée (création) — ignorée en édition. */
+  /** Target frame (creation) — ignored when editing. */
   frame: number;
   startFrame: number;
-  /** Marqueur en cours d'édition (null = création). */
+  /** Marker being edited (null = creation). */
   editing: TimelineMarker | null;
   api: TimelineMarkersApi;
 }) {

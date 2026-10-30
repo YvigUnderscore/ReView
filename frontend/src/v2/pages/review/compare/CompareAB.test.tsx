@@ -7,12 +7,12 @@ import CompareAB from './CompareAB';
 import type { CompareTarget } from './useCompareTargets';
 
 /**
- * Les deux réglages de la comparaison image.
+ * The two settings of the image comparison.
  *
- * Avant, B se choisissait dans un menu d'en-tête qui disparaissait au mauvais moment, et
- * l'onglet « Comparaison » du dock n'en offrait aucun choix. Ce qui est vérifié ici : les deux
- * côtés se voient, et B descend jusqu'au média — une version portant deux images ne pouvait
- * être comparée que par la première.
+ * B used to be chosen in a header menu that disappeared at the wrong moment, and the
+ * "Compare" tab of the dock offered no choice. What is checked here: both sides are visible,
+ * and B reaches down to the media. A version carrying two images could only be compared
+ * through the first one.
  */
 const targets: CompareTarget[] = [
   {
@@ -23,7 +23,7 @@ const targets: CompareTarget[] = [
       { id: 21, name: 'bunny_layout.exr' },
     ],
   },
-  // Une version sans média du même type ne se propose pas : on n'y comparerait rien.
+  // A version with no media of the same type is not offered: there would be nothing to compare.
   { versionId: 3, name: 'v003', media: [] },
 ];
 
@@ -44,7 +44,7 @@ const setup = (over: Partial<Parameters<typeof CompareAB>[0]> = {}) => {
 };
 
 describe('CompareAB', () => {
-  it('montre les deux côtés : A est le média ouvert, B un sélecteur', () => {
+  it('shows both sides: A is the open media, B a selector', () => {
     const { container, select } = setup();
     expect(container.textContent).toContain('A');
     expect(container.textContent).toContain('bunny_beauty_v001.exr');
@@ -52,7 +52,7 @@ describe('CompareAB', () => {
     expect(select).toBeTruthy();
   });
 
-  it('liste B par version puis par média, et saute les versions sans rien à comparer', () => {
+  it('lists B by version then by media, and skips versions with nothing to compare', () => {
     const { select } = setup();
     const groups = [...select.querySelectorAll('optgroup')];
     expect(groups.map((g) => g.getAttribute('label'))).toEqual(['v002']);
@@ -62,29 +62,29 @@ describe('CompareAB', () => {
     ]);
   });
 
-  it('choisit le média coché, y compris le second d’une même version', () => {
+  it('picks the ticked media, including the second one of the same version', () => {
     const { select, onSetB } = setup();
     fireEvent.change(select, { target: { value: '21' } });
     expect(onSetB).toHaveBeenCalledWith(21);
   });
 
-  it('ferme la comparaison par un bouton, pas par un interrupteur coché en dur', () => {
+  it('closes the comparison with a button, not with a switch hard-wired on', () => {
     const { getByTitle, onClear, container } = setup({ bId: 20 });
     expect(container.querySelector('input[type="checkbox"]')).toBeNull();
     fireEvent.click(getByTitle('Close the comparison'));
     expect(onClear).toHaveBeenCalledTimes(1);
   });
 
-  it('revenir à « aucune comparaison » la ferme', () => {
+  it('going back to "no comparison" closes it', () => {
     const { select, onClear } = setup({ bId: 20 });
     expect(select.value).toBe('20');
     fireEvent.change(select, { target: { value: '' } });
     expect(onClear).toHaveBeenCalledTimes(1);
   });
 
-  it('garde le B choisi affiché tant que les médias des voisins ne sont pas arrivés', () => {
-    // Sans option de repli, le champ retombait sur « aucune comparaison » alors qu'une
-    // comparaison était bien en cours.
+  it("keeps the chosen B displayed until the neighbours' media have arrived", () => {
+    // Without a fallback option, the field dropped back to "no comparison" while a
+    // comparison was in progress.
     const { select } = setup({ bId: 99, targets: [] });
     expect(select.value).toBe('99');
   });

@@ -8,20 +8,21 @@ import { requireRole, assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { notFound } from '../lib/errors';
 import { logAudit } from '../services/AuditService';
+import { requireUser } from '../middleware/auth';
 
 /**
- * Le triplet corbeille d'une entité de pipe : mise à la corbeille, restauration, purge.
+ * The trash triplet of a pipeline entity: move to trash, restore, purge.
  *
- * Séquences, plans et assets le répétaient à l'identique — quarante lignes chacun, au mot
- * près, sauf le nom de l'entité dans le message d'erreur et l'action d'audit. Le monter
- * une fois évite qu'une règle corrigée à un endroit reste fausse aux deux autres.
+ * Sequences, shots and assets repeated it identically: forty lines each, word for word, except the entity's
+ * name in the error message and the audit action. Mounting it once prevents a rule corrected in one place
+ * from staying wrong in the other two.
  */
 export interface TrashRoutesOptions {
-  /** Segment d'entité pour l'audit — « Asset », « Shot », « Sequence », « Episode ». */
+  /** Entity segment for the audit: "Asset", "Shot", "Sequence", "Episode". */
   entityType: 'Asset' | 'Shot' | 'Sequence' | 'Episode';
-  /** Préfixe des actions d'audit — « ASSET », « SHOT », « SEQUENCE », « EPISODE ». */
+  /** Prefix of the audit actions: "ASSET", "SHOT", "SEQUENCE", "EPISODE". */
   auditPrefix: string;
-  /** Message quand l'entité n'existe pas. */
+  /** Message when the entity does not exist. */
   notFoundMessage: string;
   resolveProjectId: (id: number) => Promise<number | null>;
   softDelete: (userId: number, id: number) => Promise<unknown>;
@@ -43,9 +44,9 @@ export function mountTrashRoutes(router: Router, options: TrashRoutesOptions) {
   router.delete('/:id', manage, validate({ params: idParam }), async (req, res) => {
     const id = Number(req.params.id);
     await access(req, id);
-    await options.softDelete(req.user!.id, id);
+    await options.softDelete(requireUser(req).id, id);
     logAudit({
-      userId: req.user!.id,
+      userId: requireUser(req).id,
       action: `${options.auditPrefix}_DELETE`,
       entityType: options.entityType,
       entityId: id,
@@ -63,9 +64,9 @@ export function mountTrashRoutes(router: Router, options: TrashRoutesOptions) {
   router.delete('/:id/purge', manage, validate({ params: idParam }), async (req, res) => {
     const id = Number(req.params.id);
     await access(req, id);
-    await options.purge(req.user!.id, id);
+    await options.purge(requireUser(req).id, id);
     logAudit({
-      userId: req.user!.id,
+      userId: requireUser(req).id,
       action: `${options.auditPrefix}_PURGE`,
       entityType: options.entityType,
       entityId: id,

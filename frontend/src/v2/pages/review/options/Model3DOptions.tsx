@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { RotateCcw } from 'lucide-react';
-import { IconButton } from '../../../components/ui/icon-button';
-import { NumberField } from '../../../components/ui/number-field';
+import { IconButton } from '@/v2/components/ui/icon-button';
+import { NumberField } from '@/v2/components/ui/number-field';
 import OptionsBar, { CommitGroup } from '../chrome/OptionsBar';
 import type { ModeId } from '../chrome/modes';
 import type { ReviewTool } from '../chrome/tools';
@@ -14,7 +14,7 @@ import type { SplatPaintState } from '../splat/paint/useSplatPaint';
 import PaintOptions from './PaintOptions';
 import PoiOptions from '../poi/PoiOptions';
 import type { PoiDraftState } from '../poi/usePoiDraft';
-import { useT, type Tr } from '../../../i18n';
+import { useT, type Tr } from '@/v2/i18n';
 
 const rotations = (t: Tr) =>
   [
@@ -24,13 +24,13 @@ const rotations = (t: Tr) =>
   ] as const;
 
 /**
- * Barre d'options du viewer 3D : les paramètres du seul outil armé. Remplace
- * `Model3DTransformBar`, qui flottait au-dessus de la scène avec ses quatre modes — les modes
- * sont devenus des outils du rail, il ne reste ici que leurs valeurs.
+ * Options bar of the 3D viewer: the settings of the single armed tool. Replaces
+ * `Model3DTransformBar`, which floated above the scene with its four modes. The modes have become
+ * tools in the rail; only their values remain here.
  *
- * La brosse de surface et sa gomme y arrivent au lot 13, avec **exactement** les réglages du
- * splat (`PaintOptions`) : le mode « Annoter » d'un modèle n'offrait que la navigation et
- * l'épingle, et l'on ne pouvait donc régler ni l'encre ni l'épaisseur du trait.
+ * The surface brush and its eraser arrive here in batch 13, with **exactly** the splat's settings
+ * (`PaintOptions`): a model's "Annotate" mode offered only navigation and the pin, so ink and
+ * stroke thickness could not be set.
  */
 export default function Model3DOptions({
   tool,
@@ -48,11 +48,11 @@ export default function Model3DOptions({
   m: Model3DThreeState;
   history: ReturnType<typeof useEditHistory>;
   dirty: boolean;
-  /** Transformation éditable (pré-publication + droits). */
+  /** Editable transform (pre-publication + rights). */
   canEdit: boolean;
-  /** Points d'intérêt en préparation — mêmes options que sur le splat. */
+  /** Points of interest in preparation: same options as on the splat. */
   poi: PoiDraftState;
-  /** Brosse de surface — mêmes réglages que sur le splat, même hook. */
+  /** Surface brush: same settings as on the splat, same hook. */
   paint: SplatPaintState;
   presentation?: { busy: boolean; onSave: () => void };
 }) {
@@ -95,16 +95,15 @@ export default function Model3DOptions({
         <span className="rv-optbar__hint">{tr('camera.objectHint')}</span>
       )}
 
-      {/* Les champs chiffrés éditent la transformation de la VERSION. Sans le droit de
-          l'enregistrer, ils n'ouvraient qu'une impasse : la valeur changeait à l'écran, aucun
-          bouton ne l'écrivait et le badge d'état était masqué. L'outil reste armé — le gizmo
-          sert aussi à déplacer un prim de la scène USD, qui a son propre enregistrement. */}
+      {/* The numeric fields edit the VERSION's transform. Without the right to save it, they opened a
+          dead end: the value changed on screen, no button wrote it, and the status badge was hidden.
+          The tool stays armed: the gizmo also moves a prim of the USD scene, which has its own record. */}
       {transforming && !canEdit && <span className="rv-optbar__hint">{tr(tool.hintKey)}</span>}
 
       {transforming && canEdit && (
         <>
-          {/* La transformation du modèle est une rotation par angles d'Euler et une échelle
-              uniforme : les trois gizmos partagent donc les mêmes champs. */}
+          {/* The model's transform is a rotation by Euler angles and a uniform scale: the three gizmos
+              therefore share the same fields. */}
           {rotations(tr).map((r) => (
             <NumberField
               key={r.key}

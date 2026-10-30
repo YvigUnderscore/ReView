@@ -9,13 +9,13 @@ import { turntableStep } from './turntable';
 function setup() {
   const camera = new THREE.PerspectiveCamera(45, 1, 0.1, 100);
   camera.position.set(0, 0, 5);
-  // OrbitControls sans DOM réel : on ne touche qu'à `target`.
+  // OrbitControls without a real DOM: we only touch `target`.
   const controls = { target: new THREE.Vector3(0, 0, 0) } as unknown as OrbitControls;
   return { camera, controls };
 }
 
-describe("turntable — pas d'orbite caméra (39.D)", () => {
-  it("rotation Y d'un quart de tour : +Z → +X, rayon préservé", () => {
+describe('turntable — no camera orbit (39.D)', () => {
+  it('Y rotation by a quarter turn: +Z → +X, radius preserved', () => {
     const { camera, controls } = setup();
     turntableStep(THREE, camera, controls, 'y', Math.PI / 2);
     expect(camera.position.x).toBeCloseTo(5, 4);
@@ -23,15 +23,15 @@ describe("turntable — pas d'orbite caméra (39.D)", () => {
     expect(camera.position.z).toBeCloseTo(0, 4);
   });
 
-  it('préserve la distance à la cible sur tout axe', () => {
+  it('preserves the distance to the target on every axis', () => {
     const { camera, controls } = setup();
     controls.target.set(1, 2, -1);
-    camera.position.set(1, 2, 4); // rayon 5 le long de Z
+    camera.position.set(1, 2, 4); // radius 5 along Z
     turntableStep(THREE, camera, controls, 'x', 0.7);
     expect(camera.position.distanceTo(controls.target)).toBeCloseTo(5, 4);
   });
 
-  it('oriente la caméra vers la cible', () => {
+  it('orients the camera toward the target', () => {
     const { camera, controls } = setup();
     turntableStep(THREE, camera, controls, 'y', 1.2);
     const fwd = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);

@@ -5,13 +5,13 @@ import { type TextareaHTMLAttributes, forwardRef, useCallback, useLayoutEffect, 
 import { cn } from '../../lib/utils';
 
 interface TextareaProps extends TextareaHTMLAttributes<HTMLTextAreaElement> {
-  /** Ajuste automatiquement la hauteur au contenu (entre minRows et maxRows). */
+  /** Automatically adjusts the height to the content (between minRows and maxRows). */
   autoGrow?: boolean;
   minRows?: number;
   maxRows?: number;
 }
 
-/** Hauteur d'une ligne approximée depuis le line-height calculé (repli 20px). */
+/** Height of one line approximated from the computed line-height (fallback 20px). */
 function lineHeightOf(el: HTMLTextAreaElement): number {
   const lh = parseFloat(getComputedStyle(el).lineHeight);
   return Number.isFinite(lh) && lh > 0 ? lh : 20;
@@ -34,7 +34,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
       const el = innerRef.current;
       if (!el || !autoGrow) return;
       const lh = lineHeightOf(el);
-      const pad = el.offsetHeight - el.clientHeight; // bordures + padding vertical
+      const pad = el.offsetHeight - el.clientHeight; // borders + vertical padding
       el.style.height = 'auto';
       const min = lh * minRows + pad;
       const max = lh * maxRows + pad;
@@ -42,7 +42,7 @@ const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
       el.style.overflowY = el.scrollHeight + pad > max ? 'auto' : 'hidden';
     }, [autoGrow, minRows, maxRows]);
 
-    // Réajuste quand le contenu change de façon contrôlée (envoi/effacement du champ).
+    // Re-adjusts when the content changes in a controlled way (sending/clearing the field).
     useLayoutEffect(() => {
       resize();
     }, [resize, value]);

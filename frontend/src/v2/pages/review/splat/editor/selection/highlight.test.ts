@@ -20,7 +20,7 @@ class FakeRgbaArray {
   }
 }
 
-/** Mesh factice : 2 splats (rouge opaque, vert semi-transparent). */
+/** Dummy mesh: 2 splats (opaque red, semi-transparent green). */
 function makeMesh() {
   const splats = [
     { color: { r: 1, g: 0, b: 0 }, opacity: 1 },
@@ -48,16 +48,16 @@ const setup = () => {
 };
 
 describe('createSelectionHighlight', () => {
-  it('teinte les sélectionnés (alpha conservé), garde la base pour les autres, attache une fois', () => {
+  it('tints the selected splats (alpha kept), keeps the base for the others, attaches once', () => {
     const { mesh, highlight } = setup();
     highlight.apply(new Set([1]));
     const rgba = mesh.splatRgba as FakeRgbaArray;
     expect(rgba).toBeInstanceOf(FakeRgbaArray);
     expect(mesh.updateGenerator).toHaveBeenCalledTimes(1);
     const a = rgba.array!;
-    expect([...a.subarray(0, 4)]).toEqual([255, 0, 0, 255]); // base intacte
-    expect([...a.subarray(4, 8)]).toEqual([...HIGHLIGHT_RGB, 128]); // teinte, alpha 0,5 conservé
-    // Nouvelle sélection : l'ancien teinté est restauré, pas de ré-attache.
+    expect([...a.subarray(0, 4)]).toEqual([255, 0, 0, 255]); // base untouched
+    expect([...a.subarray(4, 8)]).toEqual([...HIGHLIGHT_RGB, 128]); // tint, alpha 0.5 kept
+    // New selection: the previously tinted one is restored, no re-attach.
     highlight.apply(new Set([0]));
     expect([...a.subarray(0, 4)]).toEqual([...HIGHLIGHT_RGB, 255]);
     expect([...a.subarray(4, 8)]).toEqual([0, 255, 0, 128]);
@@ -65,17 +65,17 @@ describe('createSelectionHighlight', () => {
     expect(mesh.needsUpdate).toBe(true);
   });
 
-  it('resynchronise les indices marqués dirty (masquage) au prochain apply', () => {
+  it('resyncs the dirty-marked indices (masking) on the next apply', () => {
     const { mesh, highlight } = setup();
     highlight.apply(new Set([0]));
-    mesh.splats[1].opacity = 0; // splat 1 masqué après la capture de base
+    mesh.splats[1].opacity = 0; // splat 1 masked after the base capture
     highlight.markDirty([1]);
     highlight.apply(new Set([0, 1]));
     const a = (mesh.splatRgba as FakeRgbaArray).array!;
-    expect([...a.subarray(4, 8)]).toEqual([...HIGHLIGHT_RGB, 0]); // teinté mais invisible
+    expect([...a.subarray(4, 8)]).toEqual([...HIGHLIGHT_RGB, 0]); // tinted but invisible
   });
 
-  it('détache sur sélection vide et libère à dispose', () => {
+  it('detaches on empty selection and releases on dispose', () => {
     const { mesh, highlight } = setup();
     highlight.apply(new Set([0]));
     const rgba = mesh.splatRgba as FakeRgbaArray;

@@ -16,7 +16,7 @@ import type { ReviewRequestRule } from '../../types/api';
 import type { ReviewAssignee } from '../../types/entities';
 import { useT } from '../../i18n';
 
-/** Une ligne du dialogue : une personne, et la consigne qu'on lui écrit. */
+/** One row of the dialog: a person, and the brief written for them. */
 interface Draft {
   userId: number;
   name: string;
@@ -25,22 +25,19 @@ interface Draft {
 }
 
 /**
- * Confier la review AU MOMENT DE PUBLIER.
+ * Entrusting the review AT PUBLICATION TIME.
  *
- * Le dialogue de décision (`ReviewAssignees`) est l'endroit du superviseur, après coup.
- * Celui-ci est l'endroit de l'uploader : il vient de livrer, il sait ce qu'il y a à
- * regarder, et c'est là que la consigne a le plus de valeur — c'est aussi le moment que le
- * réglage « consigne obligatoire à l'upload » vise.
+ * The decision dialog (`ReviewAssignees`) is the supervisor's place, after the fact. This one is the uploader's place: they
+ * have just delivered, they know what there is to look at, and that is where the brief is worth most. It is also the moment
+ * the "mandatory brief on upload" setting targets.
  *
- * La liste se compose entièrement avant d'être envoyée, contrairement à l'écriture
- * immédiate de l'autre écran : ici rien n'est encore publié, et le bouton principal fait
- * les deux d'un coup. Un enregistrement par clic aurait posé des assignations sur une
- * version qu'on peut encore renoncer à publier.
+ * The list is composed entirely before being sent, unlike the immediate writing of the other screen: here nothing is
+ * published yet, and the main button does both at once. A save per click would have placed assignments on a version one
+ * may still decide not to publish.
  *
- * La consigne est **par personne** : « la lumière » au lead lighting et « le raccord au
- * 1042 » au monteur sont deux demandes différentes. Ajouter un second nom repart de la
- * consigne qu'on vient d'écrire, pour que « la même chose pour tous les trois » reste une
- * seule frappe.
+ * The brief is **per person**: "the lighting" for the lead lighting and "the match at 1042" for the editor are two different
+ * requests. Adding a second name starts from the brief just written, so that "the same for all three" stays a single
+ * keystroke.
  */
 export default function ReviewersDialog({
   open,
@@ -57,10 +54,10 @@ export default function ReviewersDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   projectId: number;
-  /** L'état de départ — ce que la version porte déjà. */
+  /** The starting state: what the version already carries. */
   reviewers: ReviewAssignee[];
   rule: ReviewRequestRule;
-  /** Libellé du bouton principal : c'est lui qui publie. */
+  /** Label of the main button: it is the one that publishes. */
   submitLabel: string;
   title: string;
   description: string;
@@ -89,8 +86,8 @@ export default function ReviewersDialog({
               userId: person.id,
               name: person.name,
               avatarUrl: person.avatarUrl ?? null,
-              // La consigne de la ligne précédente : le cas courant est « les trois mêmes
-              // yeux sur la même chose », et retaper la phrase pousse à ne rien écrire.
+              // The brief of the previous row: the usual case is "the same three eyes on the same thing", and retyping
+              // the sentence discourages writing anything at all.
               note: current[current.length - 1]?.note ?? '',
             },
           ],
@@ -151,8 +148,8 @@ export default function ReviewersDialog({
                   aria-label={t('reviewers.noteLabel', { name: draft.name })}
                   aria-invalid={issue !== null}
                 />
-                {/* Ce qui manque, dit avec le chiffre du projet — « trop courte » sans le
-                    plancher oblige à deviner combien il en faut. */}
+                {/* What is missing, stated with the project's figure: "too short" without the floor forces one to guess how
+                    many are needed. */}
                 {issue && (
                   <p className="mt-1 text-xs text-destructive">
                     {issue === 'missing'

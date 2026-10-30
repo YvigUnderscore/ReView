@@ -5,15 +5,14 @@ import { describe, expect, it } from 'vitest';
 import { aimedPrimPath, buildRows, rowIndexOf, variantTitleIndex } from './scenegraphRows';
 import { buildPrimTree } from '../three/usdScenegraph';
 import { IDENTITY_TRANSFORM, addClone, emptyOverride } from '../three/sceneOverride';
-import type { UsdModelInfo, UsdPrim } from '../../../types/api';
+import type { UsdModelInfo, UsdPrim } from '@/v2/types/api';
 
 /**
- * L'arithmétique des rangées du scenegraph.
+ * Arithmetic of the scenegraph rows.
  *
- * Ce qui est vérifié ici : on n'aplatit que ce qui est déplié (c'est tout l'intérêt — le
- * virtualiseur ne sait compter que des rangées), la recherche ne déplie que le chemin menant à
- * ses résultats, les clones restent sous leur prim source, et les jeux de variantes sont
- * indexés une fois au lieu d'être refiltrés par rangée.
+ * What is verified here: only what is expanded gets flattened (that is the whole point: the virtualizer
+ * can only count rows), the search expands only the path leading to its results, clones stay under their
+ * source prim, and variant sets are indexed once instead of being re-filtered per row.
  */
 
 const prim = (path: string): UsdPrim => ({
@@ -29,28 +28,28 @@ const prim = (path: string): UsdPrim => ({
 
 const tree = buildPrimTree(['/World/A/A1', '/World/A/A2', '/World/B'].map(prim));
 
-describe('buildRows — aplatissement de l’arbre visible', () => {
-  it('laisse hors des rangées les enfants d’un nœud replié', () => {
+describe('buildRows — flattening the visible tree', () => {
+  it('leaves out of the rows the children of a collapsed node', () => {
     const rows = buildRows(tree, new Set(['/World']), emptyOverride());
     expect(rows.map((r) => r.path)).toEqual(['/World', '/World/A', '/World/B']);
     expect(rows.map((r) => r.depth)).toEqual([0, 1, 1]);
-    // Le chevron ne s'ouvre que là où il y a des enfants.
+    // The chevron only opens where there are children.
     expect(rows.map((r) => r.kind === 'prim' && r.open)).toEqual([true, false, false]);
   });
 
-  it('déplie de force le chemin menant au résultat, et lui seul', () => {
-    // `forceOpen` vient de `searchPrimTree` : c'est la lignée des correspondances. `/World/A`
-    // s'ouvre parce qu'on cherche sous lui ; `/World/B`, replié, le reste.
+  it('forcibly expands the path leading to the result, and that path only', () => {
+    // `forceOpen` comes from `searchPrimTree`: it is the lineage of the matches. `/World/A` opens because
+    // one searches beneath it; `/World/B`, collapsed, stays so.
     const rows = buildRows(tree, new Set(), emptyOverride(), new Set(['/World', '/World/A']));
     expect(rows.map((r) => r.path)).toEqual(['/World', '/World/A', '/World/A/A1', '/World/A/A2', '/World/B']);
   });
 
-  it('cumule le dépliage de l’utilisateur et celui de la recherche', () => {
+  it('combines the user expansion and the search expansion', () => {
     const rows = buildRows(tree, new Set(['/World']), emptyOverride(), new Set(['/World/A']));
     expect(rows.map((r) => r.path)).toEqual(['/World', '/World/A', '/World/A/A1', '/World/A/A2', '/World/B']);
   });
 
-  it('range les clones juste sous leur prim source, un cran à droite', () => {
+  it('places clones just under their source prim, one step to the right', () => {
     const override = addClone(emptyOverride(), '/World/B', { id: 'c1', transform: IDENTITY_TRANSFORM });
     const rows = buildRows(tree, new Set(['/World']), override);
     expect(rows.map((r) => `${r.kind}:${r.path}`)).toEqual([
@@ -63,20 +62,20 @@ describe('buildRows — aplatissement de l’arbre visible', () => {
   });
 });
 
-describe('rowIndexOf — défiler jusqu’à un prim demande un index', () => {
+describe('rowIndexOf — scrolling to a prim requires an index', () => {
   const rows = buildRows(tree, new Set(['/World', '/World/A']), emptyOverride());
 
-  it('situe la rangée d’un prim déplié', () => {
+  it('locates the row of an expanded prim', () => {
     expect(rowIndexOf(rows, '/World/A/A2')).toBe(3);
   });
 
-  it('rend -1 pour un prim sans rangée (branche repliée, rien de sélectionné)', () => {
+  it('returns -1 for a prim with no row (collapsed branch, nothing selected)', () => {
     expect(rowIndexOf(buildRows(tree, new Set(), emptyOverride()), '/World/A/A2')).toBe(-1);
     expect(rowIndexOf(rows, null)).toBe(-1);
   });
 });
 
-describe('variantTitleIndex — un seul passage sur les variantSets', () => {
+describe('variantTitleIndex — a single pass over the variantSets', () => {
   const usd = {
     variantSets: [
       { prim: '/World/A', name: 'modelingVariant', options: ['hero', 'lo'], selected: 'hero' },
@@ -85,14 +84,14 @@ describe('variantTitleIndex — un seul passage sur les variantSets', () => {
     ],
   } as UsdModelInfo;
 
-  it('joint les jeux d’un même prim dans l’ordre du catalogue', () => {
+  it('joins the sets of the same prim in catalogue order', () => {
     const index = variantTitleIndex(usd);
     expect(index.get('/World/A')).toBe('modelingVariant, lookVariant');
     expect(index.get('/World/B')).toBe('lodVariant');
     expect(index.has('/World')).toBe(false);
   });
 
-  it('ne lit la liste qu’une fois, quel que soit le nombre de rangées', () => {
+  it('reads the list only once, whatever the number of rows', () => {
     let reads = 0;
     const sets = usd.variantSets;
     const watched = {
@@ -105,13 +104,13 @@ describe('variantTitleIndex — un seul passage sur les variantSets', () => {
     expect(reads).toBe(1);
   });
 
-  it('tient la scène sans variantes', () => {
+  it('handles a scene without variants', () => {
     expect(variantTitleIndex(null).size).toBe(0);
   });
 });
 
-describe('aimedPrimPath — la rangée visée par le clic droit', () => {
-  it('remonte du contenu de la rangée jusqu’à son prim', () => {
+describe('aimedPrimPath — the row targeted by the right-click', () => {
+  it('climbs from the row content up to its prim', () => {
     const row = document.createElement('div');
     row.setAttribute('data-prim-path', '/World/A');
     const icon = document.createElement('span');
@@ -121,7 +120,7 @@ describe('aimedPrimPath — la rangée visée par le clic droit', () => {
     row.remove();
   });
 
-  it('ne vise rien hors d’une rangée de prim (zone vide, rangée de clone)', () => {
+  it('targets nothing outside a prim row (empty area, clone row)', () => {
     const clone = document.createElement('div');
     document.body.appendChild(clone);
     expect(aimedPrimPath(clone)).toBeNull();

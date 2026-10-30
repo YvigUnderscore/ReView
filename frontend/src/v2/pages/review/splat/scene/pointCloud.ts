@@ -5,32 +5,32 @@ import type * as THREE from 'three';
 import type { SplatMesh } from '@sparkjsdev/spark';
 
 /**
- * Overlay « nuage de points » du mode de visualisation `points` (10.G), réactif à l'édition.
+ * "Point cloud" overlay of the `points` display mode (10.G), reactive to editing.
  *
- * Contrairement à un simple `THREE.Points` figé, cet overlay garde un mapping **1:1**
- * point ↔ index de splat (jusqu'à `MAX_POINTS`) afin de refléter *en direct* :
- *  - la **sélection** (teinte orange, même code couleur que la surbrillance des gaussiennes —
- *    invisible sur le mesh en mode points car son opacité est mise à 0) ;
- *  - la **suppression non-destructive** (le point masqué est escamoté via une position `NaN`,
- *    donc écarté par le GPU) sans reconstruire le nuage ni changer de mode.
+ * Unlike a plain frozen `THREE.Points`, this overlay keeps a **1:1** mapping of point to splat
+ * index (up to `MAX_POINTS`) so as to mirror, live:
+ *  - the **selection** (orange tint, same colour code as the gaussian highlight: invisible on the
+ *    mesh in points mode since its opacity is set to 0);
+ *  - the **non-destructive deletion** (the masked point is carved out via a `NaN` position, hence
+ *    discarded by the GPU), without rebuilding the cloud or changing mode.
  *
- * Les mises à jour sont **incrémentales** (diff par index) pour rester fluides sous le pinceau.
+ * Updates are **incremental** (per-index diff) to stay smooth under the brush.
  */
 
-/** Garde-fou perf : nombre max de points construits. */
+/** Performance guard: maximum number of points built. */
 const MAX_POINTS = 1_500_000;
 
-/** Teinte de sélection normalisée 0..1 — miroir de `HIGHLIGHT_RGB` (#ffaa33) côté gaussiennes. */
+/** Selection tint normalized to 0..1: mirror of `HIGHLIGHT_RGB` (#ffaa33) on the gaussian side. */
 const SELECT_COLOR: readonly [number, number, number] = [1, 170 / 255, 51 / 255];
 
 export interface PointCloud {
   points: THREE.Points;
-  /** Reflète la sélection courante (teinte orange) — diff incrémental depuis la précédente. */
+  /** Mirrors the current selection (orange tint): incremental diff from the previous one. */
   setSelection(selected: ReadonlySet<number>): void;
-  /** Masque (`hidden=true`) ou rétablit des points — suppression non-destructive reflétée live. */
+  /** Masks (`hidden=true`) or restores points: non-destructive deletion mirrored live. */
   setHidden(indices: Iterable<number>, hidden: boolean): void;
-  /** Remplace l'ensemble des points escamotés par les volumes de crop (canal séparé du masque —
-   *  retirer un volume ne révèle pas un point supprimé, et inversement). Phase 28. */
+  /** Replaces the set of points carved out by the crop volumes (a channel separate from the mask:
+   *  removing a volume does not reveal a deleted point, and vice versa). Phase 28. */
   setCropped(indices: Iterable<number>): void;
   dispose(): void;
 }
@@ -38,13 +38,13 @@ export interface PointCloud {
 export function createPointCloud(THREE: typeof import('three'), mesh: SplatMesh): PointCloud {
   const total = mesh.packedSplats?.numSplats ?? 0;
   const n = Math.min(total, MAX_POINTS);
-  const positions = new Float32Array(n * 3); // tampon rendu (NaN = point masqué)
-  const basePositions = new Float32Array(n * 3); // centres d'origine (restauration undo)
-  const colors = new Float32Array(n * 3); // tampon rendu (base + teinte)
-  const baseColors = new Float32Array(n * 3); // couleurs d'origine
+  const positions = new Float32Array(n * 3); // rendered buffer (NaN = masked point)
+  const basePositions = new Float32Array(n * 3); // original centres (undo restore)
+  const colors = new Float32Array(n * 3); // rendered buffer (base + tint)
+  const baseColors = new Float32Array(n * 3); // original colours
 
-  // Deux canaux d'escamotage indépendants : masque de suppression et volumes de crop (un point
-  // n'est visible que hors des deux) — cf. `setHidden` / `setCropped`.
+  // Two independent carving channels: the deletion mask and the crop volumes (a point is
+  // visible only outside both): see `setHidden` and `setCropped`.
   const maskHidden = new Set<number>();
   let cropped: ReadonlySet<number> = new Set<number>();
 
@@ -54,7 +54,7 @@ export function createPointCloud(THREE: typeof import('three'), mesh: SplatMesh)
     basePositions[o] = center.x;
     basePositions[o + 1] = center.y;
     basePositions[o + 2] = center.z;
-    const visible = opacity > 0; // splats déjà masqués (masque chargé) → escamotés
+    const visible = opacity > 0; // already masked splats (loaded mask) are carved out
     if (!visible) maskHidden.add(i);
     positions[o] = visible ? center.x : NaN;
     positions[o + 1] = visible ? center.y : NaN;
@@ -68,9 +68,9 @@ export function createPointCloud(THREE: typeof import('three'), mesh: SplatMesh)
   });
 
   const geo = new THREE.BufferGeometry();
-  // `BufferAttribute` (et non `Float32BufferAttribute`) garde le Float32Array **par référence** :
-  // nos écritures live (setSelection/setHidden) mutent directement le buffer rendu, puis
-  // `needsUpdate` le ré-uploade. `Float32BufferAttribute` en ferait une copie (updates perdus).
+  // `BufferAttribute` (and not `Float32BufferAttribute`) keeps the Float32Array **by reference**:
+  // our live writes (setSelection/setHidden) mutate the rendered buffer directly, then
+  // `needsUpdate` re-uploads it. `Float32BufferAttribute` would make a copy (lost updates).
   const posAttr = new THREE.BufferAttribute(positions, 3);
   const colAttr = new THREE.BufferAttribute(colors, 3);
   geo.setAttribute('position', posAttr);
@@ -86,7 +86,7 @@ export function createPointCloud(THREE: typeof import('three'), mesh: SplatMesh)
     colors[o + 2] = baseColors[o + 2]!;
   };
 
-  /** Recalcule la visibilité d'un point (hors masque ET hors crop → position d'origine). */
+  /** Recomputes the visibility of a point (outside the mask AND outside the crop: original position). */
   const refresh = (i: number) => {
     const o = i * 3;
     const hide = maskHidden.has(i) || cropped.has(i);
@@ -122,8 +122,8 @@ export function createPointCloud(THREE: typeof import('three'), mesh: SplatMesh)
     setCropped(indices) {
       const next = new Set<number>();
       for (const i of indices) if (i < n) next.add(i);
-      // Diff incrémental : seuls les points qui changent d'état sont réécrits (après l'échange,
-      // pour que `refresh` lise le nouvel ensemble).
+      // Incremental diff: only points changing state are rewritten (after the swap,
+      // so that `refresh` reads the new set).
       const prev = cropped;
       cropped = next;
       for (const i of prev) if (!next.has(i)) refresh(i);

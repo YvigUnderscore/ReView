@@ -11,13 +11,13 @@ import type { Annotations } from '../review/useAnnotations';
 import { useT } from '../../i18n';
 
 /**
- * Envoi d'un retour d'invité — miroir de `useSubmitComment` côté review, amputé de tout ce
- * qui suppose un compte (pièces jointes, mentions, plage in→out, parts d'auteur).
+ * Sends a guest's feedback: a mirror of `useSubmitComment` on the review side, stripped of
+ * everything that presumes an account (attachments, mentions, in-to-out range, author parts).
  *
- * Le seul piège est le temps : le dérivé client porte un slate en tête que la review interne
- * ne connaît pas. Le timestamp envoyé passe donc par `mediaTimeOf`, sans quoi chaque
- * remarque d'un client arriverait décalée de la durée du slate — trois secondes plus loin
- * que l'image dont il parle.
+ * The only trap is time: the client derivative carries a slate at the head that the internal
+ * review does not know. The timestamp sent therefore goes through `mediaTimeOf`, otherwise
+ * every client remark would arrive offset by the slate duration, three seconds further on than
+ * the image being discussed.
  */
 export function useClientSubmitComment(opts: {
   token: string;
@@ -33,11 +33,11 @@ export function useClientSubmitComment(opts: {
 
   return useCallback(
     async (guestName: string, text: string) => {
-      // Le portail client ne pose qu'un point : le premier de la liste part comme `hotspot`,
-      // la part que le schéma INVITÉ accepte. Un retour de client reste un retour de client.
+      // The client portal places only one point: the first in the list goes as `hotspot`, the
+      // part the guest schema accepts. A client's feedback stays a client's feedback.
       const annotation = buildGuestAnnotation({ shapes: ann.annot, hotspot: ann.poi.points[0] ?? null });
       const content = guestCommentContent(text, annotation);
-      // Ni texte ni dessin : il n'y a rien à envoyer.
+      // Neither text nor drawing: there is nothing to send.
       if (content === null) return;
       try {
         localStorage.setItem('client-guest-name', guestName);
@@ -50,7 +50,7 @@ export function useClientSubmitComment(opts: {
           ...(annotation ? { annotation } : {}),
         });
         toast.success(t('comments.sent'));
-        // Le dessin est parti avec le retour : le composer repart vide, comme en interne.
+        // The drawing was sent with the feedback: the composer restarts empty, as internally.
         ann.resetComposer();
         void qc.invalidateQueries({ queryKey: ['client-share', token, 'media', mediaId, 'comments'] });
       } catch (err) {

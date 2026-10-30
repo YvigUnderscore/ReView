@@ -2,22 +2,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Notes de review au format tableur.
+ * Review notes in spreadsheet format.
  *
- * Une ligne par note (réponses comprises, rattachées par `reply_to`), dans l'ordre où la
- * review les présente. Le format suit exactement la convention du CSV pipeline
- * (`projectCsv.ts`) : séparateur `,`, UTF-8 sans BOM, fin de ligne `\n`, en-tête en
- * minuscules — un fichier lisible par Excel, Numbers et Sheets, et ré-exploitable par un
- * script.
+ * One line per note (replies included, attached by `reply_to`), in the order the review presents them. The format
+ * follows exactly the convention of the pipeline CSV (`projectCsv.ts`): `,` separator, UTF-8 without BOM, `\n` line
+ * end, lowercase header — a file readable by Excel, Numbers and Sheets, and reusable by a script.
  *
- * Sérialisation PURE : aucune dépendance Prisma ni MinIO, le service fournit des lignes
- * déjà résolues. C'est ce qui rend le format testable sans base.
+ * PURE serialisation: no Prisma or MinIO dependency, the service supplies already-resolved rows. This is what makes the
+ * format testable without a database.
  */
 
 /**
- * Colonnes, dans l'ordre. `frame` est la frame **affichée** (base `startFrame` du projet,
- * celle que l'artiste lit à l'écran) ; `timecode` est le timecode interne du média
- * (00:00:00:00 = premier photogramme), celui que le montage attend.
+ * Columns, in order. `frame` is the **displayed** frame (based on the project's `startFrame`, the one the artist reads
+ * on screen); `timecode` is the media's internal timecode (00:00:00:00 = first frame), the one the editorial expects.
  */
 export const NOTES_CSV_COLUMNS = [
   'note_id',
@@ -44,15 +41,14 @@ export const NOTES_CSV_COLUMNS = [
 
 export type NotesCsvColumn = (typeof NOTES_CSV_COLUMNS)[number];
 
-/** Une note prête à écrire : toutes les valeurs sont déjà des chaînes. */
+/** A note ready to write: all values are already strings. */
 export type NoteCsvRow = Record<NotesCsvColumn, string>;
 
 /**
- * Échappe un champ CSV et neutralise l'injection de formule tableur : un champ commençant
- * par `= + - @` (ou tab/CR) est préfixé d'une apostrophe pour qu'Excel/Sheets ne
- * l'interprète pas comme une formule. Même règle que `projectCsv.csvField` — le texte
- * d'une note est saisi par l'utilisateur, donc exactement la donnée qu'on ne veut pas voir
- * exécutée à l'ouverture du fichier.
+ * Escapes a CSV field and neutralises spreadsheet formula injection: a field starting with `= + - @` (or tab/CR) is
+ * prefixed with an apostrophe so that Excel/Sheets does not interpret it as a formula. Same rule as
+ * `projectCsv.csvField` — the text of a note is typed by the user, hence exactly the data we do not want executed when
+ * the file is opened.
  */
 export function csvField(value: string): string {
   const safe = /^[=+\-@\t\r]/.test(value) ? `'${value}` : value;
@@ -60,9 +56,8 @@ export function csvField(value: string): string {
 }
 
 /**
- * Aplatit un texte de note pour la cellule : le contenu est du HTML assaini côté service,
- * mais les retours à la ligne restent, et une cellule multi-lignes rend le fichier
- * pénible à trier. On garde un séparateur lisible plutôt que de perdre la structure.
+ * Flattens a note text for the cell: the content is HTML sanitised on the service side, but line breaks remain, and a
+ * multi-line cell makes the file painful to sort. We keep a readable separator rather than losing the structure.
  */
 export function flattenNoteText(text: string): string {
   return text
@@ -73,7 +68,7 @@ export function flattenNoteText(text: string): string {
     .join(' ⏎ ');
 }
 
-/** Sérialise les notes au format CSV (en-tête inclus). */
+/** Serialises the notes to CSV format (header included). */
 export function toNotesCsv(rows: NoteCsvRow[]): string {
   const lines = [NOTES_CSV_COLUMNS.join(',')];
   for (const row of rows) {

@@ -4,38 +4,34 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { logger } from '../../lib/logger';
-import { storage } from '../StorageService';
+import { storage } from '../../lib/storage';
 import { safeUploadContentType } from '../../lib/uploadContentType';
 import { belongsToProject } from './shotgridProjectGuard';
 import { attachmentName, attachmentUrl, asEntityRef, type SgRecord } from './shotgridMapper';
 import type { PullContext } from './ShotgridPullService';
 
 /**
- * Pièces jointes d'une note ShotGrid → pièces jointes du commentaire ReView.
+ * ShotGrid note attachments -> ReView comment attachments.
  *
- * C'est par là que passe l'image annotée : ShotGrid aplatit le dessin du superviseur et
- * l'attache à la note. Sans ce chemin, la review ne reçoit que le texte, et le retour
- * perd précisément ce qu'il désignait à l'écran.
+ * This is where the annotated image passes: ShotGrid flattens the supervisor's drawing and attaches it to the note. Without this path, the review only receives
+ * the text, and the feedback loses precisely what it pointed to on screen.
  *
- * Le fichier est recopié dans le stockage de ReView plutôt que pointé chez ShotGrid :
- * une URL de site expire, exige une authentification, et disparaît avec la note.
+ * The file is copied into ReView's storage rather than pointed to on ShotGrid: a site URL expires, requires authentication, and disappears with the note.
  */
 
 const ATTACHMENT_FIELDS = [
   'this_file',
   'filename',
   'display_name',
-  // Obligatoire : `belongsToProject` refuse toute entité dont il ne peut pas lire le
-  // projet, et un Attachment n'est pas une entité hors-projet.
+  // Mandatory: `belongsToProject` refuses any entity whose project it cannot read, and an Attachment is not an out-of-project entity.
   'project',
 ];
 
-/** Au-delà, on n'aspire pas : une note peut porter un rendu entier par mégarde. */
+/** Beyond this, we do not suck it in: a note may carry an entire render by mistake. */
 const MAX_BYTES = 25 * 1024 * 1024;
 
 /**
- * Alias de type (et non `interface`) à dessein : une interface n'a pas de signature d'index
- * implicite, et Prisma refuse alors de la voir comme une valeur JSON stockable.
+ * Type alias (not `interface`) on purpose: an interface has no implicit index signature, and Prisma then refuses to see it as a storable JSON value.
  */
 export type CommentAttachmentRef = {
   key: string;
@@ -43,7 +39,7 @@ export type CommentAttachmentRef = {
   contentType: string;
 };
 
-/** Type MIME depuis le nom de fichier, quand le site n'en annonce pas. */
+/** MIME type from the file name, when the site does not announce one. */
 export function guessType(filename: string): string {
   const ext = filename.toLowerCase().split('.').pop() ?? '';
   if (ext === 'png') return 'image/png';
@@ -55,15 +51,11 @@ export function guessType(filename: string): string {
 }
 
 /**
- * Type retenu pour la pièce jointe rapatriée — celui qui sera stocké **et** enregistré
- * sur le commentaire.
+ * Type retained for the attachment fetched: the one that will be stored **and** recorded on the comment.
  *
- * Le type annoncé par le transport prime, mais un `application/octet-stream` générique
- * priverait l'image de sa vignette : le nom de fichier tranche alors. Le résultat passe
- * ensuite par la liste blanche, car c'est le site distant qui choisit cet en-tête : un
- * `text/html` ou un `image/svg+xml` seraient servis depuis l'origine de l'application.
- * `putObject` normalise déjà ce qu'il écrit ; on enregistre ici la même valeur, pour que
- * la fiche du commentaire ne promette pas une image que le stockage sert en binaire.
+ * The type announced by the transport takes precedence, but a generic `application/octet-stream` would deprive the image of its thumbnail: the file name then decides.
+ * The result then goes through the allowlist, because the remote site chooses this header: a `text/html` or an `image/svg+xml` would be served from the application's origin.
+ * `putObject` already normalizes what it writes; we record the same value here, so that the comment's record does not promise an image that storage serves as binary.
  */
 export function storedContentType(announced: string | null | undefined, name: string): string {
   const base = announced?.split(';')[0]?.trim();
@@ -72,11 +64,10 @@ export function storedContentType(announced: string | null | undefined, name: st
 }
 
 /**
- * Récupère les pièces jointes d'une note et les pose sur le commentaire.
+ * Fetches a note's attachments and attaches them to the comment.
  *
- * Renvoie le nombre de fichiers effectivement rapatriés. Un échec sur l'un d'eux ne fait
- * pas tomber les autres, ni la note : une pièce jointe manquante est un appauvrissement,
- * pas une raison de perdre le retour lui-même.
+ * Returns the number of files actually fetched. A failure on one of them does not bring down the others, nor the note: a missing attachment is an impoverishment,
+ * not a reason to lose the feedback itself.
  */
 export async function importNoteAttachments(
   ctx: PullContext,
@@ -116,11 +107,11 @@ export async function importNoteAttachments(
     where: { id: commentId },
     data: { attachments: [...already, ...imported] as Prisma.InputJsonArray },
   });
-  logger.info({ commentId, count: imported.length }, 'Pièces jointes de note importées');
+  logger.info({ commentId, count: imported.length }, 'Note attachments imported');
   return imported.length;
 }
 
-/** Un fichier : lecture de l'entité, contrôle de projet, téléchargement, dépôt. */
+/** One file: read the entity, check the project, download, deposit. */
 async function fetchOne(
   ctx: PullContext,
   sgId: number,
@@ -129,14 +120,13 @@ async function fetchOne(
   const rec = await ctx.client.findById('Attachment', sgId, ATTACHMENT_FIELDS);
   if (!rec) return null;
 
-  // Même exigence que partout ailleurs : rien n'entre sans que son projet soit vérifié.
+  // The same requirement as everywhere else: nothing enters without its project being verified.
   if (!belongsToProject(rec, ctx.scope).ok) {
     ctx.journal.count('guard', 'skipped');
     return null;
   }
 
-  // L'endpoint dédié d'abord, l'adresse portée par le champ ensuite — selon le site et
-  // le champ, l'un ou l'autre répond.
+  // The dedicated endpoint first, the address carried by the field next: depending on the site and the field, one or the other answers.
   const url = (await ctx.client.downloadUrl('Attachment', sgId, 'this_file')) ?? attachmentUrl(rec.this_file);
   if (!url) return null;
 
@@ -162,20 +152,18 @@ async function fetchOne(
 
   const contentType = storedContentType(type, name);
 
-  // Le chemin ne peut pas suivre la convention `comments/attachments/{userId}` : une note
-  // importée n'a pas d'auteur local. Il est rangé sous la note d'origine, ce qui reste
-  // classé par `AdminStorageService` et dit d'où vient le fichier.
+  // The path cannot follow the `comments/attachments/{userId}` convention: an imported note has no local author. It is filed under the original note,
+  // which stays classified by `AdminStorageService` and says where the file came from.
   const key = `comments/attachments/shotgrid/${commentId}/${sgId}-${sanitize(name)}`;
   await storage.putObject(key, Buffer.concat(chunks), contentType);
   return { key, name, contentType };
 }
 
 /**
- * Nom de fichier réduit à ce qui peut vivre dans une clé de stockage.
+ * File name reduced to what can live in a storage key.
  *
- * Les séquences de points tombent avant le reste : le point seul doit survivre pour
- * garder l'extension — dont dépend le type MIME, donc la vignette — mais « .. » n'a
- * aucune raison d'atteindre une clé qui servira à signer une URL de lecture.
+ * Sequences of dots fall before the rest: the single dot must survive to keep the extension, on which the MIME type depends, hence the thumbnail, but ".." has no reason
+ * to reach a key that will be used to sign a read URL.
  */
 export const sanitize = (name: string): string =>
   name

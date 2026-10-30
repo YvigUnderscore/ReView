@@ -22,73 +22,72 @@ beforeEach(() => {
   db.projectMembership.findUnique.mockResolvedValue({ role: Role.SUPERVISOR });
 });
 
-describe('assertProjectManager — projet mis à la corbeille', () => {
+describe('assertProjectManager — project put in the trash', () => {
   /**
-   * Ces écrans ne font pas que lire : ils déclenchent des synchronisations, donc des
-   * écritures sur le site ShotGrid du studio. Un projet retiré doit y être aussi
-   * inatteignable qu'ailleurs — la garde interrogeait le projet sans regarder `deletedAt`.
+   * These screens do more than read: they trigger synchronisations, hence writes to the studio's ShotGrid site. A removed project must be as unreachable there as
+   * elsewhere — the guard queried the project without looking at `deletedAt`.
    */
-  it('interroge le projet en excluant la corbeille', async () => {
+  it('queries the project excluding the trash', async () => {
     await assertProjectManager(admin, 12);
     expect(db.project.findUnique).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ id: 12, deletedAt: null }) }),
     );
   });
 
-  it('refuse un projet à la corbeille, même à un administrateur', async () => {
-    // Le filtre `deletedAt: null` ne rend rien pour un projet retiré.
+  it('refuses a project in the trash, even to an administrator', async () => {
+    // The `deletedAt: null` filter returns nothing for a removed project.
     db.project.findUnique.mockResolvedValue(null);
     await expect(assertProjectManager(admin, 12)).rejects.toThrow(/Project not found/);
   });
 
-  it('refuse avant même de regarder l’appartenance', async () => {
+  it('refuses before even looking at the membership', async () => {
     db.project.findUnique.mockResolvedValue(null);
     await expect(assertProjectManager(superviseur, 12)).rejects.toThrow(/Project not found/);
     expect(db.projectMembership.findUnique).not.toHaveBeenCalled();
   });
 
-  it('rend le même refus qu’un projet qui n’a jamais existé', async () => {
+  it('returns the same refusal as a project that never existed', async () => {
     db.project.findUnique.mockResolvedValue(null);
     const retire = await assertProjectManager(admin, 12).catch((e: Error) => e.message);
     const inexistant = await assertProjectManager(admin, 999).catch((e: Error) => e.message);
     expect(retire).toBe(inexistant);
   });
 
-  it('laisse passer un projet vivant', async () => {
+  it('lets a live project through', async () => {
     await expect(assertProjectManager(superviseur, 12)).resolves.toBeUndefined();
   });
 });
 
-describe('assertProjectManager — rôles', () => {
-  it('accepte un administrateur sans consulter l’appartenance', async () => {
+describe('assertProjectManager — roles', () => {
+  it('accepts an administrator without consulting the membership', async () => {
     await assertProjectManager(admin, 12);
     expect(db.projectMembership.findUnique).not.toHaveBeenCalled();
   });
 
-  it('refuse un non-membre', async () => {
+  it('refuses a non-member', async () => {
     db.projectMembership.findUnique.mockResolvedValue(null);
     await expect(assertProjectManager(artiste, 12)).rejects.toThrow(/No access to this project/);
   });
 
-  it('refuse un membre qui n’est pas superviseur', async () => {
+  it('refuses a member who is not a supervisor', async () => {
     db.projectMembership.findUnique.mockResolvedValue({ role: Role.ARTIST });
     await expect(assertProjectManager(artiste, 12)).rejects.toThrow(/Supervisors and administrators only/);
   });
 
-  // L'élévation locale (10.D8) : le rôle porté par l'appartenance prime sur le rôle global.
-  it('accepte un artiste promu superviseur sur ce projet', async () => {
+  // Local elevation (10.D8): the role carried by the membership takes precedence over the global role.
+  it('accepts an artist promoted to supervisor on this project', async () => {
     db.projectMembership.findUnique.mockResolvedValue({ role: Role.SUPERVISOR });
     await expect(assertProjectManager(artiste, 12)).resolves.toBeUndefined();
   });
 
-  it('adminOnly écarte le superviseur', async () => {
+  it('adminOnly excludes the supervisor', async () => {
     await expect(assertProjectManager(superviseur, 12, { adminOnly: true })).rejects.toThrow(
       /Administrators only/,
     );
     await expect(assertProjectManager(admin, 12, { adminOnly: true })).resolves.toBeUndefined();
   });
 
-  it('allowMembers ouvre aux membres mais jamais au client', async () => {
+  it('allowMembers opens to members but never to the client', async () => {
     db.projectMembership.findUnique.mockResolvedValue({ role: Role.ARTIST });
     await expect(assertProjectManager(artiste, 12, { allowMembers: true })).resolves.toBeUndefined();
 
@@ -98,12 +97,12 @@ describe('assertProjectManager — rôles', () => {
 });
 
 describe('canManageShotgrid', () => {
-  it('rend false plutôt que de lever, corbeille comprise', async () => {
+  it('returns false rather than throwing, trash included', async () => {
     db.project.findUnique.mockResolvedValue(null);
     await expect(canManageShotgrid(admin, 12)).resolves.toBe(false);
   });
 
-  it('rend true pour un superviseur membre d’un projet vivant', async () => {
+  it('returns true for a supervisor member of a live project', async () => {
     await expect(canManageShotgrid(superviseur, 12)).resolves.toBe(true);
   });
 });

@@ -4,11 +4,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * `version.published` est l'événement auquel s'abonne d'abord un studio, et il ne partait
- * que de la route v1 : publier depuis l'interface, par un patch en lot ou par « publier
- * tout » ne réveillait aucun abonné. Ces tests figent l'émission depuis le service et le
- * fait qu'elle suit une transition — repasser publié sur une version publiée n'est pas
- * une publication.
+ * `version.published` is the event a studio subscribes to first, and it only went out from the v1 route: publishing from
+ * the interface, through a batch patch or through "publish all" woke no subscriber. These tests pin the emission from the
+ * service, and the fact that it follows a transition: setting a published version to published again is not a publication.
  */
 vi.mock('../lib/prisma', () => ({
   prisma: {
@@ -29,7 +27,7 @@ vi.mock('../lib/prisma', () => ({
 vi.mock('./SocketService', () => ({ emitToProject: vi.fn() }));
 vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
 vi.mock('./ApiEventService', () => ({ publish: vi.fn() }));
-vi.mock('./StorageService', () => ({ storage: { getPresignedGetUrl: vi.fn() } }));
+vi.mock('../lib/storage', () => ({ storage: { getPresignedGetUrl: vi.fn() } }));
 vi.mock('./MediaService', () => ({ publish: vi.fn(), syncVersionPublication: vi.fn() }));
 vi.mock('../lib/trash', () => ({
   softDeleteVersion: vi.fn(),
@@ -50,7 +48,7 @@ import { Role, VersionStatus } from '@prisma/client';
 
 const supervisor = { id: 2, role: Role.SUPERVISOR };
 
-/** Ligne au format `versionSelect`. */
+/** Row in `versionSelect` format. */
 const versionRow = {
   id: 5,
   name: 'sh010_comp_v003',
@@ -70,8 +68,8 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-describe('VersionService.update — publication depuis l’interface', () => {
-  it('publie version.published sur la transition', async () => {
+describe('VersionService.update: publishing from the interface', () => {
+  it('publishes version.published on the transition', async () => {
     vi.mocked(prisma.version.findUnique)
       .mockResolvedValueOnce({ authorId: 2, published: false } as never)
       .mockResolvedValueOnce(versionRow as never);
@@ -88,7 +86,7 @@ describe('VersionService.update — publication depuis l’interface', () => {
     });
   });
 
-  it('ne republie pas une version déjà publiée', async () => {
+  it('does not republish a version already published', async () => {
     vi.mocked(prisma.version.findUnique).mockResolvedValueOnce({ authorId: 2, published: true } as never);
     vi.mocked(prisma.version.update).mockResolvedValue({ id: 5, published: true } as never);
 
@@ -97,7 +95,7 @@ describe('VersionService.update — publication depuis l’interface', () => {
     expect(publish).not.toHaveBeenCalled();
   });
 
-  it('reste muet pour un simple renommage', async () => {
+  it('stays silent for a simple rename', async () => {
     vi.mocked(prisma.version.findUnique).mockResolvedValueOnce({ authorId: 2, published: false } as never);
     vi.mocked(prisma.version.update).mockResolvedValue({ id: 5, published: false } as never);
 
@@ -107,8 +105,8 @@ describe('VersionService.update — publication depuis l’interface', () => {
   });
 });
 
-describe('VersionService.publishAll — « publier tout »', () => {
-  it('publie version.published quand la version bascule', async () => {
+describe('VersionService.publishAll: "publish all"', () => {
+  it('publishes version.published when the version switches', async () => {
     vi.mocked(prisma.version.findUnique)
       .mockResolvedValueOnce({ id: 5, deletedAt: null, published: false } as never)
       .mockResolvedValueOnce(versionRow as never);
@@ -119,7 +117,7 @@ describe('VersionService.publishAll — « publier tout »', () => {
     expect(eventsSent()).toEqual(['version.published']);
   });
 
-  it('reste muet si la version était déjà publiée', async () => {
+  it('stays silent if the version was already published', async () => {
     vi.mocked(prisma.version.findUnique).mockResolvedValueOnce({
       id: 5,
       deletedAt: null,

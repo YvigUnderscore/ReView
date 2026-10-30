@@ -6,25 +6,25 @@ import { rollFromUp } from './cameraRoll';
 import { fromV1 } from '../camera/channels/model';
 
 /**
- * Import d'une **animation caméra** depuis un **glTF** (symétrique de `exportCameraGltf`) —
- * de nombreux logiciels 3D exportent des caméras glTF. Convertit les échantillons (position +
- * quaternion) en poses de review (position + cible + fov + roll).
+ * Import of a **camera animation** from a **glTF** (symmetric to `exportCameraGltf`): many 3D
+ * packages export glTF cameras. Converts the samples (position and quaternion) into review poses
+ * (position, target, fov and roll).
  *
- * Note : l'import `.abc` (Alembic) demanderait un worker conteneurisé (parseur Ogawa) ; le glTF
- * est le format d'échange lisible côté client.
+ * Note: the `.abc` import (Alembic) would require a containerised worker (Ogawa parser); glTF is
+ * the readable exchange format on the client side.
  */
 
 export interface CameraSample {
-  /** Temps en secondes. */
+  /** Time in seconds. */
   t: number;
   pos: [number, number, number];
   quat: [number, number, number, number];
 }
 
 /**
- * Convertit des échantillons (position/quaternion glTF) en keyframes de review. Pur/testable :
- * la cible est dérivée de la direction de vue (quaternion) à distance `targetDist` ; le roll est
- * lu depuis le vecteur up de la caméra.
+ * Converts samples (glTF position and quaternion) into review keyframes. Pure and testable: the
+ * target is derived from the view direction (quaternion) at distance `targetDist`; the roll is read
+ * from the camera's up vector.
  */
 export function keyframesFromSamples(
   three: typeof import('three'),
@@ -55,7 +55,7 @@ interface KeyframeTrackLike {
   values: ArrayLike<number>;
 }
 
-/** Assemble les échantillons depuis les pistes `.position` / `.quaternion` d'un clip glTF. */
+/** Assembles the samples from the `.position` and `.quaternion` tracks of a glTF clip. */
 export function samplesFromTracks(tracks: KeyframeTrackLike[]): CameraSample[] {
   const posT = tracks.find((t) => t.name.endsWith('.position'));
   const rotT = tracks.find((t) => t.name.endsWith('.quaternion'));
@@ -75,7 +75,7 @@ export function samplesFromTracks(tracks: KeyframeTrackLike[]): CameraSample[] {
   return samples;
 }
 
-/** Charge un fichier glTF/GLB et en extrait l'animation caméra (runtime). `null` si absente. */
+/** Loads a glTF/GLB file and extracts the camera animation from it (runtime). `null` if absent. */
 export async function importCameraFromGltf(file: File): Promise<SplatLayoutAnim | null> {
   const three = await import('three');
   const { GLTFLoader } = await import('three/addons/loaders/GLTFLoader.js');
@@ -94,6 +94,6 @@ export async function importCameraFromGltf(file: File): Promise<SplatLayoutAnim 
   if (!clip) return null;
   const samples = samplesFromTracks(clip.tracks);
   if (samples.length < 2) return null;
-  // Les samples glTF (linéaires) → keyframes v1 → animation v2 par canaux (mode `linear`).
+  // The glTF samples (linear) → v1 keyframes → v2 animation per channel (`linear` mode).
   return fromV1(keyframesFromSamples(three, samples, fovDeg), false);
 }

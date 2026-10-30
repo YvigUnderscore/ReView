@@ -3,7 +3,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { paginationQuery, readPagination } from '../lib/pagination';
 import * as DashboardService from '../services/DashboardService';
@@ -12,21 +12,21 @@ import * as MyWorkService from '../services/MyWorkService';
 const router = Router();
 router.use(authenticate);
 
-// GET /api/dashboard — données de la page Accueil (dernières reviews, activité,
-// mes tâches, stats), bornées aux projets accessibles (membership ; admin/sup = tous).
+// GET /api/dashboard — data for the Home page (latest reviews, activity, my tasks, stats), bounded to
+// accessible projects (membership; admin and supervisor see all).
 router.get('/', async (req, res) => {
-  res.json(await DashboardService.getDashboard(req.user!));
+  res.json(await DashboardService.getDashboard(requireUser(req)));
 });
 
 /**
- * GET /api/dashboard/tasks — mes tâches, tous projets confondus (page « mes tâches »).
+ * GET /api/dashboard/tasks: my tasks across all projects (the "my tasks" page).
  *
- * C'est la destination des deux cartes personnelles de l'Accueil, qui pointaient jusqu'ici
- * une ancre disparaissant avec le bloc « mes tâches ». `scope=blocked` déplie le compteur
- * de retakes, sans scope c'est tout ce qui m'est assigné et vivant.
+ * It is the destination of the two personal cards of the Home page, which until now pointed to an
+ * anchor that disappeared along with the "my tasks" block. `scope=blocked` unfolds the retake counter;
+ * without a scope, it is everything assigned to me and still alive.
  *
- * `projectId` sert le même contenu à la vue d'ensemble d'un projet : ce bloc et cette page
- * lisent le même périmètre, si bien qu'ils ne peuvent pas se contredire.
+ * `projectId` serves the same content to a project's overview: this block and this page read the same
+ * scope, so they cannot contradict each other.
  */
 router.get(
   '/tasks',
@@ -40,20 +40,20 @@ router.get(
   }),
   async (req, res) => {
     const scope = req.query.scope === 'blocked' ? 'blocked' : 'all';
-    // Express 5 : `req.query` est un getter, la coercition du middleware ne persiste pas.
+    // Express 5: `req.query` is a getter, the middleware's coercion does not persist on it.
     const projectId = req.query.projectId ? Number(req.query.projectId) : undefined;
-    res.json(await MyWorkService.listMyTasks(req.user!, scope, readPagination(req.query), projectId));
+    res.json(await MyWorkService.listMyTasks(requireUser(req), scope, readPagination(req.query), projectId));
   },
 );
 
 /**
- * GET /api/dashboard/comments — les derniers commentaires de mon périmètre.
+ * GET /api/dashboard/comments: the latest comments within my scope.
  *
- * La quatrième carte de l'Accueil compte des commentaires : elle mène désormais à une page
- * qui en montre. Un CLIENT n'y voit que les notes qui lui sont destinées (`lib/homeScope`).
+ * The fourth card of the Home page counts comments: it now leads to a page that shows them. A CLIENT
+ * sees only the notes addressed to them (`lib/homeScope`).
  */
 router.get('/comments', validate({ query: paginationQuery }), async (req, res) => {
-  res.json(await MyWorkService.listMyComments(req.user!, readPagination(req.query)));
+  res.json(await MyWorkService.listMyComments(requireUser(req), readPagination(req.query)));
 });
 
 export default router;

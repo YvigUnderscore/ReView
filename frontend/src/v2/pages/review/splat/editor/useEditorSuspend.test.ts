@@ -9,12 +9,11 @@ import type { SplatViewer } from '../useSplat';
 import type { SplatTransform } from '../../reviewTypes';
 
 /**
- * Lire la proposition d'un commentaire suspend l'éditeur, et la sortie le rend INTACT.
+ * Reading a comment's proposal suspends the editor, and leaving it restores it INTACT.
  *
- * C'est la condition posée au rejeu : sans elle, montrer une proposition à un gestionnaire
- * revenait à écrire dans la scène qu'il est en train d'éditer. Le test vérifie les deux sens —
- * ce qui quitte la scène, et ce qui y revient, y compris quand l'auteur a continué d'éditer
- * pendant qu'il lisait.
+ * This is the condition set for the replay: without it, showing a proposal to a manager would
+ * amount to writing into the scene they are editing. The test checks both directions: what leaves
+ * the scene, and what comes back to it, including when the author kept editing while reading.
  */
 const trs = (x: number): SplatTransform => ({
   position: [x, 0, 0],
@@ -35,8 +34,8 @@ function harness() {
   return { mesh, runtime, splat, runtimesRef };
 }
 
-describe('useEditorSuspend — l’éditeur rend la main, puis la reprend', () => {
-  it('ne touche à rien tant qu’aucune proposition n’est lue', () => {
+describe('useEditorSuspend — the editor yields, then takes control back', () => {
+  it('touches nothing while no proposal is being read', () => {
     const h = harness();
     renderHook(() =>
       useEditorSuspend({
@@ -52,7 +51,7 @@ describe('useEditorSuspend — l’éditeur rend la main, puis la reprend', () =
     expect(h.splat.applyTransform).not.toHaveBeenCalled();
   });
 
-  it('retire les volumes locaux de la scène pendant la lecture', () => {
+  it('removes the local volumes from the scene during reading', () => {
     const h = harness();
     renderHook(() =>
       useEditorSuspend({
@@ -66,11 +65,11 @@ describe('useEditorSuspend — l’éditeur rend la main, puis la reprend', () =
     );
     expect(h.runtime.edit.removeFromParent).toHaveBeenCalledTimes(1);
     expect(h.mesh.add).not.toHaveBeenCalled();
-    // Suspendre ne réécrit rien : c'est le rejeu de la proposition qui pilote le nuage.
+    // Suspending rewrites nothing: the replay of the proposal is what drives the cloud.
     expect(h.splat.applyTransform).not.toHaveBeenCalled();
   });
 
-  it('à la sortie, rend les volumes ET la transformation locale à l’identique', () => {
+  it('on exit, restores the volumes AND the local transform unchanged', () => {
     const h = harness();
     const local = trs(2);
     const { rerender } = renderHook(
@@ -92,10 +91,10 @@ describe('useEditorSuspend — l’éditeur rend la main, puis la reprend', () =
   });
 
   /**
-   * L'édition peut continuer pendant la lecture (le gizmo reste sous la main) : ce qu'on rend à
-   * la sortie est l'état du DERNIER rendu, pas celui d'avant la lecture.
+   * Editing can continue during the reading (the gizmo stays under the hand): what is restored
+   * on exit is the state of the LAST render, not the one from before the reading.
    */
-  it('rend l’état le plus récent, pas celui figé à l’entrée en lecture', () => {
+  it('restores the most recent state, not the one frozen on entering reading', () => {
     const h = harness();
     const { rerender } = renderHook(
       ({ suspended, transform }: { suspended: boolean; transform: SplatTransform }) =>
@@ -114,7 +113,7 @@ describe('useEditorSuspend — l’éditeur rend la main, puis la reprend', () =
     expect(h.splat.applyTransform).toHaveBeenLastCalledWith(trs(5));
   });
 
-  it('hors éditeur, il n’y a rien à suspendre', () => {
+  it('outside the editor, there is nothing to suspend', () => {
     const h = harness();
     renderHook(() =>
       useEditorSuspend({

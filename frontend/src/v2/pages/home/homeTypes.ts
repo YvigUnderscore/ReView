@@ -3,7 +3,7 @@
 
 import type { MediaKind, TaskStatus, TaskType } from '../../types/api';
 
-/** Réponse de GET /api/dashboard (12.B) — shapes display-ready construites côté serveur. */
+/** Response of GET /api/dashboard (12.B), with display-ready shapes built on the server. */
 
 export interface DashboardReview {
   mediaId: number;
@@ -12,7 +12,7 @@ export interface DashboardReview {
   thumbnailUrl: string | null;
   location: string;
   versionName: string;
-  /** Nombre total de commentaires du média (badge de la carte). */
+  /** Total number of comments on the media (badge of the card). */
   commentCount: number;
   lastComment: {
     content: string;
@@ -39,11 +39,11 @@ export interface DashboardTask {
   status: TaskStatus;
   location: string;
   projectId: number | null;
-  /** Échéance (43.C) — null si non planifiée. */
+  /** Due date (43.C), null if not scheduled. */
   dueDate: string | null;
 }
 
-/** Projet récent avec progression (tâches approuvées / total). */
+/** Recent project with its progress (approved tasks / total). */
 export interface DashboardProject {
   id: number;
   name: string;
@@ -60,19 +60,19 @@ export interface DashboardData {
   stats: {
     projects: number;
     /**
-     * Médias réellement en review : publiés, prêts, **sans décision rendue**. La carte
-     * comptait tout le publié — un projet livré depuis deux ans y figurait encore.
+     * Media actually in review: published, ready, **without a decision given**. The card used to
+     * count everything published, so a project delivered two years ago still appeared.
      */
     mediaInReview: number;
     comments: number;
-    /** Tendances 7 jours, sur le périmètre du compteur qu'elles accompagnent. */
+    /** Seven-day trends, on the scope of the counter they accompany. */
     mediaInReview7d: number;
     comments7d: number;
     myRetakes: number;
     /**
-     * Ce qu'on attend de MOI : les reviews qui m'ont été confiées et qu'aucune décision
-     * n'a encore tranchées. L'ancien `pendingReview` portait le même libellé personnel
-     * mais comptait les verdicts attendus de tout le studio.
+     * What is expected of ME: the reviews entrusted to me that no decision has yet settled. The
+     * former `pendingReview` carried the same personal label but counted the verdicts expected
+     * from the whole studio.
      */
     awaitingMyReview: number;
   };

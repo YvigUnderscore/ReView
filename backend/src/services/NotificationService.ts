@@ -13,18 +13,17 @@ import { logger } from '../lib/logger';
 import { NOTIFICATION_TYPE, channelEnabled, type NotificationKind } from '../lib/notificationKinds';
 
 /**
- * Crée une notification in-app et la pousse en temps réel à l'utilisateur ciblé.
+ * Creates an in-app notification and pushes it in real time to the targeted user.
  *
- * La phrase est une **clé et ses paramètres** (D2), pas du texte : elle était écrite en
- * français en base, puis servie telle quelle à tout le monde — jusque dans la notification
- * navigateur, qui échappait à tout catalogue. `content` reste écrit, en anglais, pour les
- * lecteurs qui n'ont pas encore rechargé l'interface et pour les lignes antérieures.
+ * The sentence is a **key and its parameters** (D2), not text: it used to be written in French in the
+ * database, then served as is to everyone — including in the browser notification,
+ * which escaped any catalogue. `content` is still written, in English, for readers who have not yet reloaded
+ * the interface and for earlier rows.
  *
- * Le `kind` est l'unique entrée : le `type` servi au navigateur s'en déduit (registre
- * `lib/notificationKinds`), et c'est lui qui décide si le destinataire veut encore de cet
- * événement — dans le panneau, et dans son navigateur. Une ligne refusée n'est pas écrite
- * du tout : un panneau qui se remplit de ce qu'on a demandé à ne plus voir reste un
- * panneau qu'on n'ouvre plus.
+ * The `kind` is the sole input: the `type` served to the browser is derived from it (registry
+ * `lib/notificationKinds`), and it is what decides whether the recipient still wants this
+ * event — in the panel, and in their browser. A refused row is not written at all: a panel filled with what
+ * one asked not to see any more remains a panel one no longer opens.
  */
 export async function notify(params: {
   userId: number;
@@ -34,11 +33,10 @@ export async function notify(params: {
   projectId?: number | null;
   referenceId?: number | null;
 }): Promise<void> {
-  // Une seule lecture du destinataire pour les deux décisions qui le concernent : ses
-  // réglages par événement et sa langue. `resolveUserLocale` recevait auparavant le NUMÉRO
-  // de l'utilisateur au lieu de ses préférences : elle n'y trouvait évidemment pas de
-  // `locale`, retombait sur le défaut du studio, et la notification navigateur partait
-  // dans la langue du studio quoi qu'ait choisi son destinataire.
+  // A single read of the recipient for the two decisions that concern them: their per-event settings and
+  // their language. `resolveUserLocale` previously received the user's NUMBER
+  // instead of their preferences: it obviously found no `locale` there, fell back on the studio default, and
+  // the browser notification went out in the studio's language whatever its recipient had chosen.
   const recipient = await prisma.user.findUnique({
     where: { id: params.userId },
     select: { preferences: true },
@@ -59,9 +57,8 @@ export async function notify(params: {
     },
   });
   emitToUser(params.userId, 'notification:new', notification);
-  // Web Push (42.B — №66) : notification navigateur hors-onglet (si l'utilisateur s'est
-  // abonné). Elle sort de l'application : c'est ici, et nulle part ailleurs, qu'il faut
-  // la rendre dans la langue du destinataire.
+  // Web Push (42.B — #66): off-tab browser notification (if the user subscribed). It leaves the application:
+  // it is here, and nowhere else, that it must be rendered in the recipient's language.
   if (!channelEnabled(preferences, params.kind, 'push')) return;
   const locale = await resolveUserLocale(preferences);
   const url = params.projectId ? `/projects/${params.projectId}` : '/';
@@ -69,8 +66,8 @@ export async function notify(params: {
 }
 
 /**
- * Review live démarrée sur une playlist (dailies, Phase 33 retours) : notifie tous les
- * membres du projet (sauf l'initiateur) — la notification (type LIVE) mène à la session.
+ * Live review started on a playlist (dailies, Phase 33 feedback): notifies all project members (except the
+ * initiator) — the notification (type LIVE) leads to the session.
  */
 export async function notifyPlaylistLiveStarted(
   playlistId: number,
@@ -101,26 +98,24 @@ export async function notifyPlaylistLiveStarted(
   );
 }
 
-/** Discord répond en quelques centaines de millisecondes ; au-delà, la notification est perdue. */
+/** Discord answers within a few hundred milliseconds; beyond that, the notification is lost. */
 const DISCORD_TIMEOUT_MS = 5000;
-/** La réponse de Discord tient en quelques centaines d'octets ; on ne lui en lira pas plus. */
+/** Discord's response fits in a few hundred bytes; we will not read more of it. */
 const DISCORD_MAX_BYTES = 64 * 1024;
 
 /**
- * Envoie un message au webhook Discord du studio (si configuré et valide).
- * Tolérant aux erreurs : un échec Discord ne doit jamais casser le flux applicatif.
+ * Sends a message to the studio's Discord webhook (if configured and valid).
+ * Error-tolerant: a Discord failure must never break the application flow.
  *
- * La phrase est une **clé** et non du texte, pour la même raison que dans `notifyChat` :
- * ce qui part vers un canal d'équipe sort de l'application et échappait donc à tout
- * catalogue — un message écrit en dur y restait français quelle que soit la langue du
- * studio. Un canal est collectif : il se rend dans la langue du studio, pas dans celle
- * d'un lecteur.
+ * The sentence is a **key** and not text, for the same reason as in `notifyChat`: what goes to a team channel
+ * leaves the application and so escaped any catalogue — a hard-coded message stayed French there whatever the
+ * studio's language. A channel is collective: it is rendered in the studio's language, not in a reader's.
  *
- * L'appel passe par `safeFetch` et non par `fetch` : il n'avait **aucun délai d'attente**.
- * Un relais qui accepte la connexion puis se tait retenait indéfiniment un socket et le
- * contexte du message, une fois par notification, sans jamais atteindre le `catch`.
- * `safeFetch` apporte en prime la garde sur l'adresse résolue et le refus de suivre une
- * redirection — l'allow-list `isValidDiscordWebhook` ne contrôle que l'URL de départ.
+ * The call goes through `safeFetch` and not `fetch`: it had **no timeout at all**. A relay that accepts the
+ * connection and then goes silent held a socket and the message context indefinitely,
+ * once per notification, without ever reaching the `catch`. `safeFetch` additionally brings the guard on the
+ * resolved address and the refusal to follow a redirect — the `isValidDiscordWebhook`
+ * allow-list only checks the starting URL.
  */
 export async function sendDiscord(key: MessageKey, params?: TParams): Promise<void> {
   try {
@@ -137,10 +132,10 @@ export async function sendDiscord(key: MessageKey, params?: TParams): Promise<vo
       },
       { timeoutMs: DISCORD_TIMEOUT_MS, maxRedirects: 0, maxBytes: DISCORD_MAX_BYTES },
     );
-    // Un 4xx (webhook supprimé, charge malformée) restait totalement muet : rien ne
-    // distinguait une notification remise d'une notification perdue.
-    if (!res.ok) logger.warn({ status: res.status }, '[Discord] webhook refusé');
+    // A 4xx (webhook deleted, malformed payload) remained completely silent: nothing distinguished a
+    // delivered notification from a lost one.
+    if (!res.ok) logger.warn({ status: res.status }, '[Discord] webhook refused');
   } catch (err) {
-    logger.warn({ err }, '[Discord] envoi échoué');
+    logger.warn({ err }, '[Discord] send failed');
   }
 }

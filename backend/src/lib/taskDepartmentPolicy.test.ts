@@ -9,7 +9,7 @@ import {
   type TaskWriteContext,
 } from './taskDepartmentPolicy';
 
-/** Un artiste d'animation (département 1), sous la politique restreinte. */
+/** An animation artist (department 1), under the restricted policy. */
 const artist = (over: Partial<TaskWriteContext> = {}): TaskWriteContext => ({
   policy: 'department',
   isManager: false,
@@ -20,7 +20,7 @@ const artist = (over: Partial<TaskWriteContext> = {}): TaskWriteContext => ({
 });
 
 describe('parseTaskPolicy', () => {
-  it('retombe sur « ouvert » — ce que ReView faisait avant que la règle existe', () => {
+  it('falls back to "open": what ReView did before the rule existed', () => {
     expect(parseTaskPolicy(null)).toBe('open');
     expect(parseTaskPolicy('n’importe quoi')).toBe('open');
     expect(parseTaskPolicy('department')).toBe('department');
@@ -28,35 +28,35 @@ describe('parseTaskPolicy', () => {
 });
 
 describe('canWriteTask', () => {
-  it('laisse écrire sur une tâche de son département', () => {
+  it('allows writing on a task of their department', () => {
     expect(canWriteTask(artist())).toBe(true);
   });
 
-  it('refuse une tâche d’un autre département', () => {
+  it('rejects a task from another department', () => {
     expect(canWriteTask(artist({ taskDepartmentId: 2 }))).toBe(false);
   });
 
-  it('laisse écrire sur une tâche qu’on lui a confiée, quel qu’en soit le département', () => {
-    // « Si leur département OU leur profil n'a pas la task » : l'assignation suffit.
+  it('allows writing on a task assigned to them, whatever its department', () => {
+    // "If their department OR their profile does not have the task": the assignment is enough.
     expect(canWriteTask(artist({ taskDepartmentId: 2, isAssignee: true }))).toBe(true);
   });
 
-  it('laisse une tâche sans département ouverte — sinon elle serait immodifiable', () => {
-    // C'est le cas d'une tâche née d'un retour de review.
+  it('leaves a task without a department open, otherwise it would be unmodifiable', () => {
+    // This is the case of a task created from a review feedback.
     expect(canWriteTask(artist({ taskDepartmentId: null }))).toBe(true);
   });
 
-  it('n’entrave jamais un gestionnaire : intervenir partout est son métier', () => {
+  it('never hinders a manager: intervening everywhere is their job', () => {
     expect(canWriteTask(artist({ isManager: true, taskDepartmentId: 9 }))).toBe(true);
   });
 
-  it("n'élargit rien en mode ouvert : la règle historique — l'assigné, et lui seul", () => {
-    // L'ouvrir ici donnerait à tout artiste la main sur toutes les tâches du projet.
+  it('widens nothing in open mode: the historical rule, the assignee and only them', () => {
+    // Opening it here would give every artist control over all tasks of the project.
     expect(canWriteTask(artist({ policy: 'open', taskDepartmentId: 9 }))).toBe(false);
     expect(canWriteTask(artist({ policy: 'open', taskDepartmentId: 9, isAssignee: true }))).toBe(true);
   });
 
-  it('refuse quelqu’un sans aucun département', () => {
+  it('rejects someone with no department at all', () => {
     expect(canWriteTask(artist({ userDepartmentIds: [] }))).toBe(false);
   });
 });
@@ -64,19 +64,19 @@ describe('canWriteTask', () => {
 describe('writableDepartments', () => {
   const pipe = [{ id: 1 }, { id: 2 }, { id: 3 }];
 
-  it('réduit la liste aux étapes de la personne — la lisibilité promise', () => {
+  it("narrows the list to the person's steps: the promised readability", () => {
     expect(
       writableDepartments(pipe, { policy: 'department', isManager: false, userDepartmentIds: [2] }),
     ).toEqual([2]);
   });
 
-  it('rend le pipe entier à un gestionnaire', () => {
+  it('gives the whole pipeline to a manager', () => {
     expect(
       writableDepartments(pipe, { policy: 'department', isManager: true, userDepartmentIds: [2] }),
     ).toEqual([1, 2, 3]);
   });
 
-  it('rend le pipe entier quand la politique est ouverte', () => {
+  it('gives the whole pipeline when the policy is open', () => {
     expect(writableDepartments(pipe, { policy: 'open', isManager: false, userDepartmentIds: [] })).toEqual([
       1, 2, 3,
     ]);

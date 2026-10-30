@@ -8,15 +8,15 @@ import type { PlaylistSummary } from '../../types/api';
 import { useT } from '../../i18n';
 
 /**
- * Une playlist, comme carte.
+ * A playlist, as a card.
  *
- * C'était une ligne de texte : « Dailies mardi · 12 versions · il y a 2 h ». Or une liste
- * de dailies s'identifie à ce qu'elle contient, pas à son nom — « Dailies mardi » et
- * « Dailies mercredi » ne se distinguent qu'à l'image. La bande des quatre premières
- * vignettes règle la question d'un coup d'œil.
+ * It used to be a line of text: "Dailies Tuesday · 12 versions · 2 h ago". Yet a dailies list is
+ * identified by what it contains, not by its name: "Dailies Tuesday" and "Dailies Wednesday" can
+ * only be told apart by the image. The strip of the first four thumbnails settles the question at
+ * a glance.
  *
- * Le bouton de lecture est le geste principal : on ouvre une playlist pour la regarder. Il
- * couvre l'image au survol plutôt que d'occuper une colonne — la carte reste dense.
+ * The play button is the main gesture: one opens a playlist to watch it. It covers the image on
+ * hover rather than taking up a column, so the card stays dense.
  */
 export default function PlaylistCard({
   playlist,
@@ -24,7 +24,7 @@ export default function PlaylistCard({
   onPlay,
 }: {
   playlist: PlaylistSummary;
-  /** Session en cours sur cette playlist, s'il y en a une. */
+  /** Live session currently running on this playlist, if any. */
   live: { participantCount: number } | null;
   onPlay: (joinLive: boolean) => void;
 }) {
@@ -51,8 +51,8 @@ export default function PlaylistCard({
               />
             ))
           )}
-          {/* Lecture : au survol, par-dessus la bande. Une colonne dédiée aurait coûté la
-              largeur qui sert à montrer les images. */}
+          {/* Playback: on hover, over the strip. A dedicated column would have cost the width
+              used to show the images. */}
           <button
             onClick={(e) => {
               e.preventDefault();

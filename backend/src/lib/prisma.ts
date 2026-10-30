@@ -4,55 +4,48 @@
 import { PrismaClient } from '@prisma/client';
 
 /**
- * Bornes du pool, posées ici faute de l'être dans l'URL.
+ * Pool bounds, set here since they are not set in the URL.
  *
- * Sans `connection_limit`, Prisma dimensionne son pool à `cœurs physiques × 2 + 1`, PAR
- * PROCESS. Deux process se connectent (API et worker) et PostgreSQL est laissé à son
- * défaut d'image, `max_connections = 100` : sur un hôte à 32 cœurs physiques — une machine
- * banale pour un serveur de transcodage — cela demande 2 × 65 = 130 connexions pour 100
- * disponibles. Le second process à démarrer prend « FATAL: sorry, too many clients
- * already », et `restart: always` le relance en boucle. La borne ne doit donc pas suivre
- * le matériel.
+ * Without `connection_limit`, Prisma sizes its pool at `physical cores × 2 + 1`, PER PROCESS. Two processes connect (API and worker)
+ * and PostgreSQL is left at its image default, `max_connections = 100`: on a 32-physical-core host — an ordinary machine for a transcoding
+ * server — that asks for 2 × 65 = 130 connections for 100 available. The second process to start gets "FATAL: sorry, too many clients
+ * already", and `restart: always` relaunches it in a loop. The bound must therefore not follow the hardware.
  *
- * Dix connexions couvrent largement la charge du produit (requêtes courtes), et laissent
- * la place aux sauvegardes, aux migrations et à une seconde réplique.
+ * Ten connections comfortably cover the product's load (short queries), and leave room for backups, migrations and a second replica.
  */
 const DEFAULT_CONNECTION_LIMIT = 10;
 
-/** Attente maximale (secondes) d'une connexion libre avant de rendre une erreur claire. */
+/** Maximum wait (seconds) for a free connection before returning a clear error. */
 const DEFAULT_POOL_TIMEOUT_S = 20;
 
 /**
- * Garde-fou d'exécution côté serveur, en millisecondes.
+ * Server-side execution guard, in milliseconds.
  *
- * Sans lui, une agrégation partie de travers (vues de production, Gantt) tient sa
- * connexion indéfiniment : la seule sortie est un `pg_terminate_backend` manuel.
+ * Without it, an aggregation that went wrong (production views, Gantt) holds its connection indefinitely: the only way out is a
+ * manual `pg_terminate_backend`.
  *
- * ⚠ Posé sur la CONNEXION de l'application, et non sur le rôle par migration : un
- * `ALTER ROLE … SET statement_timeout` s'appliquerait aussi aux sessions du CLI Prisma,
- * donc à `prisma migrate deploy` — un index créé sur une grosse table ferait alors échouer
- * la migration au bout d'une minute, au démarrage du conteneur. Le CLI n'instancie pas ce
- * module : il garde le `DATABASE_URL` brut, sans délai.
+ * ⚠ Set on the APPLICATION's CONNECTION, not on the role per migration: an `ALTER ROLE … SET statement_timeout` would also apply
+ * to the Prisma CLI sessions, hence to `prisma migrate deploy` — an index built on a large table would then make the migration fail
+ * after one minute, at container start-up. The CLI does not instantiate this module: it keeps the raw `DATABASE_URL`, without a delay.
  */
 const DEFAULT_STATEMENT_TIMEOUT_MS = 60_000;
 
-/** Entier strictement positif lu dans l'environnement, sinon le repli. */
+/** Strictly positive integer read from the environment, otherwise the fallback. */
 function positiveInt(raw: string | undefined, fallback: number): number {
   const value = Number(raw);
   return Number.isInteger(value) && value > 0 ? value : fallback;
 }
 
 /**
- * Début de la query d'une URL de connexion.
+ * Start of the query of a connection URL.
  *
- * On cherche le « ? » APRÈS le dernier « @ » : un mot de passe mal encodé qui en contient
- * un ne doit pas faire passer la moitié des identifiants pour des paramètres.
+ * We look for the "?" AFTER the last "@": a badly encoded password containing one must not make half the credentials pass as parameters.
  */
 function queryStart(url: string): number {
   return url.indexOf('?', url.lastIndexOf('@') + 1);
 }
 
-/** Le paramètre est-il DÉJÀ présent ? Un choix explicite de l'exploitant prime. */
+/** Is the parameter ALREADY present? An explicit choice of the operator takes precedence. */
 function hasParam(url: string, name: string): boolean {
   const start = queryStart(url);
   if (start < 0) return false;
@@ -67,16 +60,13 @@ function appendParam(url: string, pair: string): string {
 }
 
 /**
- * Complète une URL de connexion des bornes qui lui manquent.
+ * Completes a connection URL with the bounds it lacks.
  *
- * Filet et non doublon : `docker-compose.yml` pose déjà `connection_limit` et
- * `pool_timeout` dans les deux `DATABASE_URL` qu'il construit, pour que la borne soit
- * lisible là où un exploitant la cherche. Cette fonction couvre tous les AUTRES chemins
- * d'exécution — un `.env` écrit à la main, une pile qui n'est pas celle du dépôt, un
- * script lancé depuis l'hôte — et ne touche jamais à ce qui est déjà écrit.
+ * A safety net, not a duplicate: `docker-compose.yml` already sets `connection_limit` and `pool_timeout` in the two `DATABASE_URL`s it
+ * builds, so that the bound is readable where an operator looks for it. This function covers all the OTHER execution paths — a
+ * hand-written `.env`, a stack that is not the repository's, a script launched from the host — and never touches what is already written.
  *
- * Rend `undefined` quand il n'y a rien à surcharger : le client retombe alors sur le
- * `DATABASE_URL` du schéma Prisma, comme avant.
+ * Returns `undefined` when there is nothing to override: the client then falls back on the `DATABASE_URL` of the Prisma schema, as before.
  */
 export function withPoolBounds(
   rawUrl: string | undefined,
@@ -92,20 +82,18 @@ export function withPoolBounds(
     url = appendParam(url, `pool_timeout=${positiveInt(env.DB_POOL_TIMEOUT, DEFAULT_POOL_TIMEOUT_S)}`);
   }
   if (!hasParam(url, 'options')) {
-    // Encodage explicite (%20, %3D) plutôt que via URLSearchParams, qui écrirait l'espace
-    // en « + » : le serveur découpe `options` sur les espaces, un « + » littéral ferait un
-    // jeton inconnu et la connexion échouerait.
+    // Explicit encoding (%20, %3D) rather than via URLSearchParams, which would write the space as "+": the server splits `options` on
+    // spaces, and a literal "+" would make an unknown token and the connection would fail.
     const ms = positiveInt(env.DB_STATEMENT_TIMEOUT_MS, DEFAULT_STATEMENT_TIMEOUT_MS);
-    // Concaténation et non gabarit : `check-untranslated` compte les fragments de gabarit,
-    // et ce paramètre d'URL n'est pas un texte d'interface.
+    // Concatenation rather than a template: `check-untranslated` counts template fragments, and this URL parameter is not interface text.
     url = appendParam(url, 'options=-c%20statement_timeout%3D' + String(ms));
   }
   return url === rawUrl ? undefined : url;
 }
 
 /**
- * Singleton PrismaClient — réutilisé entre les hot-reloads en dev pour éviter
- * d'épuiser le pool de connexions.
+ * PrismaClient singleton — reused across hot-reloads in dev to avoid
+ * exhausting the connection pool.
  */
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 

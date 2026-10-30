@@ -4,39 +4,39 @@
 import type { SplatMesh } from '@sparkjsdev/spark';
 
 /**
- * Effets d'apparition du splat (10.G-V6) : modifier dyno (GLSL) injecté dans le générateur
- * Spark (`objectModifier` — l'effet suit la transformation du mesh). Le type + la durée sont
- * persistés dans `splatPresentation.reveal` et rejoués pour tous à l'ouverture. Le namespace
- * `dyno` est injecté par l'appelant (import dynamique) — testable avec un faux namespace.
+ * Splat appearance effects (10.G-V6): dyno modifier (GLSL) injected into Spark's generator
+ * (`objectModifier`, so the effect follows the mesh transform). The type and duration are
+ * persisted in `splatPresentation.reveal` and replayed for everyone on opening. The `dyno`
+ * namespace is injected by the caller (dynamic import), so it is testable with a fake namespace.
  */
 export type RevealType = 'fade' | 'sweep' | 'dissolve';
 type DynoNs = typeof import('@sparkjsdev/spark').dyno;
 
-/** GLSL de l'effet (pur, testable) : `g` = gsplat de sortie, `u` = progression 0→1. */
+/** GLSL of the effect (pure, testable): `g` = output gsplat, `u` = progression 0→1. */
 export function revealGlsl(type: RevealType, g: string, u: string, minY: string, maxY: string): string {
   switch (type) {
-    case 'sweep': // balayage vertical : révèle du bas vers le haut
+    case 'sweep': // vertical sweep: reveals from bottom to top
       return `float band = max((${maxY} - ${minY}) * 0.08, 1e-4);
 float edge = mix(${minY} - band, ${maxY} + band, ${u});
 ${g}.rgba.a *= 1.0 - smoothstep(edge - band, edge + band, ${g}.center.y);`;
-    case 'dissolve': // dissolution : chaque splat apparaît à un seuil pseudo-aléatoire
+    case 'dissolve': // dissolve: each splat appears at a pseudo-random threshold
       return `float rnd = fract(sin(float(${g}.index) * 12.9898) * 43758.5453);
 ${g}.rgba.a *= smoothstep(rnd - 0.03, rnd + 0.03, ${u} * 1.06 - 0.03);`;
-    default: // fade : montée en opacité globale
+    default: // fade: global opacity ramp-up
       return `${g}.rgba.a *= ${u};`;
   }
 }
 
 export interface RevealRuntime {
-  /** Règle la progression de l'effet (0 = invisible, 1 = rendu normal). */
+  /** Sets the progression of the effect (0 = invisible, 1 = normal rendering). */
   update(progress: number): void;
-  /** Retire le modifier et rétablit le rendu normal. */
+  /** Removes the modifier and restores normal rendering. */
   dispose(): void;
 }
 
 export function createReveal(dyno: DynoNs, mesh: SplatMesh, type: RevealType): RevealRuntime {
   const progress = dyno.dynoFloat(0);
-  // Bornes verticales du balayage (bbox objet) — littéraux GLSL, figés à la création.
+  // Vertical bounds of the sweep (object bbox): GLSL literals, frozen at creation.
   let minY = 0;
   let maxY = 1;
   try {
@@ -46,7 +46,7 @@ export function createReveal(dyno: DynoNs, mesh: SplatMesh, type: RevealType): R
       maxY = box.max.y > box.min.y ? box.max.y : box.min.y + 1;
     }
   } catch {
-    // bbox indisponible : bornes par défaut (fade/dissolve n'en dépendent pas)
+    // bbox unavailable: default bounds (fade and dissolve do not depend on them)
   }
   mesh.objectModifier = dyno.dynoBlock({ gsplat: dyno.Gsplat }, { gsplat: dyno.Gsplat }, ({ gsplat }) => ({
     gsplat: dyno.dyno({

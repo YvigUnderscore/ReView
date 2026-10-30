@@ -3,7 +3,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// `vi.mock` est remonté en tête de fichier : les doublures doivent l'être aussi.
+// `vi.mock` is hoisted to the top of the file: the doubles must be too.
 const { connection, runSync } = vi.hoisted(() => ({
   connection: { findUnique: vi.fn(), update: vi.fn() },
   runSync: vi.fn(),
@@ -11,7 +11,7 @@ const { connection, runSync } = vi.hoisted(() => ({
 
 vi.mock('../../lib/prisma', () => ({ prisma: { shotgridConnection: connection } }));
 vi.mock('../../lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
-vi.mock('../JobService', () => ({ shotgridQueue: { add: vi.fn() } }));
+vi.mock('../../lib/queues', () => ({ shotgridQueue: { add: vi.fn() } }));
 vi.mock('./ShotgridSyncService', () => ({ runSync: (...args: unknown[]) => runSync(...args) }));
 
 import { coalesceKey, handleEvent, parseEventType } from './ShotgridEventService';
@@ -40,7 +40,7 @@ beforeEach(() => {
 });
 
 describe('parseEventType', () => {
-  it('lit le type d’entité et l’action', () => {
+  it('reads the entity type and the action', () => {
     expect(parseEventType('Shotgun_Note_New')).toEqual({ entity: 'Note', action: 'New' });
     expect(parseEventType('Shotgun_Version_Change')).toEqual({ entity: 'Version', action: 'Change' });
     expect(parseEventType('bruit')).toBeNull();
@@ -49,34 +49,32 @@ describe('parseEventType', () => {
 });
 
 /**
- * Une entité globale déclenche la même relecture quel que soit son identifiant. Le
- * regroupement doit donc l'ignorer — sans quoi cinquante comptes renommés d'un coup
- * fabriquent cinquante passes complètes identiques. Le cas cesse d'être théorique dès
- * qu'un webhook sans filtre de projet apporte les `Person` et les `Status` du site.
+ * A global entity triggers the same re-read whatever its identifier. Grouping must therefore ignore it: otherwise fifty accounts renamed
+ * at once would produce fifty identical full passes. The case stops being theoretical as soon as a webhook without a project filter brings
+ * the site's `Person` and `Status` records.
  */
 describe('coalesceKey', () => {
-  it('regroupe les entités globales sur leur seul type', () => {
+  it('groups global entities by their type alone', () => {
     expect(coalesceKey('HumanUser', 11)).toBe(coalesceKey('HumanUser', 22));
     expect(coalesceKey('Status', 3)).toBe('Status');
   });
 
-  it('garde l’identifiant pour une entité de production', () => {
+  it('keeps the identifier for a production entity', () => {
     expect(coalesceKey('Shot', 11)).toBe('Shot-11');
     expect(coalesceKey('Shot', 11)).not.toBe(coalesceKey('Shot', 12));
   });
 
-  it('ne confond pas deux types globaux entre eux', () => {
+  it('does not confuse two global types with each other', () => {
     expect(coalesceKey('Status', 1)).not.toBe(coalesceKey('HumanUser', 1));
   });
 });
 
 /**
- * Le sens entrant des notes et des playlists était mort : l'événement était accepté puis
- * traité par une passe qui ne savait pas les lire. Ces vérifications tiennent la
- * correspondance « événement reçu → passe exécutée ».
+ * The inbound direction of notes and playlists was dead: the event was accepted, then processed by a pass that did not know how to read them.
+ * These checks hold the mapping "received event -> pass executed".
  */
 describe('handleEvent', () => {
-  it('importe enfin la note désignée par l’événement', async () => {
+  it('finally imports the note designated by the event', async () => {
     await handleEvent(1, event('Shotgun_Note_New', 501));
 
     expect(runSync).toHaveBeenCalledWith(42, {
@@ -86,7 +84,7 @@ describe('handleEvent', () => {
     });
   });
 
-  it('importe la playlist désignée par l’événement', async () => {
+  it('imports the playlist designated by the event', async () => {
     await handleEvent(1, event('Shotgun_Playlist_Change', 88));
 
     expect(runSync).toHaveBeenCalledWith(42, {
@@ -96,7 +94,7 @@ describe('handleEvent', () => {
     });
   });
 
-  it('ne rejoue pas tout le projet pour une version', async () => {
+  it('does not replay the whole project for a version', async () => {
     await handleEvent(1, event('Shotgun_Version_Change', 9001));
 
     const options = runSync.mock.calls[0]![1] as { passes: string[]; onlySgIds: unknown };
@@ -104,7 +102,7 @@ describe('handleEvent', () => {
     expect(options.onlySgIds).toEqual([{ sgType: 'Version', sgId: 9001 }]);
   });
 
-  it('relit toute la hiérarchie pour un statut, sans cibler d’entité', async () => {
+  it('re-reads the whole hierarchy for a status, without targeting an entity', async () => {
     await handleEvent(1, {
       event_type: 'Shotgun_Status_Change',
       entity: { type: 'Status', id: 3 },
@@ -116,9 +114,9 @@ describe('handleEvent', () => {
     expect(options.onlySgIds).toBeUndefined();
   });
 
-  it('refuse un événement venu d’un autre projet du site', async () => {
-    // Un site héberge tous les projets du studio : un webhook mal configuré livre les
-    // événements du voisin, et écrire dans le mauvais projet ne se rattrape pas.
+  it('refuses an event coming from another project of the site', async () => {
+    // A site hosts all the studio's projects: a misconfigured webhook delivers the neighbour's events, and writing into the
+    // wrong project cannot be undone.
     await handleEvent(1, {
       event_type: 'Shotgun_Shot_Change',
       entity: { type: 'Shot', id: 5 },
@@ -128,13 +126,13 @@ describe('handleEvent', () => {
     expect(runSync).not.toHaveBeenCalled();
   });
 
-  it('ne fait rien quand le studio a choisi le mode manuel', async () => {
+  it('does nothing when the studio has chosen manual mode', async () => {
     connection.findUnique.mockResolvedValue({ ...LINKED, settings: { eventMode: 'manual' } });
     await handleEvent(1, event('Shotgun_Note_New', 501));
     expect(runSync).not.toHaveBeenCalled();
   });
 
-  it('ne fait rien sur une connexion désactivée', async () => {
+  it('does nothing on a disabled connection', async () => {
     connection.findUnique.mockResolvedValue({ ...LINKED, active: false });
     await handleEvent(1, event('Shotgun_Note_New', 501));
     expect(runSync).not.toHaveBeenCalled();

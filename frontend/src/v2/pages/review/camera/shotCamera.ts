@@ -2,30 +2,30 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Règles pures du modèle « dans / hors caméra » (Phase 50, lot 7). Le modèle complet est décrit en
- * tête de `viewer/useLayoutMode.ts`, sa source de vérité ; on ne trouve ici que les deux décisions
- * qui se prennent ailleurs et méritent d'être testées seules.
+ * Pure rules of the "in / out of camera" model (Phase 50, batch 7). The full model is described
+ * at the top of `viewer/useLayoutMode.ts`, its source of truth; only the two decisions made
+ * elsewhere that deserve standalone tests are found here.
  */
 
 /**
- * Faut-il poser une clé en réglant la focale ou le tilt ?
+ * Should a key be set when adjusting the focal length or the tilt?
  *
- * Hors caméra, la caméra du plan n'existe que par l'animation : sa focale est la valeur
- * échantillonnée du canal `fov`, et la pose de base d'où retombent les canaux vides n'est pas
- * persistée. Écrire sur la caméra libre n'y change donc **rien** — le panneau affichait la valeur
- * du plan et écrivait à côté. Dans la caméra, l'ancienne règle vaut toujours : la caméra libre
- * *est* la caméra du plan, et seul l'auto-key armé transforme un réglage en clé.
+ * Outside the camera, the plan's camera only exists through the animation: its focal length is
+ * the sampled value of the `fov` channel, and the base pose that empty channels fall back to is
+ * not persisted. Writing to the free camera therefore changes **nothing** — the panel displayed
+ * the plan's value and wrote next to it. Inside the camera, the old rule still holds: the free
+ * camera *is* the plan's camera, and only armed auto-key turns an adjustment into a key.
  */
 export function shouldKeyLens(layoutMode: boolean, autoKey: boolean): boolean {
   return layoutMode || autoKey;
 }
 
 /**
- * Temps (ms) auquel un drag du gizmo de la caméra-objet écrit ses clés : celui de la clé
- * sélectionnée si le geste en reprend une, sinon la tête de lecture.
+ * Time (ms) at which a drag of the camera-object gizmo writes its keys: that of the selected key
+ * if the gesture takes one over, otherwise the playhead.
  *
- * L'animation vide forçait auparavant `t = 0`, quelle que soit la tête de lecture : impossible de
- * commencer une animation ailleurs qu'au premier instant.
+ * An empty animation used to force `t = 0`, whatever the playhead: it was impossible to start an
+ * animation anywhere other than the first instant.
  */
 export function gizmoKeyTime(selectedKeyTime: number | undefined, playheadMs: number): number {
   return Math.max(0, Math.round(selectedKeyTime ?? playheadMs));

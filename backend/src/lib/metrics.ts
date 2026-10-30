@@ -3,13 +3,13 @@
 
 import type { Request, Response, NextFunction } from 'express';
 import { Registry, collectDefaultMetrics, Histogram, Gauge } from 'prom-client';
-import { ALL_QUEUES } from '../services/JobService';
+import { ALL_QUEUES } from './queues';
 import { logger } from './logger';
 
 /**
- * Métriques Prometheus (37.G) : métriques Node par défaut + latence HTTP par route
- * agrégée + profondeur des files BullMQ (rafraîchie toutes les 15 s).
- * Exposées sur GET /metrics (jeton optionnel METRICS_TOKEN — voir app.ts).
+ * Prometheus metrics (37.G): default Node metrics + HTTP latency per aggregated route + BullMQ queue depth
+ * (refreshed every 15 s).
+ * Exposed on GET /metrics (optional METRICS_TOKEN — see app.ts).
  */
 
 export const registry = new Registry();
@@ -30,12 +30,12 @@ const queueGauge = new Gauge({
   registers: [registry],
 });
 
-/** Route agrégée (les ids deviennent :id) pour borner la cardinalité des labels. */
+/** Aggregated route (ids become :id) to bound the cardinality of the labels. */
 export function normalizeRoute(path: string): string {
   return (
     path
       .split('?')[0]!
-      // tokens/hash hex longs (partages) d'abord — ils commencent souvent par des chiffres
+      // Long hex tokens/hashes (shares) first — they often start with digits
       .replace(/\/[0-9a-f]{16,}/gi, '/:token')
       .replace(/\/\d+/g, '/:id')
       .slice(0, 80)
@@ -43,24 +43,21 @@ export function normalizeRoute(path: string): string {
 }
 
 /**
- * Chaque valeur distincte du label `route` crée une série persistante dans le registre
- * Prometheus. Ce middleware est monté avant le rate limiter global et voit donc toutes les
- * URLs, y compris celles qui ne correspondent à aucune route : sans borne, marteler des
- * chemins aléatoires fait grossir le registre indéfiniment — épuisement mémoire à distance,
- * sans authentification.
+ * Every distinct value of the `route` label creates a persistent series in the Prometheus registry. This middleware is
+ * mounted before the global rate limiter and therefore sees all URLs, including those matching no route: unbounded,
+ * hammering random paths grows the registry indefinitely — remote memory exhaustion, without authentication.
  *
- * Le catalogue ne s'enrichit donc que sur une réponse ABOUTIE (statut < 400) : seule une
- * vraie route en produit. Un 404 (chemin inexistant) comme un 400 (`/api/media/abc`, dont la
- * validation rejette le paramètre) sont l'outil du balayage — ils sont agrégés sous `/other`
- * sans jamais consommer de place. Une fois une route connue, elle garde son étiquette quel
- * que soit son statut : les taux d'erreur des vraies routes restent donc visibles.
- * Le nombre de routes distinctes est en outre plafonné, tout dépassement retombant sur `/other`.
+ * The catalogue is therefore only enriched on a SUCCESSFUL response (status < 400): only a real route produces one.
+ * A 404 (non-existent path) as well as a 400 (`/api/media/abc`, whose validation rejects the parameter) are the tools of
+ * the sweep — they are aggregated under `/other` without ever consuming a slot. Once a route is known, it keeps its
+ * label whatever its status: the error rates of real routes therefore stay visible.
+ * The number of distinct routes is also capped, any overflow falling back to `/other`.
  */
 const MAX_ROUTE_LABELS = 300;
 const OTHER_ROUTE = '/other';
 const seenRoutes = new Set<string>();
 
-/** Étiquette de route effectivement utilisée, cardinalité bornée. */
+/** Route label actually used, with bounded cardinality. */
 export function routeLabel(originalUrl: string, statusCode: number): string {
   const route = normalizeRoute(originalUrl);
   if (seenRoutes.has(route)) return route;
@@ -70,7 +67,7 @@ export function routeLabel(originalUrl: string, statusCode: number): string {
   return route;
 }
 
-/** Middleware Express : histogramme de latence par méthode/route/statut. */
+/** Express middleware: latency histogram by method/route/status. */
 export function httpMetrics(req: Request, res: Response, next: NextFunction): void {
   const end = httpDuration.startTimer();
   res.on('finish', () => {
@@ -86,8 +83,8 @@ export function httpMetrics(req: Request, res: Response, next: NextFunction): vo
 export const __testing = { seenRoutes, MAX_ROUTE_LABELS, OTHER_ROUTE };
 
 async function refreshQueueGauges(): Promise<void> {
-  // Les cinq files déclarées, plus l'entretien : `timeline-export` et `shotgrid` étaient
-  // absentes du registre, donc invisibles du tableau Grafana comme de toute alerte.
+  // The five declared queues, plus maintenance: `timeline-export` and `shotgrid` were absent from the registry, hence
+  // invisible from the Grafana dashboard as from any alert.
   for (const [name, q] of ALL_QUEUES) {
     const counts = await q.getJobCounts('waiting', 'active', 'failed', 'delayed');
     for (const [state, value] of Object.entries(counts)) {
@@ -96,10 +93,10 @@ async function refreshQueueGauges(): Promise<void> {
   }
 }
 
-/** Démarre le rafraîchissement périodique des gauges de files (serveur uniquement). */
+/** Starts the periodic refresh of the queue gauges (server only). */
 export function startQueueMetrics(): void {
   const tick = () =>
-    void refreshQueueGauges().catch((err) => logger.warn({ err }, '[metrics] files illisibles'));
+    void refreshQueueGauges().catch((err) => logger.warn({ err }, '[metrics] unreadable queues'));
   tick();
   setInterval(tick, 15_000).unref();
 }

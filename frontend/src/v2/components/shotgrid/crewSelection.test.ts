@@ -11,8 +11,8 @@ const person = (sgId: number, state: SgCrewState): SgCrewPerson => ({
   login: null,
   email: `p${sgId}@studio.test`,
   sgStatus: 'act',
-  // Le département venu du site (lot 10) n'entre pas dans le choix des invitables : ces cas
-  // ne portent donc rien, et la sélection doit s'en moquer.
+  // The department from the site (batch 10) does not count toward who can be invited: these
+  // cases therefore carry nothing, and the selection must ignore it.
   sgDepartment: null,
   department: null,
   state,
@@ -25,28 +25,28 @@ const person = (sgId: number, state: SgCrewState): SgCrewPerson => ({
 const crew = [person(1, 'none'), person(2, 'account'), person(3, 'member'), person(4, 'ineligible')];
 
 describe('isInvitable', () => {
-  it('ne retient que ce qui change quelque chose', () => {
-    // Un membre n'a rien à gagner ; un inéligible n'a pas d'adresse ou a quitté le studio.
+  it('only keeps what changes something', () => {
+    // A member has nothing to gain; an ineligible person has no address or has left the studio.
     expect(invitableOf(crew).map((p) => p.sgId)).toEqual([1, 2]);
     expect(isInvitable(person(3, 'member'))).toBe(false);
   });
 });
 
 describe('splitOutcome', () => {
-  it('annonce les créations à part des ajouts', () => {
-    // Une création envoie un courriel à quelqu'un : il faut le dire avant, pas après.
+  it('announces creations separately from additions', () => {
+    // A creation sends an email to someone: say so before, not after.
     const { willCreate, willAdd } = splitOutcome(crew, [1, 2, 3]);
     expect(willCreate.map((p) => p.sgId)).toEqual([1]);
     expect(willAdd.map((p) => p.sgId)).toEqual([2]);
   });
 
-  it('ignore une sélection vide', () => {
+  it('ignores an empty selection', () => {
     expect(splitOutcome(crew, [])).toEqual({ willCreate: [], willAdd: [] });
   });
 });
 
 describe('summarize', () => {
-  it('compte chaque issue', () => {
+  it('counts each outcome', () => {
     expect(
       summarize([
         { sgId: 1, outcome: 'created' },

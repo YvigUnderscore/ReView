@@ -13,18 +13,16 @@ import { emptyPeopleReason, filterPeople, personSubtitle, type PersonOption } fr
 import { useT } from '../../i18n';
 
 /**
- * Annuaire cliquable : recherche au clavier, visage, et de quoi reconnaître la personne.
+ * Clickable directory: keyboard search, faces, and what is needed to recognise the person.
  *
- * Extrait du dialogue d'assignation (lot du 25 août), qui était le seul écran à savoir
- * montrer des visages — les autres alignaient un `<select>` natif où vingt-sept comptes
- * nommés « IT Artist » se suivaient sans rien pour les distinguer. La liste vit donc
- * désormais hors du dialogue : un écran qui n'est pas une modale (ou une modale qui a
- * déjà son pied de page) la pose telle quelle.
+ * Extracted from the assignment dialog (batch of 25 August), which was the only screen able to show faces: the others
+ * lined up a native `<select>` where twenty-seven accounts named "IT Artist" followed one another with nothing to tell
+ * them apart. The list now lives outside the dialog: a screen that is not a modal (or a modal that already has its own
+ * footer) places it as is.
  *
- * Ce qui a dû être adapté par rapport à l'existant : la recherche ignore les accents et
- * porte sur l'adresse, le poste et le rôle (le dialogue ne cherchait que dans le nom, en
- * casse simple), et chaque ligne porte une ligne secondaire — c'est elle qui départage
- * les homonymes. Le filtrage lui-même est parti dans `lib/peopleSearch`, testable.
+ * What had to be adapted from the existing version: the search ignores accents and covers the address, the role and the
+ * position (the dialog only searched the name, case-insensitively), and each row carries a secondary line, which is what
+ * tells namesakes apart. The filtering itself moved into `lib/peopleSearch`, where it is testable.
  */
 export default function PeopleList({
   people,
@@ -38,12 +36,12 @@ export default function PeopleList({
   className,
 }: {
   people: readonly PersonOption[];
-  /** Personnes à ne pas proposer (déjà membres, déjà destinataires). */
+  /** People not to offer (already members, already recipients). */
   excludeIds?: readonly number[];
-  /** Personnes cochées — la coche n'apparaît que si l'écran gère une sélection. */
+  /** Checked people: the tick only appears if the screen handles a selection. */
   selectedIds?: readonly number[];
   onPick: (person: PersonOption) => void;
-  /** Ligne en cours d'écriture serveur : elle reste visible mais ne se re-clique pas. */
+  /** Row currently being written to the server: it stays visible but cannot be clicked again. */
   pendingId?: number | null;
   searchLabel?: string;
   emptyLabel?: string;
@@ -54,8 +52,8 @@ export default function PeopleList({
   const [query, setQuery] = useState('');
   const search = searchLabel ?? t('assignees.searchPlaceholder');
 
-  // `excludeIds`/`selectedIds` sont des littéraux chez certains appelants : le filtrage
-  // se refait alors à chaque rendu, ce qui reste sans effet sur une liste d'annuaire.
+  // Some callers pass `excludeIds`/`selectedIds` as literals: the filtering is then redone on every render, which
+  // costs nothing noticeable on a directory list.
   const visible = useMemo(() => filterPeople(people, { query, excludeIds }), [people, query, excludeIds]);
 
   return (

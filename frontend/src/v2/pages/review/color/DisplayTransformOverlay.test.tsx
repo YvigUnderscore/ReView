@@ -6,16 +6,16 @@ import { render } from '@testing-library/react';
 import DisplayTransformOverlay from './DisplayTransformOverlay';
 
 describe('DisplayTransformOverlay', () => {
-  it('ne pose rien tant qu’aucune image transformée n’existe', () => {
+  it('draws nothing as long as no transformed image exists', () => {
     const { container } = render(<DisplayTransformOverlay url={null} />);
     expect(container.querySelector('img')).toBeNull();
   });
 
-  it('couvre exactement la boîte de l’image et reste transparente aux gestes', () => {
+  it('covers exactly the image box and stays transparent to gestures', () => {
     const { container } = render(<DisplayTransformOverlay url="blob:review/transformed" />);
     const img = container.querySelector('img')!;
     expect(img).toHaveAttribute('src', 'blob:review/transformed');
-    // Décorative : la visionneuse en dessous porte déjà le texte de remplacement.
+    // Decorative: the viewer underneath already carries the alt text.
     expect(img).toHaveAttribute('alt', '');
     expect(img.className).toContain('absolute inset-0');
     expect(img.className).toContain('pointer-events-none');

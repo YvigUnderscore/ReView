@@ -3,13 +3,14 @@
 
 import { randomUUID } from 'node:crypto';
 import { prisma } from '../lib/prisma';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 import { badRequest, notFound } from '../lib/errors';
+import { ignoreFailure } from '../lib/ignoreFailure';
 
 /**
- * Bibliothèque d'environnements HDRI uploadables en admin (Phase 15 V4). Stockée sans
- * migration dans un réglage clé/valeur (`Setting` `hdriLibrary`, JSON) ; les fichiers vivent
- * dans MinIO sous `studio/hdris/`. Le viewer 3D Three chargera ces HDRI comme environnement.
+ * Library of HDRI environments uploadable by admins (Phase 15 V4). Stored without migration in a key/value
+ * setting (`Setting` `hdriLibrary`, JSON); the files live in MinIO under
+ * `studio/hdris/`. The 3D Three viewer loads these HDRIs as environment.
  */
 
 const SETTING_KEY = 'hdriLibrary';
@@ -44,7 +45,7 @@ async function writeLibrary(entries: HdriEntry[]): Promise<void> {
   });
 }
 
-/** Liste des HDRI avec URL présignée de lecture (pour le viewer). */
+/** List of the HDRIs with a presigned read URL (for the viewer). */
 export async function listWithUrls(): Promise<(HdriEntry & { url: string })[]> {
   const entries = await readLibrary();
   return Promise.all(
@@ -53,18 +54,17 @@ export async function listWithUrls(): Promise<(HdriEntry & { url: string })[]> {
 }
 
 /**
- * Une HDRI par son identifiant, présignée — `null` si la bibliothèque ne la connaît plus.
+ * An HDRI by its identifier, presigned — `null` if the library no longer knows it.
  *
- * `listWithUrls` signerait toute la bibliothèque pour n'en servir qu'une : c'est acceptable
- * sur l'écran d'administration qui les affiche toutes, pas sur la page publique de partage,
- * où l'on ouvre un média et où chaque signature compte.
+ * `listWithUrls` would sign the whole library just to serve one: acceptable on the administration screen that
+ * displays them all, not on the public sharing page, where a media is opened and every signature counts.
  */
 export async function findWithUrl(id: string): Promise<(HdriEntry & { url: string }) | null> {
   const entry = (await readLibrary()).find((e) => e.id === id);
   return entry ? { ...entry, url: await storage.getPresignedGetUrl(entry.storageKey) } : null;
 }
 
-/** URL présignée d'upload d'un nouveau HDRI (admin) : renvoie la clé + l'URL PUT. */
+/** Presigned upload URL for a new HDRI (admin): returns the key + the PUT URL. */
 export async function presignUpload(format: HdriFormat): Promise<{ storageKey: string; uploadUrl: string }> {
   if (!HDRI_FORMATS.includes(format)) throw badRequest('Invalid HDRI format (hdr or exr)', 'BAD_FORMAT');
   const storageKey = `studio/hdris/${randomUUID()}.${format}`;
@@ -73,7 +73,7 @@ export async function presignUpload(format: HdriFormat): Promise<{ storageKey: s
   return { storageKey, uploadUrl };
 }
 
-/** Finalise l'ajout après upload MinIO (admin). */
+/** Finalises the addition after the MinIO upload (admin). */
 export async function add(name: string, storageKey: string, format: HdriFormat): Promise<HdriEntry> {
   if (!storageKey.startsWith('studio/hdris/')) throw badRequest('Invalid storage key', 'BAD_KEY');
   const entry: HdriEntry = {
@@ -88,11 +88,13 @@ export async function add(name: string, storageKey: string, format: HdriFormat):
   return entry;
 }
 
-/** Supprime un HDRI (admin) : retire l'entrée + l'objet MinIO. */
+/** Deletes an HDRI (admin): removes the entry + the MinIO object. */
 export async function remove(id: string): Promise<void> {
   const entries = await readLibrary();
   const target = entries.find((e) => e.id === id);
   if (!target) throw notFound('HDRI not found');
   await writeLibrary(entries.filter((e) => e.id !== id));
-  await storage.deleteObject(target.storageKey).catch(() => undefined);
+  await storage
+    .deleteObject(target.storageKey)
+    .catch(ignoreFailure('HDRI object cleanup failed', { key: target.storageKey }));
 }

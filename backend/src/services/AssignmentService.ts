@@ -13,16 +13,15 @@ import * as TaskService from './TaskService';
 import { assertAssignable } from './EntityAssigneeService';
 
 /**
- * Assigner quelqu'un à un asset ou à un plan.
+ * Assign someone to an asset or to a shot.
  *
- * Un asset ne porte pas d'assigné, et n'en portera pas : le travail est réparti par
- * étape, et c'est la **tâche** qui a un responsable. ShotGrid le pose de la même façon
- * (`task_assignees` vit sur `Task`), donc lui ajouter un champ propre ferait diverger les
- * deux modèles au premier aller-retour.
+ * An asset carries no assignee, and never will: work is split by step, and it is the **task** that has an
+ * owner. ShotGrid does it the same way (`task_assignees` lives on `Task`), so adding a field of our own would
+ * make the two models diverge at the first round trip.
  *
- * « Assigner Alice à cet asset » s'écrit donc : pour chaque département visé, poser Alice
- * sur la tâche correspondante — et créer cette tâche si elle manque. Le raccourci est celui
- * du langage courant en production ; la donnée écrite, elle, reste celle du pipeline.
+ * "Assign Alice to this asset" is therefore: for each targeted department, put Alice on the matching task,
+ * creating that task if it is missing. The shortcut is the everyday production language; the data written
+ * remains that of the pipeline.
  */
 
 export type AssignHolder = 'asset' | 'shot';
@@ -30,20 +29,20 @@ export type AssignHolder = 'asset' | 'shot';
 export interface AssignInput {
   holder: AssignHolder;
   id: number;
-  /** `null` désassigne. */
+  /** `null` unassigns. */
   userId: number | null;
-  /** Départements visés. Vide = tous ceux que l'entité traverse déjà. */
+  /** Targeted departments. Empty = all those the entity already goes through. */
   departmentIds?: number[];
 }
 
 export interface AssignResult {
-  /** Tâches réellement modifiées. */
+  /** Tasks actually modified. */
   updated: number;
-  /** Tâches créées faute d'exister — jamais sur un projet piloté depuis ShotGrid. */
+  /** Tasks created because they did not exist; never on a project driven from ShotGrid. */
   created: number;
 }
 
-/** Le projet de l'entité porteuse, et son existence. */
+/** The project of the owning entity, and its existence. */
 async function resolveProject(holder: AssignHolder, id: number): Promise<number> {
   const row =
     holder === 'asset'
@@ -54,15 +53,14 @@ async function resolveProject(holder: AssignHolder, id: number): Promise<number>
 }
 
 /**
- * Qui peut recevoir du travail : **une seule** garde, celle d'`EntityAssigneeService`.
+ * Who can receive work: **a single** guard, that of `EntityAssigneeService`.
  *
- * Ce service en gardait une copie privée qui avait divergé — elle ne testait pas
- * `disabledAt`, si bien qu'un compte désactivé refusé comme responsable d'un plan restait
- * acceptable comme assigné d'une tâche. Deux copies des mêmes refus, c'est la porte de
- * service de l'autre : on assigne la tâche, et l'entité suit.
+ * This service kept a private copy that had diverged: it did not test `disabledAt`, so a disabled account
+ * refused as the owner of a shot remained acceptable as the assignee of a task. Two copies of the same
+ * refusals are a service door to one another: assign the task, and the entity follows.
  */
 
-/** Le projet est-il piloté depuis ShotGrid ? On n'y crée alors aucune tâche. */
+/** Is the project driven from ShotGrid? If so, no task is created there. */
 async function isDrivenByShotgrid(projectId: number): Promise<boolean> {
   const connection = await prisma.shotgridConnection.findUnique({
     where: { projectId },
@@ -72,10 +70,10 @@ async function isDrivenByShotgrid(projectId: number): Promise<boolean> {
 }
 
 /**
- * Assigne une personne sur l'entité, département par département.
+ * Assigns a person to the entity, department by department.
  *
- * Sans département précisé, on vise les tâches existantes de l'entité : c'est le cas
- * courant — « donne cet asset à Alice » veut dire « tout ce qu'il reste à y faire ».
+ * Without a department specified, we target the entity's existing tasks: this is the common case, "give this
+ * asset to Alice" means "everything still to be done on it".
  */
 export async function assignEntity(user: SessionUser, input: AssignInput): Promise<AssignResult> {
   const projectId = await resolveProject(input.holder, input.id);
@@ -98,9 +96,8 @@ export async function assignEntity(user: SessionUser, input: AssignInput): Promi
   let created = 0;
   const targets = tasks.map((t) => t.id);
 
-  // Départements demandés qui n'ont pas encore de tâche : on la crée, sauf si le pipeline
-  // est piloté depuis ShotGrid — la tâche doit naître là-bas, sinon la synchronisation
-  // suivante en verrait deux.
+  // Requested departments with no task yet: we create one, unless the pipeline is driven from ShotGrid. The
+  // task must be born there, otherwise the next sync would see two of them.
   const missing = departmentIds.filter((d) => !tasks.some((t) => t.departmentId === d));
   if (missing.length > 0) {
     if (await isDrivenByShotgrid(projectId)) {
@@ -131,15 +128,15 @@ export async function assignEntity(user: SessionUser, input: AssignInput): Promi
   let updated = 0;
   for (const taskId of targets) {
     const before = tasks.find((t) => t.id === taskId);
-    // Rien à faire si la personne est déjà là : éviter la notification et l'envoi vers
-    // ShotGrid qu'une écriture inutile déclencherait.
+    // Nothing to do if the person is already there: avoid the notification and the push to ShotGrid that a
+    // useless write would trigger.
     if (before && before.assigneeId === input.userId) continue;
     await TaskService.setAssignee(user, projectId, taskId, input.userId);
     updated += 1;
   }
 
-  // Un département sur lequel on assigne quelqu'un est un département que l'entité
-  // traverse : le rattacher évite d'avoir à le déclarer une seconde fois à la main.
+  // A department someone is assigned on is one the entity goes through: attaching it avoids having to
+  // declare it a second time by hand.
   if (departmentIds.length > 0) {
     await DepartmentService.attachHolderDepartments(input.holder, input.id, departmentIds);
   }
@@ -148,9 +145,8 @@ export async function assignEntity(user: SessionUser, input: AssignInput): Promi
 }
 
 /**
- * Même geste sur une sélection. L'accès est revérifié pour chaque entité : une sélection
- * peut traverser plusieurs projets, et un seul contrôle en tête laisserait passer les
- * autres.
+ * Same action on a selection. Access is re-checked for each entity: a selection may span several projects,
+ * and a single check at the head would let the others through.
  */
 export async function assignMany(
   user: SessionUser,
@@ -167,8 +163,8 @@ export async function assignMany(
       updated += result.updated;
       created += result.created;
     } catch (err) {
-      // Une entité inaccessible ou sans tâche ne fait pas échouer les autres : sur une
-      // sélection de cinquante assets, tout perdre pour un seul serait absurde.
+      // An inaccessible entity, or one without a task, does not make the others fail: on a selection of fifty
+      // assets, losing everything over one would be absurd.
       if (isExpected(err)) skipped += 1;
       else throw err;
     }
@@ -176,11 +172,11 @@ export async function assignMany(
   return { updated, created, skipped };
 }
 
-/** Les refus attendus d'une entité isolée, qui ne doivent pas condamner la sélection. */
+/** The expected refusals of a single entity, which must not sink the selection. */
 function isExpected(err: unknown): boolean {
   if (!(err instanceof AppError)) return false;
   return err.statusCode === 403 || err.statusCode === 404 || err.statusCode === 400;
 }
 
-/** Rôles proposables à l'assignation, pour l'interface. */
+/** Roles that can be proposed for assignment, for the interface. */
 export const ASSIGNABLE_ROLES: Role[] = [Role.ADMIN, Role.SUPERVISOR, Role.ARTIST];

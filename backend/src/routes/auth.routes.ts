@@ -5,10 +5,10 @@ import { Router, type Request, type Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { prisma } from '../lib/prisma';
-import { signAccessToken, signRefreshToken, signTwoFaToken, verifyToken } from '../lib/jwt';
-import { createSession, isSessionActive, touchSession } from '../lib/sessions';
+import { signAccessToken, signRefreshToken, signTwoFaToken } from '../lib/jwt';
+import { createSession } from '../lib/sessions';
 import { validate } from '../middleware/validate';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { rateLimit, targetAccountRateKey } from '../middleware/rateLimit';
 import { toSessionUser, type RawSessionUser } from '../lib/userView';
 import { normalizeEmail } from '../lib/email';
@@ -17,6 +17,7 @@ import * as InvitationService from '../services/InvitationService';
 import { isPasswordLoginBlocked } from '../lib/oidcConfig';
 import { env } from '../config/env';
 import { badRequest, forbidden, unauthorized } from '../lib/errors';
+import { setRefreshCookie } from '../lib/refreshCookie';
 
 const router = Router();
 
@@ -28,11 +29,11 @@ const passwordSchema = z
   .regex(/[0-9]/, 'At least one digit');
 
 /**
- * Hash bcrypt (coût 12) d'une valeur aléatoire perdue : aucun mot de passe ne le vérifie.
+ * bcrypt hash (cost 12) of a lost random value: no password verifies against it.
  *
- * Il sert à faire travailler bcrypt même quand l'adresse ne correspond à aucun compte.
- * Sans lui, la réponse revient ~100 ms plus tôt dans ce cas : de quoi énumérer à distance
- * les adresses du studio sans jamais deviner un mot de passe.
+ * It is used to make bcrypt work even when the address matches no account. Without it, the response
+ * comes back about 100 ms earlier in that case: enough to enumerate the studio's addresses remotely,
+ * without ever guessing a password.
  */
 const ABSENT_ACCOUNT_HASH = '$2b$12$FZqqqvbZMoTW4t0AxtCNBOlpsEVwaNdSPZWu1.p/Q2tXt/kj3SMp2';
 
@@ -41,9 +42,9 @@ const credentialsSchema = z.object({
   password: z.string().max(128),
 });
 
-// Deux freins distincts, non un budget partagé : l'IP protège le service et reste large (tout un
-// studio sort par une seule adresse publique), le COMPTE protège le mot de passe — cent machines
-// complices restent bornées sur l'adresse visée. Inscription et invitation ont leur propre espace.
+// Two distinct brakes, not a shared budget: the IP protects the service and stays generous (a whole
+// studio goes out through a single public address), while the ACCOUNT protects the password: a hundred
+// accomplice machines remain bounded on the targeted address. Sign-up and invitation have their own space.
 const loginIpLimiter = rateLimit({ name: 'auth-login-ip', windowMs: 15 * 60_000, max: 300 });
 const signupLimiter = rateLimit({ name: 'auth-signup', windowMs: 15 * 60_000, max: 50 });
 const loginAccountLimiter = rateLimit({
@@ -54,11 +55,10 @@ const loginAccountLimiter = rateLimit({
 });
 
 /**
- * Mode « SSO seul » (studio) : le mot de passe n'est plus une porte d'entrée.
+ * "SSO only" mode (studio): the password is no longer an entry point.
  *
- * Le refus vaut aussi pour l'inscription libre : un compte créé avec un mot de passe
- * inutilisable n'est pas un compte, c'est un piège — et il réserve l'email d'un
- * collaborateur avant sa première connexion SSO.
+ * The refusal also applies to open sign-up: an account created with an unusable password is not an
+ * account, it is a trap, and it reserves a collaborator's email before their first SSO login.
  */
 async function refusePasswordAuth(): Promise<void> {
   if (await isPasswordLoginBlocked()) {
@@ -66,24 +66,26 @@ async function refusePasswordAuth(): Promise<void> {
   }
 }
 
-// Offboarding (A1-01) : révoquer les sessions d'un partant ne servait à rien tant qu'il lui
-// suffisait de retaper son mot de passe. Le refus est nommé sans rien apprendre — on n'y arrive
-// qu'avec le bon mot de passe.
+// Offboarding (A1-01): revoking a leaver's sessions was pointless as long as they could just retype
+// their password. The refusal is named without revealing anything: it is only reached with the right password.
 const refuseIfDisabled = (user: { disabledAt: Date | null }): void => {
   if (user.disabledAt) throw unauthorized('Account disabled', 'ACCOUNT_DISABLED');
 };
 
-/** Ouvre la session et rend le couple de jetons — réponse commune à `/login` et à l'activation. */
+/**
+ * Opens the session: the shared response of `/login` and of activation. The access token goes in the body
+ * (kept in memory by the page), the refresh token in its httpOnly cookie (`lib/refreshCookie`).
+ */
 async function grantSession(user: RawSessionUser, req: Request, res: Response): Promise<void> {
   const sid = await createSession(user.id, req);
   const payload = { id: user.id, email: user.email, role: user.role, sid };
-  const token = signAccessToken(payload);
-  res.json({ token, refreshToken: signRefreshToken(payload), user: await toSessionUser(user) });
+  setRefreshCookie(req, res, signRefreshToken(payload));
+  res.json({ token: signAccessToken(payload), user: await toSessionUser(user) });
 }
 
-// POST /api/auth/register — crée un artiste. Fermé par défaut (ALLOW_SELF_REGISTRATION) :
-// sinon n'importe qui obtient un compte authentifié sur l'instance, et peut réserver
-// l'email d'un collaborateur avant sa première connexion SSO.
+// POST /api/auth/register — creates an artist. Closed by default (ALLOW_SELF_REGISTRATION): otherwise
+// anyone gets an authenticated account on the instance, and can reserve a collaborator's email before
+// their first SSO login.
 router.post(
   '/register',
   signupLimiter,
@@ -112,27 +114,26 @@ router.post(
   },
 );
 
-// POST /api/auth/login — session révocable (36.B) ; si 2FA actif, renvoie un jeton
-// intermédiaire à échanger via /api/auth/2fa/verify (36.A). Le frein par compte est posé
-// APRÈS la validation Zod : sans corps parsé, sa clé serait ce que l'appelant a bien voulu.
+// POST /api/auth/login — revocable session (36.B); if 2FA is active, returns an intermediate token to
+// exchange via /api/auth/2fa/verify (36.A). The per-account brake is set AFTER Zod validation: without
+// a parsed body, its key would be whatever the caller chose to send.
 const loginGuards = [loginIpLimiter, validate({ body: credentialsSchema }), loginAccountLimiter];
 router.post('/login', loginGuards, async (req: Request, res: Response) => {
   await refusePasswordAuth();
   const { password } = req.body as { password: string };
-  // Toutes les écritures normalisent l'adresse (inscription, invitation, installation,
-  // provisionnement OIDC). La chercher telle qu'elle est tapée rendait « Alice@Studio.com »
-  // inatteignable pour un compte enregistré « alice@studio.com ».
+  // Every write normalizes the address (sign-up, invitation, setup, OIDC provisioning). Looking it up as
+  // typed made "Alice@Studio.com" unreachable for an account registered as "alice@studio.com".
   const email = normalizeEmail((req.body as { email: string }).email);
   const user = await prisma.user.findUnique({ where: { email } });
-  // La comparaison a lieu même sans compte (hash factice) : c'est ce qui rend le refus
-  // aussi lent qu'un mot de passe faux, donc muet sur l'existence de l'adresse.
+  // The comparison happens even without an account (dummy hash): that is what makes the refusal as
+  // slow as a wrong password, hence silent about whether the address exists.
   const passwordOk = await bcrypt.compare(password, user?.password ?? ABSENT_ACCOUNT_HASH);
-  // Un compte de service (API v1) n'existe que pour porter les écritures d'un token
-  // machine : il ne se connecte jamais, même si son mot de passe aléatoire fuitait.
+  // A service account (API v1) exists only to carry the writes of a machine token: it never logs in,
+  // even if its random password leaked.
   const granted = !!user && passwordOk && !user.isService && !user.disabledAt;
-  // A5-03 : le verdict est consigné avant d'être rendu, refus compris — c'est la première
-  // ligne que l'on cherche après un vol de compte. Appel identique dans les deux branches,
-  // écriture non attendue : aucun écart de temps ne trahit l'existence de l'adresse.
+  // A5-03: the verdict is recorded before being returned, refusals included: it is the first line one
+  // looks for after an account theft. The call is identical in both branches and the write is not
+  // awaited: no timing gap betrays the existence of the address.
   logLoginAttempt({ user, granted, email, ip: req.ip });
   if (!user || !passwordOk || user.isService) throw unauthorized('Invalid credentials', 'BAD_CREDENTIALS');
   refuseIfDisabled(user);
@@ -143,33 +144,12 @@ router.post('/login', loginGuards, async (req: Request, res: Response) => {
   await grantSession(user, req, res);
 });
 
-// POST /api/auth/refresh — exige une session active.
-//
-// ⚠ Un refresh sans `sid` est REFUSÉ, il n'obtient pas de session neuve. La « migration
-// transparente » qui en fabriquait une était la porte de derrière du correctif 36.B :
-// refermer `middleware/auth` ne sert à rien si le jeton legacy que l'on vient d'écarter
-// suffit à repartir avec un jeton d'accès parfaitement valide. Le porteur se reconnecte.
-router.post('/refresh', validate({ body: z.object({ refreshToken: z.string() }) }), async (req, res) => {
-  const { refreshToken } = req.body as { refreshToken: string };
-  const payload = verifyToken(refreshToken);
-  if (!payload || payload.kind !== 'refresh') throw unauthorized('Invalid refresh token');
-  const { sid } = payload;
-  if (!sid) throw unauthorized('Session revoked', 'SESSION_REVOKED');
-  const user = await prisma.user.findUnique({ where: { id: payload.id } });
-  if (!user) throw unauthorized('User not found');
-  refuseIfDisabled(user);
-  if (!(await isSessionActive(sid))) throw unauthorized('Session revoked', 'SESSION_REVOKED');
-  await touchSession(sid);
-  const next = { id: user.id, email: user.email, role: user.role, sid };
-  res.json({ token: signAccessToken(next), refreshToken: signRefreshToken(next) });
-});
-
-// ── Invitation d'un nouveau membre (Phase 47) ────────────────────────────────
-// Routes publiques : le porteur du lien n'a, par définition, pas encore de session.
+// ── Invitation of a new member (Phase 47) ────────────────────────────────
+// Public routes: the holder of the link has, by definition, no session yet.
 
 const invitationTokenParam = z.object({ token: z.string().min(20).max(128) });
 
-// GET /api/auth/invitation/:token — aperçu affiché sur la page d'activation
+// GET /api/auth/invitation/:token — preview shown on the activation page
 router.get(
   '/invitation/:token',
   signupLimiter,
@@ -179,7 +159,7 @@ router.get(
   },
 );
 
-// POST /api/auth/invitation/:token — pose le mot de passe choisi et ouvre la session
+// POST /api/auth/invitation/:token — sets the chosen password and opens the session
 router.post(
   '/invitation/:token',
   signupLimiter,
@@ -187,15 +167,14 @@ router.post(
   async (req, res) => {
     const { password } = req.body as { password: string };
     const user = await InvitationService.acceptInvitation(req.params.token as string, password);
-    // Activer son compte vaut connexion : personne ne demande de retaper le mot de passe
-    // qu'on vient de choisir.
+    // Activating one's account is a login: nobody is asked to retype the password they have just chosen.
     await grantSession(user, req, res);
   },
 );
 
 // GET /api/auth/me
 router.get('/me', authenticate, async (req, res) => {
-  const user = await prisma.user.findUnique({ where: { id: req.user!.id } });
+  const user = await prisma.user.findUnique({ where: { id: requireUser(req).id } });
   if (!user) throw unauthorized('User not found');
   res.json({ user: { ...(await toSessionUser(user)), twoFaEnabled: user.totpEnabledAt != null } });
 });

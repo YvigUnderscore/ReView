@@ -9,15 +9,14 @@ import NoteTextBlock from './NoteTextBlock';
 import NoteGalleryBlock from './NoteGalleryBlock';
 import NoteImageBlock from './NoteImageBlock';
 import { HeadingEditor, ProgressEditor, SmallEditor, TitleEditor } from './NoteSimpleBlocks';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
- * Le cadre d'un bloc en édition : ce qui l'entoure, jamais ce qu'il contient.
+ * The frame of a block being edited: what surrounds it, never what it contains.
  *
- * La poignée et la corbeille n'apparaissent qu'au survol — un brief se compose surtout en
- * lisant, et une colonne d'icônes en face de chaque paragraphe donne l'impression d'un
- * formulaire. Le glissement part de la poignée seule : un bloc de texte se sélectionne à la
- * souris, il ne peut pas être aussi la zone qu'on tire.
+ * The handle and the trash icon only appear on hover: a brief is written mostly by reading, and a column of icons
+ * facing each paragraph gives the impression of a form. Dragging starts from the handle alone: a text block is
+ * selected with the mouse, so it cannot also be the area one drags.
  */
 export default function NoteBlockRow({
   block,
@@ -31,9 +30,9 @@ export default function NoteBlockRow({
   block: EditorBlock;
   onChange: (patch: Partial<EditorBlock>) => void;
   onRemove: () => void;
-  /** Images déposées depuis ce bloc — le parent décide où elles atterrissent. */
+  /** Images dropped from this block: the parent decides where they land. */
   onImages: (files: File[]) => void;
-  /** ←/→ sur la poignée : sortir de la section, ou y entrer. */
+  /** ←/→ on the handle: leave the section, or enter it. */
   onDepthKey?: (key: string) => void;
   busy?: boolean;
   autoFocus?: boolean;
@@ -67,8 +66,8 @@ export default function NoteBlockRow({
       case 'image':
         return <NoteImageBlock block={block} onChange={onChange} onFiles={onImages} busy={busy} />;
       case 'divider':
-        // Un trait fait deux pixels de haut : sans cette bande autour, il n'y avait rien à
-        // survoler pour faire apparaître la poignée, et rien à viser pour le déplacer.
+        // A rule is two pixels high: without this band around it, there was nothing to hover over to reveal
+        // the handle, and nothing to aim at in order to move it.
         return (
           <div className="flex h-8 items-center">
             <hr className="w-full border-border" />
@@ -91,8 +90,8 @@ export default function NoteBlockRow({
         {...attributes}
         {...listeners}
         onKeyDown={(e) => {
-          // Les flèches latérales règlent l'appartenance à la section ; le reste (Espace,
-          // flèches verticales) appartient au glisser-déposer au clavier de dnd-kit.
+          // The lateral arrows set the section membership; the rest (Space, vertical arrows) belongs to
+          // dnd-kit's keyboard drag-and-drop.
           if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') {
             e.preventDefault();
             onDepthKey?.(e.key);

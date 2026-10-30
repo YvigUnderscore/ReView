@@ -5,37 +5,32 @@ import { MediaStatus, Prisma, Role } from '@prisma/client';
 import { TASK_BLOCKED_FILTER, TASK_OPEN_FILTER } from './statusFamily';
 
 /**
- * Périmètres de « ce qui m'attend » — la seule définition de chacun des quatre compteurs
- * de l'Accueil.
+ * Scopes of "what awaits me": the single definition of each of the four counters of the Home page.
  *
- * Les quatre cartes mentaient, chacune à sa façon : « mes retakes » n'était borné à aucun
- * périmètre (un projet à la corbeille, un plan masqué, un projet dont je ne suis pas membre
- * comptaient encore), « awaiting review » était posé et libellé comme personnel mais
- * calculé pour tout le studio, et « media in review » comptait TOUS les médias publiés,
- * décision rendue comprise — un projet livré depuis deux ans y figurait.
+ * The four cards each lied in their own way: "my retakes" was bounded by no scope (a project in the trash, a
+ * hidden shot, a project I am not a member of still counted), "awaiting review" was labelled as personal but
+ * computed for the whole studio, and "media in review" counted ALL published media, decided ones included — a
+ * project delivered two years ago was among them.
  *
- * Le remède n'est pas de corriger quatre requêtes : c'est de n'écrire chaque périmètre
- * qu'une fois. Le compteur de la carte et la page qu'elle ouvre lisent ici le même `where`,
- * si bien qu'un chiffre ne peut plus annoncer autre chose que ce que la page montre.
- * Un périmètre décrit à deux endroits finit par diverger, et une divergence de périmètre
- * est soit un mensonge, soit une fuite.
+ * The fix is not to correct four queries: it is to write each scope only once. The card's counter and the page
+ * it opens read the same `where` here, so a figure can no longer announce anything other than what the page
+ * shows. A scope described in two places ends up diverging, and a divergent scope is either a lie or a leak.
  */
 
 export type SessionUser = { id: number; role: Role };
 
-/** ADMIN et SUPERVISOR voient tout le studio ; les autres, leurs projets. */
+/** ADMIN and SUPERVISOR see the whole studio; the others see their projects. */
 export const isGlobalRole = (role: Role): boolean => role === Role.ADMIN || role === Role.SUPERVISOR;
 
-/** Projet accessible : vivant (corbeille exclue) et, sauf rôle global, dont je suis membre. */
+/** Accessible project: alive (trash excluded) and, unless a global role applies, one I am a member of. */
 export const accessibleProjects = (user: SessionUser): Prisma.ProjectWhereInput =>
   isGlobalRole(user.role)
     ? { deletedAt: null }
     : { deletedAt: null, memberships: { some: { userId: user.id } } };
 
 /**
- * Version rattachée à un projet accessible, par les trois chemins de rattachement.
- * Le parent masqué (`hiddenAt`) ou à la corbeille est exclu : ce qui ne s'affiche nulle
- * part ne doit pas peser sur un compteur.
+ * Version attached to an accessible project, through the three attachment paths.
+ * A hidden (`hiddenAt`) or trashed parent is excluded: what is displayed nowhere must not weigh on a counter.
  */
 export const versionInProjects = (access: Prisma.ProjectWhereInput): Prisma.VersionWhereInput => ({
   OR: [
@@ -45,7 +40,7 @@ export const versionInProjects = (access: Prisma.ProjectWhereInput): Prisma.Vers
   ],
 });
 
-/** Tâche rattachée à un projet accessible (les deux chemins de rattachement). */
+/** Task attached to an accessible project (both attachment paths). */
 export const taskInProjects = (access: Prisma.ProjectWhereInput): Prisma.TaskWhereInput => ({
   OR: [
     { shot: { deletedAt: null, hiddenAt: null, project: access } },
@@ -54,9 +49,9 @@ export const taskInProjects = (access: Prisma.ProjectWhereInput): Prisma.TaskWhe
 });
 
 /**
- * Média publié et prêt de mon périmètre. `version` reçoit la contrainte supplémentaire de
- * l'appelant (sans décision, review confiée…) : elle se fond dans la même clause, car
- * deux clés `version` dans un objet Prisma se remplaceraient l'une l'autre.
+ * Published, ready media within my scope. `version` receives the caller's extra constraint (no decision,
+ * review assigned...): it merges into the same clause, because two `version` keys in a Prisma object would
+ * overwrite each other.
  */
 export function publishedMediaInScope(
   user: SessionUser,
@@ -71,64 +66,62 @@ export function publishedMediaInScope(
 }
 
 /**
- * « Media in review » : média publié dont la version **n'a pas encore reçu de décision**.
+ * "Media in review": published media whose version **has not yet received a decision**.
  *
- * C'est la correction de fond de cette carte. Elle comptait tout le publié : le libellé
- * disait « en review », le chiffre disait « dans la base ». Une version approuvée ou
- * rejetée n'est plus en review — sa place est dans l'historique, pas dans un compteur
- * d'attente.
+ * This is the substantive fix of this card. It used to count everything published: the label said "in review",
+ * the figure said "in the database". An approved or rejected version is no longer in review — it belongs in
+ * the history, not in a waiting counter.
  */
 export const mediaInReviewWhere = (user: SessionUser): Prisma.MediaObjectWhereInput =>
   publishedMediaInScope(user, { reviewStatusId: null });
 
 /**
- * « Awaiting my review » : ce qu'on attend de MOI, via `ReviewAssignment`.
+/**
+ * "Awaiting my review": what is expected of ME, via `ReviewAssignment`.
  *
- * La carte est posée parmi mes chiffres et libellée à la première personne ; elle comptait
- * pourtant les tâches en attente de verdict de tout le studio (`TASK_REVIEW_FILTER`). Le
- * volume collectif existe toujours, mais il a sa propre carte et son propre libellé :
- * jamais le même chiffre pour deux sens.
+ * The card sits among my figures and is labelled in the first person; yet it counted tasks awaiting a verdict
+ * from the whole studio (`TASK_REVIEW_FILTER`). The collective volume still exists, but it has its own card and
+ * its own label: never the same figure for two meanings.
  *
- * Le filtre porte sur la version — c'est la livraison qu'on confie — et la décision déjà
- * rendue sort du compte : on n'attend plus rien de moi sur une version tranchée. Même
- * périmètre que `/reviews?assigned=me&decision=none`, la vue qu'ouvre la carte.
+ * The filter applies to the version — it is the delivery that is handed over — and a decision already made drops
+ * out of the count: nothing is awaited from me on a decided version. Same scope as
+ * `/reviews?assigned=me&decision=none`, the view the card opens.
  */
 export const awaitingMyReviewWhere = (user: SessionUser): Prisma.MediaObjectWhereInput =>
   publishedMediaInScope(user, { reviewStatusId: null, reviewers: { some: { reviewerId: user.id } } });
 
 /**
- * « My retakes » : mes tâches en retake ou rejet, dans mon périmètre.
+/**
+ * "My retakes": my tasks in retake or rejected, within my scope.
  *
- * Le compteur d'origine ne portait que `assigneeId` : une tâche d'un projet mis à la
- * corbeille, d'un plan masqué ou d'un projet dont je ne suis plus membre continuait de
- * réclamer une action qu'aucun écran ne pouvait plus montrer.
+ * The original counter only carried `assigneeId`: a task of a project put in the trash, of a hidden shot or of a
+ * project I am no longer a member of kept claiming an action that no screen could show any more.
  */
 export const myRetakesWhere = (user: SessionUser): Prisma.TaskWhereInput => ({
   assigneeId: user.id,
   AND: [taskInProjects(accessibleProjects(user)), TASK_BLOCKED_FILTER],
 });
 
-/** Mes tâches vivantes (ni terminées, ni hors jeu) dans mon périmètre. */
+/** My live tasks (neither done nor out of play) within my scope. */
 export const myOpenTasksWhere = (user: SessionUser): Prisma.TaskWhereInput => ({
   assigneeId: user.id,
   AND: [taskInProjects(accessibleProjects(user)), TASK_OPEN_FILTER],
 });
 
 /**
- * Tâche rattachée à UN projet précis, par ses deux chemins de rattachement.
+ * Task attached to ONE specific project, through its two attachment paths.
  *
- * Restriction, jamais élargissement : elle se compose en `AND` avec le périmètre
- * ci-dessus pour le bloc « mes tâches » d'une page projet, qui montre ce que la page
- * transverse montre déjà — le même périmètre, vu par le trou d'un seul projet.
+ * A restriction, never a widening: it composes with `AND` with the scope above for the "my tasks" block of a
+ * project page, which shows what the cross-project page already shows — the same scope, seen through a single
+ * project's hole.
  */
 export const taskOfProject = (projectId: number): Prisma.TaskWhereInput => ({
   OR: [{ shot: { projectId } }, { asset: { projectId } }],
 });
 
 /**
- * Commentaires lisibles depuis mon Accueil : ceux des médias publiés de mon périmètre.
- * Un CLIENT n'y voit que les notes qui lui sont destinées — même règle que le fil de
- * review, le partage public, la recherche et l'export.
+ * Comments readable from my Home page: those of the published media within my scope.
+ * A CLIENT only sees the notes intended for them — same rule as the review thread, public sharing, search and export.
  */
 export const commentFeedWhere = (user: SessionUser): Prisma.CommentWhereInput => ({
   media: publishedMediaInScope(user),

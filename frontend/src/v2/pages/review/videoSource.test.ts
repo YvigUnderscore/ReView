@@ -7,34 +7,34 @@ import { canPlayHlsMaster, hlsMasterUrl } from './videoSource';
 const hls = { renditions: [{ height: 720, width: 1280, videoBitrateK: 2500 }] };
 const trim = { inFrame: 24, outFrame: 240 };
 
-describe('canPlayHlsMaster — la coupe passe avant l’échelle adaptative', () => {
-  it('sert le HLS quand le média n’est pas coupé', () => {
+describe('canPlayHlsMaster — the trim takes precedence over the adaptive ladder', () => {
+  it('serves HLS when the media is not trimmed', () => {
     expect(canPlayHlsMaster({ hls, trim: null, trimProxyReady: false })).toBe(true);
   });
 
-  it('refuse le HLS dès que le proxy coupé est prêt : le master ignore la coupe', () => {
+  it('refuses HLS once the trimmed proxy is ready: the master ignores the trim', () => {
     expect(canPlayHlsMaster({ hls, trim, trimProxyReady: true })).toBe(false);
   });
 
-  it('garde le HLS le temps que le proxy coupé se fabrique', () => {
-    // La timeline grise alors les zones hors coupe : l'utilisateur voit ce qui va partir.
+  it('keeps HLS while the trimmed proxy is being built', () => {
+    // The timeline greys out the areas outside the trim so the user sees what will be removed.
     expect(canPlayHlsMaster({ hls, trim, trimProxyReady: false })).toBe(true);
   });
 
-  it('sans renditions, il n’y a rien à servir', () => {
+  it('without renditions, there is nothing to serve', () => {
     expect(canPlayHlsMaster({ hls: null, trim: null, trimProxyReady: false })).toBe(false);
     expect(canPlayHlsMaster({ hls: null, trim, trimProxyReady: true })).toBe(false);
   });
 });
 
 describe('hlsMasterUrl', () => {
-  it('pointe le master servi par le proxy authentifié', () => {
+  it('points to the master served by the authenticated proxy', () => {
     expect(hlsMasterUrl(42, { hls, trim: null, trimProxyReady: false })).toBe(
       '/api/media/42/hls/master.m3u8',
     );
   });
 
-  it('rend null quand la coupe est active — le lecteur reprend le proxy MP4', () => {
+  it('returns null when the trim is active, so the player falls back to the MP4 proxy', () => {
     expect(hlsMasterUrl(42, { hls, trim, trimProxyReady: true })).toBeNull();
   });
 });

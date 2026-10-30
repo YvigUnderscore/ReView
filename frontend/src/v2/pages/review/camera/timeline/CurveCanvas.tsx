@@ -11,7 +11,7 @@ import TransformBox from './TransformBox';
 import { inSel, useCurveGestures, type KeyMove } from './useCurveGestures';
 import { timeToX, valueToY, xToTime, yToValue, type TimeView, type ValueView } from './viewTransform';
 
-/** Points d'une F-curve échantillonnée sur la fenêtre visible (polyline SVG). */
+/** Points of an F-curve sampled over the visible window (SVG polyline). */
 function curvePath(anim: CameraAnimV2, id: ChannelId, tv: TimeView, vv: ValueView): string {
   const ch = anim.channels[id];
   if (!ch?.keys.length) return '';
@@ -25,15 +25,15 @@ function curvePath(anim: CameraAnimV2, id: ChannelId, tv: TimeView, vv: ValueVie
 }
 
 /**
- * Graph editor F-curves (Phase 17/27) : grille de fond, une courbe par canal visible, ses clés en
- * points **déplaçables** (multi-sélection : rubber-band + Maj pour ajouter, déplacement groupé,
- * snap à la frame) et, pour la clé primaire, des **poignées de tangente** draggables. Double-clic
- * sur une courbe = ajouter une clé. Navigation : molette = zoom temporel, **Ctrl+molette = zoom
- * vertical**, Maj+molette = pan temporel, **bouton du milieu = pan des deux axes**. Guide vertical =
- * durée réglable. En lecture seule, l'édition est inerte (playhead + affichage).
+ * F-curve graph editor (Phase 17/27): background grid, one curve per visible channel, its keys as
+ * **movable** points (multi-selection: rubber-band + Shift to add, grouped move, frame snap) and,
+ * for the primary key, draggable **tangent handles**. Double-clicking a curve adds a key.
+ * Navigation: wheel = time zoom, **Ctrl+wheel = vertical zoom**, Shift+wheel = time pan,
+ * **middle button = pan on both axes**. Vertical guide = adjustable duration. Read-only: editing
+ * is inert (playhead + display).
  *
- * Ce fichier ne porte que le **rendu et la composition** : les gestes (déplacement, rubber-band,
- * tangentes) vivent dans `useCurveGestures`.
+ * This file only holds the **rendering and composition**: the gestures (move, rubber-band,
+ * tangents) live in `useCurveGestures`.
  */
 export default function CurveCanvas({
   anim,
@@ -67,16 +67,16 @@ export default function CurveCanvas({
   editable: boolean;
   width: number;
   height: number;
-  /** Guide de durée de lecture (ms) — trait vertical repère (Phase 27). */
+  /** Playback duration guide (ms) — vertical reference line (Phase 27). */
   guideT?: number;
-  /** Framerate du pipeline : graduations de la grille et snap des clés déplacées. */
+  /** Pipeline frame rate: grid ticks and snapping of moved keys. */
   fps: number;
   onZoom: (pivotT: number, factor: number) => void;
-  /** Zoom vertical (Ctrl+molette) au pivot de valeur. */
+  /** Vertical zoom (Ctrl+wheel) around the value pivot. */
   onZoomValue?: (pivotV: number, factor: number) => void;
-  /** Pan horizontal (Maj+molette) — décale la fenêtre temporelle en ms. */
+  /** Horizontal pan (Shift+wheel) — shifts the time window in ms. */
   onPan?: (deltaMs: number) => void;
-  /** Pan des deux axes (bouton du milieu). */
+  /** Pan on both axes (middle button). */
   onPanView?: (deltaMs: number, deltaV: number) => void;
   onScrub: (t: number) => void;
   onSelect: (sel: KeyRef[]) => void;
@@ -132,12 +132,12 @@ export default function CurveCanvas({
       {...surface}
       onWheel={(e) => {
         const factor = e.deltaY < 0 ? 0.85 : 1.18;
-        // Ctrl/Cmd+molette = zoom de l'axe des VALEURS (l'axe du temps garde la molette nue).
+        // Ctrl/Cmd+wheel = zoom on the VALUE axis (the time axis keeps the bare wheel).
         if (onZoomValue && (e.ctrlKey || e.metaKey)) {
           onZoomValue(yToValue(localY(e.clientY), vv), factor);
           return;
         }
-        // Maj+molette (ou molette horizontale de trackpad) = pan temporel ; sinon zoom au pivot.
+        // Shift+wheel (or trackpad horizontal wheel) = time pan; otherwise zoom around the pivot.
         const horiz = e.shiftKey ? e.deltaY : e.deltaX;
         if (onPan && horiz !== 0 && (e.shiftKey || Math.abs(e.deltaX) > Math.abs(e.deltaY)))
           onPan((horiz / (tv.width || 1)) * (tv.t1 - tv.t0));
@@ -219,7 +219,7 @@ export default function CurveCanvas({
         );
       })}
 
-      {/* Boîte de transformation : deux clés au moins, sinon il n'y a rien à mettre à l'échelle. */}
+      {/* Transform box: at least two keys, otherwise there is nothing to scale. */}
       {editable && selection.length > 1 && selectionBounds && (
         <TransformBox
           bounds={selectionBounds}

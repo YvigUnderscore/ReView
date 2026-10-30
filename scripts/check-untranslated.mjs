@@ -2,33 +2,29 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Détecte le texte d'interface écrit en dur dans le frontend — c'est-à-dire tout ce qui
- * s'affiche sans passer par `t()`.
+ * Detects hard-coded interface text in the frontend — that is, anything displayed without going
+ * through `t()`.
  *
- * Deux générations de ce contrôle ont échoué avant celle-ci, chacune parce qu'elle cherchait
- * la mauvaise chose :
- *   1. la première ne lisait que du texte JSX tenant sur une ligne — tout ce que Prettier
- *      coupait lui échappait ;
- *   2. la seconde cherchait des *marqueurs de français* (accents, mots-outils). Or « Port »,
- *      « Cadence », « Objets », « Commentaires », « Note », « Import CSV » n'en portent aucun :
- *      l'interface est restée à moitié française en chinois avec un contrôle au vert.
+ * Two generations of this check failed before this one, each because it looked for the wrong thing:
+ *   1. the first only read JSX text fitting on one line — anything Prettier wrapped escaped it;
+ *   2. the second looked for *French markers* (accents, function words). Yet "Port", "Cadence",
+ *      "Objets", "Commentaires", "Note", "Import CSV" carry none: the interface stayed half French
+ *      in Chinese with a green check.
  *
- * D'où le critère retenu ici, qui ne dépend d'aucune langue : **tout littéral qui atteint
- * l'écran est une faute**, quelle que soit la langue dans laquelle il est écrit. On analyse
- * l'AST TypeScript plutôt que des expressions régulières, et on relève :
- *   - le texte JSX (`<p>Bonjour</p>`) ;
- *   - les props qui s'affichent ou sont lues à voix haute (`title`, `placeholder`,
- *     `aria-label`, `label`, `alt`…) ;
- *   - les littéraux passés aux fonctions qui parlent à l'utilisateur (`toast.*`, `confirm`) ;
- *   - les gabarits `` `${n} fichier(s) supprimé(s)` ``, où qu'ils soient : une phrase autour
- *     d'une interpolation est du texte d'interface, et c'est la forme qui échappait le plus
- *     souvent aux contrôles précédents.
+ * Hence the criterion kept here, which depends on no language: **any literal that reaches the
+ * screen is a fault**, whatever language it is written in. The TypeScript AST is analysed rather
+ * than regular expressions, and we report:
+ *   - JSX text (`<p>Hello</p>`);
+ *   - props that are displayed or read aloud (`title`, `placeholder`, `aria-label`, `label`, `alt`…);
+ *   - literals passed to functions that speak to the user (`toast.*`, `confirm`);
+ *   - the templates `` `${n} file(s) deleted` ``, wherever they are: a sentence around an
+ *     interpolation is interface text, and that shape was the one most often escaping the previous checks.
  *
- * Ce qui n'est pas du texte d'interface (identifiants, classes CSS, unités, sigles, noms
- * propres) est écarté par `ALLOWED` et `SKIP` — explicitement, pas par devinette.
+ * What is not interface text (identifiers, CSS classes, units, acronyms, proper nouns) is set aside by
+ * `ALLOWED` and `SKIP` — explicitly, not by guesswork.
  *
- * Le total est comparé à un plafond (`CEILING`) : la suite échoue s'il remonte. Baisser le
- * plafond quand on descend, jamais l'inverse.
+ * The total is compared to a ceiling (`CEILING`): the suite fails if it rises. Lower the ceiling when
+ * going down, never the other way.
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -36,59 +32,58 @@ import { createRequire } from 'node:module';
 import { pathToFileURL } from 'node:url';
 import { join, relative, resolve, sep } from 'node:path';
 
-// TypeScript n'est pas installé à la racine : on emprunte celui du frontend, qui sert déjà
-// au typecheck. Aucune dépendance nouvelle, donc aucune obligation de licence nouvelle.
+// TypeScript is not installed at the root: we borrow the frontend's, which already serves
+// the typecheck. No new dependency, hence no new licence obligation.
 const ts = createRequire(resolve('frontend/package.json'))('typescript');
 
 /**
- * Arborescences contrôlées.
+ * Controlled trees.
  *
- * Le backend en était ABSENT — un seul répertoire était scanné. Or il a sa propre i18n
- * (`backend/src/i18n`), et la règle du projet vise les deux moitiés : « tout texte visible
- * passe par `t()` (`v2/i18n` front, `src/i18n` back) ». Tout ce que le serveur rend à un
- * humain — pied de page de `/api/docs`, corps des e-mails, pages publiques — échappait donc
- * au plafond, qui mesurait une moitié du produit en annonçant le tout.
+ * The backend was ABSENT — only one directory was scanned. Yet it has its own i18n
+ * (`backend/src/i18n`), and the project rule covers both halves: "all visible text goes through
+ * `t()` (`v2/i18n` front, `src/i18n` back)". Everything the server renders to a human — footer of
+ * `/api/docs`, email bodies, public pages — therefore escaped the ceiling, which measured half the
+ * product while announcing the whole.
  */
 const ROOTS = ['frontend/src', 'backend/src'];
 
 /**
- * Dette backend constatée à l'entrée dans le périmètre. À faire baisser, jamais monter.
+ * Backend debt found when entering the scope. To be lowered, never raised.
  *
- * Ce chiffre est une LIGNE DE BASE, pas un relâchement : le backend n'était pas contrôlé du
- * tout jusqu'ici. Ce qu'il recouvre est presque entièrement hors interface — assemblage SVG,
- * filtres FFmpeg, fragments SQL, messages de journal destinés à l'exploitant, textes d'erreur
- * ShotGrid. Les surfaces réellement lues par un utilisateur, elles, sont à zéro et passent
- * par `t()` : pied de page public de `/api/docs`, page de désabonnement, e-mails.
+ * This figure is a BASELINE, not a relaxation: the backend had not been checked at all until now.
+ * What it covers is almost entirely outside the interface — SVG assembly, FFmpeg filters, SQL
+ * fragments, log messages meant for the operator, ShotGrid error texts. The surfaces really read by
+ * a user are at zero and go through `t()`: public footer of `/api/docs`, unsubscribe page, emails.
  *
- * 2026-09-16 : 343 -> 332. Les gabarits BALISÉS (`Prisma.sql`, cf. `TECHNICAL_TAGS`) ne sont
- * plus comptés — une requête paramétrée déclarait jusqu'ici autant de « textes en dur »
- * qu'elle avait de fragments, ce qui poussait à concaténer le SQL pour satisfaire le contrôle.
- * Le plafond descend d'autant : ce qu'il reste est de la dette réelle, pas du bruit.
+ * 2026-09-16: 343 -> 332. The TAGGED templates (`Prisma.sql`, see `TECHNICAL_TAGS`) are no longer
+ * counted — a parameterised query had until then declared as many "hard-coded texts" as it had
+ * fragments, which pushed people to concatenate SQL to satisfy the check. The ceiling drops by as
+ * much: what remains is real debt, not noise.
  *
- * 2026-09-20 : 332 -> 330. Le service et le routeur de la découpe vidéo ont été supprimés
- * avec la fonctionnalité (Phase 50, lot 4) ; leurs messages d'erreur partent avec eux.
+ * 2026-09-20: 332 -> 330. The service and the router of the video cutting were removed along with
+ * the feature (Phase 50, lot 4); their error messages went with them.
  */
 const BACKEND_DEBT = 330;
 
 /**
- * Reliquat toléré **par arborescence** — dette à résorber, jamais à relever.
+ * Tolerated remainder **per tree** — debt to be paid down, never raised.
  *
- * Le front est à zéro et doit y rester. Le backend entre dans le périmètre avec une dette :
- * il n'était pas contrôlé du tout, et l'essentiel de ce qu'on y trouve n'a rien à faire dans
- * un catalogue (assemblage SVG, filtres FFmpeg, fragments SQL, journaux d'exploitation). Le
- * plafond fige donc l'existant pour que rien ne s'ajoute, pendant que les surfaces réellement
- * lues par un humain — pied de page public, e-mails, invitations — passent par `t()`.
+ * The front end is at zero and must stay there. The backend enters the scope with a debt: it had
+ * not been checked at all, and most of what is found there has no business in a catalogue (SVG
+ * assembly, FFmpeg filters, SQL fragments, operator logs). The ceiling therefore freezes what exists
+ * so that nothing gets added, while the surfaces really read by a human — public footer, emails,
+ * invitations — go through `t()`.
  */
 const CEILINGS = { 'frontend/src': 0, 'backend/src': BACKEND_DEBT };
 
 /**
- * Balises dont le contenu est du littéral technique et non de la prose : une commande, un
- * en-tête HTTP, un préfixe de bucket, une touche. Y placer le texte est la façon *correcte*
- * de dire « ceci ne se traduit pas » — le contrôle s'y fie plutôt que de deviner.
+ * Tags whose content is technical literal rather than prose: a command, an HTTP header, a bucket
+ * prefix, a key. Putting the text there is the *correct* way to say "this does not translate" — the
+ * check relies on it rather than guessing.
  */
 const CODE_TAGS = new Set(['code', 'pre', 'kbd', 'samp']);
 
-/** Props dont la valeur atteint l'utilisateur (à l'écran ou via un lecteur d'écran). */
+/** Props whose value reaches the user (on screen or through a screen reader). */
 const VISIBLE_PROPS = new Set([
   'alt',
   'aria-label',
@@ -103,9 +98,9 @@ const VISIBLE_PROPS = new Set([
   'heading',
   'help',
   'hint',
-  // Un raccourci clavier s'écrit en LISTE de touches (`keys={['Espace', 'Maj']}`), et la
-  // prop échappait au contrôle pour cette seule raison : elle ne s'appelait pas `label`.
-  // Les noms de touches restaient donc en français dans les treize autres catalogues.
+  // A keyboard shortcut is written as a LIST of keys (`keys={['Espace', 'Maj']}`), and the
+  // prop escaped the check for this reason alone: it was not called `label`.
+  // The key names therefore stayed in French in the thirteen other catalogues.
   'keys',
   'label',
   'message',
@@ -115,64 +110,62 @@ const VISIBLE_PROPS = new Set([
   'tooltip',
 ]);
 
-/** Fonctions qui affichent leur argument tel quel. */
+/** Functions that display their argument as is. */
 const SPEAKING_CALLS = /^(toast(\.\w+)?|confirm|alert|prompt|window\.(confirm|alert|prompt))$/;
 
-/** Props dont la valeur est une adresse, une classe ou un identifiant — jamais de la prose. */
+/** Props whose value is an address, a class or an identifier — never prose. */
 const TECHNICAL_PROPS =
   /^(className|class|style|id|key|href|src|srcSet|to|type|name|value|htmlFor|accept|pattern|role|d|points|viewBox|data-.*|aria-(hidden|controls|labelledby|describedby))$/;
 
 /**
- * Props techniques **seulement sur une balise HTML native**.
+ * Technical props **only on a native HTML tag**.
  *
- * `value` est l'exemple qui a coûté cher : sur `<input>` ou `<option>` c'est une donnée, mais
- * sur un composant maison (`<Row value=…>`, `<Metric value=…>`) c'est de la prose affichée.
- * Classer `value` technique sans regarder la balise laissait passer « SQ### / SH### (pas 10) »
- * en pleine page d'administration. La distinction est celle de JSX : minuscule = élément du
- * DOM, majuscule = composant.
+ * `value` is the example that cost dearly: on `<input>` or `<option>` it is data, but on a home-made
+ * component (`<Row value=…>`, `<Metric value=…>`) it is displayed prose. Classing `value` as technical
+ * without looking at the tag let "SQ### / SH### (pas 10)" through on a full administration page. The
+ * distinction is JSX's: lowercase = DOM element, uppercase = component.
  */
 const NATIVE_ONLY_PROPS = /^(value|name|type|role)$/;
 
 /**
- * Props et clés d'option dont la valeur est un **discriminant**, jamais de la prose : la
- * variante d'un composant (`variant="destructive"`), une portée, une option `Intl`
- * (`{ month: 'long' }`), un attribut SVG de peinture.
+ * Props and option keys whose value is a **discriminant**, never prose: a component's variant
+ * (`variant="destructive"`), a scope, an `Intl` option (`{ month: 'long' }`), an SVG paint attribute.
  *
- * Ces noms sont nécessaires depuis que le contrôle ne se fie plus au seul aspect du mot :
- * « destructive » et « numeric » ressemblent trait pour trait à « approbation ».
+ * These names are needed since the check no longer relies on the word's look alone: "destructive" and
+ * "numeric" look exactly like "approbation" (approval).
  */
 const DISCRIMINANT_PROPS =
   /^(variant|scope|kind|mode|side|align|tone|level|status|size|entity|fill|stroke|strokeLinecap|strokeLinejoin|weekday|era|year|month|day|hour|minute|second|timeZoneName|dateStyle|timeStyle|numeric|unit|unitDisplay|currency|notation|display|position|behavior|block|inline|aria-current)$/;
 
 /**
- * Appels dont les arguments sont des URL, des clés de cache, des traces — ou des SÉLECTEURS CSS.
+ * Calls whose arguments are URLs, cache keys, traces — or CSS SELECTORS.
  *
- * `querySelector` et sa famille prennent un sélecteur, jamais de la prose : sans cette entrée, un
- * sélecteur interpolé (`[data-index="${i}"]`) est compté comme un texte d'interface, ce qui pousse
- * à l'écrire par concaténation — un code moins lisible que le premier relecteur « nettoiera » en
- * gabarit, rouvrant le faux positif. C'est l'appelant qui déclare la nature du littéral.
+ * `querySelector` and its family take a selector, never prose: without this entry, an interpolated
+ * selector (`[data-index="${i}"]`) is counted as interface text, which pushes people to write it by
+ * concatenation — less readable code that the first reviewer "cleans up" into a template, reopening
+ * the false positive. The caller declares the nature of the literal.
  */
 const TECHNICAL_CALLS =
   /^(api\.\w+|fetch|navigate|qk(\.\w+)?|URL|URLSearchParams|encodeURI\w*|decodeURI\w*|console\.\w+|(local|session)Storage\.\w+|require|import|(\w+\.)*(querySelector|querySelectorAll|closest|matches|getAttribute|setAttribute|removeAttribute))$/;
 
 /**
- * Gabarits BALISÉS qui déclarent un langage, pas de la prose.
+ * TAGGED templates that declare a language, not prose.
  *
- * Côté JSX, `<code>`/`<pre>`/`<kbd>` sont la façon d'écrire « ceci ne se traduit pas ». Côté
- * backend, c'est la balise du gabarit qui le dit : `Prisma.sql\`SELECT …\`` ne contiendra
- * jamais une phrase destinée à un lecteur. Sans cette exemption, une requête SQL paramétrée —
- * la SEULE forme sûre, puisque Prisma y lie les valeurs — compte autant de « textes en dur »
- * qu'elle a de fragments, ce qui pousse à écrire du SQL concaténé pour satisfaire le contrôle.
+ * On the JSX side, `<code>`/`<pre>`/`<kbd>` are the way to write "this does not translate". On the
+ * backend, the tag of the template says it: `Prisma.sql\`SELECT …\`` will never contain a sentence
+ * meant for a reader. Without this exemption, a parameterised SQL query — the ONLY safe form, since
+ * Prisma binds the values there — counts as many "hard-coded texts" as it has fragments, which pushes
+ * people to write concatenated SQL to satisfy the check.
  *
- * L'exemption est volontairement nominative : seule une balise de cette liste exempte. Une
- * balise inconnue reste comptée, et une chaîne simple posée à côté d'un gabarit balisé aussi.
+ * The exemption is deliberately by name: only a tag in this list is exempted. An unknown tag remains
+ * counted, and so does a plain string placed next to a tagged template.
  */
 const TECHNICAL_TAGS = /^(\w+\.)?(sql|raw|css|html|gql|graphql|\$queryRaw|\$executeRaw)$/;
 
 /**
- * Textes qui atteignent l'écran mais ne se traduisent pas : unités, sigles, noms propres,
- * vocabulaire de production (cf. `scripts/i18n-glossary.json`). Toute entrée ajoutée ici
- * doit être un mot qu'aucune langue ne rendrait autrement.
+ * Texts that reach the screen but do not translate: units, acronyms, proper nouns, production
+ * vocabulary (see `scripts/i18n-glossary.json`). Any entry added here must be a word that no language
+ * would render otherwise.
  */
 const ALLOWED = new Set(
   [
@@ -186,9 +179,9 @@ const ALLOWED = new Set(
     'Blender',
     'OpenColorIO',
     'AGPL-3.0-or-later',
-    // Nom de classe Three.js affiché tel quel (`MeshStandardMaterial`, à défaut `Material`).
+    // Three.js class name displayed as is (`MeshStandardMaterial`, failing that `Material`).
     'Material',
-    // sigles et formats
+    // acronyms and formats
     'ID',
     'URL',
     'API',
@@ -233,10 +226,10 @@ const ALLOWED = new Set(
     'A/B',
     'PiP',
     'QR',
-    // Noms de département VFX : vocabulaire de production, écrit en anglais dans tous les
-    // studios — c'est d'ailleurs ainsi que le studio les nomme dans ses propres
-    // départements (« Look Dev », « Modeling »). Les traduire ferait diverger l'enum de
-    // repli du référentiel réel.
+    // VFX department names: production vocabulary, written in English in every
+    // studio — which is in fact how the studio names them in its own
+    // departments ("Look Dev", "Modeling"). Translating them would make the fallback
+    // enum diverge from the real reference list.
     'Animation',
     'Compositing',
     'Lighting',
@@ -245,17 +238,16 @@ const ALLOWED = new Set(
     'Look',
     'Dev',
     'Layout',
-    // unités
+    // units
     'px',
     'fps',
     'ms',
     's',
-    // « Ko », « Mo », « Go » et « To » ont été RETIRÉS : ce sont les symboles français, et
-    // l'anglais les rend « KB », « MB », « GB », « TB ». Le contrat de cette liste — « un mot
-    // qu'aucune langue ne rendrait autrement » — ne les couvrait pas, et leur présence ici a
-    // laissé passer pendant des mois un formateur d'octets écrit en français dans les sept
-    // écrans d'administration qui l'utilisaient. Les tailles passent désormais par
-    // `lib/formatBytes`, qui les rend via `Intl.NumberFormat`.
+    // "Ko", "Mo", "Go" and "To" were REMOVED: they are the French symbols, and English
+    // renders them "KB", "MB", "GB", "TB". The contract of this list — "a word no language
+    // would render otherwise" — did not cover them, and their presence here let a French byte
+    // formatter through for months, across the seven administration screens using it. Sizes now go
+    // through `lib/formatBytes`, which renders them via `Intl.NumberFormat`.
     'KB',
     'MB',
     'GB',
@@ -272,7 +264,7 @@ const ALLOWED = new Set(
     'y',
     'z',
     '×',
-    // touches et symboles d'interface
+    // keys and interface symbols
     'Ctrl',
     'Alt',
     'Shift',
@@ -289,7 +281,7 @@ const ALLOWED = new Set(
     '→',
     'Ctrl+K',
     'Ctrl+V',
-    // vocabulaire de production jamais traduit
+    // production vocabulary never translated
     'shot',
     'shots',
     'sequence',
@@ -319,36 +311,36 @@ const ALLOWED = new Set(
 );
 
 /**
- * Ce qui ressemble à du texte sans en être : identifiants, chemins, classes, gabarits CSS.
- * Ces valeurs vivent dans des props visibles (un `label` calculé, un `title` d'icône) ou
- * dans du JSX purement structurel.
+ * What looks like text without being text: identifiers, paths, classes, CSS templates.
+ * These values live in visible props (a computed `label`, an icon's `title`) or in
+ * purely structural JSX.
  */
 const SKIP = [
-  /^[\p{P}\p{S}\p{N}\s]*$/u, // aucune lettre : ponctuation, chiffres, symboles
-  /^(https?:|mailto:|data:|blob:|\/|\.{1,2}\/|#)/, // URL, chemin, ancre
-  /^[a-z0-9]+([-_:][a-z0-9]+)+$/i, // kebab / snake / namespacé : classes, clés, événements
-  /^[a-z][a-zA-Z0-9]*$/, // camelCase ou mot seul en minuscules : identifiant
+  /^[\p{P}\p{S}\p{N}\s]*$/u, // no letters: punctuation, digits, symbols
+  /^(https?:|mailto:|data:|blob:|\/|\.{1,2}\/|#)/, // URL, path, anchor
+  /^[a-z0-9]+([-_:][a-z0-9]+)+$/i, // kebab / snake / namespaced: classes, keys, events
+  /^[a-z][a-zA-Z0-9]*$/, // camelCase or a lone lowercase word: identifier
   /^[A-Z0-9_]+$/, // SCREAMING_SNAKE
-  /^\w+\.\w+/, // dot.case : clé de traduction, chemin de propriété
-  /^\d/, // commence par un chiffre : format, dimension
+  /^\w+\.\w+/, // dot.case: translation key, property path
+  /^\d/, // starts with a digit: format, dimension
   /(sans-serif|serif|monospace|var\(--|rgba?\(|#[0-9a-f]{3,8}\b)/i, // CSS
-  /^[\w.+-]+@[\w-]+\.[a-z]{2,}$/i, // adresse e-mail d'exemple
-  /^[\w-]+\/$/, // préfixe de bucket (`derived/`)
-  /[\\^$]|\\[dwsn]|\{\d+,?\d*\}/, // expression régulière donnée en exemple
-  /^[?&#]|^\w+=$|[?&]\w+=/, // fragment de query string (`?frame=`, `&live=1`)
-  /^[\w-]*\.[a-z0-9]{2,4}$/i, // suffixe de nom de fichier (`-frame.jpg`)
-  /^[\w-]+[-_=]$/, // préfixe d'identifiant (`seq-`, `project-`)
-  /^\.\w/, // accès de propriété (shaders, dyno Spark)
-  /^[\w:-]+[:.]$/, // préfixe de canal ou de clé (`task:`, `review:tree:`, `onboarding.`)
-  /<\/?[a-z][\w-]*[\s/>]/i, // balise HTML ou SVG assemblée à la main
-  /[;{}]|^[-+*/%<>=!&|]\s|^\)|\w\($/, // code : instruction, opérateur de tête, appel
+  /^[\w.+-]+@[\w-]+\.[a-z]{2,}$/i, // example email address
+  /^[\w-]+\/$/, // bucket prefix (`derived/`)
+  /[\\^$]|\\[dwsn]|\{\d+,?\d*\}/, // regular expression given as an example
+  /^[?&#]|^\w+=$|[?&]\w+=/, // query string fragment (`?frame=`, `&live=1`)
+  /^[\w-]*\.[a-z0-9]{2,4}$/i, // file name suffix (`-frame.jpg`)
+  /^[\w-]+[-_=]$/, // identifier prefix (`seq-`, `project-`)
+  /^\.\w/, // property access (shaders, Spark dyno)
+  /^[\w:-]+[:.]$/, // channel or key prefix (`task:`, `review:tree:`, `onboarding.`)
+  /<\/?[a-z][\w-]*[\s/>]/i, // HTML or SVG tag assembled by hand
+  /[;{}]|^[-+*/%<>=!&|]\s|^\)|\w\($/, // code: statement, leading operator, call
   /\b(float|vec[234]|int|uint|mat[234]|gl_\w+)\b/, // GLSL
-  /\b(translate|scale|rotate|matrix|calc|url)\(/i, // fonction CSS
-  /^[a-z][\w-]*\([^)]*\)$/i, // valeur CSS complète (`polygon(0 0, 0 0, 0 0)`)
-  /^[a-z]+\/[a-z0-9.+-]+$/i, // type MIME (`application/octet-stream`)
+  /\b(translate|scale|rotate|matrix|calc|url)\(/i, // CSS function
+  /^[a-z][\w-]*\([^)]*\)$/i, // full CSS value (`polygon(0 0, 0 0, 0 0)`)
+  /^[a-z]+\/[a-z0-9.+-]+$/i, // MIME type (`application/octet-stream`)
 ];
 
-/** Une pile de classes utilitaires : tout en minuscules, avec au moins un `-`/`[` interne. */
+/** A stack of utility classes: all lowercase, with at least one internal `-`/`[`. */
 export const isUtilityClasses = (text) => {
   const words = text.split(' ');
   return (
@@ -360,7 +352,7 @@ export const isUtilityClasses = (text) => {
 
 export const isIdentifierLike = (text) => SKIP.some((re) => re.test(text)) || isUtilityClasses(text);
 
-/** Même filtre, sans les deux règles qui confondraient un mot ordinaire avec un identifiant. */
+/** Same filter, without the two rules that would confuse an ordinary word with an identifier. */
 const IDENTIFIER_ONLY = [/^[a-z0-9]+([-_:][a-z0-9]+)+$/i, /^[a-z][a-zA-Z0-9]*$/];
 const PROSE_SKIP = SKIP.filter((re) => !IDENTIFIER_ONLY.some((id) => id.source === re.source));
 
@@ -370,12 +362,12 @@ export function isAllowed(text) {
   return clean.split(/\s+/).every((word) => ALLOWED.has(word.toLowerCase()));
 }
 
-/** Un littéral de chaîne ou un gabarit sans interpolation ; sinon `null`. */
+/** A string literal or a template without interpolation; otherwise `null`. */
 export function literalOf(node) {
   if (!node) return null;
   if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) return node.text;
   if (ts.isJsxExpression(node)) return literalOf(node.expression);
-  // `cond ? 'Oui' : 'Non'` — les deux branches comptent, on les rend en une fois.
+  // `cond ? 'Oui' : 'Non'` — both branches count; they are returned together.
   if (ts.isConditionalExpression(node)) {
     const parts = [literalOf(node.whenTrue), literalOf(node.whenFalse)].filter(Boolean);
     return parts.length ? parts.join(' / ') : null;
@@ -384,13 +376,12 @@ export function literalOf(node) {
 }
 
 /**
- * Les littéraux qu'une prop visible reçoit — un seul, ou toute une **liste**.
+ * The literals a visible prop receives — a single one, or a whole **list**.
  *
- * `keys={['Espace', 'Maj']}` : le contrôle s'arrêtait au crochet ouvrant, et les noms de touches
- * de l'aide des raccourcis sont restés en français dans les treize autres catalogues pendant
- * toute la migration i18n. Chaque élément est rendu **séparément** : une liste de touches n'est
- * pas une phrase, et les coller bout à bout ferait passer `['Ctrl', 'K']` — deux noms que
- * personne ne traduit — pour du texte d'interface.
+ * `keys={['Espace', 'Maj']}`: the check used to stop at the opening bracket, and the key names of the
+ * shortcut help stayed in French in the thirteen other catalogues throughout the i18n migration. Each
+ * element is returned **separately**: a list of keys is not a sentence, and gluing them end to end would
+ * make `['Ctrl', 'K']` — two names nobody translates — pass as interface text.
  */
 export function literalsOf(node) {
   const inner = node && ts.isJsxExpression(node) ? node.expression : node;
@@ -399,47 +390,45 @@ export function literalsOf(node) {
   return single ? [single] : [];
 }
 
-/** `??` et `||` : les deux façons d'écrire une valeur de repli. */
+/** `??` and `||`: the two ways of writing a fallback value. */
 const FALLBACK_OPERATORS = new Set([ts.SyntaxKind.QuestionQuestionToken, ts.SyntaxKind.BarBarToken]);
 
 /**
- * Noms qui annoncent un texte d'interface : `statusLabel`, `formatDuration`, `errorText`,
- * `VERSION_STATUS_LABEL`. Ils complètent l'annotation `: string`, que le code n'écrit pas
- * toujours — et nomment aussi les tables de libellés, où le texte se cache le plus.
+ * Names that announce interface text: `statusLabel`, `formatDuration`, `errorText`,
+ * `VERSION_STATUS_LABEL`. They complement the `: string` annotation, which the code does not always
+ * write — and they also name the label tables, where the text hides most.
  */
 const UI_TEXT_NAME = /(^|[a-z_])(label|text|title|message|caption|wording)s?$|^format[A-Z]/i;
 
 const declaredName = (fn) => {
   if (fn.name && ts.isIdentifier(fn.name)) return fn.name.text;
-  // `const statusLabel = (...) => …` : le nom est porté par la déclaration.
+  // `const statusLabel = (...) => …`: the name is carried by the declaration.
   const parent = fn.parent;
   if (parent && ts.isVariableDeclaration(parent) && ts.isIdentifier(parent.name)) return parent.name.text;
   return '';
 };
 
 /**
- * La fonction rend-elle du texte destiné à l'écran ? Le détecteur s'arrêtait au bord de
- * toute fonction, et cinq libellés français s'affichaient à chaque upload derrière un
- * `switch` : une table de libellés est du texte d'interface, où qu'elle soit écrite.
- * Deux signes suffisent, tous deux syntaxiques (ce contrôle n'a pas de vérificateur de
- * types) : le type de retour annoncé `string`, ou un nom qui dit ce qu'il rend.
+ * Does the function return text meant for the screen? The detector used to stop at the edge of
+ * every function, and five French labels were displayed on each upload behind a `switch`: a table
+ * of labels is interface text, wherever it is written. Two signs suffice, both syntactic (this check
+ * has no type checker): the announced return type `string`, or a name that says what it returns.
  */
 export function returnsUiText(fn) {
   if (fn.type && fn.type.kind === ts.SyntaxKind.StringKeyword) return true;
   return UI_TEXT_NAME.test(declaredName(fn));
 }
 
-/** Fonction englobante la plus proche, ou `null` au niveau du module. */
+/** Nearest enclosing function, or `null` at module level. */
 export function enclosingFunction(node) {
   for (let cur = node.parent; cur; cur = cur.parent) if (ts.isFunctionLike(cur)) return cur;
   return null;
 }
 
 /**
- * Le nœud appartient-il à une **table de libellés** — `const VERSION_STATUS_LABEL = {
- * REVIEW: 'En review' }` ? La clé y est un identifiant métier (`REVIEW`), donc aucune des
- * règles fondées sur le nom de la propriété ne voit le texte : c'est le nom de la table
- * qui dit ce qu'elle contient.
+ * Does the node belong to a **label table** — `const VERSION_STATUS_LABEL = {
+ * REVIEW: 'En review' }`? The key there is a business identifier (`REVIEW`), so none of the rules
+ * based on the property name sees the text: it is the table's name that says what it contains.
  */
 export function inLabelTable(node) {
   for (let cur = node.parent; cur; cur = cur.parent) {
@@ -452,30 +441,30 @@ export function inLabelTable(node) {
 }
 
 /**
- * Le nœud aboutit-il à l'écran ? Vrai s'il est rendu par du JSX, passé à une prop de
- * libellé ou à un appel parlant (`toast`, `confirm`…). C'est ce qui distingue une valeur
- * de repli affichée d'une constante technique interne.
+ * Does the node end up on screen? True if it is rendered by JSX, passed to a label prop or to a
+ * speaking call (`toast`, `confirm`…). This is what distinguishes a displayed fallback value from an
+ * internal technical constant.
  */
 export function inSpeakingPosition(node, src) {
   for (let cur = node.parent; cur; cur = cur.parent) {
     if (ts.isJsxExpression(cur)) return true;
     if (ts.isJsxAttribute(cur)) return VISIBLE_PROPS.has(cur.name.getText(src));
     if (ts.isCallExpression(cur)) return SPEAKING_CALLS.test(calleeName(cur.expression));
-    // Valeur rendue par une fonction : parlante si la fonction rend du texte d'interface
-    // (`statusLabel()`, `(): string`). C'était l'angle mort principal du contrôle.
+    // Value returned by a function: speaking if the function returns interface text
+    // (`statusLabel()`, `(): string`). This used to be the check's main blind spot.
     if (ts.isReturnStatement(cur)) {
       const fn = enclosingFunction(cur);
       return fn ? returnsUiText(fn) : false;
     }
     if (ts.isArrowFunction(cur)) return returnsUiText(cur);
-    // Une déclaration coupe la recherche : au-delà, on ne sait plus si la valeur
-    // s'affiche, et deviner produirait des faux positifs en série.
+    // A declaration ends the search: beyond it we no longer know whether the value
+    // is displayed, and guessing would produce false positives in series.
     if (ts.isVariableDeclaration(cur) || ts.isPropertyAssignment(cur)) return false;
   }
   return false;
 }
 
-/** Vrai si le nœud est contenu dans un `<code>`, `<pre>`, `<kbd>` ou `<samp>`. */
+/** True if the node is contained in a `<code>`, `<pre>`, `<kbd>` or `<samp>`. */
 export function insideCode(node, src) {
   for (let cur = node.parent; cur; cur = cur.parent) {
     if (ts.isJsxElement(cur) && CODE_TAGS.has(cur.openingElement.tagName.getText(src))) return true;
@@ -484,17 +473,17 @@ export function insideCode(node, src) {
 }
 
 /**
- * Vrai si le nœud sert à fabriquer une adresse, une classe CSS ou une clé de cache. Ces
- * gabarits-là (`` `/api/versions?taskId=${id}` ``, `` `w-${n} rounded` ``) contiennent des
- * fragments qui ressemblent à des mots sans en être.
+ * True if the node is used to build an address, a CSS class or a cache key. Those templates
+ * (`` `/api/versions?taskId=${id}` ``, `` `w-${n} rounded` ``) contain fragments that look like
+ * words without being any.
  */
 export function inTechnicalContext(node, src) {
   let previous = node;
   for (let cur = node.parent; cur; previous = cur, cur = cur.parent) {
     if (ts.isJsxAttribute(cur) && TECHNICAL_PROPS.test(cur.name.getText(src))) {
-      // `value` sur un composant maison PEUT porter de la prose (`<Row value={\`… (pas 10)\`}>`).
-      // On ne lève l'exemption que pour un texte qui en a la forme : une phrase, ou un gabarit
-      // interpolé. Un mot isolé (`value="cards"`, `value="invite"`) reste un discriminant.
+      // `value` on a home-made component CAN carry prose (`<Row value={\`… (pas 10)\`}>`).
+      // The exemption is only lifted for text with that shape: a sentence, or an interpolated
+      // template. A lone word (`value="cards"`, `value="invite"`) stays a discriminant.
       if (
         NATIVE_ONLY_PROPS.test(cur.name.getText(src)) &&
         !isNativeJsxElement(cur, src) &&
@@ -509,18 +498,18 @@ export function inTechnicalContext(node, src) {
     if (ts.isTaggedTemplateExpression(cur) && TECHNICAL_TAGS.test(calleeName(cur.tag))) return true;
     if (ts.isPropertyAssignment(cur) && TECHNICAL_PROPS.test(cur.name.getText(src))) return true;
     if (ts.isPropertyAssignment(cur) && DISCRIMINANT_PROPS.test(cur.name.getText(src))) return true;
-    // Un littéral COMPARÉ n'est jamais affiché : `tool === 'erase'`, `case 'move':`. Le mot
-    // ressemble à de la prose, mais il ne quitte jamais le code.
+    // A COMPARED literal is never displayed: `tool === 'erase'`, `case 'move':`. The word
+    // looks like prose, but it never leaves the code.
     //
-    // Pour `case`, seule l'ÉTIQUETTE est exclue — surtout pas le corps de la clause, où vit
-    // précisément le `return 'En attente…'` que ce contrôle doit attraper.
+    // For `case`, only the LABEL is excluded — certainly not the body of the clause, where lives
+    // precisely the `return 'En attente…'` that this check must catch.
     if (ts.isBinaryExpression(cur) && isComparison(cur)) return true;
     if (ts.isCaseClause(cur)) return cur.expression === previous;
   }
   return false;
 }
 
-/** Vrai pour `===`, `!==`, `==`, `!=` — les opérateurs qui confrontent sans afficher. */
+/** True for `===`, `!==`, `==`, `!=` — the operators that compare without displaying. */
 export function isComparison(node) {
   const kind = node.operatorToken.kind;
   return (
@@ -532,11 +521,11 @@ export function isComparison(node) {
 }
 
 /**
- * Ce nœud a-t-il la forme d'une phrase plutôt que d'un discriminant ?
+ * Does this node have the shape of a sentence rather than of a discriminant?
  *
- * Un gabarit interpolé ou un texte à plusieurs mots est de la prose ; un mot isolé est un
- * identifiant. C'est ce qui sépare `` `SQ### / SH### (pas ${step})` `` — du français affiché
- * en pleine page d'administration — de `value="cards"`.
+ * An interpolated template or a multi-word text is prose; a lone word is an identifier. This is what
+ * separates `` `SQ### / SH### (pas ${step})` `` — French displayed on a full administration page —
+ * from `value="cards"`.
  */
 export function looksLikeProse(node) {
   if (!node) return false;
@@ -546,10 +535,10 @@ export function looksLikeProse(node) {
 }
 
 /**
- * La balise qui porte cet attribut est-elle un élément natif du DOM ?
+ * Is the tag carrying this attribute a native DOM element?
  *
- * JSX tranche sur la casse : `<div>`, `<input>`, `<option>` sont des éléments ; `<Row>`,
- * `<Metric>`, `<Badge>` sont des composants, dont les props peuvent porter de la prose.
+ * JSX decides on case: `<div>`, `<input>`, `<option>` are elements; `<Row>`, `<Metric>`, `<Badge>`
+ * are components, whose props can carry prose.
  */
 export function isNativeJsxElement(attribute, src) {
   for (let cur = attribute.parent; cur; cur = cur.parent) {
@@ -561,7 +550,7 @@ export function isNativeJsxElement(attribute, src) {
   return false;
 }
 
-/** Nom appelé sous forme textuelle : `toast.success`, `window.confirm`, `t`… */
+/** Called name in textual form: `toast.success`, `window.confirm`, `t`… */
 export function calleeName(node) {
   if (ts.isIdentifier(node)) return node.text;
   if (ts.isPropertyAccessExpression(node)) return `${calleeName(node.expression)}.${node.name.text}`;
@@ -578,9 +567,9 @@ export function scan(file) {
   );
   const found = [];
   /**
-   * `prose` lève les deux règles qui ne valent que pour du code : « un seul mot en
-   * minuscules » et « kebab-case ». Un fragment détaché par une espace (`${n} objets`) ou
-   * un texte JSX (`Re-scanner`) est de la prose, quoi qu'il ressemble à un identifiant.
+   * `prose` lifts the two rules that only hold for code: "a single lowercase word" and
+   * "kebab-case". A fragment set apart by a space (`${n} objets`) or a JSX text (`Re-scanner`) is
+   * prose, however much it looks like an identifier.
    */
   const push = (text, prose = false) => {
     const clean = text.split(/\s+/).join(' ').trim();
@@ -591,10 +580,10 @@ export function scan(file) {
   };
 
   const visit = (node) => {
-    // `const LABELS = { DRAFT: t('reviews.draft') }` — évalué à l'import, c'est-à-dire
-    // avant l'arrivée du catalogue de la langue (seul l'anglais est embarqué) et jamais
-    // réévalué ensuite : la table reste anglaise pour toujours. Même faute qu'un texte en
-    // dur, sous une autre forme — la table se convertit en fonction prenant `t`.
+    // `const LABELS = { DRAFT: t('reviews.draft') }` — evaluated at import, that is,
+    // before the language catalogue arrives (only English is embedded) and never
+    // re-evaluated afterwards: the table stays English for ever. The same fault as hard-coded
+    // text, in another form — the table should become a function taking `t`.
     if (
       ts.isCallExpression(node) &&
       /^(t|tr)$/.test(calleeName(node.expression)) &&
@@ -613,12 +602,12 @@ export function scan(file) {
       ts.isPropertyAssignment(node) &&
       (VISIBLE_PROPS.has(node.name.getText(src).replace(/['"]/g, '')) || inLabelTable(node))
     ) {
-      // `const FILTERS = [{ value: 'open', label: 'Ouverts' }]` — une table de libellés est
-      // du texte d'interface, et c'est là qu'il se cache le plus souvent.
+      // `const FILTERS = [{ value: 'open', label: 'Ouverts' }]` — a label table is
+      // interface text, and that is where it most often hides.
       //
-      // Le contexte technique s'applique ici aussi : une variable nommée `monthLabel` fait
-      // passer `{ month: 'long', year: 'numeric' }` pour une table de libellés, alors que ce
-      // sont les options d'`Intl.DateTimeFormat`.
+      // The technical context applies here too: a variable named `monthLabel` makes
+      // `{ month: 'long', year: 'numeric' }` pass for a label table, whereas those
+      // are the options of `Intl.DateTimeFormat`.
       if (!inTechnicalContext(node, src)) for (const value of literalsOf(node.initializer)) push(value);
     } else if (ts.isCallExpression(node) && SPEAKING_CALLS.test(calleeName(node.expression))) {
       for (const arg of node.arguments) {
@@ -630,16 +619,16 @@ export function scan(file) {
       ts.isJsxExpression(node.parent) &&
       (ts.isJsxElement(node.parent.parent) || ts.isJsxFragment(node.parent.parent))
     ) {
-      // `{name ?? 'Anonyme'}` — une valeur de repli affichée telle quelle.
+      // `{name ?? 'Anonyme'}` — a fallback value displayed as is.
       push(node.text);
     } else if (
       ts.isConditionalExpression(node) &&
       inSpeakingPosition(node, src) &&
       !inTechnicalContext(node, src)
     ) {
-      // `{a ? 'Enregistrement…' : t('common.save')}` — la branche en dur atteint l'écran
-      // aussi sûrement que l'autre. Le contrôle ne voyait que les ternaires dont les DEUX
-      // branches étaient littérales : une seule suffit.
+      // `{a ? 'Enregistrement…' : t('common.save')}` — the hard-coded branch reaches the screen
+      // just as surely as the other. The check only saw ternaries whose TWO
+      // branches were literal: one is enough.
       for (const branch of [node.whenTrue, node.whenFalse]) {
         if (ts.isStringLiteral(branch) || ts.isNoSubstitutionTemplateLiteral(branch)) push(branch.text);
       }
@@ -649,8 +638,8 @@ export function scan(file) {
       inSpeakingPosition(node, src) &&
       !inTechnicalContext(node, src)
     ) {
-      // `name ?? 'Anonyme'`, `label || 'Sans titre'` — le repli s'affiche dès que la
-      // valeur manque, c'est-à-dire précisément quand on le remarque.
+      // `name ?? 'Anonyme'`, `label || 'Sans titre'` — the fallback is displayed as soon as the
+      // value is missing, that is, precisely when one notices it.
       const right = node.right;
       if (ts.isStringLiteral(right) || ts.isNoSubstitutionTemplateLiteral(right)) push(right.text);
     } else if (
@@ -659,8 +648,8 @@ export function scan(file) {
       inSpeakingPosition(node, src) &&
       !inTechnicalContext(node, src)
     ) {
-      // `function statusLabel(u): string { … return 'En attente…' }` — la valeur s'affiche
-      // une ligne plus loin, à côté de branches qui appellent bien `t()`.
+      // `function statusLabel(u): string { … return 'En attente…' }` — the value is displayed
+      // one line further, next to branches that do call `t()`.
       push(node.text);
     } else if (
       ts.isBinaryExpression(node) &&
@@ -668,15 +657,15 @@ export function scan(file) {
       inSpeakingPosition(node, src) &&
       !inTechnicalContext(node, src)
     ) {
-      // `'Supprimer ' + n + ' fichiers'` — la même phrase qu'un gabarit, écrite autrement.
+      // `'Supprimer ' + n + ' fichiers'` — the same sentence as a template, written differently.
       for (const side of [node.left, node.right]) {
         if (ts.isStringLiteral(side) || ts.isNoSubstitutionTemplateLiteral(side)) {
           push(side.text, /^\s|\s$/.test(side.text));
         }
       }
     } else if (ts.isTemplateExpression(node) && !inTechnicalContext(node, src)) {
-      // Chaque fragment séparément : `${n} job(s) purgé(s)` n'a de sens qu'en morceaux.
-      // Une espace en bord signe la prose autour de l'interpolation.
+      // Each fragment separately: `${n} job(s) purgé(s)` only makes sense in pieces.
+      // A space at the edge marks the prose around the interpolation.
       const detached = (t) => /^\s|\s$/.test(t);
       push(node.head.text, detached(node.head.text));
       for (const span of node.templateSpans) push(span.literal.text, detached(span.literal.text));
@@ -688,10 +677,9 @@ export function scan(file) {
 }
 
 /**
- * Répertoires hors périmètre : les catalogues eux-mêmes, et tout ce qui ne s'adresse jamais
- * à un utilisateur — bancs d'essai d'intégration (fixtures, comptes de test, messages
- * d'assertion) et validation de configuration, qui parle à l'exploitant dans les journaux
- * de démarrage, pas à l'écran.
+ * Directories out of scope: the catalogues themselves, and everything never addressed to a user —
+ * integration test benches (fixtures, test accounts, assertion messages) and configuration validation,
+ * which speaks to the operator in the startup logs, not on screen.
  */
 const SKIPPED_DIRS = new Set(['i18n', 'integration', 'config', 'types']);
 
@@ -706,7 +694,7 @@ function* sources(dir) {
   }
 }
 
-/** Scanne l'arborescence et rend les textes en dur, groupés par fichier. */
+/** Scans the tree and returns the hard-coded texts, grouped by file. */
 export function collectHardcoded(roots = ROOTS) {
   const findings = new Map();
   for (const root of Array.isArray(roots) ? roots : [roots]) {
@@ -727,8 +715,8 @@ function main() {
     }
   }
 
-  // Un plafond PAR arborescence : le front reste à zéro, le backend entre avec sa dette.
-  // Un total unique laisserait une régression du front se cacher derrière la dette du back.
+  // One ceiling PER tree: the front end stays at zero, the backend comes in with its debt.
+  // A single total would let a front-end regression hide behind the backend's debt.
   let failed = false;
   for (const root of ROOTS) {
     const prefix = resolve(root);
@@ -749,5 +737,5 @@ function main() {
   }
 }
 
-// Importable pour les tests ; exécuté seulement quand on l'appelle directement.
+// Importable for the tests; only runs when called directly.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

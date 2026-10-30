@@ -34,11 +34,11 @@ const pick = (over: Partial<PickRow> = {}): PickRow => ({
 });
 
 describe('declaredDuration', () => {
-  it('convertit une plage de frames en secondes, bornes incluses', () => {
+  it('converts a frame range to seconds, bounds included', () => {
     expect(declaredDuration(shot({ startFrame: 1001, endFrame: 1024 }), 24)).toBe(1);
   });
 
-  it('rend null sans plage complète ou sans cadence utilisable', () => {
+  it('returns null without a complete range or a usable frame rate', () => {
     expect(declaredDuration(shot({ startFrame: 1001 }), 24)).toBeNull();
     expect(declaredDuration(shot({ startFrame: 1001, endFrame: 1024 }), 0)).toBeNull();
     expect(declaredDuration(shot({ startFrame: 1024, endFrame: 1001 }), 24)).toBeNull();
@@ -46,11 +46,11 @@ describe('declaredDuration', () => {
 });
 
 describe('clipDuration', () => {
-  it('donne la priorité au média réel', () => {
+  it('prioritizes the actual media', () => {
     expect(clipDuration(3.5, 1)).toBe(3.5);
   });
 
-  it('retombe sur la durée déclarée, puis sur la durée de carton', () => {
+  it('falls back to the declared duration, then to the placeholder duration', () => {
     expect(clipDuration(null, 2)).toBe(2);
     expect(clipDuration(null, null)).toBe(PLACEHOLDER_DURATION);
     expect(clipDuration(0, null)).toBe(PLACEHOLDER_DURATION);
@@ -64,7 +64,7 @@ describe('buildItems', () => {
     shot({ id: 3, code: 'SH030' }),
   ];
 
-  it('enchaîne les clips et cumule les temps de départ', () => {
+  it('chains the clips and accumulates the start times', () => {
     const picks = new Map([
       [1, pick({ mediaDuration: 2 })],
       [2, pick({ mediaDuration: 3 })],
@@ -75,7 +75,7 @@ describe('buildItems', () => {
     expect(totalDuration(items)).toBe(6.5);
   });
 
-  it('remplace un plan sans version par un carton, sans le sauter', () => {
+  it('replaces a shot without a version with a placeholder, without skipping it', () => {
     const picks = new Map([[1, pick({ mediaDuration: 2 })]]);
     const items = buildItems(shots, picks, 24);
     expect(items).toHaveLength(3);
@@ -83,38 +83,38 @@ describe('buildItems', () => {
     expect(items[2]!.startTime).toBe(2 + PLACEHOLDER_DURATION);
   });
 
-  it('tient la durée déclarée du plan pour un carton', () => {
+  it('honors the declared duration of the shot for a placeholder', () => {
     const items = buildItems([shot({ startFrame: 1001, endFrame: 1048 })], new Map(), 24);
     expect(items[0]).toMatchObject({ placeholder: true, duration: 2 });
   });
 
-  it('traite une version sans média comme un trou', () => {
+  it('treats a version without media as a gap', () => {
     const picks = new Map([[1, pick({ mediaId: null, mediaDuration: null })]]);
     const items = buildItems([shots[0]!], picks, 24);
     expect(items[0]!.placeholder).toBe(true);
   });
 
-  it('signale un écart entre média et plage déclarée sans y toucher', () => {
+  it('flags a difference between media and declared range without touching it', () => {
     const picks = new Map([[1, pick({ mediaDuration: 5 })]]);
     const items = buildItems([shot({ startFrame: 1001, endFrame: 1024 })], picks, 24);
     expect(items[0]!.duration).toBe(5);
     expect(items[0]!.durationMismatch).toBe(true);
   });
 
-  it('ne signale rien pour un écart en deçà de la tolérance', () => {
+  it('flags nothing for a difference within the tolerance', () => {
     const picks = new Map([[1, pick({ mediaDuration: 1.2 })]]);
     const items = buildItems([shot({ startFrame: 1001, endFrame: 1024 })], picks, 24);
     expect(items[0]!.durationMismatch).toBe(false);
   });
 
-  it('rend un montage vide pour une séquence sans plan', () => {
+  it('returns an empty timeline for a sequence without shots', () => {
     expect(buildItems([], new Map(), 24)).toEqual([]);
     expect(totalDuration([])).toBe(0);
   });
 });
 
 describe('diffItems', () => {
-  it('relève les plans ajoutés, retirés et re-versionnés', () => {
+  it('reports added, removed and re-versioned shots', () => {
     const diff = diffItems(
       [
         { shotCode: 'SH010', versionName: 'v0001' },
@@ -132,7 +132,7 @@ describe('diffItems', () => {
     expect(diff.changed).toEqual([{ shotCode: 'SH020', from: 'v0002', to: 'v0005' }]);
   });
 
-  it('voit un trou qui se comble comme un changement', () => {
+  it('sees a gap being filled as a change', () => {
     const diff = diffItems(
       [{ shotCode: 'SH010', versionName: null }],
       [{ shotCode: 'SH010', versionName: 'v0001' }],
@@ -140,7 +140,7 @@ describe('diffItems', () => {
     expect(diff.changed).toEqual([{ shotCode: 'SH010', from: null, to: 'v0001' }]);
   });
 
-  it('ne signale rien entre deux états identiques', () => {
+  it('reports nothing between two identical states', () => {
     const items = [{ shotCode: 'SH010', versionName: 'v0001' }];
     expect(diffItems(items, items)).toEqual({ added: [], removed: [], changed: [] });
   });

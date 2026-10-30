@@ -5,16 +5,16 @@ import { Diamond } from 'lucide-react';
 import type { CameraAnimV2, ChannelId, Extrapolation, TangentType } from '../channels/model';
 import { CHANNEL_META, channelColor } from './channelMeta';
 import ChannelMenu from './ChannelMenu';
-import { useT } from '../../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
- * Liste des canaux de l'éditeur d'animation (Phase 17) : pastille de couleur (token thème) +
- * libellé, cliquable pour afficher/masquer la F-curve dans le graph editor. Un canal sans clé
- * est grisé. En édition, chaque ligne porte un losange « poser une clé sur **ce** canal au
- * playhead » — la clé complète 8 canaux n'est plus le seul geste.
+ * Channel list of the animation editor (Phase 17): color swatch (theme token) + label, clickable
+ * to show/hide the F-curve in the graph editor. A channel without keys is grayed out. When
+ * editing, each row carries a diamond "set a key on **this** channel at the playhead" — the full
+ * 8-channel key is no longer the only gesture.
  *
- * **Clic droit sur une ligne** (Phase 50, lot 7) : tout ce qui vise la courbe ENTIÈRE — profil de
- * tangente, pré/post-infinity, sélection de ses clés, recadrage vertical (`ChannelMenu`).
+ * **Right-click on a row** (Phase 50, batch 7): everything that targets the WHOLE curve — tangent
+ * profile, pre/post-infinity, selecting its keys, vertical fit (`ChannelMenu`).
  */
 export default function ChannelList({
   anim,
@@ -29,19 +29,19 @@ export default function ChannelList({
   onFit,
 }: {
   anim: CameraAnimV2;
-  /** Canaux qui portent au moins une clé (les autres sont inertes). */
+  /** Channels that carry at least one key (the others are inert). */
   keyedChannels: ReadonlySet<ChannelId>;
   visible: ReadonlySet<ChannelId>;
   onToggle: (id: ChannelId) => void;
   editable?: boolean;
-  /** Pose une clé sur ce canal seul, au temps courant (depuis la vue). */
+  /** Sets a key on this channel only, at the current time (from the view). */
   onKeyChannel?: (id: ChannelId) => void;
-  /** Applique un profil de tangente à toutes les clés de la courbe. */
+  /** Applies a tangent profile to all keys of the curve. */
   onProfile: (id: ChannelId, type: TangentType) => void;
-  /** Règle l'extrapolation du canal hors de ses clés. */
+  /** Sets the channel's extrapolation outside its keys. */
   onInfinity: (id: ChannelId, patch: { pre?: Extrapolation; post?: Extrapolation }) => void;
   onSelectAll: (id: ChannelId) => void;
-  /** Recadre l'axe des valeurs sur cette seule courbe. */
+  /** Fits the value axis to this curve alone. */
   onFit: (id: ChannelId) => void;
 }) {
   const t = useT();

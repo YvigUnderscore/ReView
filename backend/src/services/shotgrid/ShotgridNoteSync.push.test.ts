@@ -7,8 +7,8 @@ const { comment, version, links, storage, annotationToSvg } = vi.hoisted(() => (
   comment: { findUnique: vi.fn() },
   version: { findUnique: vi.fn() },
   links: { mapSgToLocal: vi.fn(), upsertLink: vi.fn(), findByLocal: vi.fn() },
-  // Le stockage est ici la doublure qui compte : c'est lui qu'interrogeait la branche
-  // morte (`Comment.screenshotKey`). Il doit rester muet.
+  // The storage is the double that matters here: it is what the dead branch (`Comment.screenshotKey`) queried.
+  // It must stay silent.
   storage: { getObjectBuffer: vi.fn(), downloadToFile: vi.fn() },
   annotationToSvg: vi.fn(() => null),
 }));
@@ -20,7 +20,7 @@ vi.mock('../../lib/logger', () => ({
 vi.mock('../../lib/annotationSvg', () => ({ annotationToSvg }));
 vi.mock('../../config/env', () => ({ env: { APP_URL: null } }));
 vi.mock('../MediaService', () => ({ mediaSourceKey: vi.fn(() => 'key') }));
-vi.mock('../StorageService', () => ({ storage }));
+vi.mock('../../lib/storage', () => ({ storage }));
 vi.mock('./ShotgridNoteAttachments', () => ({ importNoteAttachments: vi.fn(async () => 0) }));
 vi.mock('./ShotgridPullService', () => ({ touch: vi.fn(), confirmGone: vi.fn(async () => []) }));
 vi.mock('./shotgridSettings', () => ({ can: () => true }));
@@ -71,25 +71,23 @@ beforeEach(() => {
   links.upsertLink.mockResolvedValue(undefined);
 });
 
-describe('pushComment — pièce jointe de la frame annotée', () => {
-  it('ne joint rien quand l’annotation ne donne aucune image', async () => {
-    // `Comment.screenshotKey` était lue en priorité pour joindre une capture déjà
-    // calculée — mais rien dans le dépôt n'a jamais écrit cette colonne : la branche
-    // était morte et le repli, l'unique chemin. La colonne et sa lecture sont parties
-    // ensemble ; la composition de la frame est donc la SEULE source possible.
-    // Sans SVG à incruster, il n'y a pas d'image, donc pas de pièce jointe.
+describe('pushComment: attachment of the annotated frame', () => {
+  it('attaches nothing when the annotation yields no image', async () => {
+    // `Comment.screenshotKey` used to be read first to attach an already computed capture, but nothing in the repository ever wrote this column:
+    // the branch was dead and the fallback the only path. The column and its reading left together; so composing the frame is the ONLY possible source.
+    // Without an SVG to burn in, there is no image, hence no attachment.
     const { ctx, uploadFile } = context(true);
     annotationToSvg.mockReturnValue(null);
 
     await expect(pushComment(ctx as never, 12)).resolves.toBe(4242);
 
     expect(uploadFile).not.toHaveBeenCalled();
-    // Aucune capture n'est cherchée dans MinIO : plus personne ne lit de clé de capture.
+    // No capture is looked up in MinIO: nobody reads a capture key any more.
     expect(storage.getObjectBuffer).not.toHaveBeenCalled();
     expect(storage.downloadToFile).not.toHaveBeenCalled();
   });
 
-  it('pose la correspondance du commentaire sur la Note créée', async () => {
+  it('sets the comment match on the created Note', async () => {
     const { ctx, createAs } = context(false);
 
     await pushComment(ctx, 12);
@@ -100,7 +98,7 @@ describe('pushComment — pièce jointe de la frame annotée', () => {
     );
   });
 
-  it('ne crée pas une seconde note pour un commentaire déjà poussé', async () => {
+  it('does not create a second note for an already pushed comment', async () => {
     const { ctx, createAs } = context(true);
     links.findByLocal.mockImplementation(async (_c: number, type: string) =>
       type === 'version' ? { sgId: 900 } : { sgId: 4242 },

@@ -2,21 +2,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../../lib/apiClient';
-import { qk } from '../../../lib/query';
-import { usePlaylists } from '../../../lib/playlistApi';
-import { Label } from '../../../components/ui/label';
-import { Select } from '../../../components/ui/select';
-import { Checkbox } from '../../../components/ui/checkbox';
-import { useT } from '../../../i18n';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
+import { usePlaylists } from '@/v2/lib/playlistApi';
+import { Label } from '@/v2/components/ui/label';
+import { Select } from '@/v2/components/ui/select';
+import { Checkbox } from '@/v2/components/ui/checkbox';
+import { useT } from '@/v2/i18n';
 import { toggleMedia, versionsOf, type ScopeState, type ShareCandidate, type ShareScope } from './shareScope';
 
 /**
- * Choix de ce qu'un lien ouvre. Sans lui, faire valider un plan par un client revenait à
- * lui ouvrir le projet entier : c'est le champ qui manquait au dialogue de création.
+ * Choice of what a link opens. Without it, having a client validate a shot amounted to opening the
+ * whole project to them: it was the field missing from the creation dialog.
  */
 
-/** Catalogue des médias publiés du projet — dérivé de la clé des liens, même invalidation. */
+/** Catalogue of the project's published media: derived from the links' key, same invalidation. */
 function useCandidates(projectId: number, enabled: boolean) {
   return useQuery({
     queryKey: [...qk.shareLinks(projectId), 'candidates'],

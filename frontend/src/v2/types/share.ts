@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { MediaKind } from './api';
-import type { DisplayAttachment } from '../../lib/commentAttachments';
+import type { DisplayAttachment } from '../lib/commentAttachments';
 
-// ── Partage client (35.C/35.D) — module séparé de api.ts pour le budget de lignes ─
+// ── Client sharing (35.C/35.D) — module separate from api.ts for the line budget ─
 export type SharePermission = 'VIEW' | 'COMMENT' | 'DECIDE';
-/** Ce qu'un lien ouvre. Défini ici, réutilisé par l'écran d'administration des partages. */
+/** What a link opens. Defined here, reused by the sharing administration screen. */
 export type ShareScope = 'PROJECT' | 'PLAYLIST' | 'VERSION' | 'MEDIA';
-/** GET /api/share?projectId= — lien de partage (le hash du mot de passe n'est jamais exposé). */
+/** GET /api/share?projectId= — share link (the password hash is never exposed). */
 export interface ShareLink {
   id: number;
   token: string;
@@ -25,11 +25,11 @@ export interface ShareLink {
   createdBy: { id: number; name: string | null } | null;
 }
 /**
- * Média tel qu'exposé sur la page client publique.
+ * Media as exposed on the public client page.
  *
- * `placement` ne porte que des **clés** : c'est ce qui permet à une tuile de n'exister
- * qu'une fois dans le payload, quelle que soit la richesse de l'arborescence — donc une
- * seule URL présignée par média, quel que soit le nombre de nœuds qui le citent.
+ * `placement` only carries **keys**: this is what allows a tile to exist only once in the payload,
+ * whatever the richness of the tree — hence a single presigned URL per media, however many nodes
+ * cite it.
  */
 export interface ClientMedia {
   id: number;
@@ -38,7 +38,7 @@ export interface ClientMedia {
   thumbnailUrl: string | null;
   createdAt: string;
   version: { id: number; name: string; taskName: string | null };
-  /** Ce lien s'est déjà prononcé sur cette version — la file d'accueil l'écarte. */
+  /** This link has already given its verdict on this version — the home queue leaves it out. */
   decided: boolean;
   placement: {
     episodeId: number | null;
@@ -61,9 +61,9 @@ export interface ShareSequenceNode {
   order: number;
   episodeId: number | null;
   shotIds: number[];
-  /** Tous les médias de la séquence, plans confondus. */
+  /** All media of the sequence, across its shots. */
   mediaIds: number[];
-  /** Pointeur vers une tuile de `media` — surtout pas une URL de plus à signer. */
+  /** Pointer to a tile of `media` — certainly not one more URL to sign. */
   coverMediaId: number | null;
 }
 export interface ShareShotNode {
@@ -79,7 +79,7 @@ export interface ShareAssetNode {
   id: number;
   name: string;
   type: string;
-  /** Libellé du studio quand il en a défini un. */
+  /** Studio label when it has defined one. */
   typeLabel: string | null;
   mediaIds: number[];
   coverMediaId: number | null;
@@ -88,15 +88,15 @@ export interface SharePlaylistCard {
   id: number;
   name: string;
   updatedAt: string;
-  /** Items en portée : peut dépasser `mediaIds.length` quand la page est bornée. */
+  /** Items in scope: may exceed `mediaIds.length` when the page is bounded. */
   itemCount: number;
-  /** Médias de la playlist présents dans `media`, dans l'ordre de la playlist. */
+  /** Playlist media present in `media`, in playlist order. */
   mediaIds: number[];
   coverMediaIds: number[];
 }
 /**
- * L'arborescence de l'accueil. Nommée `browse` et non `home` : « home view » désigne déjà,
- * côté client, le retour caméra des viewers spatiaux (touche `H`).
+ * The home tree. Named `browse` and not `home`: "home view" already designates, on the client
+ * side, the camera return of the spatial viewers (`H` key).
  */
 export interface ShareBrowse {
   playlists: SharePlaylistCard[];
@@ -104,10 +104,10 @@ export interface ShareBrowse {
   sequences: ShareSequenceNode[];
   shots: ShareShotNode[];
   assets: ShareAssetNode[];
-  /** Médias qu'aucun parent ne réclame — jamais perdus, jamais nommés. */
+  /** Media no parent claims — never lost, never named. */
   looseMediaIds: number[];
 }
-/** GET /api/client/:token — payload public (locked = mot de passe requis). */
+/** GET /api/client/:token — public payload (locked = password required). */
 export interface ClientSharePayload {
   locked: boolean;
   studio: { name: string; logoUrl: string | null };
@@ -116,18 +116,18 @@ export interface ClientSharePayload {
     name: string;
     description: string | null;
     status: string;
-    /** Sans lui, le niveau Episode s'inviterait sur un long-métrage. */
+    /** Without it, the Episode level would impose itself on a feature film. */
     episodesEnabled: boolean;
   };
   permission?: SharePermission;
   label?: string | null;
   scope?: ShareScope;
   media?: ClientMedia[];
-  /** Total réel en portée : `browse` ne décrit que la page de `media`. */
+  /** Real total in scope: `browse` only describes the page of `media`. */
   mediaTotal?: number;
   mediaHasMore?: boolean;
   browse?: ShareBrowse;
-  /** Les deux réponses offertes — `null` dès que le lien n'a pas le droit de se prononcer. */
+  /** The two offered answers — `null` as soon as the link is not allowed to give a verdict. */
   decisionStatuses?: {
     approval: { id: number; name: string; color: string } | null;
     retake: { id: number; name: string; color: string } | null;
@@ -135,7 +135,7 @@ export interface ClientSharePayload {
   watermark?: { enabled: boolean; opacity: number };
   shareAuth?: string;
 }
-/** Commentaire tel qu'exposé côté client public (liste blanche posée côté serveur). */
+/** Comment as exposed to the public client (allowlist set server-side). */
 export interface ClientComment {
   id: number;
   content: string;
@@ -145,16 +145,16 @@ export interface ClientComment {
   author: { id: number; name: string | null } | null;
   createdAt: string;
   isEdited: boolean;
-  /** Dessin joint — celui que le studio montre au client, et celui que le client pose. */
+  /** Attached drawing — the one the studio shows the client, and the one the client places. */
   annotation: unknown;
   /**
-   * Images jointes par le studio, en URL présignée : le portail n'en affichait AUCUNE, et
-   * une note illustrée arrivait donc vide chez son destinataire. La clé MinIO ne descend
-   * pas — seuls le nom, le type et l'URL le font.
+   * Images attached by the studio, as presigned URLs: the portal displayed NONE of them, so an
+   * illustrated note arrived empty for its recipient. The MinIO key does not come down — only the
+   * name, the type and the URL do.
    */
   attachments?: DisplayAttachment[];
 }
-/** GET /api/admin/burnin — template studio des burn-ins/slates (35.A). */
+/** GET /api/admin/burnin — studio template of burn-ins/slates (35.A). */
 export interface BurninConfig {
   enabled: boolean;
   showShot: boolean;

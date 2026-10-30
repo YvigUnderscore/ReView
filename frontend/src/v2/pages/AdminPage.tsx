@@ -76,12 +76,12 @@ import { SettingsSearchBar } from '../components/settings/SettingsSearch';
 import { ADMIN_GROUPS, adminGroupLabel, adminSections, type AdminSectionKey } from './admin/adminSections';
 
 /**
- * Écran de chaque section d'administration : l'icône de la barre latérale, l'onglet, et la
- * vue de détail quand l'URL porte un id (/admin/users/12, /admin/projects/3).
+ * Screen for each administration section: the sidebar icon, the tab, and the
+ * detail view when the URL carries an id (/admin/users/12, /admin/projects/3).
  *
- * Les clés, les groupes et les libellés vivent dans `admin/adminSections` : la palette
- * Ctrl+K les lit aussi, et une seconde table divergerait au premier renommage. Le type de
- * clé rend l'oubli impossible — ajouter une section sans lui donner d'écran ne compile pas.
+ * Keys, groups and labels live in `admin/adminSections`: the Ctrl+K palette
+ * reads them too, and a second table would diverge at the first rename. The key type
+ * makes forgetting impossible — adding a section without giving it a screen does not compile.
  */
 const VIEWS: Record<AdminSectionKey, { icon: LucideIcon; Component: ComponentType; Detail?: ComponentType }> =
   {
@@ -130,11 +130,11 @@ export default function AdminPage() {
     );
   }
   /*
-   * `/admin/audit` a disparu : il rendait `/api/studio/audit`, exactement comme « Activité »,
-   * mais sans pagination, sans auteur et sans lien vers les entités — deux sections
-   * concurrentes pour le même journal, dans deux groupes différents, et l'administrateur
-   * qui cherchait « qui a changé ce réglage » trouvait la mauvaise selon le groupe ouvert.
-   * L'adresse continue de fonctionner : les liens et signets existants aboutissent.
+   * `/admin/audit` has gone: it rendered `/api/studio/audit`, exactly like "Activity",
+   * but without pagination, without author and without links to the entities — two
+   * competing sections for the same log, in two different groups, and the administrator
+   * looking for "who changed this setting" found a different one depending on the group open.
+   * The address still works: existing links and bookmarks resolve.
    */
   const all = adminSections(t);
   const visibleSections = all.filter((s) => sectionMatches(sectionHaystack(s.key, s.label, t), query));
@@ -146,16 +146,16 @@ export default function AdminPage() {
 
   return (
     <PageShell>
-      {/* Un seul nom pour un seul endroit : le lien de la barre latérale, la palette et
-          ce titre disent tous « Réglages ». La page s'appelait « Administration », son
-          lien « Paramètres » et l'une de ses sections « Réglages » — trois mots pour le
-          même écran, dont deux qu'on ne retrouvait nulle part ailleurs. */}
+      {/* One name for one place: the sidebar link, the palette and
+          this title all say "Settings". The page was called "Administration", its
+          link "Parameters" and one of its sections "Settings" — three words for the
+          same screen, two of which were found nowhere else. */}
       <h1 className="mb-4 text-xl font-semibold">{t('nav.settings')}</h1>
       <div className="flex flex-col gap-6 md:flex-row">
         <nav className="flex shrink-0 gap-1 overflow-x-auto pb-1 md:w-52 md:flex-col md:overflow-visible md:pb-0">
-          {/* Chercher dans les réglages, pas seulement dans leurs titres : vingt-huit
-              sections en cinq groupes sont introuvables sans cela — on cherche
-              « watermark », pas « Diffusion ». */}
+          {/* Search the settings, not only their titles: twenty-eight
+              sections in five groups are unfindable without this — one searches for
+              "watermark", not "Distribution". */}
           <SettingsSearchBar value={query} onChange={setQuery} className="mb-2 hidden md:block" />
           {ADMIN_GROUPS.map((group) => {
             const inGroup = visibleSections.filter((s) => s.group === group);

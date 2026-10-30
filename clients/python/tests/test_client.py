@@ -8,9 +8,10 @@ from __future__ import annotations
 import os
 import tempfile
 import unittest
+import urllib.error
 
-from review import ReviewApiError, ReviewClient, ReviewConfigError, ReviewTransportError, RetryPolicy
-from tests.support import FakeOpener, Recorder, http_error, json_response
+from review import RetryPolicy, ReviewApiError, ReviewClient, ReviewConfigError, ReviewTransportError
+from tests.support import FakeOpener, FakeResponse, Recorder, http_error, json_response
 
 
 def client(*answers, **options) -> ReviewClient:
@@ -89,8 +90,8 @@ class Errors(unittest.TestCase):
         self.assertEqual(caught.exception.status, 404)
         self.assertFalse(caught.exception.is_retryable)
 
-    # Un frontal en panne rend une page HTML, pas le JSON de l'API : le client doit
-    # quand même produire une erreur exploitable.
+    # A broken front end returns an HTML page, not the API's JSON: the client must
+    # still produce a usable error.
     def test_survives_an_error_body_that_is_not_json(self) -> None:
         api = client(http_error(400, b"<html>bad gateway</html>"))
         with self.assertRaises(ReviewApiError) as caught:
@@ -116,7 +117,7 @@ class Retries(unittest.TestCase):
         api.me()
         self.assertEqual(api.sleeper.slept, [7.0])
 
-    # Sans clé d'idempotence, rejouer un POST publierait une seconde version.
+    # Without an idempotency key, replaying a POST would publish a second version.
     def test_never_replays_a_write_that_cannot_be_recognised(self) -> None:
         api = client(http_error(503), json_response({}))
         with self.assertRaises(ReviewApiError):
@@ -143,8 +144,8 @@ class Retries(unittest.TestCase):
 
 
 class Downloads(unittest.TestCase):
-    # Une URL présignée porte déjà sa signature : y ajouter l'en-tête d'autorisation fait
-    # refuser la requête par le stockage objet.
+    # A presigned URL already carries its signature: adding the authorization header makes
+    # the object storage reject the request.
     def test_downloads_without_the_authorization_header(self) -> None:
         api = client(json_response({"url": "https://minio/plate.mov"}), json_response("BYTES"))
         with tempfile.TemporaryDirectory() as folder:
@@ -165,6 +166,109 @@ class Downloads(unittest.TestCase):
         self.assertEqual(api.opener.methods, ["PUT", "PUT"])
         self.assertEqual(api.opener.requests[0].headers["Content-length"], "10")
         self.assertEqual(api.opener.requests[1].headers["Content-type"], "video/mp4")
+
+
+SIGNED = {"url": "https://minio/plate.mov?sig=1"}
+
+
+class BreaksMidStream(FakeResponse):
+    """Hands out one chunk, then the connection drops."""
+
+    def read(self, size: int = -1) -> bytes:
+        if self._stream.tell():
+            raise ConnectionResetError("connection reset by peer")
+        return super().read(4)
+
+
+class AtomicDownloads(unittest.TestCase):
+    """``download`` retries what is transient and never leaves half a plate behind."""
+
+    def setUp(self) -> None:
+        self._folder = tempfile.TemporaryDirectory()
+        self.folder = self._folder.name
+        self.target = os.path.join(self.folder, "plate.mov")
+
+    def tearDown(self) -> None:
+        self._folder.cleanup()
+
+    def leftovers(self) -> list[str]:
+        return sorted(name for name in os.listdir(self.folder) if name != "plate.mov")
+
+    def test_writes_the_bytes_and_leaves_no_temporary_file(self) -> None:
+        api = client(json_response(SIGNED), FakeResponse(b"PLATE", headers={"Content-Length": "5"}))
+        self.assertEqual(api.download(128, self.target), self.target)
+        with open(self.target, "rb") as handle:
+            self.assertEqual(handle.read(), b"PLATE")
+        self.assertEqual(self.leftovers(), [])
+
+    def test_retries_a_busy_storage_and_signs_a_fresh_url_each_time(self) -> None:
+        api = client(
+            json_response(SIGNED),
+            http_error(503),
+            json_response(SIGNED),
+            FakeResponse(b"PLATE"),
+        )
+        api.download(128, self.target)
+        self.assertEqual(api.sleeper.slept, [0.5])
+        self.assertEqual(sum("/api/v1/media/128/url" in url for url in api.opener.urls), 2)
+        self.assertEqual(self.leftovers(), [])
+
+    def test_retries_a_connection_dropped_mid_stream(self) -> None:
+        api = client(
+            json_response(SIGNED),
+            BreaksMidStream(b"PLATE-PART"),
+            json_response(SIGNED),
+            FakeResponse(b"PLATE"),
+        )
+        api.download(128, self.target)
+        with open(self.target, "rb") as handle:
+            self.assertEqual(handle.read(), b"PLATE")
+        self.assertEqual(self.leftovers(), [])
+
+    # A proxy that closes early would otherwise hand over a short file as if it were whole.
+    def test_treats_a_truncated_body_as_transient(self) -> None:
+        api = client(
+            json_response(SIGNED),
+            FakeResponse(b"PLA", headers={"Content-Length": "5"}),
+            json_response(SIGNED),
+            FakeResponse(b"PLATE", headers={"Content-Length": "5"}),
+        )
+        api.download(128, self.target)
+        with open(self.target, "rb") as handle:
+            self.assertEqual(handle.read(), b"PLATE")
+        self.assertEqual(len(api.sleeper.slept), 1)
+
+    def test_gives_up_with_a_transport_error_and_keeps_the_previous_file(self) -> None:
+        with open(self.target, "wb") as handle:
+            handle.write(b"OLD")
+        answers = []
+        for _ in range(2):
+            answers += [json_response(SIGNED), urllib.error.URLError("timed out")]
+        api = client(*answers, retry=RetryPolicy(attempts=2))
+        with self.assertRaises(ReviewTransportError) as caught:
+            api.download(128, self.target)
+        self.assertIsInstance(caught.exception.cause, urllib.error.URLError)
+        with open(self.target, "rb") as handle:
+            self.assertEqual(handle.read(), b"OLD")
+        self.assertEqual(self.leftovers(), [])
+
+    def test_a_refusal_is_typed_and_never_retried(self) -> None:
+        api = client(json_response(SIGNED), http_error(403, {"code": "SIGNATURE_EXPIRED"}))
+        with self.assertRaises(ReviewApiError) as caught:
+            api.download(128, self.target)
+        self.assertEqual(caught.exception.status, 403)
+        self.assertEqual(api.sleeper.slept, [])
+        self.assertFalse(os.path.exists(self.target))
+        self.assertEqual(self.leftovers(), [])
+
+    # Retrying cannot create a missing folder or free a full disk: surface the OSError as is.
+    def test_a_local_write_failure_is_not_retried_nor_disguised(self) -> None:
+        api = client(json_response(SIGNED), FakeResponse(b"PLATE"))
+        missing = os.path.join(self.folder, "no-such-dir", "plate.mov")
+        with self.assertRaises(FileNotFoundError):
+            api.download(128, missing)
+        self.assertEqual(api.sleeper.slept, [])
+        self.assertEqual(len(api.opener.requests), 1)
 
 
 if __name__ == "__main__":  # pragma: no cover - manual run

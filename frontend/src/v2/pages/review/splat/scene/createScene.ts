@@ -5,7 +5,7 @@ import type * as THREE from 'three';
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import type { SparkRenderer, SplatMesh } from '@sparkjsdev/spark';
 
-/** Modules Spark/Three importés dynamiquement (hors bundle initial), passés à `createScene`. */
+/** Spark/Three modules imported dynamically (out of the initial bundle), passed to `createScene`. */
 export interface SplatModules {
   THREE: typeof import('three');
   OrbitControls: typeof OrbitControls;
@@ -13,7 +13,7 @@ export interface SplatModules {
   SplatMesh: typeof SplatMesh;
 }
 
-/** Cœur de la scène Three.js d'un splat (sans le mesh, ajouté après chargement). */
+/** Core of a splat's Three.js scene (without the mesh, added after loading). */
 export interface SplatSceneCore {
   renderer: THREE.WebGLRenderer;
   scene: THREE.Scene;
@@ -23,9 +23,9 @@ export interface SplatSceneCore {
 }
 
 /**
- * Monte le renderer WebGL2, la scène, la caméra perspective, les OrbitControls (damping) et le
- * SparkRenderer, et branche le canvas dans `container`. Extrait de `useSplat` — la couche
- * « scène » ne connaît ni l'édition ni l'état React ; l'orchestrateur gère le cycle de vie.
+ * Mounts the WebGL2 renderer, the scene, the perspective camera, the OrbitControls (damping) and
+ * the SparkRenderer, and attaches the canvas to `container`. Extracted from `useSplat`: the
+ * "scene" layer knows neither editing nor React state; the orchestrator manages the lifecycle.
  */
 export function createScene(
   { THREE, OrbitControls, SparkRenderer }: SplatModules,

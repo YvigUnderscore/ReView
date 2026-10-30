@@ -2,29 +2,29 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 
 /**
- * Accès au modèle de droits machine : catalogue de scopes et formes des tokens.
+ * Access to the machine rights model: scope catalogue and token shapes.
  *
- * Le catalogue vient du serveur (`GET /api/auth/scopes`) et n'est jamais recopié côté
- * front : c'est ce qui garantit qu'un scope retiré du catalogue disparaît des écrans.
+ * The catalogue comes from the server (`GET /api/auth/scopes`) and is never copied to the
+ * front end: that is what guarantees a scope removed from the catalogue disappears from the screens.
  */
 
-/** Clé de cache du catalogue de scopes — statique, partagée profil ↔ administration. */
+/** Cache key for the scope catalogue: static, shared between profile and admin. */
 export const scopeCatalogKey = ['api-scopes'] as const;
 
-/** Clé de cache des tokens de service du studio. */
+/** Cache key for the studio's service tokens. */
 export const serviceTokensKey = ['admin', 'service-tokens'] as const;
 
 export interface ScopeCatalog {
-  /** Scopes fins attribuables, `domaine:action` (+ `admin`). */
+  /** Fine-grained assignable scopes, `domain:action` (+ `admin`). */
   scopes: string[];
-  /** Scopes hérités (`read`, `write`) — encore acceptés, plus jamais proposés. */
+  /** Legacy scopes (`read`, `write`): still accepted, no longer offered. */
   legacy: string[];
 }
 
-/** Token tel que le serveur le rend — jamais le secret, qui n'existe qu'à l'émission. */
+/** Token as the server returns it: never the secret, which only exists at issuance. */
 export interface TokenRow {
   id: number;
   name: string;
@@ -36,15 +36,15 @@ export interface TokenRow {
   createdAt: string;
 }
 
-/** Token de service : son compte porteur donne le rôle effectif, son projet la portée. */
+/** Service token: its owning account gives the effective role, its project the scope. */
 export type ServiceTokenRow = TokenRow & {
   user: { id: number; email: string; role: string };
   project: { id: number; name: string } | null;
 };
 
 /**
- * Catalogue de scopes. `staleTime: Infinity` : il ne change qu'avec la version du serveur,
- * le recharger à chaque ouverture de formulaire n'apprendrait rien.
+ * Scope catalogue. `staleTime: Infinity`: it only changes with the server version, so
+ * reloading it every time a form opens would teach nothing.
  */
 export function useScopeCatalog() {
   return useQuery({

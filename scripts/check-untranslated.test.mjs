@@ -7,7 +7,7 @@ import { join } from 'node:path';
 import { afterAll, describe, expect, it } from 'vitest';
 import { isAllowed, isIdentifierLike, isUtilityClasses, scan } from './check-untranslated.mjs';
 
-/** Fichier .tsx jetable : `scan` lit sur disque, pas en mémoire. */
+/** Throwaway .tsx file: `scan` reads from disk, not from memory. */
 const dir = mkdtempSync(join(tmpdir(), 'review-untranslated-'));
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
@@ -18,135 +18,135 @@ const scanSource = (source, name = 'Sample.tsx') => {
 };
 
 describe('isAllowed', () => {
-  it('laisse passer les sigles et unités du vocabulaire admis', () => {
+  it('lets through the acronyms and units of the admitted vocabulary', () => {
     expect(isAllowed('API')).toBe(true);
     expect(isAllowed('1920 px')).toBe(true);
     expect(isAllowed('dailies')).toBe(true);
   });
 
-  it('refuse de la prose ordinaire', () => {
+  it('refuses ordinary prose', () => {
     expect(isAllowed('Supprimer le projet')).toBe(false);
     expect(isAllowed('Delete project')).toBe(false);
   });
 
-  it('laisse passer un texte sans aucune lettre', () => {
+  it('lets through a text with no letters at all', () => {
     expect(isAllowed('— 12 : 34 %')).toBe(true);
   });
 });
 
 describe('isUtilityClasses', () => {
-  it('reconnaît une pile de classes Tailwind', () => {
+  it('recognises a stack of Tailwind classes', () => {
     expect(isUtilityClasses('flex items-center gap-2')).toBe(true);
   });
 
-  it('ne prend pas une phrase pour des classes', () => {
+  it('does not take a sentence for classes', () => {
     expect(isUtilityClasses('Ajouter un plan')).toBe(false);
   });
 
-  it('exige au moins un mot composé — deux mots nus ne sont pas des classes', () => {
+  it('requires at least one compound word — two bare words are not classes', () => {
     expect(isUtilityClasses('flex block')).toBe(false);
   });
 });
 
 describe('isIdentifierLike', () => {
-  it('écarte les identifiants, chemins et clés', () => {
+  it('sets aside identifiers, paths and keys', () => {
     for (const text of ['task-status', 'camelCase', 'SCREAMING_SNAKE', '/api/projects', 'review:tree:']) {
       expect(isIdentifierLike(text), text).toBe(true);
     }
   });
 
-  it('ne prend pas de la prose pour un identifiant', () => {
+  it('does not take prose for an identifier', () => {
     expect(isIdentifierLike('Ajouter un plan')).toBe(false);
   });
 });
 
 describe('scan', () => {
-  it('relève le texte JSX écrit en dur', () => {
+  it('reports hard-coded JSX text', () => {
     expect(scanSource('export const A = () => <p>Ajouter un plan</p>;')).toContain('Ajouter un plan');
   });
 
-  it('relève une prop visible écrite en dur', () => {
+  it('reports a hard-coded visible prop', () => {
     expect(scanSource('export const A = () => <input placeholder="Nom du projet" />;')).toContain(
       'Nom du projet',
     );
   });
 
-  it('relève une phrase assemblée autour d’une interpolation', () => {
+  it('reports a sentence assembled around an interpolation', () => {
     const found = scanSource('export const A = (n: number) => <p>{`${n} fichiers supprimés`}</p>;');
     expect(found.join(' ')).toMatch(/fichiers supprim/);
   });
 
-  it('laisse passer le texte traduit par t()', () => {
+  it('lets through text translated by t()', () => {
     expect(scanSource('export const A = ({ t }) => <p>{t("shots.add")}</p>;')).toEqual([]);
   });
 
-  it('laisse passer un littéral technique placé dans <code>', () => {
+  it('lets through a technical literal placed in <code>', () => {
     expect(scanSource('export const A = () => <code>docker compose up -d</code>;')).toEqual([]);
   });
 
-  it('laisse passer une classe CSS et une URL', () => {
+  it('lets through a CSS class and a URL', () => {
     expect(
       scanSource('export const A = () => <a className="flex items-center" href="/api/docs" />;'),
     ).toEqual([]);
   });
 
   /**
-   * Angle mort fermé en Phase 50 : l'aide des raccourcis passait ses noms de touches en LISTE
-   * (`keys={['Espace', 'Maj']}`), et le contrôle s'arrêtait au crochet ouvrant. Les treize
-   * autres langues affichaient « Espace » et « Maj ».
+   * Blind spot closed in Phase 50: the shortcut help passed its key names as a LIST
+   * (`keys={['Espace', 'Maj']}`), and the check stopped at the opening bracket. The thirteen
+   * other languages displayed "Espace" and "Maj".
    */
-  it('relève un nom de touche en dur passé dans une liste', () => {
+  it('reports a hard-coded key name passed in a list', () => {
     const found = scanSource('export const A = () => <Keys keys={["Espace", "Maj"]} />;');
     expect(found).toContain('Espace');
     expect(found).toContain('Maj');
   });
 
-  it('laisse passer les noms de touches qu’aucune langue ne rend autrement', () => {
-    // Chaque élément est jugé seul : collés bout à bout, « Ctrl K » passerait pour une phrase.
+  it('lets through key names that no language renders otherwise', () => {
+    // Each element is judged on its own: glued end to end, "Ctrl K" would pass for a sentence.
     expect(scanSource('export const A = () => <Keys keys={["Ctrl", "K"]} />;')).toEqual([]);
   });
 });
 
 /**
- * Les trois angles morts fermés après l'audit du 2026-08-21 : le contrôle passait au vert
- * pendant que huit chaînes françaises atteignaient l'écran.
+ * The three blind spots closed after the audit of 2026-08-21: the check passed green
+ * while eight French strings reached the screen.
  */
-describe('scan — texte rendu par une fonction', () => {
-  it('relève un littéral renvoyé par une fonction annoncée `: string`', () => {
+describe('scan — text returned by a function', () => {
+  it('reports a literal returned by a function declared `: string`', () => {
     const src = `export function statut(u: { s: string }): string {
       switch (u.s) { case 'pending': return 'En attente…'; default: return 'Traitement…'; }
     }`;
     expect(scanSource(src, 'Fn.ts')).toEqual(['En attente…', 'Traitement…']);
   });
 
-  it('relève un littéral renvoyé par une fonction au nom parlant', () => {
+  it('reports a literal returned by a function with a speaking name', () => {
     expect(
       scanSource('export const statusLabel = (s: string) => (s ? "Terminé" : "En cours");', 'B.ts'),
     ).toEqual(['Terminé', 'En cours']);
   });
 
-  it('laisse passer une fonction technique, même annoncée `: string`', () => {
+  it('lets through a technical function, even when declared `: string`', () => {
     expect(
       scanSource('export function bucket(id: number): string { return `derived/${id}`; }', 'C.ts'),
     ).toEqual([]);
   });
 
-  it('laisse passer un type MIME et une valeur CSS renvoyés par une fonction', () => {
+  it('lets through a MIME type and a CSS value returned by a function', () => {
     const src = `export const fallbackType = (m?: string): string => m ?? 'application/octet-stream';
       export function clip(): string { return 'polygon(0 0, 0 0, 0 0)'; }`;
     expect(scanSource(src, 'D.ts')).toEqual([]);
   });
 });
 
-describe('scan — table de libellés et t() hors fonction', () => {
-  it('relève le texte d’une table de libellés dont la clé est un identifiant métier', () => {
+describe('scan — label table and t() outside a function', () => {
+  it('reports the text of a label table whose key is a business identifier', () => {
     const src = `export const VERSION_STATUS_LABEL: Record<string, string> = {
       DRAFT: 'Brouillon', REVIEW: 'En review',
     };`;
     expect(scanSource(src, 'E.ts')).toEqual(['Brouillon', 'En review']);
   });
 
-  it('relève un t() appelé hors de toute fonction — la langue y est figée à l’import', () => {
+  it('reports a t() called outside any function — the language is frozen there at import', () => {
     const src = `import { t } from '../i18n';
       export const LABELS = { DRAFT: t('reviews.draft') };`;
     expect(scanSource(src, 'F.ts')).toEqual(["t('reviews.draft') hors fonction — langue figée à l'import"]);
@@ -163,7 +163,7 @@ describe('scan — table de libellés et t() hors fonction', () => {
 describe('scan — concaténation', () => {
   it('relève une phrase assemblée par +', () => {
     const found = scanSource('export const A = ({ n }: { n: number }) => <p>{"Reste " + n + " objets"}</p>;');
-    // L'ordre suit le parcours de l'arbre (`('Reste ' + n) + ' objets'`), pas la phrase.
+    // The order follows the walk of the tree (`('Reste ' + n) + ' objets'`), not the sentence.
     expect([...found].sort()).toEqual(['Reste', 'objets']);
   });
 });

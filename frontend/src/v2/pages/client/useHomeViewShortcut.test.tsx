@@ -7,7 +7,7 @@ import { useHomeViewShortcut } from './useHomeViewShortcut';
 
 afterEach(cleanup);
 
-/** Frappe une touche sur une cible donnée (par défaut le document). */
+/** Presses a key on a given target (the document by default). */
 function press(key: string, target: EventTarget = document, init: KeyboardEventInit = {}) {
   const event = new KeyboardEvent('keydown', { key, bubbles: true, cancelable: true, ...init });
   target.dispatchEvent(event);
@@ -15,25 +15,25 @@ function press(key: string, target: EventTarget = document, init: KeyboardEventI
 }
 
 /**
- * `H` est la seule commande d'un invité sur un viewer spatial : il faut qu'elle marche sans
- * bouton, et qu'elle ne se déclenche pas pendant qu'il tape « chaise » dans son commentaire.
+ * `H` is the only command a guest has on a spatial viewer: it must work without a button, and
+ * it must not fire while they type "chair" in their comment.
  */
 describe('useHomeViewShortcut', () => {
-  it('ramène à la vue d’origine', () => {
+  it('returns to the original view', () => {
     const home = vi.fn();
     renderHook(() => useHomeViewShortcut(home, true));
     press('h');
     expect(home).toHaveBeenCalledTimes(1);
   });
 
-  it('reste inerte tant que la scène n’est pas prête', () => {
+  it('stays inert until the scene is ready', () => {
     const home = vi.fn();
     renderHook(() => useHomeViewShortcut(home, false));
     press('H');
     expect(home).not.toHaveBeenCalled();
   });
 
-  it('ne recadre pas pendant la saisie d’un commentaire', () => {
+  it('does not reframe while a comment is being typed', () => {
     const home = vi.fn();
     renderHook(() => useHomeViewShortcut(home, true));
     const textarea = document.createElement('textarea');
@@ -43,7 +43,7 @@ describe('useHomeViewShortcut', () => {
     textarea.remove();
   });
 
-  it('laisse passer les raccourcis du navigateur (Ctrl+H, Cmd+H)', () => {
+  it('lets browser shortcuts through (Ctrl+H, Cmd+H)', () => {
     const home = vi.fn();
     renderHook(() => useHomeViewShortcut(home, true));
     press('h', document, { ctrlKey: true });
@@ -51,7 +51,7 @@ describe('useHomeViewShortcut', () => {
     expect(home).not.toHaveBeenCalled();
   });
 
-  it('se débranche au démontage — plus rien ne réagit', () => {
+  it('unhooks on unmount, so nothing reacts anymore', () => {
     const home = vi.fn();
     const { unmount } = renderHook(() => useHomeViewShortcut(home, true));
     unmount();

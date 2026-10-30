@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Copy, Eye, Link2, Lock, Mail, Plus, Target, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
@@ -28,9 +28,9 @@ const fmtDate = (iso: string | null) =>
     : null;
 
 /**
- * Onglet Partages (35.C) : liens client durcis — portée, mot de passe, expiration, limite
- * de vues. L'envoi par courriel et la copie passent par le clic droit sur la ligne (règle
- * d'interface : pas de nouveau bouton visible tant qu'un menu contextuel suffit).
+ * Shares tab (35.C): hardened client links, with scope, password, expiry and view limit.
+ * Sending by email and copying go through right-click on the row (interface rule: no new visible
+ * button as long as a context menu is enough).
  */
 export default function SharesTab({ projectId }: { projectId: number }) {
   const t = useT();

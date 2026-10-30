@@ -7,10 +7,10 @@ import { rulerTicks, snapToFrame, timeToX, xToTime, type TimeView } from './view
 export const RULER_HEIGHT = 22;
 
 /**
- * Règle temporelle graduée du séquenceur caméra : timecode `s:ff` aux graduations majeures,
- * frames en ticks mineurs, losanges des clés (tous canaux confondus) et tête de lecture.
- * **Scrub au drag** (capture du pointeur, snap à la frame — Alt pour libérer), molette = zoom
- * comme le graph. Partage la `TimeView` du graph editor : clés et courbes restent alignées.
+ * Graduated time ruler of the camera sequencer: `s:ff` timecode at major ticks, frames as minor
+ * ticks, key diamonds (all channels combined) and the playhead. **Drag to scrub** (pointer
+ * capture, snap to frame — Alt to release), wheel = zoom like the graph. Shares the graph
+ * editor's `TimeView`: keys and curves stay aligned.
  */
 export default function TimeRuler({
   view,
@@ -29,16 +29,16 @@ export default function TimeRuler({
   fps: number;
   keyTimes: readonly number[];
   playheadT: number;
-  /** Fin de lecture (durée réglée) — repère pointillé, comme dans le graph. */
+  /** End of playback (set duration) — dotted marker, as in the graph. */
   guideT?: number;
-  /** Colonnes du dopesheet éditables : drag = retimer, Alt+clic = supprimer. */
+  /** Editable dopesheet columns: drag = retime, Alt+click = delete. */
   editable?: boolean;
   onScrub: (t: number) => void;
   onZoom?: (pivotT: number, factor: number) => void;
   onBeginStroke?: () => void;
-  /** Retime en direct la colonne de clés `fromT` vers `toT` (drag d'un losange). */
+  /** Retimes the key column `fromT` to `toT` live (drag of a diamond). */
   onMoveColumn?: (fromT: number, toT: number) => void;
-  /** Supprime toutes les clés de la colonne `t` (Alt+clic sur un losange). */
+  /** Deletes all keys of the column `t` (Alt+click on a diamond). */
   onRemoveColumn?: (t: number) => void;
 }) {
   const svgRef = useRef<SVGSVGElement>(null);
@@ -141,7 +141,7 @@ export default function TimeRuler({
               ? (e) => {
                   if (e.button !== 0) return;
                   e.stopPropagation();
-                  // Alt+clic = supprimer la colonne ; sinon drag = retimer toutes les clés du temps.
+                  // Alt+click = delete the column; otherwise drag = retime all keys at that time.
                   if (e.altKey) {
                     onRemoveColumn?.(t);
                     return;

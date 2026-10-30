@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, expect, it } from 'vitest';
-import type { WidgetsPref } from '../../../lib/widgetLayout';
-import { OVERVIEW_ROWS } from './overviewSizing';
+import type { WidgetsPref } from '@/v2/lib/widgetLayout';
+import { WIDGET_ROWS } from '@/v2/components/widgets/widgetSizing';
 import {
   ALL_OVERVIEW_IDS,
   BUILTIN_ROLE_LAYOUTS,
@@ -21,17 +21,17 @@ import {
 } from './overviewWidgets';
 
 /**
- * Les règles de la vue d'ensemble composable. Ce qui est vérifié ici n'est pas l'algèbre
- * commune (`lib/widgetLayout`, couverte par `homeWidgets.test`), mais ce que cette page
- * ajoute : le repli sur le défaut du rôle, et le filtre des blocs réservés.
+ * The rules of the composable overview. What is verified here is not the common algebra
+ * (`lib/widgetLayout`, covered by `homeWidgets.test`) but what this page adds: the fallback to the
+ * role default, and the filtering of reserved blocks.
  */
 
-describe('registre', () => {
-  it('déclare une définition par identifiant, dans le même ordre', () => {
+describe('registry', () => {
+  it('declares one definition per identifier, in the same order', () => {
     expect(ALL_OVERVIEW_IDS).toEqual([...OVERVIEW_WIDGETS]);
   });
 
-  it('ne réserve aux gestionnaires que les blocs dont le serveur refuse la lecture', () => {
+  it('reserves for managers only the blocks whose read the server refuses', () => {
     const reserved = ALL_OVERVIEW_IDS.filter((id) => OVERVIEW_WIDGET_DEFS[id].manage);
     expect(reserved).toEqual(['attention', 'retakes']);
   });
@@ -44,48 +44,48 @@ describe('resolveOverviewLayout', () => {
     settings: { activity: { span: 6 }, counts: { span: 4 } },
   };
 
-  it('sert le défaut du rôle à qui n’a rien personnalisé', () => {
+  it('serves the role default to someone who has customized nothing', () => {
     expect(resolveOverviewLayout(undefined, role)).toEqual(role);
     expect(resolveOverviewLayout(null, role)).toEqual(role);
   });
 
-  it('garde l’ordre du rôle quand la personne n’a fait que masquer', () => {
-    // Le repli est par CHAMP : masquer un bloc ne dit rien de l'ordre, et un repli « tout
-    // ou rien » ferait perdre l'ordre décidé par l'administration au premier masquage.
+  it('keeps the role order when the person has only hidden something', () => {
+    // The fallback is per FIELD: hiding a block says nothing about the order, and an "all or
+    // nothing" fallback would lose the order decided by the administration at the first hiding.
     const resolved = resolveOverviewLayout({ hidden: ['activity'] }, role);
     expect(resolved.order).toEqual(['activity', 'counts']);
     expect(resolved.hidden).toEqual(['activity']);
   });
 
-  it('superpose les réglages : ceux du rôle d’abord, ceux de la personne par-dessus', () => {
+  it('overlays the settings: the role ones first, the person ones on top', () => {
     const resolved = resolveOverviewLayout({ settings: { activity: { span: 12 } } }, role);
     expect(resolved.settings).toEqual({ activity: { span: 12 }, counts: { span: 4 } });
   });
 
-  it('sans rôle ni personne, ne rend rien à masquer ni à ordonner', () => {
+  it('without role or person, renders nothing to hide or to order', () => {
     expect(resolveOverviewLayout(undefined, undefined)).toEqual({});
   });
 });
 
 describe('roleLayout', () => {
-  it('préfère le défaut réglé par l’administration', () => {
+  it('prefers the default set by the administration', () => {
     const studio = { ARTIST: { hidden: ['activity'] } };
     expect(roleLayout(studio, 'ARTIST')).toEqual(studio.ARTIST);
   });
 
-  it('retombe sur la disposition livrée avec le produit', () => {
+  it('falls back to the layout shipped with the product', () => {
     expect(roleLayout({}, 'SUPERVISOR')).toEqual(BUILTIN_ROLE_LAYOUTS.SUPERVISOR);
     expect(roleLayout(undefined, 'CLIENT')).toEqual(BUILTIN_ROLE_LAYOUTS.CLIENT);
   });
 
-  it('traite un rôle inconnu comme le plus restreint des rôles internes', () => {
+  it('treats an unknown role as the most restricted of the internal roles', () => {
     expect(roleLayout(undefined, null)).toEqual(BUILTIN_ROLE_LAYOUTS.ARTIST);
   });
 
-  it('donne à chaque rôle une page qui lui parle', () => {
-    // Un artiste entre par son travail, un superviseur par ce qui bloque, un client par
-    // ce qu'il y a à regarder. C'est la promesse du défaut par rôle ; sans elle, la
-    // fonctionnalité se réduit à « chacun refera sa page ».
+  it('gives each role a page that speaks to it', () => {
+    // An artist comes in through their work, a supervisor through what is blocking, a client
+    // through what there is to look at. This is the promise of the per-role default; without it,
+    // the feature reduces to "everyone will redo their page".
     expect(visibleOverviewWidgets(BUILTIN_ROLE_LAYOUTS.ARTIST, false)[0]).toBe('myTasks');
     expect(visibleOverviewWidgets(BUILTIN_ROLE_LAYOUTS.SUPERVISOR, true)[0]).toBe('attention');
     expect(visibleOverviewWidgets(BUILTIN_ROLE_LAYOUTS.CLIENT, false)).toEqual(['latestMedia', 'activity']);
@@ -93,22 +93,22 @@ describe('roleLayout', () => {
 });
 
 describe('visibleOverviewWidgets', () => {
-  it('rend l’ordre de déclaration sans disposition', () => {
+  it('renders the declaration order with no layout', () => {
     expect(visibleOverviewWidgets(undefined, true)).toEqual([...OVERVIEW_WIDGETS]);
   });
 
-  it('écarte les blocs masqués', () => {
+  it('drops the hidden blocks', () => {
     expect(visibleOverviewWidgets({ hidden: ['counts'] }, true)).not.toContain('counts');
   });
 
-  it('écarte les blocs réservés pour qui ne gère pas le projet', () => {
+  it('drops the reserved blocks for whoever does not manage the project', () => {
     const visible = visibleOverviewWidgets(undefined, false);
     expect(visible).not.toContain('attention');
     expect(visible).not.toContain('retakes');
     expect(visible).toContain('activity');
   });
 
-  it('ignore un identifiant inconnu resté en disposition', () => {
+  it('ignores an unknown identifier left in the layout', () => {
     const pref: WidgetsPref = { order: ['fantome', 'counts'], hidden: ['fantome'] };
     expect(visibleOverviewWidgets(pref, true)).toEqual(expect.arrayContaining(['counts']));
     expect(hiddenOverviewWidgets(pref)).toEqual([]);
@@ -116,16 +116,16 @@ describe('visibleOverviewWidgets', () => {
 });
 
 describe('addableOverviewWidgets', () => {
-  it('ne propose jamais d’ajouter un bloc dont le serveur refuserait le contenu', () => {
+  it('never offers to add a block whose content the server would refuse', () => {
     const hiddenAll: WidgetsPref = { hidden: ['attention', 'retakes', 'counts'] };
     expect(addableOverviewWidgets(hiddenAll, false)).toEqual(['counts']);
-    // Le catalogue suit l'ordre où les blocs ont été retirés, pas celui du registre.
+    // The catalogue follows the order in which blocks were removed, not that of the registry.
     expect(addableOverviewWidgets(hiddenAll, true)).toEqual(['attention', 'retakes', 'counts']);
   });
 });
 
 describe('gestes de composition', () => {
-  it('masque puis réaffiche sans perdre l’ordre du rôle', () => {
+  it('hides then shows again without losing the role order', () => {
     const base = resolveOverviewLayout(undefined, BUILTIN_ROLE_LAYOUTS.ARTIST);
     const hidden = toggleOverviewWidget('activity', false, base);
     expect(visibleOverviewWidgets(hidden, false)).not.toContain('activity');
@@ -135,22 +135,22 @@ describe('gestes de composition', () => {
     );
   });
 
-  it('réordonne en conservant les masqués dans l’ordre enregistré', () => {
+  it('reorders while keeping the hidden blocks in their saved order', () => {
     const next = reorderOverviewWidgets('activity', 'counts', { hidden: ['tasks'] });
     expect(next.order?.[0]).toBe('activity');
     expect(next.order).toContain('tasks');
   });
 
-  it('applique les réglages de la disposition, sinon ceux du registre', () => {
+  it('applies the layout settings, otherwise the registry ones', () => {
     expect(overviewWidgetSettings('activity', { settings: { activity: { span: 12 } } }).span).toBe(12);
     expect(overviewWidgetSettings('activity', undefined).span).toBe(OVERVIEW_WIDGET_DEFS.activity.span);
-    // Une largeur que le bloc ne propose pas est refusée, pas appliquée de travers.
+    // A width the block does not offer is refused, not applied wrongly.
     expect(overviewWidgetSettings('counts', { settings: { counts: { span: 3 } } }).span).toBe(
       OVERVIEW_WIDGET_DEFS.counts.span,
     );
   });
 
-  it('enregistre largeur et hauteur d’un seul geste', () => {
+  it('saves width and height in a single gesture', () => {
     const next = setOverviewWidgetSize(
       'activity',
       { span: 12, rows: 6 },
@@ -160,28 +160,28 @@ describe('gestes de composition', () => {
   });
 });
 
-describe('hauteurs', () => {
-  it('donne à chaque bloc une hauteur par défaut', () => {
+describe('heights', () => {
+  it('gives each block a default height', () => {
     for (const id of ALL_OVERVIEW_IDS)
-      expect(OVERVIEW_ROWS).toContain(overviewWidgetSettings(id, undefined).rows);
+      expect(WIDGET_ROWS).toContain(overviewWidgetSettings(id, undefined).rows);
   });
 
-  it('applique la hauteur enregistrée', () => {
+  it('applies the saved height', () => {
     expect(overviewWidgetSettings('activity', { settings: { activity: { rows: 6 } } }).rows).toBe(6);
   });
 
-  it('relit sans casse une disposition enregistrée avant les hauteurs', () => {
-    // Ni hauteur ni rangées : le bloc reprend son défaut, et rien n'est réécrit.
+  it('reads back without breaking a layout saved before the heights', () => {
+    // Neither height nor rows: the block takes its default, and nothing is rewritten.
     expect(overviewWidgetSettings('counts', { settings: { counts: { span: 6 } } }).rows).toBe(
       OVERVIEW_WIDGET_DEFS.counts.rows,
     );
-    // L'ancienne échelle, elle, est traduite — on ne perd pas le bloc haut qu'on s'était réglé.
+    // The old scale, on the other hand, is translated: the tall block one had set is not lost.
     expect(overviewWidgetSettings('activity', { settings: { activity: { height: 'tall' } } }).rows).toBe(5);
   });
 
-  it('porte les hauteurs jusque dans les dispositions livrées par rôle', () => {
-    // Le défaut par rôle du lot 10 doit continuer de fonctionner ET dire une hauteur :
-    // sinon la page d'un artiste rouvrirait sur les cartes courtes qu'on vient de corriger.
+  it('carries the heights into the layouts shipped per role', () => {
+    // The per-role default of batch 10 must keep working AND carry a height: otherwise an artist's
+    // page would reopen on the short cards that have just been corrected.
     const artist = resolveOverviewLayout(undefined, BUILTIN_ROLE_LAYOUTS.ARTIST);
     expect(overviewWidgetSettings('myTasks', artist).rows).toBe(5);
     expect(overviewWidgetSettings('activity', artist).rows).toBe(5);

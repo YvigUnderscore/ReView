@@ -8,16 +8,15 @@ import { toolsFor, type ReviewTool } from '../chrome/tools';
 import type { SplatEditorState } from '../splat/editor/useSplatEditor';
 import type { SplatPaintState } from '../splat/paint/useSplatPaint';
 import type { PoiDraftState } from '../poi/usePoiDraft';
-import { t } from '../../../i18n';
+import { t } from '@/v2/i18n';
 
 /**
- * La demande de l'utilisateur, mot pour mot : « dans le cas où le projet n'utilise pas les
- * brouillons, lors de l'édition des splats, il ne faut pas qu'il y ait le bouton "Save" qui
- * apparaisse en haut à droite du viewer ».
+ * The user's request, word for word: "when the project does not use drafts, while editing splats,
+ * there must not be a "Save" button appearing at the top right of the viewer".
  *
- * Un média naît publié quand le studio n'utilise pas les brouillons : le bouton d'écriture
- * globale ne doit alors jamais paraître — et ce qui le remplace doit dire où va l'édition,
- * sinon on aurait juste retiré une commande.
+ * A media is born published when the studio does not use drafts: the global write button must then
+ * never appear, and what replaces it must say where the edit goes, otherwise we would merely have
+ * removed a command.
  */
 const navTool = (): ReviewTool => toolsFor('explore', 'SPLAT').find((tool) => tool.id === 'nav')!;
 
@@ -48,8 +47,8 @@ const options = (saveForAll: boolean, editor = editorState()) => (
   />
 );
 
-describe('SplatOptions — l’écriture « pour tout le monde » s’arrête à la publication', () => {
-  it('offre « Enregistrer » tant que la version n’est pas publiée', () => {
+describe('SplatOptions — the "for everyone" write stops at publication', () => {
+  it('offers "Save" as long as the version is not published', () => {
     const save = vi.fn();
     render(options(true, editorState({ save })));
     const button = screen.getByRole('button', { name: new RegExp(t('common.save')) });
@@ -58,13 +57,13 @@ describe('SplatOptions — l’écriture « pour tout le monde » s’arrête à
     expect(screen.queryByText(t('review.splat.editAttached'))).not.toBeInTheDocument();
   });
 
-  it('ne l’offre plus une fois publiée : l’édition part dans le commentaire', () => {
+  it('no longer offers it once published: the edit goes into the comment', () => {
     render(options(false));
     expect(screen.queryByRole('button', { name: new RegExp(t('common.save')) })).not.toBeInTheDocument();
     expect(screen.getByText(t('review.splat.editAttached'))).toBeInTheDocument();
   });
 
-  it('garde annuler/rétablir après publication — éditer reste possible, l’écriture globale non', () => {
+  it('keeps undo/redo after publication: editing stays possible, the global write does not', () => {
     const undo = vi.fn();
     const editor = editorState({
       history: { undo, redo: vi.fn(), canUndo: true, canRedo: false },

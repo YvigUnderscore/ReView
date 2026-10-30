@@ -8,13 +8,12 @@ import { applyRoll } from '../../three/cameraRoll';
 import type { SplatViewer } from '../useSplat';
 import { normalizeAnim } from '../../camera/channels/model';
 import type { CameraAnimState } from '../../camera/useCameraAnim';
-import { useT } from '../../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
- * Réglages caméra du viewer splat (10.G-V5) : focale (fov), profondeur de champ Spark
- * (`focalDistance` + `apertureAngle`), mise au point par clic-raycast, et **rejeu de la
- * présentation persistée à l'ouverture** (pose + DoF + animation, pour tous les spectateurs).
- * Les réglages en session sont locaux (non persistés) — seul le gestionnaire enregistre.
+ * Camera settings of the splat viewer (10.G-V5): focal length (fov), Spark depth of field (`focalDistance` +
+ * `apertureAngle`), focusing by click-raycast, and **replay of the persisted presentation on opening** (pose +
+ * DoF + animation, for all viewers). Session settings are local (not persisted): only the manager records.
  */
 export function useCameraRig(
   splat: SplatViewer,
@@ -23,8 +22,8 @@ export function useCameraRig(
 ) {
   const t = useT();
   const { getSceneHandle, restoreCamera, ready } = splat;
-  // États initialisés depuis la présentation persistée (le bloc splat remonte par média) —
-  // le rejeu en effet n'applique qu'à la scène, sans setState (règle set-state-in-effect).
+  // States initialised from the persisted presentation (the splat block comes up per media): the replay only
+  // applies to the scene, without setState (set-state-in-effect rule).
   const [fov, setFovState] = useState(() => presentation?.camera?.fov ?? 60);
   const [aperture, setApertureState] = useState(() => presentation?.dof?.apertureAngle ?? 0);
   const [roll, setRollState] = useState(() => presentation?.camera?.roll ?? 0);
@@ -42,7 +41,7 @@ export function useCameraRig(
     [getSceneHandle],
   );
 
-  /** Ouverture du DoF (radians, 0 = net partout) ; la distance focale suit la cible d'orbite si non réglée. */
+  /** Aperture of the DoF (radians, 0 = sharp everywhere); the focal distance follows the orbit target if unset. */
   const setAperture = useCallback(
     (angle: number) => {
       setApertureState(angle);
@@ -55,7 +54,7 @@ export function useCameraRig(
     [getSceneHandle],
   );
 
-  /** Tilt (roll) de la caméra, en radians — oriente `camera.up` selon la direction de vue (layout). */
+  /** Roll of the camera, in radians: orients `camera.up` according to the view direction (layout). */
   const setRoll = useCallback(
     (value: number) => {
       setRollState(value);
@@ -68,10 +67,10 @@ export function useCameraRig(
     [getSceneHandle],
   );
 
-  /** Distance focale courante du renderer (persistance). */
+  /** Current focal distance of the renderer (persistence). */
   const focalDistance = useCallback(() => getSceneHandle()?.spark.focalDistance ?? 0, [getSceneHandle]);
 
-  // Rejeu de la présentation persistée à l'ouverture (une fois le viewer prêt) — pour tous.
+  // Replay of the persisted presentation on opening (once the viewer is ready): for everyone.
   const { setAnim, play } = anim;
   useEffect(() => {
     if (!ready || appliedRef.current) return;
@@ -89,7 +88,7 @@ export function useCameraRig(
     }
   }, [ready, presentation, getSceneHandle, restoreCamera, setAnim, play]);
 
-  // Mise au point au clic : le prochain clic gauche sur le canvas règle la distance focale.
+  // Focus by click: the next left click on the canvas sets the focal distance.
   useEffect(() => {
     if (!focusPick) return;
     const h = getSceneHandle();

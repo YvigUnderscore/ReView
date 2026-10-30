@@ -2,21 +2,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Neutralisation du type MIME déclaré à l'upload.
+ * Neutralization of the MIME type declared at upload.
  *
- * Les fichiers sont servis depuis le même domaine que l'application (le reverse-proxy
- * expose MinIO sous `/<bucket>/…`, cf. `nginx/nginx.conf`) : un objet rendu par le
- * navigateur en `text/html` ou `image/svg+xml` exécuterait donc du script **sur l'origine
- * de l'app**, avec accès au jeton de session. Comme le `Content-Type` est choisi par le
- * client au moment de la signature de l'URL, il ne peut pas être considéré comme fiable.
+ * Files are served from the same domain as the application (the reverse proxy exposes MinIO
+ * under `/<bucket>/…`, cf. `nginx/nginx.conf`): an object rendered by the browser as `text/html`
+ * or `image/svg+xml` would therefore run script **on the app's origin**, with access to the
+ * session token. Since the `Content-Type` is chosen by the client when the URL is signed, it
+ * cannot be considered trustworthy.
  *
- * Politique : liste blanche des types réellement destinés à être rendus en ligne
- * (images matricielles, vidéo, audio, PDF, texte brut) ; **tout le reste** — y compris les
- * innombrables formats VFX (EXR, USD, ABC, R3D…) qu'aucun navigateur ne rend nativement —
- * est stocké en `application/octet-stream`. Rien n'est refusé : seul le rendu actif l'est.
+ * Policy: an allowlist of the types really meant to be rendered inline (raster images, video,
+ * audio, PDF, plain text). **Everything else**, including the countless VFX formats (EXR, USD,
+ * ABC, R3D…) that no browser renders natively, is stored as `application/octet-stream`. Nothing
+ * is refused: only active rendering is.
  */
 
-/** Types rendus en ligne par l'UI, sans capacité de script. */
+/** Types rendered inline by the UI, with no script capability. */
 const INLINE_SAFE = new Set([
   'image/png',
   'image/jpeg',
@@ -43,13 +43,13 @@ const INLINE_SAFE = new Set([
   'text/plain',
 ]);
 
-/** Repli pour tout type non listé : téléchargé, jamais interprété. */
+/** Fallback for any unlisted type: downloaded, never interpreted. */
 export const OPAQUE_CONTENT_TYPE = 'application/octet-stream';
 
 /**
- * Ramène un `Content-Type` déclaré par le client à une valeur sûre.
- * Les paramètres (`; charset=…`) sont retirés : ils servent à masquer un type actif
- * derrière un préfixe anodin et n'apportent rien au stockage.
+ * Reduces a `Content-Type` declared by the client to a safe value.
+ * Parameters (`; charset=…`) are stripped: they serve to hide an active type behind a harmless
+ * prefix and add nothing to storage.
  */
 export function safeUploadContentType(declared: string | null | undefined): string {
   if (!declared) return OPAQUE_CONTENT_TYPE;
@@ -58,12 +58,12 @@ export function safeUploadContentType(declared: string | null | undefined): stri
 }
 
 /**
- * Type d'image déduit de l'EXTENSION de la clé de stockage.
+ * Image type deduced from the EXTENSION of the storage key.
  *
- * Sert à imposer le `Content-Type` de la réponse pour les objets déposés par PUT présigné
- * (logo studio, avatars) : la signature ne contraint pas l'en-tête envoyé au dépôt, le type
- * stocké n'est donc pas fiable. La clé, elle, est construite par le serveur à partir d'un
- * type déjà validé — c'est la seule source sûre.
+ * Used to force the response's `Content-Type` for objects uploaded via presigned PUT (studio
+ * logo, avatars): the signature does not constrain the header sent at upload, so the stored type
+ * is not reliable. The key, however, is built by the server from an already validated type:
+ * that is the only safe source.
  */
 export function imageTypeFromKey(key: string): string {
   const ext = key.slice(key.lastIndexOf('.')).toLowerCase();
@@ -74,7 +74,7 @@ export function imageTypeFromKey(key: string): string {
   return OPAQUE_CONTENT_TYPE;
 }
 
-/** Vrai si le type serait interprété activement par le navigateur (HTML, SVG, XML…). */
+/** True if the type would be actively interpreted by the browser (HTML, SVG, XML…). */
 export function isActiveContentType(declared: string | null | undefined): boolean {
   if (!declared) return false;
   const base = declared.split(';')[0]!.trim().toLowerCase();

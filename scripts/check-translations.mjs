@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Vérifie les catalogues de traduction de ReView.
+ * Checks the ReView translation catalogues.
  *
- * Une traduction partielle est légitime — les clés manquantes retombent sur l'anglais —
- * mais une traduction *incohérente* casse l'écran : placeholder disparu, forme plurielle
- * absente, terme métier traduit, clé qui ne correspond plus à rien. Ce script attrape
- * ces cas-là et laisse passer l'incomplétude, qu'il se contente de chiffrer.
+ * A partial translation is legitimate — missing keys fall back to English — but an *inconsistent*
+ * translation breaks the screen: placeholder gone, plural form missing, business term translated, key
+ * that no longer matches anything. This script catches those cases and lets incompleteness through,
+ * merely counting it.
  *
- * Usage : node scripts/check-translations.mjs [--json]
+ * Usage: node scripts/check-translations.mjs [--json]
  */
 
 import { readFile, readdir } from 'node:fs/promises';
@@ -19,7 +19,7 @@ import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 
-/** Jeux de catalogues du dépôt : même registre de langues, clés indépendantes. */
+/** The repository's catalogue sets: same language registry, independent keys. */
 export const CATALOG_SETS = [
   { name: 'frontend', dir: 'frontend/src/v2/i18n' },
   { name: 'backend', dir: 'backend/src/i18n' },
@@ -27,33 +27,33 @@ export const CATALOG_SETS = [
 
 export const CLDR_CATEGORIES = ['zero', 'one', 'two', 'few', 'many', 'other'];
 
-/** Noms des variables interpolées dans un message (`{name}`). */
+/** Names of the variables interpolated in a message (`{name}`). */
 export function placeholders(text) {
   return new Set(Array.from(text.matchAll(/\{(\w+)\}/g), (m) => m[1]));
 }
 
-/** Ramène un message (chaîne simple ou formes plurielles) à une table de formes. */
+/** Reduces a message (plain string or plural forms) to a table of forms. */
 export function normalizeMessage(value) {
   return typeof value === 'string' ? { other: value } : { ...value };
 }
 
 /**
- * Première étiquette candidate réellement connue d'`Intl` — miroir exact de la
- * résolution du runtime front. Sans ce filtre, `new Intl.PluralRules('co')` retombe
- * silencieusement sur la locale par défaut et le script validerait les mauvaises formes.
+ * First candidate tag actually known to `Intl` — an exact mirror of the front-end runtime's
+ * resolution. Without this filter, `new Intl.PluralRules('co')` silently falls back to the default
+ * locale and the script would validate the wrong forms.
  */
 export function resolveIntlTag(candidates, fallback = 'en') {
   for (const tag of candidates) {
     try {
       if (Intl.PluralRules.supportedLocalesOf([tag]).length > 0) return tag;
     } catch {
-      /* étiquette mal formée : candidate suivante */
+      /* malformed tag: next candidate */
     }
   }
   return fallback;
 }
 
-/** Catégories de pluriel que la langue distingue réellement (repli : `other` seul). */
+/** Plural categories the language actually distinguishes (fallback: `other` only). */
 export function supportedCategories(tag) {
   try {
     return new Intl.PluralRules(tag).resolvedOptions().pluralCategories;
@@ -63,8 +63,8 @@ export function supportedCategories(tag) {
 }
 
 /**
- * Termes du glossaire présents dans un message. La correspondance porte sur un début
- * de mot : « boards » compte pour « board », « ReViewera » pour « ReView ».
+ * Glossary terms present in a message. The match is on the start of a word: "boards" counts for
+ * "board", "ReViewera" for "ReView".
  */
 export function glossaryHits(text, terms) {
   return terms.filter((term) =>
@@ -72,15 +72,15 @@ export function glossaryHits(text, terms) {
   );
 }
 
-/** Compare deux registres de langues, en ignorant les clés de commentaire. */
+/** Compares two language registries, ignoring the comment keys. */
 export function sameRegistry(a, b) {
   const strip = (o) => JSON.stringify(o, (k, v) => (k === '$comment' ? undefined : v));
   return strip(a) === strip(b);
 }
 
 /**
- * Confronte un catalogue traduit au catalogue de référence.
- * Renvoie les erreurs bloquantes, les remarques non bloquantes et le nombre de clés traduites.
+ * Compares a translated catalogue with the reference catalogue.
+ * Returns the blocking errors, the non-blocking remarks and the number of translated keys.
  */
 export function checkCatalog({ base, target, locale, categories, terms }) {
   const errors = [];
@@ -97,7 +97,7 @@ export function checkCatalog({ base, target, locale, categories, terms }) {
   for (const [key, baseValue] of Object.entries(base)) {
     if (key.startsWith('$')) continue;
     const targetValue = target[key];
-    if (targetValue === undefined) continue; // repli anglais : légitime
+    if (targetValue === undefined) continue; // English fallback: legitimate
     translated += 1;
 
     const baseForms = normalizeMessage(baseValue);
@@ -145,8 +145,8 @@ export function checkCatalog({ base, target, locale, categories, terms }) {
       }
     }
 
-    // Seuls les messages comptés ont des formes plurielles à couvrir : une phrase
-    // ordinaire n'a que « other », ce n'est pas une lacune.
+    // Only counted messages have plural forms to cover: an ordinary sentence only
+    // has "other", which is not a gap.
     if (typeof baseValue === 'object') {
       for (const category of categories) {
         if (category !== 'other' && targetForms[category] === undefined) {
@@ -159,7 +159,7 @@ export function checkCatalog({ base, target, locale, categories, terms }) {
   return { errors, warnings, translated };
 }
 
-/** Codes déclarés dans l'union TypeScript `Locale` de locales.ts. */
+/** Codes declared in the TypeScript `Locale` union of locales.ts. */
 export function localeUnionCodes(source) {
   const block = source.match(/export type Locale =([\s\S]*?);/);
   if (!block) return null;
@@ -169,15 +169,15 @@ export function localeUnionCodes(source) {
 const readJson = async (file) => JSON.parse(await readFile(file, 'utf8'));
 
 /**
- * Clés déclarées deux fois dans le même catalogue.
+ * Keys declared twice in the same catalogue.
  *
- * `JSON.parse` ne peut pas les voir : la dernière occurrence écrase silencieusement la
- * première. Treize clés étaient dans ce cas, et huit d'entre elles remplaçaient un libellé
- * par sa propre description — l'écran affichait « (marqueurs posés aux coupes…) » là où il
- * devait lire « Détection de plans ». Seule une lecture ligne à ligne les débusque.
+ * `JSON.parse` cannot see them: the last occurrence silently overwrites the first. Thirteen keys were in
+ * this situation, and eight of them replaced a label with its own description — the screen displayed
+ * "(markers set at cuts…)" where it should have read "Shot detection". Only a line-by-line reading
+ * uncovers them.
  *
- * Ne regarde que les clés de premier niveau (deux espaces d'indentation) : les formes
- * plurielles imbriquées (`one`, `other`…) se répètent légitimement d'une clé à l'autre.
+ * Only looks at top-level keys (two spaces of indentation): nested plural forms (`one`, `other`…) repeat
+ * legitimately from one key to the next.
  */
 export function duplicateKeys(source) {
   const seen = new Set();
@@ -297,7 +297,7 @@ async function main() {
   console.log('✓ catalogues de traduction cohérents');
 }
 
-// Exécuté directement (et non importé par un test) → on lance.
+// Run directly (and not imported by a test) → launch it.
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   await main();
 }

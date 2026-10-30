@@ -1,14 +1,14 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { UsdBakedVariant } from '../../../types/usd';
+import type { UsdBakedVariant } from '@/v2/types/usd';
 
 /**
- * Disponibilité d'une option de variante en review (46.P).
+ * Availability of a variant option in review (46.P).
  *
- * La bascule instantanée repose sur la **cuisson** : seule une option présente dans le GLB
- * peut être montrée sans reconversion. Le menu grise les autres au lieu de proposer un choix
- * sans effet — c'était le symptôme « les variantes de texture ne fonctionnent pas ».
+ * Instant switching relies on **baking**: only an option present in the GLB can be shown without
+ * reconversion. The menu greys out the others instead of offering a choice with no effect — that
+ * was the symptom "texture variants don't work".
  */
 export function variantOptionAvailable(
   baked: readonly UsdBakedVariant[] | null | undefined,
@@ -17,10 +17,10 @@ export function variantOptionAvailable(
   option: string,
   selected: string,
 ): boolean {
-  // L'option composée à la conversion est déjà la scène de base : toujours montrable.
+  // The option composed at conversion is already the base scene: always displayable.
   if (option === selected) return true;
-  // Média converti avant que la liste des options cuites soit exposée : on ne sait pas —
-  // ne pas bloquer (les fixtures d'avant 46.P fonctionnent sans cette information).
+  // Media converted before the list of baked options was exposed: we don't know —
+  // do not block (fixtures from before 46.P work without this information).
   if (!baked) return true;
   return baked.some((b) => b.prim === prim && b.set === set && b.option === option);
 }

@@ -5,17 +5,16 @@ import type { ChatSystemPhrase } from '../types/chat';
 import type { MessageKey, TParams } from '../i18n';
 
 /**
- * Phrase d'un message de la messagerie, dans la langue du lecteur.
+ * Sentence of a chat message, in the reader's language.
  *
- * Un message écrit n'a rien à traduire : il rend son corps, tel qu'il a été tapé. Un
- * message de service (arrivée, départ, renommage), lui, était écrit **en français en
- * base** au moment de l'événement, puis servi tel quel à tout le monde — un studio
- * japonais lisait « a rejoint la conversation », et rien ne pouvait plus le retraduire.
- * Le serveur enregistre désormais une clé et ses variables ; `body` reste renvoyé, en
- * anglais, et sert de repli aux messages antérieurs à ce changement.
+ * A written message has nothing to translate: it returns its body as typed. A system message
+ * (arrival, departure, rename), on the other hand, was written **in French in the database** at the
+ * time of the event, then served as-is to everyone — a Japanese studio read the French
+ * "a rejoint la conversation" ("joined the conversation"), and nothing could translate it any
+ * more. The server now stores a key and its variables; `body` is still returned, in English, and
+ * serves as the fallback for messages predating this change.
  *
- * Même contrat que `notificationText` — les deux surfaces ont la même dette et le même
- * repli.
+ * Same contract as `notificationText` — both surfaces have the same debt and the same fallback.
  */
 export function chatSystemText(
   t: (key: MessageKey, params?: TParams) => string,

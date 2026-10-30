@@ -31,45 +31,45 @@ const usd = (over: Partial<UsdModelInfo> = {}): UsdModelInfo => ({
 });
 
 describe('unitLabel', () => {
-  it('nomme les échelles USD courantes', () => {
+  it('names the common USD scales', () => {
     expect(unitLabel(1)).toBe('metre');
     expect(unitLabel(0.01)).toBe('centimetre');
     expect(unitLabel(0.001)).toBe('millimetre');
   });
-  it('affiche la valeur brute pour une échelle inhabituelle', () => {
+  it('shows the raw value for an unusual scale', () => {
     expect(unitLabel(0.3048)).toBe('0.3048 m');
   });
 });
 
 describe('purposeLabel', () => {
-  it('nomme les trois purposes du format', () => {
+  it('names the three purposes of the format', () => {
     expect(purposeLabel('render')).toBe('Render');
     expect(purposeLabel('proxy')).toBe('Proxy');
     expect(purposeLabel('guide')).toBe('Guide');
   });
-  it('laisse passer un purpose inconnu tel quel', () => {
+  it('lets an unknown purpose through as is', () => {
     expect(purposeLabel('default')).toBe('default');
   });
 });
 
 describe('variantValue', () => {
-  it('la sélection appliquée prime sur la valeur de la scène', () => {
+  it('the applied selection takes precedence over the scene value', () => {
     expect(variantValue({ '/W/A': { look: 'dirty' } }, '/W/A', 'look', 'clean')).toBe('dirty');
   });
-  it('retombe sur la valeur de la scène quand rien n’est sélectionné', () => {
+  it('falls back to the scene value when nothing is selected', () => {
     expect(variantValue({}, '/W/A', 'look', 'clean')).toBe('clean');
     expect(variantValue({ '/W/A': { autre: 'x' } }, '/W/A', 'look', 'clean')).toBe('clean');
   });
 });
 
 describe('initialSelection', () => {
-  it('pré-remplit chaque jeu de variantes avec sa valeur affichée', () => {
+  it('pre-fills each variant set with its displayed value', () => {
     expect(initialSelection(usd())).toEqual({
       '/World/Asset': { modelingVariant: 'hero', lookVariant: 'clean' },
     });
   });
 
-  it('reprend la sélection déjà appliquée', () => {
+  it('takes over the selection already applied', () => {
     const info = usd({
       selection: { variants: { '/World/Asset': { lookVariant: 'dirty' } }, purpose: 'proxy' },
     });
@@ -79,7 +79,7 @@ describe('initialSelection', () => {
     });
   });
 
-  it('renvoie un objet vide sans variantes', () => {
+  it('returns an empty object without variants', () => {
     expect(initialSelection(usd({ variantSets: [] }))).toEqual({});
   });
 });

@@ -10,7 +10,7 @@ const off = { available: false, enabled: false, onToggle: () => {} };
 const openOn = (label: string) => fireEvent.contextMenu(screen.getByTestId(label));
 
 describe('TimelineOptionsMenu', () => {
-  it('rien à proposer : la barre est rendue nue, le clic droit remonte au viewer', () => {
+  it('nothing to offer: the bar is rendered bare, right-click bubbles up to the viewer', () => {
     render(
       <TimelineOptionsMenu canAddMarker={false} onAddMarker={() => {}} waveform={off} autoAdvance={off}>
         <div data-testid="bar" />
@@ -20,7 +20,7 @@ describe('TimelineOptionsMenu', () => {
     expect(screen.queryByRole('menu')).toBeNull();
   });
 
-  it('propose le marqueur, la forme d’onde et l’enchaînement quand ils existent', () => {
+  it('offers the marker, the waveform and the chaining when they exist', () => {
     render(
       <TimelineOptionsMenu
         canAddMarker
@@ -39,7 +39,7 @@ describe('TimelineOptionsMenu', () => {
     expect(toggles[1]).toHaveAttribute('aria-checked', 'false');
   });
 
-  it('cocher une bascule la rapporte', () => {
+  it('checking a toggle reports it', () => {
     const onToggle = vi.fn();
     render(
       <TimelineOptionsMenu

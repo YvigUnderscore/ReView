@@ -3,27 +3,21 @@
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
-import { Search } from 'lucide-react';
-import { api } from '../../../lib/apiClient';
-import { qk } from '../../lib/query';
 import { Badge } from '../../components/ui/badge';
-import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { QueryState } from '../../components/ui/query-state';
 import { fmtBytes } from './adminShared';
 import { filterProjects, PROJECT_STATUSES, projectStatusLabels, quotaPct } from './adminProjects';
-import type { AdminProjectRow, ProjectStatus } from '../../types/api';
+import type { ProjectStatus } from '../../types/api';
 import { useT } from '../../i18n';
+import { SearchInput } from '@/v2/components/ui/search-input';
+import { useAdminProjectsQuery } from '@/v2/lib/queries';
 
-/** Liste d'administration des projets : compteurs pipeline, stockage/quota, fiches. */
+/** Admin list of projects: pipeline counters, storage/quota, sheets. */
 export default function ProjectsAdminTab() {
   const t = useT();
-  const projectsQ = useQuery({
-    queryKey: qk.adminProjects,
-    queryFn: () => api.get<{ projects: AdminProjectRow[] }>('/api/admin/projects'),
-  });
+  const projectsQ = useAdminProjectsQuery();
   const data = projectsQ.data;
   const [q, setQ] = useState('');
   const [status, setStatus] = useState<ProjectStatus | 'ALL'>('ALL');
@@ -33,16 +27,12 @@ export default function ProjectsAdminTab() {
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div className="relative min-w-44 flex-1">
-          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder={t('project.searchPlaceholder')}
-            aria-label={t('project.searchPlaceholder')}
-            className="pl-8"
-          />
-        </div>
+        <SearchInput
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={t('project.searchPlaceholder')}
+          wrapperClassName="min-w-44 flex-1"
+        />
         <Select value={status} onChange={(e) => setStatus(e.target.value as ProjectStatus | 'ALL')}>
           <option value="ALL">{t('projectsAdmin.allStatuses')}</option>
           {PROJECT_STATUSES.map((s) => (

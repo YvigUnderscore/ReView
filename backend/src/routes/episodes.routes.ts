@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole, assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { notFound } from '../lib/errors';
@@ -19,14 +19,14 @@ import * as PipelineStatusService from '../services/PipelineStatusService';
 import { assertEpisodeCreationAllowed } from '../services/shotgrid/ShotgridEpisodes';
 
 /**
- * Le niveau Épisode (série) — routes.
+ * The Episode level (series): routes.
  *
- * Deux familles : l'interrupteur du projet (`/settings`), lisible et modifiable même
- * quand le niveau est éteint, et les épisodes eux-mêmes, qui répondent 409 tant qu'il
- * l'est. Le service porte la règle ; la route se contente de valider et d'autoriser.
+ * Two families: the project's switch (`/settings`), readable and editable even when the level is off,
+ * and the episodes themselves, which answer 409 for as long as it is off. The service carries the rule;
+ * the route only validates and authorizes.
  *
- * `/settings` est déclaré AVANT `/:id` : Express 5 essaie les routes dans l'ordre, et
- * `/:id` capturerait « settings » avant de le refuser en validation.
+ * `/settings` is declared BEFORE `/:id`: Express 5 tries routes in order, and `/:id` would capture
+ * "settings" before refusing it at validation.
  */
 const router = Router();
 router.use(authenticate);
@@ -40,7 +40,7 @@ const episodeBody = z.object({
   order: z.number().int().optional(),
 });
 
-/** Projet propriétaire de l'épisode, accès vérifié. Lève 404 si l'épisode n'existe pas. */
+/** Project owning the episode, access verified. Throws 404 if the episode does not exist. */
 async function projectOf(req: Parameters<typeof assertProjectAccess>[0], id: number): Promise<number> {
   const projectId = await resolveProjectIdForEpisode(id);
   if (!projectId) throw notFound('Episode not found');
@@ -48,17 +48,17 @@ async function projectOf(req: Parameters<typeof assertProjectAccess>[0], id: num
   return projectId;
 }
 
-// ── L'interrupteur ────────────────────────────────────────────────────────────
-// GET reste ouvert à tout membre : c'est lui qui dit aux écrans s'ils doivent montrer
-// le niveau, et un artiste doit voir la même hiérarchie que son superviseur.
+// ── The switch ────────────────────────────────────────────────────────────
+// GET stays open to any member: it is what tells the screens whether they must show the level, and an
+// artist must see the same hierarchy as their supervisor.
 router.get('/settings', validate({ query: projectQuery }), async (req, res) => {
   const projectId = Number(req.query.projectId);
   await assertProjectAccess(req, projectId);
   res.json({ settings: await EpisodeService.readSettings(projectId) });
 });
 
-// Désactiver ne détruit rien (cf. EpisodeService) : les épisodes et leurs rattachements
-// survivent et réapparaissent intacts à la réactivation.
+// Disabling destroys nothing (cf. EpisodeService): the episodes and their attachments survive and
+// reappear intact on reactivation.
 router.put(
   '/settings',
   manage,
@@ -69,7 +69,7 @@ router.put(
     await assertProjectWritable(projectId);
     const settings = await EpisodeService.setEnabled(projectId, enabled);
     logAudit({
-      userId: req.user!.id,
+      userId: requireUser(req).id,
       action: enabled ? 'EPISODES_ENABLE' : 'EPISODES_DISABLE',
       entityType: 'Project',
       entityId: projectId,
@@ -78,7 +78,7 @@ router.put(
   },
 );
 
-// ── Les épisodes ──────────────────────────────────────────────────────────────
+// ── The episodes ──────────────────────────────────────────────────────────────
 router.get('/', validate({ query: projectQuery.merge(paginationQuery) }), async (req, res) => {
   const projectId = Number(req.query.projectId);
   await assertProjectAccess(req, projectId);
@@ -94,7 +94,7 @@ router.post(
     const { projectId, ...input } = req.body as EpisodeService.EpisodeInput & { projectId: number };
     await assertProjectAccess(req, projectId);
     await assertProjectWritable(projectId);
-    await assertEpisodeCreationAllowed(projectId); // ShotGrid mène : on ne crée pas d'orphelin
+    await assertEpisodeCreationAllowed(projectId); // ShotGrid leads: we do not create orphans
     res.status(201).json({ episode: await EpisodeService.create(projectId, input) });
   },
 );
@@ -126,7 +126,7 @@ router.post('/reorder', manage, validate({ body: reorderBody }), async (req, res
   res.status(204).end();
 });
 
-/** Rattache des séquences à un épisode — `episodeId: null` les en détache. */
+/** Attaches sequences to an episode: `episodeId: null` detaches them. */
 const assignBody = z.object({
   projectId: z.number().int(),
   episodeId: z.number().int().nullable(),
@@ -161,8 +161,8 @@ router.patch(
     const projectId = await projectOf(req, id);
     await assertProjectWritable(projectId);
     const body = req.body as EpisodeService.UpdateEpisodeInput;
-    // Même garde que pour une séquence : le statut doit venir du vocabulaire de CE
-    // projet. L'épisode partage le périmètre « sequence » (cf. schema.prisma).
+    // Same guard as for a sequence: the status must come from the vocabulary of THIS project.
+    // The episode shares the "sequence" scope (cf. schema.prisma).
     if (body.pipelineStatusId !== undefined) {
       await PipelineStatusService.assertBelongsToProject(projectId, 'sequence', body.pipelineStatusId);
     }
@@ -170,9 +170,9 @@ router.patch(
   },
 );
 
-// ── Corbeille ─────────────────────────────────────────────────────────────────
-// Montage partagé, comme séquences/plans/assets : la corbeille du projet et la
-// sélection multiple y accèdent par les mêmes chemins.
+// ── Trash ─────────────────────────────────────────────────────────────────
+// Shared mounting, like sequences, shots and assets: the project's trash and the multiple selection
+// access it through the same paths.
 mountTrashRoutes(router, {
   entityType: 'Episode',
   auditPrefix: 'EPISODE',

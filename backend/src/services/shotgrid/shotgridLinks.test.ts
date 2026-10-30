@@ -28,23 +28,21 @@ beforeEach(() => {
 });
 
 describe('listForUi', () => {
-  it('borne la table de correspondance servie à l’interface', async () => {
-    // La requête n'était pas bornée : à 2 000 plans, 10 000 tâches et 20 000 versions,
-    // elle renvoyait plusieurs mégaoctets de JSON par ouverture de projet.
+  it('bounds the correspondence table served to the interface', async () => {
+    // The query was not bounded: at 2,000 shots, 10,000 tasks and 20,000 versions, it returned several megabytes of JSON per project opening.
     await listForUi(12);
     expect(db.shotgridLink.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: UI_LINKS_LIMIT }));
   });
 
-  it('trie par type puis id local : la troncature rogne d’abord les versions', async () => {
-    // `version` est le dernier type dans l'ordre alphabétique — la dégradation touche
-    // donc ce qui s'affiche le moins, jamais les plans ou les tâches.
+  it('sorts by type then local id: the truncation trims the versions first', async () => {
+    // `version` is the last type in alphabetical order — the degradation thus touches what is displayed the least, never the shots or the tasks.
     await listForUi(12);
     const args = db.shotgridLink.findMany.mock.calls[0]![0] as { orderBy: unknown };
     expect(args.orderBy).toEqual([{ localType: 'asc' }, { localId: 'asc' }]);
     expect([...UI_LINK_TYPES].sort().at(-1)).toBe('version');
   });
 
-  it('interroge par défaut les cinq types que l’interface affiche', async () => {
+  it('queries by default the five types the interface displays', async () => {
     await listForUi(12);
     const args = db.shotgridLink.findMany.mock.calls[0]![0] as {
       where: { connectionId: number; localType: { in: string[] } };
@@ -53,7 +51,7 @@ describe('listForUi', () => {
     expect(args.where.localType.in).toEqual([...UI_LINK_TYPES]);
   });
 
-  it('accepte un filtre de types pour un écran qui n’en affiche qu’un', async () => {
+  it('accepts a type filter for a screen that displays only one', async () => {
     await listForUi(12, { localTypes: ['shot'] });
     const args = db.shotgridLink.findMany.mock.calls[0]![0] as {
       where: { localType: { in: string[] } };
@@ -61,23 +59,23 @@ describe('listForUi', () => {
     expect(args.where.localType.in).toEqual(['shot']);
   });
 
-  it('ne laisse pas un appelant franchir le plafond', async () => {
+  it('does not let a caller exceed the cap', async () => {
     await listForUi(12, { limit: 10 ** 9 });
     expect(db.shotgridLink.findMany).toHaveBeenCalledWith(expect.objectContaining({ take: UI_LINKS_LIMIT }));
   });
 
-  it('journalise la troncature : une pastille absente se lit « non liée »', async () => {
+  it('logs the truncation: a missing badge reads as "not linked"', async () => {
     db.shotgridLink.findMany.mockResolvedValue([link(1), link(2)]);
     await listForUi(12, { limit: 2 });
     expect(log.warn).toHaveBeenCalledWith({ connectionId: 12, limit: 2 }, 'shotgrid links truncated for UI');
   });
 
-  it('se tait quand rien n’a été coupé', async () => {
+  it('stays silent when nothing was cut', async () => {
     await listForUi(12);
     expect(log.warn).not.toHaveBeenCalled();
   });
 
-  it('rend les colonnes que l’interface consomme, et pas les données du lien', async () => {
+  it('returns the columns the interface consumes, and not the link data', async () => {
     await listForUi(12);
     const args = db.shotgridLink.findMany.mock.calls[0]![0] as { select: Record<string, boolean> };
     expect(args.select).toEqual({
@@ -90,7 +88,7 @@ describe('listForUi', () => {
   });
 });
 
-describe('upsertLink — conflits', () => {
+describe('upsertLink: conflicts', () => {
   const params = {
     connectionId: 12,
     localType: 'media' as const,
@@ -103,11 +101,9 @@ describe('upsertLink — conflits', () => {
     db.shotgridLink.upsert.mockResolvedValue({ id: 1 });
   });
 
-  it('refuse d’écraser le lien d’un AUTRE type local', async () => {
-    // Le scénario du lien menteur : `('Attachment', 412)` désignant en réalité la
-    // Version 412 venait effacer la correspondance du véritable Attachment 412. Un
-    // identifiant ShotGrid ne désigne qu'un seul type local — remplacer était une
-    // corruption, pas un rebranchement.
+  it('refuses to overwrite the link of a DIFFERENT local type', async () => {
+    // The lying-link scenario: `('Attachment', 412)` designating in fact Version 412 came and erased the correspondence of the real Attachment 412. A ShotGrid
+    // identifier designates only one local type — replacing was corruption, not rewiring.
     db.shotgridLink.findMany.mockResolvedValue([
       { id: 9, localType: 'comment', localId: 77, sgType: 'Attachment', sgId: 412 },
     ]);
@@ -116,10 +112,9 @@ describe('upsertLink — conflits', () => {
     expect(db.shotgridLink.upsert).not.toHaveBeenCalled();
   });
 
-  it('accepte un rebranchement de même type mais le journalise', async () => {
-    // Cas légitime : l'entité distante a été recréée sur le site avec un nouvel
-    // identifiant. Le lien précédent part — l'entité délaissée redevient « jamais
-    // importée » et sera recréée chez le client : ça se trace.
+  it('accepts a rewiring of the same type but logs it', async () => {
+    // Legitimate case: the remote entity has been recreated on the site with a new identifier. The previous link goes — the abandoned entity becomes "never
+    // imported" and will be recreated at the client: it is traced.
     db.shotgridLink.findMany.mockResolvedValue([
       { id: 9, localType: 'media', localId: 4, sgType: 'Attachment', sgId: 99 },
     ]);
@@ -129,9 +124,8 @@ describe('upsertLink — conflits', () => {
     expect(db.shotgridLink.upsert).toHaveBeenCalled();
   });
 
-  it('retire TOUS les conflits, pas seulement le premier', async () => {
-    // Un lien peut heurter les deux uniques à la fois, sur deux lignes distinctes :
-    // n'en retirer qu'une laissait l'upsert buter sur l'autre contrainte.
+  it('removes ALL conflicts, not only the first', async () => {
+    // A link can clash with both uniques at once, on two distinct rows: removing only one would leave the upsert stumbling on the other constraint.
     db.shotgridLink.findMany.mockResolvedValue([
       { id: 9, localType: 'media', localId: 4, sgType: 'Attachment', sgId: 99 },
       { id: 10, localType: 'media', localId: 5, sgType: 'Attachment', sgId: 412 },
@@ -140,7 +134,7 @@ describe('upsertLink — conflits', () => {
     expect(db.shotgridLink.delete).toHaveBeenCalledTimes(2);
   });
 
-  it('n’écrit et ne supprime rien de plus quand la voie est libre', async () => {
+  it('writes and deletes nothing more when the way is clear', async () => {
     db.shotgridLink.findMany.mockResolvedValue([]);
     await upsertLink(params);
     expect(db.shotgridLink.delete).not.toHaveBeenCalled();
@@ -149,8 +143,8 @@ describe('upsertLink — conflits', () => {
   });
 });
 
-describe('shouldImportMedia (garde-fou inchangé)', () => {
-  it('ne réimporte pas un média né dans ReView', () => {
+describe('shouldImportMedia (unchanged guard)', () => {
+  it('does not re-import a media born in ReView', () => {
     expect(shouldImportMedia({ withMedia: true, autoImport: true, link: { createdFromReview: true } })).toBe(
       false,
     );

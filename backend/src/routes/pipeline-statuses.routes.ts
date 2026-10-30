@@ -10,20 +10,20 @@ import { validate } from '../middleware/validate';
 import * as PipelineStatusService from '../services/PipelineStatusService';
 
 /**
- * Statuts de tâche et de plan personnalisables (Phase 48).
- * Lecture pour tous (badges, colonnes du kanban) ; administration réservée aux ADMIN.
+ * Customizable task and shot statuses (Phase 48).
+ * Reading for everyone (badges, kanban columns); administration reserved to ADMIN.
  */
 const router = Router();
 router.use(authenticate);
 
 const idParam = z.object({ id: z.coerce.number().int().positive() });
-// Les séquences et les assets portent un statut depuis la phase 48 et le référentiel en
-// contient : les refuser ici renvoyait un 400 à chaque badge, qui restait donc invisible.
-// La création à la main reste réservée aux deux périmètres éditables — les statuts de
-// séquence et d'asset viennent du site, qui en tient la liste de référence.
+// Sequences and assets have carried a status since phase 48, and the catalog contains them: refusing
+// them here returned a 400 on every badge, which therefore stayed invisible. Manual creation remains
+// reserved to the two editable scopes: the statuses of sequences and assets come from the site, which
+// keeps the reference list.
 const scopeSchema = z.enum(['task', 'shot', 'sequence', 'asset']);
 const editableScope = z.enum(['task', 'shot']);
-const colorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Couleur hexadécimale attendue (#RRGGBB)');
+const colorSchema = z.string().regex(/^#[0-9a-fA-F]{6}$/, 'Hexadecimal color expected (#RRGGBB)');
 
 const statusBody = z.object({
   scope: editableScope,
@@ -34,8 +34,8 @@ const statusBody = z.object({
   isDone: z.boolean().optional(),
   isDefault: z.boolean().optional(),
   legacyStatus: z.nativeEnum(TaskStatus).nullish(),
-  // Portée du statut créé (B2) : absent = référentiel du studio, sinon vocabulaire propre
-  // à ce projet.
+  // Scope of the created status (B2): absent means the studio catalog, otherwise the vocabulary
+  // specific to this project.
   projectId: z.number().int().positive().nullish(),
 });
 
@@ -44,17 +44,17 @@ router.get(
   validate({
     query: z.object({
       scope: scopeSchema.optional(),
-      // Le vocabulaire dépend du projet : celui du site sur un projet relié, le nôtre
-      // sinon. Sans ce paramètre, on répond le référentiel entier — les deux mélangés.
+      // The vocabulary depends on the project: the site's on a linked project, ours otherwise.
+      // Without this parameter, the whole catalog is returned: both mixed together.
       projectId: z.coerce.number().int().positive().optional(),
-      // `all` ignore le tri que le studio a fait pour ce projet : c'est l'écran de
-      // réglage qui le demande, et on n'y coche pas une liste déjà amputée d'elle-même.
+      // `all` ignores the sorting the studio made for this project: it is the settings screen that
+      // requests it, and one does not tick a list already trimmed of itself.
       all: z.enum(['true', 'false']).optional(),
     }),
   }),
   async (req, res) => {
-    // Express 5 : `req.query` n'est pas remplacé par la valeur validée, les nombres y
-    // restent des chaînes. On relit donc la valeur brute plutôt que de la supposer.
+    // Express 5: `req.query` is not replaced by the validated value; numbers remain strings there.
+    // So we re-read the raw value rather than assume it.
     const scope = req.query.scope as PipelineStatusService.Scope | undefined;
     const projectId = req.query.projectId ? Number(req.query.projectId) : null;
     const all = req.query.all === 'true';

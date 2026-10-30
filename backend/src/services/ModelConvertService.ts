@@ -41,40 +41,41 @@ import {
   buildThumbArgs,
   parseThumbSummary,
 } from '../lib/blenderThumb';
+import { ignoreFailure } from '../lib/ignoreFailure';
 
 /**
- * Conversion des médias 3D vers GLB — seul format lu par le viewer Three.js de la review.
- * Extrait de `workers/ffmpeg.worker.ts` en Phase 45 (45.C) : la logique métier appartient aux
- * services, et le worker dépassait largement une taille lisible.
+ * Conversion of 3D media to GLB — the only format read by the review's Three.js viewer.
+ * Extracted from `workers/ffmpeg.worker.ts` in Phase 45 (45.C): the business logic belongs to the services,
+ * and the worker had long outgrown a readable size.
  *
- * Aiguillage : `.glb` copié tel quel, `.gltf` packé en JS, USD via Blender (OpenUSD complet),
- * le reste via assimp. Les archives (`.zip`) sont extraites sous contrôle strict (`lib/zipSafety`)
- * puis re-aiguillées sur leur fichier principal ; un `.usdz` est ouvert directement par les outils
- * USD, sans extraction de notre part.
+ * Routing: `.glb` copied as is, `.gltf` packed into JS, USD via Blender (full OpenUSD), everything else via
+ * assimp. Archives (`.zip`) are extracted under strict control (`lib/zipSafety`)
+ * then re-routed to their main file; a `.usdz` is opened directly by the USD tools, without extraction on our
+ * side.
  *
- * Le fichier source n'est jamais modifié : tout est produit dans le répertoire temporaire du job.
+ * The source file is never modified: everything is produced in the job's temporary directory.
  */
 
 const execFileAsync = promisify(execFile);
 
-/** Un fichier réellement vide tient en un bloc DEFLATE vide ; au-delà, la déclaration ment. */
+/** A truly empty file fits in one empty DEFLATE block; beyond that, the declaration lies. */
 const EMPTY_ENTRY_MAX_COMPRESSED = 16;
 
-/** Méthodes de compression zip acceptées : 0 = stocké, 8 = DEFLATE. Le reste est refusé. */
+/** Accepted zip compression methods: 0 = stored, 8 = DEFLATE. Anything else is refused. */
 const METHOD_STORED = 0;
 const METHOD_DEFLATE = 8;
 
 /**
- * Lit une entrée en **bornant la sortie à la taille déclarée**, sans jamais allouer davantage.
+ * Reads an entry while **bounding the output to the declared size**, never allocating more.
  *
- * C'est le point clé de la protection anti-bombe : la déclaration du catalogue ne sert pas de
- * laissez-passer, elle sert de plafond. Une entrée qui annonce 16 octets et se détend en
- * gigaoctets fait échouer `inflateRawSync` sur `maxOutputLength` — la mémoire du worker n'est
- * jamais engagée au-delà de ce que le budget cumulé a déjà autorisé.
+ * This is the key point of the zip-bomb protection: the catalogue's declaration is not a pass, it is a
+ * ceiling. An entry announcing 16 bytes that inflates to gigabytes makes `inflateRawSync` fail
+ * on `maxOutputLength` — the worker's memory is never committed beyond what the cumulative budget has already
+ * allowed.
  *
- * Estimer le pire cas à `compressedSize × 1032` (taux d'expansion physique de DEFLATE) serait
- * plus simple mais rejette tout fichier légitimement peu compressible : un PNG de 16 Mo stocké
- * tel quel « pèserait » 16 Go et condamnerait l'archive entière.
+ * Estimating the worst case as `compressedSize × 1032` (DEFLATE's physical expansion rate) would be simpler
+ * but rejects any legitimately poorly compressible file: a 16 MB PNG stored
+ * as is would "weigh" 16 GB and condemn the entire archive.
  */
 function readEntryBounded(entry: {
   entryName: string;
@@ -87,36 +88,36 @@ function readEntryBounded(entry: {
   if (entry.header.method === METHOD_STORED) {
     if (raw.length !== declared)
       throw new Error(
-        `Archive refusée : l'entrée « ${entry.entryName} » annonce ${declared} octets et en contient ${raw.length}`,
+        `Archive refused: entry "${entry.entryName}" declares ${declared} bytes and contains ${raw.length}`,
       );
     return raw;
   }
   if (entry.header.method !== METHOD_DEFLATE)
     throw new Error(
-      `Archive refusée : l'entrée « ${entry.entryName} » utilise une compression non supportée (${entry.header.method})`,
+      `Archive refused: entry "${entry.entryName}" uses an unsupported compression (${entry.header.method})`,
     );
   if (declared === 0) {
-    // `maxOutputLength: 0` n'est pas une borne exploitable ; on borne à un octet et on refuse
-    // toute sortie non vide via la confrontation faite par l'appelant.
+    // `maxOutputLength: 0` is not a usable bound; we bound to one byte and refuse any non-empty output
+    // through the comparison made by the caller.
     return inflateRawSync(raw, { maxOutputLength: 1 });
   }
   return inflateRawSync(raw, { maxOutputLength: declared });
 }
 
-/** Options d'exécution communes : timeout obligatoire, sortie bornée, pas de fenêtre Windows. */
+/** Common execution options: mandatory timeout, bounded output, no Windows window. */
 const runOpts = () => ({
   timeout: env.MODEL_CONVERT_TIMEOUT_MS,
   maxBuffer: 32 * 1024 * 1024,
   windowsHide: true as const,
 });
 
-/** Recomposition demandée par l'utilisateur (Phase 45, 45.E) — variantes + purpose USD. */
+/** Recomposition requested by the user (Phase 45, 45.E) — variants + USD purpose. */
 export interface UsdRequest {
   variants: UsdVariantSelection;
   purpose: UsdPurpose;
 }
 
-/** Bloc `metadata.model.usd` exposé en fiche technique et consommé par la route de recomposition. */
+/** `metadata.model.usd` block exposed as a technical sheet and consumed by the recomposition route. */
 export interface UsdModelInfo {
   rootLayer: string;
   defaultPrim: string | null;
@@ -128,15 +129,15 @@ export interface UsdModelInfo {
   hasSkeleton: boolean;
   variantSets: UsdVariantSet[];
   purposes: string[];
-  /** Ce qui a été demandé… */
+  /** What was requested... */
   selection: UsdRequest;
-  /** …et si le convertisseur retenu a pu l'appliquer (seul Blender le peut). */
+  /** ...and whether the chosen converter was able to apply it (only Blender can). */
   selectionApplied: boolean;
   missingAssets: string[];
   missingAssetsTotal: number;
   layerCount: number;
   primCount: number;
-  /** Scenegraph (46.A) : arbre de prims à plat, y compris les prims non rendus. */
+  /** Scenegraph (46.A): flat list of prims, including the unrendered ones. */
   prims: UsdPrim[];
   primsTruncated: boolean;
 }
@@ -149,18 +150,18 @@ export interface ConvertResult {
 
 export const DEFAULT_USD_REQUEST: UsdRequest = { variants: {}, purpose: 'render' };
 
-// ---------------------------------------------------------------------------- outillage USD
+// ---------------------------------------------------------------------------- USD tooling
 
 /**
- * Localise un script Python du worker. Les `.py` ne passent pas par `tsc` : ils restent dans
- * `src/workers/usd/` (présent dans l'image, `COPY . .`) alors que le code exécuté vit dans `dist/`.
+ * Locates a Python script of the worker. The `.py` files do not go through `tsc`: they stay in
+ * `src/workers/usd/` (present in the image, `COPY . .`) whereas the executed code lives in `dist/`.
  */
 function resolveUsdScript(name: string): string {
-  // Chemin de référence dans l'image : le worker tourne depuis `dist/`, les scripts vivent
-  // dans `src/` (copiés tels quels par le Dockerfile).
+  // Reference path in the image: the worker runs from `dist/`, the scripts live in `src/` (copied as is by
+  // the Dockerfile).
   const packaged = join(__dirname, '..', '..', 'src', 'workers', 'usd', name);
   const candidates = [
-    join(__dirname, '..', 'workers', 'usd', name), // dist/workers/usd (si copié un jour)
+    join(__dirname, '..', 'workers', 'usd', name), // dist/workers/usd (if ever copied)
     packaged,
     join(process.cwd(), 'src', 'workers', 'usd', name), // dev (tsx, cwd=backend)
   ];
@@ -173,7 +174,7 @@ const usdToolConfig = (): UsdToolConfig => ({
   timeoutMs: env.MODEL_CONVERT_TIMEOUT_MS,
 });
 
-/** Sondes d'outillage mises en cache : inutile de relancer un binaire à chaque job. */
+/** Cached tooling probes: no need to relaunch a binary for every job. */
 let blenderProbe: Promise<boolean> | null = null;
 let usdToolsProbe: Promise<boolean> | null = null;
 
@@ -197,26 +198,26 @@ function hasUsdTools(): Promise<boolean> {
   return usdToolsProbe;
 }
 
-/** Binaire du convertisseur USD natif de repli (`guc`), ou undefined. */
+/** Binary of the fallback native USD converter (`guc`), or undefined. */
 const usdConverterBin = (): string | undefined => env.USD_GLTF_CONVERTER?.trim() || undefined;
 
-/** Message d'erreur exploitable à partir d'un échec `execFile` (timeout inclus). */
+/** Usable error message from an `execFile` failure (timeout included). */
 function describeExecError(err: unknown, who: string): string {
   const e = err as { killed?: boolean; stderr?: string; stdout?: string; message?: string };
-  if (e.killed) return `${who} : délai dépassé (${Math.round(env.MODEL_CONVERT_TIMEOUT_MS / 1000)} s)`;
+  if (e.killed) return `${who}: timed out (${Math.round(env.MODEL_CONVERT_TIMEOUT_MS / 1000)} s)`;
   const detail = (e.stderr || e.stdout || e.message || '').toString().trim();
   return `${who} : ${summarizeBlenderError(detail) || 'erreur inconnue'}`;
 }
 
-// ---------------------------------------------------------------------------- convertisseurs
+// ---------------------------------------------------------------------------- converters
 
-/** Vérifie que le GLB a bien été produit et n'est pas vide. */
+/** Checks that the GLB was indeed produced and is not empty. */
 async function assertGlbProduced(output: string, who: string): Promise<void> {
   const info = await stat(output).catch(() => null);
   if (!info || info.size === 0) throw new Error(`${who} conversion: the output GLB is empty or missing`);
 }
 
-/** Convertit un .gltf (texte, buffers et textures relatifs) en .glb binaire via gltf-import-export. */
+/** Converts a .gltf (text, buffers and relative textures) into a binary .glb via gltf-import-export. */
 async function convertGltfToGlb(input: string, output: string): Promise<void> {
   const { ConvertGltfToGLB } = await import('gltf-import-export');
   try {
@@ -230,7 +231,7 @@ async function convertGltfToGlb(input: string, output: string): Promise<void> {
   await assertGlbProduced(output, 'glTF→GLB');
 }
 
-/** Convertit un modèle 3D (FBX/OBJ/DAE/STL…) en GLB via assimp. */
+/** Converts a 3D model (FBX/OBJ/DAE/STL…) into GLB via assimp. */
 async function convertWithAssimp(input: string, output: string): Promise<void> {
   try {
     await execFileAsync('assimp', ['export', input, output, '-f', 'glb2'], runOpts());
@@ -241,12 +242,12 @@ async function convertWithAssimp(input: string, output: string): Promise<void> {
 }
 
 /**
- * Prépare une couche d'overlay par **option de variante non sélectionnée** (46.G) : chaque
- * option est ensuite importée par Blender et cuite dans le GLB, ce qui rend la bascule
- * instantanée en review — et donc possible après publication, sans reconversion.
+ * Prepares an overlay layer per **unselected variant option** (46.G): each option is then imported by Blender
+ * and baked into the GLB, which makes the switch instantaneous in review — and therefore possible after
+ * publication, without reconversion.
  *
- * Le coût est additif : chaque option est composée avec les autres jeux de variantes à leur
- * valeur courante, on ne produit pas le produit cartésien des combinaisons.
+ * The cost is additive: each option is composed with the other variant sets at their current value; we do not
+ * produce the Cartesian product of combinations.
  */
 async function prepareVariantLayers(
   source: string,
@@ -261,7 +262,7 @@ async function prepareVariantLayers(
   for (const set of info.variantSets) {
     const current = set.selected || set.options[0];
     for (const option of set.options) {
-      if (option === current) continue; // déjà présent dans la scène de base
+      if (option === current) continue; // already present in the base scene
       if (entries.length >= env.USD_MAX_BAKED_VARIANTS) break;
       index += 1;
       const overlayOut = join(dirname(source), `_review_variant_${index}.usda`);
@@ -272,25 +273,25 @@ async function prepareVariantLayers(
         set: set.name,
         option,
         default: current ?? '',
-        // Sans les matériaux rangés hors du sous-arbre, l'option cuite ressort sans liaison.
+        // Without the materials stored outside the subtree, the baked option comes out unbound.
         mask: buildVariantMask(set.prim, info.materialPaths),
       });
     }
   }
   if (entries.length === 0) return [];
 
-  // Une seule invocation pour toutes les couches (46.P) : l'ancienne préparation composait la
-  // scène une fois par option — prohibitif dès des dizaines de jeux de variantes.
+  // A single invocation for all layers (46.P): the former preparation composed the scene once per option —
+  // prohibitive as soon as there are dozens of variant sets.
   try {
     await writeVariantOverlays(source, overlays, usdToolConfig(), join(workDir, 'variant-overlays.json'));
   } catch (err) {
-    logger.warn({ err }, '[ModelConvert] couches de variantes non écrites — cuisson sautée');
+    logger.warn({ err }, '[ModelConvert] variant layers not written — bake skipped');
     return [];
   }
   return entries;
 }
 
-/** Convertit une scène USD via Blender headless (OpenUSD complet : composition, matériaux, anim). */
+/** Converts a USD scene via headless Blender (full OpenUSD: composition, materials, animation). */
 async function convertWithBlender(
   stagePath: string,
   output: string,
@@ -314,8 +315,8 @@ async function convertWithBlender(
     noAnimation: info ? !info.hasAnimation : false,
     variantLayers: manifest,
     variantVertexBudget: env.USD_VARIANT_VERTEX_BUDGET,
-    // La cuisson ne doit jamais faire expirer la conversion : elle se coupe elle-même à la
-    // moitié du timeout et laisse les options restantes en `variantsSkipped` (46.P).
+    // Baking must never let the conversion expire: it cuts itself at half the timeout and leaves the
+    // remaining options in `variantsSkipped` (46.P).
     variantTimeBudget: Math.floor(env.MODEL_CONVERT_TIMEOUT_MS / 2000),
   });
   let stdout: string;
@@ -329,9 +330,9 @@ async function convertWithBlender(
 }
 
 /**
- * Construit le bloc de métadonnées USD exposé en review. `rootLayer` est **imposé** par
- * l'appelant : le worker travaille sur une copie nommée `src.usdz`, ce nom technique n'aurait
- * aucun sens en fiche technique. Pour une archive, l'appelant passe le chemin dans l'archive.
+ * Builds the USD metadata block exposed in review. `rootLayer` is **imposed** by the caller: the worker works
+ * on a copy named `src.usdz`, a technical name that would make no sense in a technical sheet. For an archive,
+ * the caller passes the path inside the archive.
  */
 function buildUsdInfo(
   info: UsdStageInfo | null,
@@ -362,15 +363,15 @@ function buildUsdInfo(
 }
 
 /**
- * Analyse une scène USD puis la convertit. L'analyse est *best effort* : sans outillage `pxr`,
- * on convertit quand même (sans fiche technique USD ni rapport d'assets manquants).
+ * Analyses a USD scene then converts it. The analysis is *best effort*: without `pxr` tooling,
+ * we still convert (without USD technical sheet or missing-assets report).
  */
 async function convertUsd(
   input: string,
   output: string,
   request: UsdRequest,
   workDir: string,
-  /** Nom affiché de la couche racine : nom d'origine du média, ou chemin dans l'archive. */
+  /** Display name of the root layer: the media's original name, or the path inside the archive. */
   rootLabel: string,
 ): Promise<ConvertResult> {
   let info: UsdStageInfo | null = null;
@@ -379,12 +380,12 @@ async function convertUsd(
 
   if (await hasUsdTools()) {
     info = await inspectUsdStage(input, usdToolConfig()).catch((err) => {
-      logger.warn({ err }, '[ModelConvert] analyse USD indisponible, conversion sans fiche technique');
+      logger.warn({ err }, '[ModelConvert] USD analysis unavailable, converting without a technical sheet');
       return null;
     });
 
-    // Recomposition : on n'écrit jamais dans le fichier d'origine — la sélection de variantes
-    // passe par une couche d'overlay qui sous-couche la racine (façon USD).
+    // Recomposition: we never write into the original file — the variant selection goes through an overlay
+    // layer that sub-layers the root (USD style).
     const selection = sanitizeVariantSelection(request.variants, info?.variantSets ?? []);
     if (info && Object.keys(selection).length > 0) {
       const variantsFile = join(workDir, 'variants.json');
@@ -392,7 +393,7 @@ async function convertUsd(
       await writeFile(variantsFile, JSON.stringify(selection), 'utf8');
       const recomposed = await inspectUsdStage(input, usdToolConfig(), { variantsFile, overlayOut }).catch(
         (err) => {
-          logger.warn({ err }, '[ModelConvert] overlay de variantes non appliqué');
+          logger.warn({ err }, '[ModelConvert] variant overlay not applied');
           return null;
         },
       );
@@ -406,8 +407,8 @@ async function convertUsd(
 
   const rootLayer = rootLabel;
   if (await hasBlender()) {
-    // Cuisson des variantes (46.G) : chaque option devient un sous-arbre du GLB, la bascule
-    // se fait ensuite cote client — instantanee et disponible apres publication.
+    // Variant baking (46.G): each option becomes a subtree of the GLB; the switch is then made client-side —
+    // instantaneous and available after publication.
     const variantLayers = await prepareVariantLayers(stagePath, info, workDir);
     const blender = await convertWithBlender(
       stagePath,
@@ -424,8 +425,8 @@ async function convertUsd(
     };
   }
 
-  // Replis : `guc` (matériaux fidèles, géométrie statique) puis assimp. Ni l'un ni l'autre
-  // n'applique variantes ou purpose — `selectionApplied` reste faux.
+  // Fallbacks: `guc` (faithful materials, static geometry) then assimp. Neither applies variants or purpose —
+  // `selectionApplied` stays false.
   const bin = usdConverterBin();
   if (bin) {
     try {
@@ -433,30 +434,31 @@ async function convertUsd(
       await assertGlbProduced(output, `USD natif (${bin})`);
       return { converter: 'usd', usd: buildUsdInfo(info, rootLayer, request, false) };
     } catch (err) {
-      logger.warn(`[ModelConvert] convertisseur USD natif (${bin}) échoué, repli assimp: ${String(err)}`);
+      logger.warn(
+        `[ModelConvert] native USD converter (${bin}) failed, falling back to assimp: ${String(err)}`,
+      );
     }
   }
   await convertWithAssimp(stagePath, output);
   return { converter: 'assimp', usd: buildUsdInfo(info, rootLayer, request, false) };
 }
 
-// ---------------------------------------------------------------------------- vignette
+// ---------------------------------------------------------------------------- thumbnail
 
-/** Issue d'un rendu de vignette : jamais une exception — une vignette absente n'est pas un échec. */
+/** Outcome of a thumbnail render: never an exception — a missing thumbnail is not a failure. */
 export interface ModelThumbResult {
   rendered: boolean;
-  /** Motif exploitable en journal quand rien n'a été rendu (`blender-missing`, `no-geometry`…). */
+  /** Usable reason for the log when nothing was rendered (`blender-missing`, `no-geometry`…). */
   reason: string;
 }
 
 /**
- * Rend une vignette PNG (fond transparent) d'un GLB via Blender headless.
+ * Renders a PNG thumbnail (transparent background) of a GLB via headless Blender.
  *
- * **Ne lève jamais** et ne touche à rien d'autre que le fichier de sortie : le job de
- * vignette est décoratif, il ne doit ni bloquer la publication ni faire passer un média en
- * échec. Blender absent de l'image (build sans `INSTALL_USD_TOOLS`) est un cas nominal :
- * on renvoie `blender-missing`, l'appelant journalise, et la capture côté client au premier
- * affichage (`setAutoThumbnail`) reste le filet de sécurité.
+ * **Never throws** and touches nothing but the output file: the thumbnail job is decorative, it must neither
+ * block publication nor make a media fail. Blender absent from the image (build without
+ * `INSTALL_USD_TOOLS`) is a nominal case: we return `blender-missing`, the caller logs it, and the
+ * client-side capture at first display (`setAutoThumbnail`) remains the safety net.
  */
 export async function renderModelThumbnail(
   glbPath: string,
@@ -490,7 +492,7 @@ export async function renderModelThumbnail(
 
 // ---------------------------------------------------------------------------- archives
 
-/** Parcourt récursivement un dossier et renvoie tous les chemins de fichiers. */
+/** Recursively walks a folder and returns all file paths. */
 async function walk(dir: string): Promise<string[]> {
   const entries = await readdir(dir, { withFileTypes: true });
   const out: string[] = [];
@@ -503,8 +505,8 @@ async function walk(dir: string): Promise<string[]> {
 }
 
 /**
- * Extrait une archive après validation **intégrale** de son catalogue : une seule entrée
- * dangereuse (traversée, lien symbolique) ou des bornes dépassées invalident l'archive entière.
+ * Extracts an archive after **complete** validation of its catalogue: a single dangerous entry (traversal,
+ * symbolic link) or exceeded bounds invalidate the entire archive.
  */
 export async function extractArchive(input: string, extractDir: string): Promise<void> {
   const { default: AdmZip } = await import('adm-zip');
@@ -513,7 +515,7 @@ export async function extractArchive(input: string, extractDir: string): Promise
     zip = new AdmZip(input);
   } catch (err) {
     const e = err as { message?: string };
-    throw new Error(`Archive illisible : ${(e.message || 'erreur inconnue').slice(0, 300)}`, {
+    throw new Error(`Unreadable archive: ${(e.message || 'unknown error').slice(0, 300)}`, {
       cause: err,
     });
   }
@@ -534,30 +536,29 @@ export async function extractArchive(input: string, extractDir: string): Promise
   });
   if (plan.rejection) throw new Error(describeRejection(plan.rejection));
 
-  // `planExtraction` ne peut juger que le CATALOGUE : les tailles y sont *déclarées* par
-  // celui qui a fabriqué l'archive. Une entrée peut annoncer 1 Ko et se détendre en
-  // gigaoctets — `extractAllTo` écrirait alors les octets réels sans rien vérifier, et le
-  // plan (pourtant validé) serait jeté. On extrait donc entrée par entrée, en confrontant
-  // chaque taille réelle à sa déclaration et en tenant un budget cumulé.
+  // `planExtraction` can only judge the CATALOGUE: sizes there are *declared* by whoever built the archive.
+  // An entry may announce 1 KB and inflate to gigabytes — `extractAllTo` would then
+  // write the real bytes without checking anything, and the (validated) plan would be thrown away. We
+  // therefore extract entry by entry, comparing each real size with its declaration and keeping a
+  // cumulative budget.
   let written = 0;
   try {
     for (const entry of zip.getEntries()) {
       if (entry.isDirectory) continue;
-      // Second passage par `resolveInside` : c'est la destination réellement écrite.
+      // Second pass through `resolveInside`: this is the destination actually written.
       const target = resolveInside(extractDir, entry.entryName);
-      if (!target) throw new Error(`Chemin d'entrée refusé : ${entry.entryName}`);
+      if (!target) throw new Error(`Entry path refused: ${entry.entryName}`);
 
       const declared = Math.max(0, entry.header.size);
       const compressed = Math.max(0, entry.header.compressedSize);
 
-      // ⚠ L'ordre compte. Décompresser l'entrée ENTIÈRE puis mesurer ne sert à rien si la
-      // déclaration a déjà servi de laissez-passer : une entrée annonçant zéro octet
-      // franchissait ainsi le budget puis se détendait sans borne. On borne donc AVANT de
-      // décompresser — le budget cumulé sur la déclaration, la mémoire sur cette même
-      // déclaration (`readEntryBounded`), qui devient un plafond au lieu d'une promesse.
+      // ⚠ Order matters. Decompressing the WHOLE entry and then measuring is pointless if the declaration has
+      // already served as a pass: an entry announcing zero bytes would cross the budget and then inflate
+      // without bound. So we bound BEFORE decompressing — the cumulative budget on the declaration, the
+      // memory on that same declaration (`readEntryBounded`), which becomes a ceiling instead of a promise.
       if (declared === 0 && compressed > EMPTY_ENTRY_MAX_COMPRESSED)
         throw new Error(
-          `Archive refusée : l'entrée « ${entry.entryName} » se déclare vide mais pèse ${compressed} octets compressés`,
+          `Archive refused: entry "${entry.entryName}" declares itself empty but weighs ${compressed} compressed bytes`,
         );
       if (written + declared > maxTotalBytes)
         throw new Error(
@@ -565,10 +566,10 @@ export async function extractArchive(input: string, extractDir: string): Promise
         );
 
       const data = readEntryBounded(entry);
-      // La déclaration est un engagement : s'en écarter est la signature d'une bombe.
+      // The declaration is a commitment: deviating from it is the signature of a bomb.
       if (data.length !== declared)
         throw new Error(
-          `Archive refusée : l'entrée « ${entry.entryName} » annonce ${declared} octets et en contient ${data.length}`,
+          `Archive refused: entry "${entry.entryName}" declares ${declared} bytes and contains ${data.length}`,
         );
       written += data.length;
       if (written > maxTotalBytes)
@@ -578,18 +579,20 @@ export async function extractArchive(input: string, extractDir: string): Promise
       await writeFile(target, data);
     }
   } catch (err) {
-    // Extraction partielle = scène USD silencieusement incomplète : on efface tout.
-    await rm(extractDir, { recursive: true, force: true }).catch(() => undefined);
+    // Partial extraction = silently incomplete USD scene: we erase everything.
+    await rm(extractDir, { recursive: true, force: true }).catch(
+      ignoreFailure('model extraction dir cleanup failed', { dir: extractDir }),
+    );
     const e = err as { message?: string };
-    throw new Error(`Extraction de l'archive échouée : ${(e.message || 'erreur inconnue').slice(0, 300)}`, {
+    throw new Error(`Archive extraction failed: ${(e.message || 'unknown error').slice(0, 300)}`, {
       cause: err,
     });
   }
 }
 
 /**
- * Désigne la couche racine d'une archive USD. Avec l'analyseur, le graphe de dépendances tranche ;
- * sans lui, on retombe sur les heuristiques de `usdArchive`.
+ * Designates the root layer of a USD archive. With the analyser, the dependency graph decides; without it, we
+ * fall back on the heuristics of `usdArchive`.
  */
 async function resolveUsdRoot(
   files: string[],
@@ -600,14 +603,14 @@ async function resolveUsdRoot(
   let deps;
   if (await hasUsdTools()) {
     deps = await scanUsdDirectory(extractDir, usdToolConfig()).catch((err) => {
-      logger.warn({ err }, '[ModelConvert] graphe de couches USD indisponible, heuristique seule');
+      logger.warn({ err }, '[ModelConvert] USD layer graph unavailable, heuristic only');
       return undefined;
     });
   }
   return pickUsdRootLayer(files, { deps, archiveName }) ?? fallback;
 }
 
-/** Convertit une archive `.zip` : extraction contrôlée, choix du modèle principal, conversion. */
+/** Converts a `.zip` archive: controlled extraction, choice of the main model, conversion. */
 async function convertArchive(
   input: string,
   output: string,
@@ -619,7 +622,7 @@ async function convertArchive(
 
   const files = await walk(extractDir);
   const chosen = pickModelFile(files);
-  if (!chosen) throw new Error("Aucun fichier 3D reconnu dans l'archive (gltf/glb/fbx/obj/dae/stl/usd)");
+  if (!chosen) throw new Error('No recognized 3D file in the archive (gltf/glb/fbx/obj/dae/stl/usd)');
 
   const ext = extname(chosen).toLowerCase();
   if (ext === '.glb') {
@@ -627,26 +630,26 @@ async function convertArchive(
     return { converter: 'copy' };
   }
   if (ext === '.gltf') {
-    await convertGltfToGlb(chosen, output); // résout scene.bin + textures relatifs
+    await convertGltfToGlb(chosen, output); // resolves scene.bin + relative textures
     return { converter: 'gltf' };
   }
   if (isUsdModel(ext)) {
     const root = await resolveUsdRoot(files, extractDir, archiveName, chosen);
-    // Chemin **dans l'archive** : c'est ce qui permet à l'utilisateur de vérifier que la
-    // bonne couche a été ouverte parmi plusieurs.
+    // Path **inside the archive**: this is what lets the user check that the right layer was opened among
+    // several.
     const label = relative(extractDir, root).replace(/\\/g, '/');
     return convertUsd(root, output, request, dirname(input), label);
   }
-  await convertWithAssimp(chosen, output); // OBJ/FBX/DAE… avec ressources adjacentes
+  await convertWithAssimp(chosen, output); // OBJ/FBX/DAE… with adjacent resources
   return { converter: 'assimp' };
 }
 
-// ---------------------------------------------------------------------------- point d'entrée
+// ---------------------------------------------------------------------------- entry point
 
 /**
- * Convertit un média 3D en GLB et renvoie la provenance (convertisseur retenu, description USD).
- * `archiveName` sert d'indice pour retrouver la couche racine d'un zip ; `request` porte la
- * recomposition demandée (variantes/purpose), sans effet sur les formats non USD.
+ * Converts a 3D media into GLB and returns its provenance (chosen converter, USD description).
+ * `archiveName` serves as a hint to find the root layer of a zip; `request` carries the requested
+ * recomposition (variants/purpose), with no effect on non-USD formats.
  */
 export async function convertToGlb(
   input: string,
@@ -659,9 +662,8 @@ export async function convertToGlb(
   const archiveName = opts.archiveName ?? basename(input);
 
   if (e === '.zip') return convertArchive(input, output, request, archiveName);
-  // Un `.usdz` est un paquet USD : `pxr` et Blender l'ouvrent directement, sans extraction.
-  // Un `.usdz` est un paquet USD : `pxr` et Blender l'ouvrent directement, sans extraction.
-  // La « couche racine » affichée est alors le nom du fichier uploadé.
+  // A `.usdz` is a USD package: `pxr` and Blender open it directly, without extraction.
+  // The displayed "root layer" is then the name of the uploaded file.
   if (e === '.usdz' || isUsdModel(e)) return convertUsd(input, output, request, dirname(input), archiveName);
   if (e === '.gltf') {
     await convertGltfToGlb(input, output);

@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role, UserStatus } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import * as UserService from '../services/UserService';
@@ -16,7 +16,7 @@ const router = Router();
 router.use(authenticate);
 
 const idParam = z.object({ id: z.coerce.number().int() });
-// Validation pseudo : lettres/chiffres/._- (sans espace) ; mot de passe : ≥ 8, lettre + chiffre.
+// Username validation: letters, digits, `._-` (no space); password: at least 8 characters, a letter and a digit.
 const usernameSchema = z
   .string()
   .min(2)
@@ -29,20 +29,20 @@ const passwordSchema = z
   .regex(/[A-Za-z]/)
   .regex(/[0-9]/);
 
-// GET /api/users — liste (admin/superviseur)
+// GET /api/users — list (admin and supervisor)
 router.get('/', requireRole(Role.ADMIN, Role.SUPERVISOR), async (_req, res) => {
   res.json({ users: await UserService.listUsers() });
 });
 
-// GET /api/users/presence — présence, cantonnée à ce que le demandeur a le droit de voir
+// GET /api/users/presence — presence, bounded to what the requester is allowed to see
 router.get('/presence', async (req, res) => {
   res.json({ users: await UserService.listPresence(req.user) });
 });
 
-// ── Profil de l'utilisateur courant ──────────────────────────────────────────
-// La fiche publique d'un membre et l'avatar vivent dans `users-profile.routes`.
+// ── Current user's profile ──────────────────────────────────────────
+// The public record of a member and the avatar live in `users-profile.routes`.
 
-// PATCH /api/users/me — édition de son propre profil
+// PATCH /api/users/me — edits one's own profile
 router.patch(
   '/me',
   validate({
@@ -55,47 +55,47 @@ router.patch(
       phone: z.string().max(40).nullable().optional(),
       email: z.string().email().max(254).optional(),
       password: passwordSchema.optional(),
-      /** Mot de passe actuel — exigé pour modifier le mot de passe ou l'email. */
+      /** Current password: required to change the password or the email. */
       currentPassword: z.string().max(128).optional(),
     }),
   }),
   async (req, res) => {
-    // Changer d'identifiant de connexion se re-authentifie et reste interdit à un token
-    // d'API : la règle vit dans le service, la route ne fait que la déclencher (10.D8).
-    await UserService.assertCredentialChange(req.user!.id, req.body, Boolean(req.apiToken));
-    res.json({ user: await UserService.updateMe(req.user!.id, req.body, req.sessionId) });
+    // Changing the login identifier re-authenticates and remains forbidden to an API token: the rule lives in
+    // the service, and the route only triggers it (10.D8).
+    await UserService.assertCredentialChange(requireUser(req).id, req.body, Boolean(req.apiToken));
+    res.json({ user: await UserService.updateMe(requireUser(req).id, req.body, req.sessionId) });
   },
 );
 
-// GET /api/users/me/preferences — préférences UI (vues kanban sauvegardées, etc.)
+// GET /api/users/me/preferences — UI preferences (saved kanban views, etc.)
 router.get('/me/preferences', async (req, res) => {
-  res.json({ preferences: await UserService.getPreferences(req.user!.id) });
+  res.json({ preferences: await UserService.getPreferences(requireUser(req).id) });
 });
 
-// PATCH /api/users/me/preferences — merge superficiel (clé à null = suppression)
+// PATCH /api/users/me/preferences — shallow merge (a key set to null means deletion)
 router.patch(
   '/me/preferences',
-  // Valeur bornée en forme, en profondeur et en volume — le service tient le reste (A2-04).
+  // Value bounded in shape, depth and volume: the service handles the rest (A2-04).
   validate({ body: UserService.preferencesPatchSchema }),
   async (req, res) => {
-    res.json({ preferences: await UserService.updatePreferences(req.user!.id, req.body) });
+    res.json({ preferences: await UserService.updatePreferences(requireUser(req).id, req.body) });
   },
 );
 
-// PATCH /api/users/me/status — statut manuel (dispo/absent/ne pas déranger)
+// PATCH /api/users/me/status — manual status (available, away, do not disturb)
 router.patch(
   '/me/status',
   validate({ body: z.object({ status: z.nativeEnum(UserStatus) }) }),
   async (req, res) => {
-    res.json({ user: await UserService.setStatus(req.user!.id, req.body.status as UserStatus) });
+    res.json({ user: await UserService.setStatus(requireUser(req).id, req.body.status as UserStatus) });
   },
 );
 
-// ── Administration des comptes ───────────────────────────────────────────────
+// ── Account administration ───────────────────────────────────────────────
 
-// POST /api/users — création par un admin (avec rôle).
-// Sans `password`, le compte part en invitation : la personne reçoit un lien par email et
-// choisit elle-même son mot de passe. Fournir les deux n'a pas de sens — on tranche.
+// POST /api/users — creation by an admin (with role).
+// Without `password`, the account goes into invitation: the person receives a link by email and chooses
+// their own password. Providing both makes no sense: we decide.
 router.post(
   '/',
   requireRole(Role.ADMIN),
@@ -111,30 +111,34 @@ router.post(
     }),
   }),
   async (req, res) => {
-    res.status(201).json({ user: await UserService.createUser(req.user!.id, req.body) });
+    res.status(201).json({ user: await UserService.createUser(requireUser(req).id, req.body) });
   },
 );
 
-// POST /api/users/:id/invite — (re)envoie l'invitation d'un compte (admin)
+// POST /api/users/:id/invite — (re)sends an account's invitation (admin)
 router.post('/:id/invite', requireRole(Role.ADMIN), validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
-  await InvitationService.sendInvitation(id, req.user!.id);
-  logAudit({ userId: req.user!.id, action: 'USER_INVITE', entityType: 'User', entityId: id });
+  await InvitationService.sendInvitation(id, requireUser(req).id);
+  logAudit({ userId: requireUser(req).id, action: 'USER_INVITE', entityType: 'User', entityId: id });
   res.json({ sent: true });
 });
 
-// PATCH /api/users/:id/role — changement de rôle (admin)
+// PATCH /api/users/:id/role — role change (admin)
 router.patch(
   '/:id/role',
   requireRole(Role.ADMIN),
   validate({ params: idParam, body: z.object({ role: z.nativeEnum(Role) }) }),
   async (req, res) => {
-    const user = await UserService.changeRole(req.user!.id, Number(req.params.id), req.body.role as Role);
+    const user = await UserService.changeRole(
+      requireUser(req).id,
+      Number(req.params.id),
+      req.body.role as Role,
+    );
     res.json({ user });
   },
 );
 
-// PATCH /api/users/:id — identité, email, mot de passe, rôle, quota (admin)
+// PATCH /api/users/:id — identity, email, password, role, quota (admin)
 router.patch(
   '/:id',
   requireRole(Role.ADMIN),
@@ -149,20 +153,20 @@ router.patch(
       password: passwordSchema.optional(),
       role: z.nativeEnum(Role).optional(),
       storageLimit: z.number().int().nonnegative().nullable().optional(),
-      /** Désactivation / réactivation du compte (offboarding réversible). */
+      /** Deactivation and reactivation of the account (reversible offboarding). */
       disabled: z.boolean().optional(),
     }),
   }),
   async (req, res) => {
-    res.json({ user: await UserService.updateUser(req.user!.id, Number(req.params.id), req.body) });
+    res.json({ user: await UserService.updateUser(requireUser(req).id, Number(req.params.id), req.body) });
   },
 );
 
-// DELETE /api/users/:id/sessions — révoque TOUTES les sessions d'un compte (admin, 36.B)
+// DELETE /api/users/:id/sessions — revokes ALL the sessions of an account (admin, 36.B)
 router.delete('/:id/sessions', requireRole(Role.ADMIN), validate({ params: idParam }), async (req, res) => {
   const count = await revokeAllSessions(Number(req.params.id));
   logAudit({
-    userId: req.user!.id,
+    userId: requireUser(req).id,
     action: 'SESSION_REVOKE_ALL',
     entityType: 'User',
     entityId: Number(req.params.id),
@@ -171,18 +175,18 @@ router.delete('/:id/sessions', requireRole(Role.ADMIN), validate({ params: idPar
   res.json({ revoked: count });
 });
 
-// DELETE /api/users/:id — désactive le compte (admin). `?hard=true` supprime définitivement :
-// la suppression dure emporte l'auteur des actions journalisées, elle reste un geste explicite.
+// DELETE /api/users/:id — deactivates the account (admin). `?hard=true` permanently deletes: the hard
+// deletion takes along the author of the logged actions; it remains an explicit gesture.
 router.delete(
   '/:id',
   requireRole(Role.ADMIN),
-  // `z.coerce.boolean()` rendrait `?hard=false` vrai : sur une suppression définitive, seul
-  // le mot exact déclenche.
+  // `z.coerce.boolean()` would make `?hard=false` true: on a permanent deletion, only the exact word
+  // triggers it.
   validate({ params: idParam, query: z.object({ hard: z.enum(['true', 'false']).optional() }) }),
   async (req, res) => {
     const id = Number(req.params.id);
-    if (req.query.hard === 'true') await UserService.deleteUser(req.user!.id, id);
-    else await UserService.setDisabled(req.user!.id, id, true);
+    if (req.query.hard === 'true') await UserService.deleteUser(requireUser(req).id, id);
+    else await UserService.setDisabled(requireUser(req).id, id, true);
     res.status(204).end();
   },
 );

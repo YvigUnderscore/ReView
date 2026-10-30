@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Vérification de bout en bout de l'intégration ShotGrid contre le simulateur.
+ * End-to-end check of the ShotGrid integration against the simulator.
  *
- * Le scénario ne se contente pas de vérifier qu'une synchronisation « passe » : le
- * simulateur héberge trois projets dont deux portent des entités aux codes IDENTIQUES.
- * Le test échoue si ReView importe ne serait-ce qu'une entité du projet voisin — c'est
- * la garantie la plus importante de toute l'intégration.
+ * The scenario does not merely check that a synchronisation "passes": the
+ * simulator hosts three projects, two of which carry entities with IDENTICAL codes.
+ * The test fails if ReView imports even a single entity of the neighbouring project — this is
+ * the most important guarantee of the whole integration.
  *
- * Prérequis : stack docker démarrée, `node scripts/fake-shotgrid.mjs` en cours.
+ * Prerequisites: docker stack started, `node scripts/fake-shotgrid.mjs` running.
  * Usage : node scripts/test-shotgrid-e2e.mjs
  */
 
@@ -55,7 +55,7 @@ async function call(method, path, body) {
 async function main() {
   console.log('\n═══ Vérification ShotGrid de bout en bout ═══\n');
 
-  // ── 0. Le simulateur répond
+  // ── 0. The simulator responds
   const state = await fetch(`${SG_CONTROL}/_control/state`).then((r) => r.json());
   console.log('Simulateur ShotGrid :', state.projects.map((p) => `${p.name} (#${p.id})`).join(', '));
 
@@ -69,7 +69,7 @@ async function main() {
     process.exit(1);
   }
 
-  // ── 2. Projet ReView dédié au test
+  // ── 2. ReView project dedicated to the test
   console.log('\n2. Projet ReView');
   const suffix = Date.now().toString().slice(-6);
   const projectName = `Test ShotGrid ${suffix}`;
@@ -81,7 +81,7 @@ async function main() {
 
   // ── 3. Site ShotGrid
   console.log('\n3. Site ShotGrid');
-  // Le site est unique par URL : une exécution précédente l'a peut-être déjà créé.
+  // The site is unique per URL: a previous run may already have created it.
   const existing = await call('GET', '/api/shotgrid/sites');
   let siteId = (existing.json?.sites ?? []).find((s) => s.baseUrl === SG_URL)?.id;
   if (!siteId) {
@@ -109,8 +109,8 @@ async function main() {
     Array.isArray(remote.json?.projects) && remote.json.projects.length === 3,
   );
 
-  // ── 3bis. Le projet ShotGrid cible ne peut être relié qu'à un seul projet ReView :
-  // une exécution précédente occupe peut-être la place. On la libère pour rester rejouable.
+  // ── 3bis. The target ShotGrid project can only be linked to a single ReView project:
+  // a previous run may still hold the slot. We free it to stay replayable.
   const allProjects = await call('GET', '/api/projects');
   const projectList = allProjects.json?.projects ?? allProjects.json?.items ?? [];
   for (const p of projectList) {
@@ -122,7 +122,7 @@ async function main() {
     }
   }
 
-  // ── 4. Garde-fou : nom de projet incohérent
+  // ── 4. Guardrail: inconsistent project name
   console.log('\n4. Garde-fou du nom de projet');
   const wrongName = await call('POST', `/api/shotgrid/projects/${projectId}/connection`, {
     siteId,
@@ -158,10 +158,10 @@ async function main() {
     sync.json?.result?.status,
   );
 
-  // ── 7. LE contrôle : cloisonnement des projets
+  // ── 7. THE check: segregation of projects
   console.log('\n7. Cloisonnement des projets (contrôle critique)');
-  // L'effectif attendu se lit sur le simulateur plutôt que d'être écrit en dur : le jeu
-  // de données peut grossir au fil des essais, la garantie testée reste le cloisonnement.
+  // The expected headcount is read from the simulator rather than hard-coded: the dataset
+  // may grow over the trials, the guarantee under test remains the segregation.
   const sgState = await fetch(`${SG_CONTROL}/_control/shots?projectId=70`).then((r) => r.json());
   const expectedCodes = sgState.codes.slice().sort();
   const shots = await call('GET', `/api/shots?projectId=${projectId}`);
@@ -179,15 +179,15 @@ async function main() {
     `${codes.join(',')} vs ${expectedCodes.join(',')}`,
   );
 
-  // Le projet #71 porte les mêmes codes : on vérifie côté base qu'aucune entité du
-  // projet voisin n'a été reliée (identifiants ShotGrid 3xxx contre 2xxx).
+  // Project #71 carries the same codes: we check on the database side that no entity of the
+  // neighbouring project has been linked (ShotGrid identifiers 3xxx against 2xxx).
   const runs = await call('GET', `/api/shotgrid/projects/${projectId}/runs`);
   const lastRun = runs.json?.runs?.[0];
   check('exécution journalisée', Boolean(lastRun), `${runs.json?.runs?.length ?? 0} exécution(s)`);
   const guard = lastRun?.stats?.guard;
   check('aucune entité écartée par le garde-fou', !guard || guard.skipped === 0, JSON.stringify(guard));
 
-  // ── 8. Données de production
+  // ── 8. Production data
   console.log('\n8. Données importées');
   const shot = list.find((s) => s.code === 'DEMO_SH010');
   const sgShot = sgState.shots.find((x) => x.code === 'DEMO_SH010');
@@ -230,7 +230,7 @@ async function main() {
   const list2 = shots2.json?.items ?? shots2.json?.shots ?? [];
   check('effectif inchangé', list2.length === expectedCodes.length, `reçu ${list2.length}`);
 
-  // ── 11. Verrou de création locale
+  // ── 11. Local creation lock
   console.log('\n11. Verrou de création locale');
   const blocked = await call('POST', '/api/shots', {
     projectId,
@@ -244,7 +244,7 @@ async function main() {
     JSON.stringify(blocked.json).slice(0, 160),
   );
 
-  // ── 12. Changement distant appliqué (mode événement)
+  // ── 12. Remote change applied (event mode)
   console.log('\n12. Changement dans ShotGrid');
   await fetch(`${SG_CONTROL}/_control/mutate`, {
     method: 'POST',

@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -13,10 +13,10 @@ import { ROLES } from './adminShared';
 import type { Announcement, AnnouncementFrequency, AnnouncementType, Role } from '../../types/api';
 import { useT, type MessageKey } from '../../i18n';
 
-/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+/** Translator passed to the label tables, recomputed on each render. */
 type Tr = (key: MessageKey) => string;
 
-/** ISO → valeur `datetime-local` (heure locale) ; '' si absent. */
+/** ISO → `datetime-local` value (local time); '' if absent. */
 function toLocalInput(iso: string | null): string {
   if (!iso) return '';
   const d = new Date(iso);
@@ -32,7 +32,7 @@ const freqs = (t: Tr): { value: AnnouncementFrequency; label: string }[] => [
   { value: 'FIRST_OF_DAY', label: t('announcement.scope.firstDaily') },
 ];
 
-/** Création / édition d'une annonce (admin). */
+/** Creating / editing an announcement (admin). */
 export default function AnnouncementForm({
   announcement,
   onClose,

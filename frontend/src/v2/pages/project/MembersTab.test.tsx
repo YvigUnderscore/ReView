@@ -4,22 +4,22 @@
 import { describe, expect, it } from 'vitest';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import MembersTab from './MembersTab';
-import { renderWithProviders } from '../../../test/renderWithProviders';
-import { openContextMenu, openSubmenu, clickMenuRadio } from '../../../test/menu';
+import { renderWithProviders } from '@/test/renderWithProviders';
+import { openContextMenu, openSubmenu, clickMenuRadio } from '@/test/menu';
 import { t } from '../../i18n';
-import type { MockResolver } from '../../../test/apiMock';
+import type { MockResolver } from '@/test/apiMock';
 
 /**
- * L'onglet Membres : on y assigne un rôle ET un département.
+ * The members tab: a role AND a department are assigned here.
  *
- * Le rôle par projet existait (38.E) ; le département, lui, n'avait aucun écran, alors que
- * la relation et la route existaient depuis la vague B. Trois choses sont figées ici.
+ * The per-project role existed (38.E). The department, however, had no screen, although the
+ * relation and the route had existed since wave B. Three things are fixed here.
  *
- * 1. **Un artiste porte plusieurs départements.** Les cases se cochent indépendamment.
- * 2. **Chaque bascule est envoyée seule** (`{add}` / `{remove}`), jamais la liste entière :
- *    l'écran ne montre que le vocabulaire d'un projet, envoyer son état effacerait les
- *    départements que la personne tient d'ailleurs.
- * 3. Le rôle et le département se règlent au même endroit, au clic droit.
+ * 1. **An artist holds several departments.** The boxes are ticked independently.
+ * 2. **Each toggle is sent on its own** (`{add}` / `{remove}`), never the whole list: the screen
+ *    only shows the vocabulary of one project, and sending its state would erase the departments
+ *    the person holds elsewhere.
+ * 3. The role and the department are set in the same place, on right-click.
  */
 const PROJECT = 7;
 
@@ -53,19 +53,19 @@ const routes = (
 });
 
 describe('MembersTab', () => {
-  it('montre les départements de la personne sur la ligne', async () => {
+  it('shows the departments of the person on the row', async () => {
     renderWithProviders(<MembersTab projectId={PROJECT} />, {
       api: routes([{ id: 10, key: 'COMP', name: 'Compositing', color: null }]),
     });
     expect(await screen.findByText('Compositing')).toBeTruthy();
   });
 
-  it('dit « aucun département » plutôt que de laisser un blanc', async () => {
+  it('says "no department" rather than leaving a blank', async () => {
     renderWithProviders(<MembersTab projectId={PROJECT} />, { api: routes() });
     expect(await screen.findByText(t('members.noDepartment'))).toBeTruthy();
   });
 
-  it('coche un département et n’envoie QUE celui-là', async () => {
+  it('ticks a department and sends ONLY that one', async () => {
     const { api } = renderWithProviders(<MembersTab projectId={PROJECT} />, { api: routes() });
     openContextMenu(await screen.findByText('Alice Artist'));
     await openSubmenu(t('departments.menu'));
@@ -75,12 +75,12 @@ describe('MembersTab', () => {
       expect(api.called(`PATCH /api/projects/${PROJECT}/members/5/departments`)).toHaveLength(1);
     });
     const [call] = api.called(`PATCH /api/projects/${PROJECT}/members/5/departments`);
-    // `{add: [11]}` et rien d'autre : une liste complète effacerait les départements que
-    // la personne tient d'un autre projet, que cet écran n'affiche même pas.
+    // `{add: [11]}` and nothing else: a full list would erase the departments the person holds on
+    // another project, which this screen does not even show.
     expect(call.body).toEqual({ add: [11] });
   });
 
-  it('décoche un département en le nommant au retrait', async () => {
+  it('unticks a department by naming it on removal', async () => {
     const { api } = renderWithProviders(<MembersTab projectId={PROJECT} />, {
       api: routes([{ id: 10, key: 'COMP', name: 'Compositing', color: null }]),
     });
@@ -95,7 +95,7 @@ describe('MembersTab', () => {
     expect(call.body).toEqual({ remove: [10] });
   });
 
-  it('assigne le rôle projet depuis le même menu', async () => {
+  it('assigns the project role from the same menu', async () => {
     const { api } = renderWithProviders(<MembersTab projectId={PROJECT} />, { api: routes() });
     openContextMenu(await screen.findByText('Alice Artist'));
     await openSubmenu(t('members.roleOnProject'));
@@ -110,7 +110,7 @@ describe('MembersTab', () => {
     });
   });
 
-  it('n’offre aucun menu à qui ne gère pas le projet', async () => {
+  it('offers no menu to someone who does not manage the project', async () => {
     renderWithProviders(<MembersTab projectId={PROJECT} />, {
       api: {
         ...routes(),
@@ -121,7 +121,7 @@ describe('MembersTab', () => {
       user: { role: 'ARTIST' },
     });
     openContextMenu(await screen.findByText('Alice Artist'));
-    // Sans entrée, `EntityContextMenu` ne monte pas de menu du tout : rien à ouvrir.
+    // Without entries, `EntityContextMenu` does not mount a menu at all: nothing to open.
     expect(screen.queryByRole('menuitem')).toBeNull();
   });
 });

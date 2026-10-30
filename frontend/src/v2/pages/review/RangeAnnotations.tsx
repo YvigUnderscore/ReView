@@ -9,12 +9,12 @@ import { splitAnnotationParts } from './reviewTypes';
 import { useT } from '../../i18n';
 
 /**
- * Annotations sur plage in→out (34.A) : un commentaire posé avec une boucle I/O active
- * porte une part `range {inFrame,outFrame}` — ses dessins restent visibles pendant toute
- * la plage à la lecture (au lieu de n'apparaître qu'à la sélection du commentaire).
+ * Annotations over an in→out range (34.A): a comment placed with an active I/O loop carries
+ * a `range {inFrame,outFrame}` part — its drawings stay visible for the whole range during
+ * playback (instead of appearing only when the comment is selected).
  */
 
-/** Plages des commentaires (memoïsable) : id → {range, shapes}. */
+/** Comment ranges (memoizable): id → {range, shapes}. */
 function rangedOf(comments: ReviewComment[]) {
   return comments
     .map((c) => {
@@ -24,7 +24,7 @@ function rangedOf(comments: ReviewComment[]) {
     .filter((x): x is NonNullable<typeof x> => x !== null);
 }
 
-/** Overlay : dessins des commentaires dont la plage couvre la frame courante. */
+/** Overlay: drawings of the comments whose range covers the current frame. */
 export function RangeAnnotationsOverlay({
   comments,
   currentFrame,
@@ -32,7 +32,7 @@ export function RangeAnnotationsOverlay({
 }: {
   comments: ReviewComment[];
   currentFrame: number;
-  /** Commentaire sélectionné — déjà rendu par l'overlay de sélection (pas de doublon). */
+  /** Selected comment — already rendered by the selection overlay (no duplicate). */
   selectedId: number | null;
 }) {
   const ranged = useMemo(() => rangedOf(comments), [comments]);
@@ -52,8 +52,8 @@ export function RangeAnnotationsOverlay({
 }
 
 /**
- * Segments de plage sur la timeline : barre fine à la couleur de l'auteur, poignées aux
- * extrémités ; clic = sélectionne le commentaire (et se cale sur son point d'entrée).
+ * Range segments on the timeline: a thin bar in the author's color, handles at the ends;
+ * click = selects the comment (and snaps to its entry point).
  */
 export function RangeSegments({
   comments,
@@ -90,7 +90,7 @@ export function RangeSegments({
               left: `calc(${left}% * (100% - 8px) / 100% + 4px)`,
               width: `max(${width * 100}%, 6px)`,
               background: color,
-              boxShadow: `-2px 0 0 ${color}, 2px 0 0 ${color}`, // poignées aux extrémités
+              boxShadow: `-2px 0 0 ${color}, 2px 0 0 ${color}`, // handles at the ends
             }}
             title={t('comment.rangeAnnotation', {
               name: c.author?.displayName ?? c.author?.name ?? t('common.unknown'),

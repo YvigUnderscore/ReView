@@ -23,7 +23,7 @@ import { env } from '../config/env';
 
 const dbUser = { id: 7, email: 'artist@studio.com', role: 'ARTIST' as const };
 
-/** Socket minimal : seul le handshake compte pour la vérification. */
+/** Minimal socket: only the handshake matters for the check. */
 const fakeSocket = (auth: Record<string, unknown> = {}, query: Record<string, unknown> = {}): AuthedSocket =>
   ({ handshake: { auth, query } }) as unknown as AuthedSocket;
 
@@ -44,84 +44,80 @@ beforeEach(() => {
   db.shareLink.findUnique.mockResolvedValue(null);
 });
 
-describe('authenticateSocket — jeton d’accès', () => {
-  it('accepte un jeton d’accès valide et pose l’utilisateur relu en base', async () => {
+describe('authenticateSocket: access token', () => {
+  it('accepts a valid access token and sets the user re-read from the database', async () => {
     const { socket, refuse } = await run({ token: signAccessToken({ ...dbUser, sid: 'abc' }) });
     expect(refuse).toBe(false);
     expect(socket.user).toEqual(dbUser);
   });
 
-  // A1-01 : un socket donne accès aux mêmes données que l'API — commentaires internes,
-  // URLs présignées, notifications. Il se ferme donc sur les mêmes conditions.
-  it('refuse un compte désactivé', async () => {
+  // A1-01: a socket gives access to the same data as the API — internal comments, presigned URLs, notifications. It therefore closes under the same conditions.
+  it('refuses a deactivated account', async () => {
     db.user.findUnique.mockResolvedValue({ ...dbUser, disabledAt: new Date() });
     const { socket, refuse } = await run({ token: signAccessToken({ ...dbUser, sid: 'abc' }) });
     expect(refuse).toBe(true);
     expect(socket.user).toBeUndefined();
   });
 
-  // A3-02 : sans le `sid`, la session n'était vérifiée qu'au handshake et une révocation
-  // laissait la websocket ouverte pour des jours. La revalidation périodique en a besoin.
-  it('retient la session du handshake pour pouvoir la rejouer', async () => {
+  // A3-02: without the `sid`, the session was only checked at handshake and a revocation left the websocket open for days. The periodic revalidation needs it.
+  it('keeps the handshake session so that it can be replayed', async () => {
     const { socket } = await run({ token: signAccessToken({ ...dbUser, sid: 'abc' }) });
     expect(socket.authSid).toBe('abc');
   });
 
   /**
-   * Le cœur du correctif : un socket donne accès aux mêmes données qu'une requête HTTP.
-   * Tant qu'il acceptait un jeton hérité sans `sid`, il restait la seule porte du produit
-   * qu'aucune déconnexion, aucun changement de mot de passe et aucun offboarding ne
-   * pouvait fermer — refuser côté HTTP seulement ne fermait rien.
+   * The heart of the fix: a socket gives access to the same data as an HTTP request. As long as it accepted an inherited token without `sid`, it remained the only door
+   * of the product that no logout, no password change and no offboarding could close — refusing only on the HTTP side closed nothing.
    */
-  it('refuse un jeton hérité sans sid', async () => {
+  it('refuses an inherited token without sid', async () => {
     const legacy = jwt.sign({ id: dbUser.id, email: dbUser.email, role: dbUser.role }, env.JWT_SECRET);
     const { socket, refuse } = await run({ token: legacy });
     expect(refuse).toBe(true);
     expect(socket.user).toBeUndefined();
   });
 
-  it('ne consulte pas la session pour un jeton sans sid', async () => {
+  it('does not consult the session for a token without sid', async () => {
     const legacy = jwt.sign({ id: dbUser.id, email: dbUser.email, role: dbUser.role }, env.JWT_SECRET);
     await run({ token: legacy });
     expect(isSessionActive).not.toHaveBeenCalled();
   });
 
-  it('refuse un jeton dont la session a été révoquée', async () => {
+  it('refuses a token whose session has been revoked', async () => {
     vi.mocked(isSessionActive).mockResolvedValue(false);
     const { refuse } = await run({ token: signAccessToken({ ...dbUser, sid: 'morte' }) });
     expect(refuse).toBe(true);
   });
 
-  it('refuse un jeton dont le compte n’existe plus', async () => {
+  it('refuses a token whose account no longer exists', async () => {
     db.user.findUnique.mockResolvedValue(null);
     const { refuse } = await run({ token: signAccessToken({ ...dbUser, sid: 'abc' }) });
     expect(refuse).toBe(true);
   });
 
-  // Tous les jetons de l'app partagent le JWT_SECRET : seul le `kind` les distingue.
-  it('refuse les autres types de jetons signés du même secret', async () => {
+  // All the app's tokens share the JWT_SECRET: only the `kind` distinguishes them.
+  it('refuses the other types of tokens signed with the same secret', async () => {
     expect((await run({ token: signRefreshToken({ ...dbUser, sid: 'abc' }) })).refuse).toBe(true);
     expect((await run({ token: signTwoFaToken(dbUser.id) })).refuse).toBe(true);
     const oidc = jwt.sign({ kind: 'oidc', state: 's', nonce: 'n' }, env.JWT_SECRET);
     expect((await run({ token: oidc })).refuse).toBe(true);
   });
 
-  it('refuse un handshake sans jeton', async () => {
+  it('refuses a handshake without token', async () => {
     expect((await run({})).refuse).toBe(true);
     expect((await run({ token: '' })).refuse).toBe(true);
     expect((await run({ token: 42 })).refuse).toBe(true);
   });
 
-  // L'onglet ouvert avant la bascule vers `auth` se reconnecte encore par la query.
-  it('accepte encore le jeton posé en query', async () => {
+  // A tab opened before the switch to `auth` still reconnects through the query.
+  it('still accepts the token set in the query', async () => {
     const { socket, refuse } = await run({}, { token: signAccessToken({ ...dbUser, sid: 'abc' }) });
     expect(refuse).toBe(false);
     expect(socket.user).toEqual(dbUser);
   });
 });
 
-describe('authenticateSocket — lien de partage client', () => {
-  it('accepte un lien ouvert et retient son projet, sans poser d’utilisateur', async () => {
+describe('authenticateSocket: client share link', () => {
+  it('accepts an open link and keeps its project, without setting any user', async () => {
     db.shareLink.findUnique.mockResolvedValue({ id: 3, token: 'partage', projectId: 12, passwordHash: null });
     const { socket, refuse } = await run({ token: 'partage' });
     expect(refuse).toBe(false);
@@ -129,14 +125,14 @@ describe('authenticateSocket — lien de partage client', () => {
     expect(socket.user).toBeUndefined();
   });
 
-  it('refuse un lien révoqué, expiré ou à bout de vues', async () => {
+  it('refuses a revoked, expired or view-exhausted link', async () => {
     db.shareLink.findUnique.mockResolvedValue({ id: 3, token: 'partage', projectId: 12, passwordHash: null });
     vi.mocked(shareState).mockReturnValue('revoked');
     expect((await run({ token: 'partage' })).refuse).toBe(true);
   });
 
-  // Le token du lien est dans l'URL : sans cette session, le mot de passe serait décoratif.
-  it('exige la session de partage quand le lien est protégé par mot de passe', async () => {
+  // The link's token is in the URL: without this session, the password would be decorative.
+  it('requires the share session when the link is password-protected', async () => {
     db.shareLink.findUnique.mockResolvedValue({ id: 3, token: 'partage', projectId: 12, passwordHash: 'h' });
     expect((await run({ token: 'partage' })).refuse).toBe(true);
 
@@ -146,7 +142,7 @@ describe('authenticateSocket — lien de partage client', () => {
     expect(socket.shareProjectId).toBe(12);
   });
 
-  it('refuse un jeton qui n’est ni un accès ni un lien connu', async () => {
+  it('refuses a token that is neither an access token nor a known link', async () => {
     expect((await run({ token: 'nimportequoi' })).refuse).toBe(true);
   });
 });

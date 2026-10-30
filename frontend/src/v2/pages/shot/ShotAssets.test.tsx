@@ -4,15 +4,14 @@
 import { describe, expect, it } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import ShotAssets from './ShotAssets';
-import type { MockResolver } from '../../../test/apiMock';
-import { renderWithProviders } from '../../../test/renderWithProviders';
+import type { MockResolver } from '@/test/apiMock';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import { t } from '../../i18n';
 
 /**
- * Le bloc « assets du plan » lit deux choses : les assets **rattachés** (une requête sur le
- * plan) et, pour le menu « rattacher un existant », la bibliothèque **entière** du projet.
- * La seconde coûte une page par centaine d'assets — elle n'a donc rien à faire quand le
- * menu n'est pas rendu.
+ * The "shot assets" block reads two things: the **attached** assets (one request on the shot)
+ * and, for the "attach an existing one" menu, the project's **whole** library. The second costs
+ * one page per hundred assets — it therefore has nothing to do when the menu is not rendered.
  */
 
 const api: Record<string, MockResolver> = {
@@ -30,22 +29,22 @@ const api: Record<string, MockResolver> = {
 };
 
 describe('ShotAssets', () => {
-  it('ne charge pas la bibliothèque du projet pour un lecteur', async () => {
+  it('does not load the project library for a reader', async () => {
     const { api: mock } = renderWithProviders(<ShotAssets shotId={12} projectId={3} canManage={false} />, {
       api,
     });
 
     expect(await screen.findByText('Dragon', { exact: false })).toBeInTheDocument();
-    // Le sélecteur n'est pas rendu : pas une seule page d'assets ne doit partir.
+    // The selector is not rendered: not a single asset page must be requested.
     expect(screen.queryByLabelText(t('asset.attach'))).not.toBeInTheDocument();
     expect(mock.called('GET /api/assets')).toHaveLength(0);
   });
 
-  it('charge la bibliothèque entière quand le menu de rattachement est là', async () => {
+  it('loads the whole library when the attach menu is present', async () => {
     const { api: mock } = renderWithProviders(<ShotAssets shotId={12} projectId={3} canManage />, { api });
 
     const select = await screen.findByLabelText(t('asset.attach'));
-    // Le seul asset non rattaché est proposé ; celui déjà lié ne l'est pas.
+    // The only unattached asset is offered; the one already linked is not.
     await waitFor(() => expect(select).toHaveTextContent('Château'));
     const calls = mock.called('GET /api/assets');
     expect(calls).toHaveLength(1);

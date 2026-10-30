@@ -3,11 +3,11 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../../lib/apiClient';
-import { qk } from '../../../lib/query';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
 import { decodeWaveformPeaks, type WaveformMeta } from './waveformData';
 
-/** Réponse du média, réduite au seul champ qui nous intéresse (cache partagé avec la review). */
+/** Media response, reduced to the only field we need (cache shared with the review). */
 interface MediaWaveformResp {
   waveform?: WaveformMeta | null;
 }
@@ -23,20 +23,20 @@ const loadVisible = (): boolean => {
 };
 
 export interface WaveformTrack {
-  /** Le média porte une forme d'onde (transcodé avec du son). */
+  /** The media carries a waveform (transcoded with sound). */
   available: boolean;
-  /** Crêtes prêtes à dessiner — `null` tant qu'elle est absente ou masquée. */
+  /** Peaks ready to draw — `null` while it is absent or hidden. */
   peaks: Uint8Array | null;
   visible: boolean;
   toggle: () => void;
 }
 
 /**
- * Forme d'onde du média courant (constat vague 5 : rien n'existait côté son).
+ * Waveform of the current media (wave 5 finding: nothing existed on the sound side).
  *
- * Elle voyage dans la réponse `/api/media/:id` déjà chargée par la review — même clé de
- * cache, `staleTime` infini : aucune requête supplémentaire, aucun décodage audio dans
- * le navigateur. Masquable, et le choix se retient d'un média à l'autre.
+ * It travels in the `/api/media/:id` response already loaded by the review — same cache key,
+ * infinite `staleTime`: no extra request, no audio decoding in the browser. Hideable, and the
+ * choice is remembered from one media to another.
  */
 export function useWaveform(mediaId: number): WaveformTrack {
   const [visible, setVisible] = useState(loadVisible);
@@ -54,7 +54,7 @@ export function useWaveform(mediaId: number): WaveformTrack {
       try {
         localStorage.setItem(STORAGE_KEY, next ? '1' : '0');
       } catch {
-        // Stockage indisponible (navigation privée) : choix de session seulement.
+        // Storage unavailable (private browsing): session-only choice.
       }
       return next;
     });

@@ -10,7 +10,7 @@
 #
 # Pinned version (never `:latest`): two studios installing the agent on different dates must
 # run the same docker client, since it is what talks to their machine's daemon.
-FROM docker:27.5.1-cli
+FROM docker:27.5.1-cli@sha256:851f91d241214e7c6db86513b270d58776379aacc5eb9c4a87e5b47115e3065c
 
 # `coreutils` is not a convenience: `sort -V` (version comparison) and `date -d` (parsing an
 # ISO timestamp) are missing from Alpine's busybox applets, and the downgrade refusal and

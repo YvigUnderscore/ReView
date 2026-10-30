@@ -17,18 +17,18 @@ import {
 import { reviewShortcutGroups, type KeyToken } from '../pages/review/chrome/shortcuts';
 
 /**
- * Panneau récapitulatif des raccourcis clavier (10.A3), ouvert avec `?`.
+ * Summary panel of keyboard shortcuts (10.A3), opened with `?`.
  *
- * Rien n'y est écrit à la main. La section « Navigation » vient de `lib/shortcutRegistry` et
- * reste **éditable** : cliquer une touche capture la prochaine frappe et persiste la surcharge
- * (42.A2). Les sections de review viennent de `pages/review/chrome/shortcuts`, le registre que
- * les gestionnaires eux-mêmes consultent — c'est ce qui empêche l'aide et le code de diverger,
- * comme ils l'avaient fait : dix raccourcis actifs manquaient à l'appel, un outil « Zoom »
- * inerte y figurait, et les noms de touches y étaient codés en dur en français, donc affichés en
- * français dans les treize autres langues.
+ * Nothing is written by hand here. The "Navigation" section comes from `lib/shortcutRegistry` and
+ * remains **editable**: clicking a key captures the next keystroke and persists the override
+ * (42.A2). The review sections come from `pages/review/chrome/shortcuts`, the registry that
+ * the handlers themselves consult. That is what prevents the help and the code from diverging,
+ * as they had: ten active shortcuts were missing from the roll call, an inert "Zoom" tool
+ * appeared there, and the key names were hard-coded in French, hence displayed in
+ * French in the other thirteen languages.
  */
 
-/** Libellé d'une touche : caractère technique tel quel, nom de touche traduit. */
+/** Label of a key: technical character as is, key name translated. */
 const keyLabel = (token: KeyToken, t: (key: MessageKey) => string): string =>
   'char' in token ? token.char : t(token.nameKey);
 
@@ -47,13 +47,13 @@ function Keys({ keys }: { keys: string[] }) {
   );
 }
 
-/** Représentation clavier d'un raccourci global résolu (leader `g` explicité). */
+/** Keyboard representation of a resolved global shortcut (explicit `g` leader). */
 function displayKeys(def: ShortcutDef, key: string): string[] {
   const label = key === '?' ? '?' : key.toUpperCase();
   return def.kind === 'leader-g' ? ['G', label] : [label];
 }
 
-/** Section « Navigation » éditable : chaque touche est reconfigurable (persistée compte). */
+/** Editable "Navigation" section: each key is reconfigurable (persisted per account). */
 function NavShortcuts() {
   const t = useT();
   const prefsQ = usePreferences();
@@ -88,7 +88,7 @@ function NavShortcuts() {
       update.mutate({ shortcuts: next }, { onSuccess: () => toast.success(t('shortcuts.updated')) });
       setCapturing(null);
     };
-    // Capture-phase : primer sur Radix (Échap ne ferme pas le dialog pendant la capture).
+    // Capture phase: take precedence over Radix (Escape does not close the dialog during capture).
     window.addEventListener('keydown', onKey, true);
     return () => window.removeEventListener('keydown', onKey, true);
   }, [capturing, overrides, bindings, update, t]);

@@ -29,19 +29,19 @@ import { useSubsetTransform } from './selection/useSubsetTransform';
 import { useEditorShortcuts } from './useEditorShortcuts';
 import { useVolumes } from './volumes/useVolumes';
 import { useCropReflect } from './volumes/useCropReflect';
-import { useT } from '../../../../i18n';
+import { useT } from '@/v2/i18n';
 
-/** Outil actif de l'éditeur : navigation (défaut, aucun outil), gizmo ou sélection. */
+/** Active editor tool: navigation (default, no tool), gizmo or selection. */
 export type EditorTool = 'navigate' | GizmoMode | 'select-rect' | 'select-lasso' | 'brush';
 
 const GIZMO_TOOLS: readonly EditorTool[] = ['translate', 'rotate', 'scale'];
 
 /**
- * État et actions de l'éditeur de splat (10.G), sur le modèle de `useModel3D` : outil actif
- * (gizmo/sélection), mode de visualisation, transformation TRS + volumes + masque de
- * suppression, persistance non-destructive (PATCH `/api/media/:id/splat-edits` + masque
- * binaire, toasts), sélection par splat et raccourcis clavier. La logique Three vit dans
- * `gizmos/`, `selection/`, `volumes/` et `scene/` ; les composants ne font que rendre.
+ * State and actions of the splat editor (10.G), modeled on `useModel3D`: active tool
+ * (gizmo/selection), display mode, TRS transform + volumes + deletion mask, non-destructive
+ * persistence (PATCH `/api/media/:id/splat-edits` + binary mask, toasts), per-splat selection
+ * and keyboard shortcuts. The Three logic lives in `gizmos/`, `selection/`, `volumes/` and
+ * `scene/`; the components only render.
  */
 export function useSplatEditor(
   splat: SplatViewer,
@@ -52,36 +52,36 @@ export function useSplatEditor(
   onSaved: (patch: SplatEditsPatch) => void,
   enabled: boolean,
   /**
-   * Une proposition d'édition venue d'un commentaire est-elle en cours de lecture ? L'éditeur
-   * rend alors la main au rejeu, et la reprend intacte à la sortie (`useEditorSuspend`).
+   * Is an edit proposal coming from a comment being read? The editor then yields control to the
+   * replay, and takes it back intact on exit (`useEditorSuspend`).
    */
   suspended = false,
 ) {
   const t = useT();
   const { applyTransform, setBaseFlip: applyBaseFlip, setRenderMode: applyRenderMode, ready } = splat;
-  // Mode navigation par défaut (11.G) : ouvrir l'éditeur n'active aucun gizmo ni sélection.
+  // Default navigation mode (11.G): opening the editor activates no gizmo or selection.
   const [tool, setTool] = useState<EditorTool>('navigate');
   const [brushRadius, setBrushRadius] = useState(40);
   const [renderMode, setRenderMode] = useState<RenderMode>('splats');
   const [transform, setTransform] = useState<SplatTransform>(saved?.transform ?? IDENTITY_SPLAT_TRANSFORM);
-  // Flip d'orientation à l'import (11.E) : true (défaut) = convention Y-down redressée.
+  // Import orientation flip (11.E): true (default) = Y-down convention corrected.
   const [baseFlip, setBaseFlipState] = useState(saved?.baseFlip ?? true);
   const [dirty, setDirty] = useState(false);
   const markDirty = useCallback(() => setDirty(true), []);
-  // Masque de suppression cumulé (indices masqués), sérialisé en bitset à l'enregistrement.
+  // Cumulative deletion mask (masked indices), serialized as a bitset on save.
   const deletedRef = useRef<Set<number>>(new Set());
   const isHidden = useCallback((index: number) => deletedRef.current.has(index), []);
   const history = useEditHistory();
-  // La sélection entre dans le MÊME historique que les éditions (Phase 50, lot 12) : un lasso,
-  // un coup de pinceau ou un « tout désélectionner » sont des crans au même titre que la
-  // suppression qu'ils préparent, et Ctrl+Z les rend dans l'ordre où ils ont été faits.
+  // Selection enters the SAME history as edits (Phase 50, lot 12): a lasso, a brush stroke or
+  // a "deselect all" are steps like the deletion they prepare, and Ctrl+Z restores them in the
+  // order they were made.
   const selection = useSelection(splat, isHidden, history.push);
   const volumes = useVolumes(splat, history.push, markDirty, enabled ? (saved?.volumes ?? null) : null);
   const [deletedCount, setDeletedCount] = useState(0);
-  // Journal des transformations de sous-ensembles (Phase 28) — cumulé, sérialisé à l'enregistrement.
+  // Subset transform log (Phase 28): cumulative, serialized on save.
   const subsetOpsRef = useRef<SubsetOp[]>([]);
-  // Volumes binaires trouvés au chargement (masque du média, ops déjà enregistrées) : ce qui est
-  // au-delà est le geste de CETTE session, et c'est lui seul qu'une proposition emporte (lot 14).
+  // Binary volumes found on load (media mask, ops already saved): what lies beyond is this
+  // session's gesture, and it alone a proposal carries (lot 14).
   const basesRef = useRef({ mask: 0, subset: 0 });
 
   const isGizmoTool = GIZMO_TOOLS.includes(tool);
@@ -90,30 +90,30 @@ export function useSplatEditor(
     setTransform(t);
     setDirty(true);
   }, []);
-  // Un volume sélectionné capte le gizmo : sa TRS vit dans l'objet Three (sérialisée à
-  // l'enregistrement) — on la reflète dans un état pour les champs numériques (V4) + dirty.
+  // A selected volume captures the gizmo: its TRS lives in the Three object (serialized on save),
+  // so it is mirrored into a state for the numeric fields (V4) + dirty.
   const [volumeTrs, setVolumeTrs] = useState<SplatTransform | null>(null);
   const activeSdf = volumes.activeSdf;
   const volumeGizmoChange = useCallback((t: SplatTransform) => {
-    // Box/ellipsoïde : la taille dérive directement de `scale` (aucune synchro de rayon, Phase 28).
+    // Box/ellipsoid: the size derives directly from `scale` (no radius sync, Phase 28).
     setVolumeTrs(t);
     setDirty(true);
   }, []);
 
-  // Synchronise la TRS affichée quand la cible du gizmo change (sélection/désélection volume) —
-  // ajustement d'état pendant le rendu (pattern React « derived state »), pas d'effet.
+  // Syncs the displayed TRS when the gizmo target changes (volume selection/deselection), a
+  // state adjustment during render (React "derived state" pattern), not an effect.
   const [prevSdf, setPrevSdf] = useState(activeSdf);
   if (prevSdf !== activeSdf) {
     setPrevSdf(activeSdf);
     setVolumeTrs(activeSdf ? readMeshTransform(activeSdf) : null);
   }
 
-  // Réglages du gizmo par type de cible (11.G) : mémorisés séparément, persistés localStorage.
+  // Gizmo settings per target type (11.G): remembered separately, persisted in localStorage.
   const targetKind: GizmoTargetKind = activeSdf ? 'volume' : 'splat';
   const gizmo = useGizmoSettings(targetKind);
 
-  // Undo/redo du gizmo (Phase 26) : à la fin d'un drag, pousse une opération annulable qui
-  // rejoue la TRS avant/après sur la cible (splat entier ou volume SDF actif).
+  // Gizmo undo/redo (Phase 26): at the end of a drag, pushes an undoable operation that replays
+  // the TRS before/after on the target (whole splat or active SDF volume).
   const historyPush = history.push;
   const gizmoCommit = useCallback(
     (before: SplatTransform, after: SplatTransform) => {
@@ -147,8 +147,8 @@ export function useSplatEditor(
     [activeSdf, applyTransform, historyPush, t],
   );
 
-  // TRS de sous-ensemble (Phase 28) : sélection non vide + aucun volume ciblé → le gizmo agit sur
-  // les seuls splats sélectionnés (au barycentre), pas sur le mesh entier.
+  // Subset TRS (Phase 28): non-empty selection and no volume targeted, so the gizmo acts on the
+  // selected splats only (at their barycentre), not on the whole mesh.
   const hasSubset = enabled && isGizmoTool && selection.selected.size > 0 && !activeSdf;
 
   useTransformGizmo(splat, {
@@ -170,7 +170,7 @@ export function useSplatEditor(
     opsRef: subsetOpsRef,
   });
 
-  /** Saisie des champs numériques (V4) : applique la TRS à la cible du gizmo (splat ou volume). */
+  /** Numeric field input (V4): applies the TRS to the gizmo target (splat or volume). */
   const commitFields = useCallback(
     (t: SplatTransform) => {
       if (activeSdf) {
@@ -188,35 +188,35 @@ export function useSplatEditor(
   );
 
   const activeVolumeItem = volumes.volumes.find((v) => v.id === volumes.activeId) ?? null;
-  /** Cible des champs numériques du HUD : volume actif sinon splat entier. */
+  /** Target of the HUD numeric fields: active volume, otherwise the whole splat. */
   const fields = {
     label: activeVolumeItem
       ? `${activeVolumeItem.shape === 'box' ? t('review.box') : t('review.sphere')} ${volumes.volumes.indexOf(activeVolumeItem) + 1}`
       : 'Splat',
-    /** Forme de la cible (11.G) : champs contextualisés (rayon sphère / demi-extents boîte). */
+    /** Shape of the target (11.G): contextual fields (sphere radius / box half-extents). */
     shape: activeVolumeItem?.shape ?? null,
     value: volumeTrs && activeSdf ? volumeTrs : transform,
     commit: commitFields,
   };
 
-  // Applique la transformation enregistrée au chargement ; le gizmo suit ensuite le mesh.
+  // Applies the transform saved on load; the gizmo then follows the mesh.
   const savedTransform = saved?.transform ?? null;
   useEffect(() => {
     if (enabled && ready) applyTransform(savedTransform);
   }, [enabled, ready, applyTransform, savedTransform]);
 
-  // Applique le flip d'orientation courant (11.E) — persisté à l'enregistrement.
+  // Applies the current orientation flip (11.E): persisted on save.
   useEffect(() => {
     if (enabled && ready) applyBaseFlip(baseFlip);
   }, [enabled, ready, applyBaseFlip, baseFlip]);
 
-  /** Bouton « Retourner » : bascule le flip d'orientation à l'import (11.E). */
+  /** "Flip" button: toggles the import orientation flip (11.E). */
   const toggleBaseFlip = useCallback(() => {
     setBaseFlipState((f) => !f);
     setDirty(true);
   }, []);
 
-  // Applique le mode de visualisation courant ; rétablit « splats » en quittant l'édition.
+  // Applies the current display mode; restores "splats" on leaving the editor.
   useEffect(() => {
     if (enabled && ready) applyRenderMode(renderMode);
   }, [enabled, ready, applyRenderMode, renderMode]);
@@ -224,32 +224,32 @@ export function useSplatEditor(
     if (enabled) return () => applyRenderMode('splats');
   }, [enabled, applyRenderMode]);
 
-  // Mode points : la teinte de sélection (portée par le mesh, opacité 0 ici) est reflétée dans
-  // l'overlay de points — à l'entrée du mode comme à chaque changement (no-op hors mode points).
+  // Points mode: the selection tint (carried by the mesh, opacity 0 here) is reflected in the
+  // points overlay, on entering the mode and on every change (no-op outside points mode).
   const selectedSet = selection.selected;
   useEffect(() => {
     if (enabled && ready && renderMode === 'points') splat.reflectSelection(selectedSet);
   }, [enabled, ready, renderMode, selectedSet, splat]);
-  // Reflet des volumes de crop dans l'overlay de points (Phase 28) — recalcul débouncé.
+  // Mirrors the crop volumes in the points overlay (Phase 28): debounced recomputation.
   useCropReflect(splat, { enabled, renderMode, volumes, trsTick: volumeTrs });
 
-  /** Supprime (masque) la sélection courante — opération annulable (undo/redo). */
+  /** Deletes (masks) the current selection: undoable operation (undo/redo). */
   const deleteSelection = useCallback(() => {
     const handle = splat.getSceneHandle();
     if (!handle || selection.selected.size === 0) return;
     const hidden = hideSplats(handle, selection.selected);
     if (!hidden) return;
     const deleted = deletedRef.current;
-    // La sélection qui a produit la suppression fait partie de la suppression : elle est vidée
-    // SANS cran propre (`restore`), et le cran de suppression la rend. Un seul Ctrl+Z ramène
-    // donc les splats **et** la sélection — deux crans pour un geste ne se comprendraient pas.
+    // The selection that produced the deletion is part of it: it is emptied WITHOUT its own step
+    // (`restore`), and the deletion step restores it. A single Ctrl+Z thus brings back the splats
+    // **and** the selection: two steps for one gesture would not make sense.
     const selectedBefore = selection.selected;
     for (const i of hidden.indices) deleted.add(i);
     setDeletedCount(deleted.size);
     setDirty(true);
     selection.restore(new Set());
     selection.markDirty(hidden.indices);
-    splat.reflectHidden(hidden.indices, true); // reflet immédiat en mode points
+    splat.reflectHidden(hidden.indices, true); // immediate reflection in points mode
     history.push({
       label: t('splat.undoDelete'),
       undo: () => {
@@ -271,7 +271,7 @@ export function useSplatEditor(
     });
   }, [splat, selection, history, t]);
 
-  /** F : cadre la sélection courante (sinon tout le splat) en gardant la direction de vue. */
+  /** F: frames the current selection (otherwise the whole splat), keeping the view direction. */
   const frameSelection = useCallback(() => {
     const handle = splat.getSceneHandle();
     if (!handle) return;
@@ -279,18 +279,18 @@ export function useSplatEditor(
     if (bounds) frameCameraToSphere(handle.camera, handle.controls, bounds.center, bounds.radius);
   }, [splat, selection]);
 
-  /** H : vue d'origine (recadrage global identique au cadrage initial). */
+  /** H: original view (global reframing identical to the initial framing). */
   const frameHome = useCallback(() => {
     const handle = splat.getSceneHandle();
     if (handle) frameCameraToMesh(handle.THREE, handle.mesh, handle.camera, handle.controls);
   }, [splat]);
 
-  // Raccourcis clavier (extraits dans un hook dédié pour tenir le budget de taille).
+  // Keyboard shortcuts (extracted into a dedicated hook to stay within the size budget).
   useEditorShortcuts({ enabled, splat, history, deleteSelection, frameSelection, frameHome });
 
-  // Lecture d'une proposition de commentaire : l'édition locale se retire de la scène, et y
-  // revient telle quelle à la sortie (lot 14). Sans cela, le rejeu et l'éditeur écriraient dans
-  // le même nuage — c'est la raison pour laquelle le rejeu était coupé aux gestionnaires.
+  // Reading a comment's proposal: the local edit leaves the scene, and comes back as it was on
+  // exit (lot 14). Without this, the replay and the editor would write into the same cloud, which
+  // is why the replay used to be cut off for managers.
   useEditorSuspend({
     enabled,
     suspended,
@@ -300,7 +300,7 @@ export function useSplatEditor(
     baseFlip,
   });
 
-  // Persistance (chargement masque/ops + enregistrement) — hook dédié.
+  // Persistence (mask/ops load and save): dedicated hook.
   const buildEdits = useCallback(
     (): SplatEdits => ({ transform, volumes: volumes.serialize(), baseFlip }),
     [transform, volumes, baseFlip],
@@ -323,16 +323,16 @@ export function useSplatEditor(
   });
 
   /**
-   * Ce que l'édition en cours propose au prochain commentaire (lot 14) : le borné, plus les
-   * deux binaires encodés à la demande.
+   * What the current edit proposes to the next comment (lot 14): the bounded part, plus the two
+   * binaries encoded on demand.
    *
-   * Encodés **à la demande**, et non dans un état : un masque pèse jusqu'à quelques centaines
-   * de kilo-octets, et le re-sérialiser à chaque rendu de l'éditeur serait absurde.
+   * Encoded **on demand**, not stored in a state: a mask can weigh a few hundred kilobytes, and
+   * re-serializing it on every editor render would be absurd.
    *
-   * Deux traitements différents, pour une raison : le masque est idempotent (le rejeu masque ce
-   * qui ne l'est pas déjà), il part donc ENTIER dès que l'auteur y a ajouté quelque chose ; les
-   * ops de sous-ensemble ne le sont pas, seules celles qu'il a ajoutées voyagent — celles du
-   * média sont déjà appliquées chez le lecteur.
+   * Two different treatments, for one reason: the mask is idempotent (the replay masks what is
+   * not already masked), so it travels WHOLE as soon as the author added something to it; subset
+   * ops are not, so only those the author added travel: those of the media are already applied on
+   * the reader's side.
    */
   const buildProposal = useCallback((): SplatEditDraft => {
     const deleted = deletedRef.current;
@@ -345,16 +345,16 @@ export function useSplatEditor(
   }, [buildEdits]);
 
   /**
-   * Reprise locale : l'édition qui vient de partir dans un commentaire quitte l'éditeur.
+   * Local reset: the edit that has just left in a comment leaves the editor.
    *
-   * C'est la mécanique du modèle 3D, à la lettre (`Model3DReview` : proposition envoyée ⇒
-   * `scene.revert()`). Sans elle, la même proposition se rejoindrait d'elle-même au commentaire
-   * suivant (46.T) — et téléverserait son masque une deuxième fois.
+   * This is the 3D model mechanism, to the letter (`Model3DReview`: proposal sent means
+   * `scene.revert()`). Without it, the same proposal would re-attach itself to the next comment
+   * (46.T) and upload its mask a second time.
    */
   const revertEdits = useCallback(() => {
-    history.undoAll(); // restaure les splats masqués et retire les volumes ajoutés dans la session
-    // Retour à ce que le média porte — pas à l'identité : l'éditeur reprend là où il aurait
-    // ouvert. Les volumes enregistrés, créés hors historique, sont restés en place.
+    history.undoAll(); // restores the masked splats and removes the volumes added in the session
+    // Back to what the media carries, not to identity: the editor resumes where it had opened.
+    // The saved volumes, created outside the history, stayed in place.
     applyTransform(savedTransform);
     setTransform(saved?.transform ?? IDENTITY_SPLAT_TRANSFORM);
     setBaseFlipState(saved?.baseFlip ?? true);
@@ -375,8 +375,8 @@ export function useSplatEditor(
     baseFlip,
     toggleBaseFlip,
     dirty,
-    // Sérialisation de l'édition en cours : lue par la persistance, et — binaires compris —
-    // par la proposition jointe au commentaire (lot 14).
+    // Serialization of the current edit: read by persistence and, binaries included, by the
+    // proposal attached to a comment (lot 14).
     buildEdits,
     buildProposal,
     revertEdits,

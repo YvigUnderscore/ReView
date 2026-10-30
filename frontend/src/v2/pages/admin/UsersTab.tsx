@@ -3,17 +3,16 @@
 
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Pencil, Plus, Search, Send, Trash2 } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
+import { Pencil, Plus, Send, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { useAuth } from '../../stores/useAuth';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import Avatar from '../../components/Avatar';
 import { Button } from '../../components/ui/button';
 import { Badge } from '../../components/ui/badge';
-import { Input } from '../../components/ui/input';
 import { Select } from '../../components/ui/select';
 import { SkeletonRows } from '../../components/ui/skeleton';
 import { QueryState } from '../../components/ui/query-state';
@@ -23,16 +22,15 @@ import { fmtBytes, ROLES } from './adminShared';
 import { filterUsers, sortUsers, type UserSort } from './adminUsers';
 import type { Role, User } from '../../types/api';
 import { useT } from '../../i18n';
+import { SearchInput } from '@/v2/components/ui/search-input';
+import { useUsersQuery } from '@/v2/lib/queries';
 
-/** Liste des comptes (refonte admin) : recherche, filtre par rôle, tri, fiche détaillée. */
+/** Account list (admin overhaul): search, role filter, sort, detailed sheet. */
 export default function UsersTab() {
   const t = useT();
   const qc = useQueryClient();
   const meId = useAuth((s) => s.user?.id) ?? 0;
-  const usersQ = useQuery({
-    queryKey: qk.users,
-    queryFn: () => api.get<{ users: User[] }>('/api/users').then((d) => d.users),
-  });
+  const usersQ = useUsersQuery();
   const users = usersQ.data;
   const [q, setQ] = useState('');
   const [role, setRole] = useState<Role | 'ALL'>('ALL');
@@ -43,7 +41,7 @@ export default function UsersTab() {
   const [resending, setResending] = useState<number | null>(null);
 
   const invalidate = () => qc.invalidateQueries({ queryKey: qk.users });
-  /** Relance : le lien précédent est périmé côté serveur, un seul lien vit à la fois. */
+  /** Resend: the previous link is stale server-side, only one link lives at a time. */
   const resendInvite = async (u: User) => {
     setResending(u.id);
     try {
@@ -72,16 +70,12 @@ export default function UsersTab() {
   return (
     <div>
       <div className="mb-3 flex flex-wrap items-center gap-2">
-        <div className="relative min-w-44 flex-1">
-          <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            placeholder={t('users.searchPlaceholder')}
-            aria-label={t('users.searchPlaceholder')}
-            className="pl-8"
-          />
-        </div>
+        <SearchInput
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={t('users.searchPlaceholder')}
+          wrapperClassName="min-w-44 flex-1"
+        />
         <Select value={role} onChange={(e) => setRole(e.target.value as Role | 'ALL')}>
           <option value="ALL">{t('users.allRoles')}</option>
           {ROLES.map((r) => (

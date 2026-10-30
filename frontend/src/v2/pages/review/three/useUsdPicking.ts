@@ -7,47 +7,46 @@ import type { ViewerSceneHandle } from '../viewer/sceneHandle';
 import { isClickGesture, pickPrim, toNdc } from './usdPicking';
 
 /**
- * Résout le prim visé par un point écran. `exact` (Alt+clic) court-circuite la promotion au
- * component englobant et descend à la feuille touchée.
+ * Resolves the prim targeted by a screen point. `exact` (Alt+click) bypasses promotion to the
+ * enclosing component and descends to the leaf that was hit.
  */
 export type UsdPickAt = (clientX: number, clientY: number, exact?: boolean) => string | null;
 
 /**
- * Sélection d'un prim au clic dans le viewer 3D (Phase 46, 46.C).
+ * Prim selection on click in the 3D viewer (Phase 46, 46.C).
  *
- * Le clic gauche pilote aussi l'orbite : on n'interprète le geste comme une sélection que si
- * le pointeur n'a pas bougé entre l'appui et le relâchement. Un clic dans le vide désélectionne,
- * comme dans un DCC.
+ * The left click also drives the orbit, so the gesture is only read as a selection if the pointer
+ * has not moved between press and release. A click on empty space deselects, as in a DCC.
  *
- * La position d'appui vit dans une **ref** et non dans la portée de l'effet : le hook du viewer
- * renvoie un objet neuf à chaque rendu, donc un rendu survenant entre l'appui et le relâchement
- * réinstallerait les écouteurs et ferait perdre l'origine du geste — tout clic passerait alors
- * pour un glissement. Pour la même raison, l'effet ne dépend que de `getSceneHandle`, stable.
+ * The press position lives in a **ref** and not in the effect's scope: the viewer hook returns a new
+ * object on every render, so a render happening between press and release would reinstall the
+ * listeners and lose the origin of the gesture — every click would then count as a drag. For the
+ * same reason, the effect only depends on `getSceneHandle`, which is stable.
  *
- * `ready` doit être celui du viewer Three (`useModel3DThree.ready`) : l'effet ne s'exécute qu'une
- * fois, et branché sur un « média affichable » il tombait sur une scène encore vide et
- * n'installait jamais les écouteurs — aucun clic ne sélectionnait quoi que ce soit.
+ * `ready` must be that of the Three viewer (`useModel3DThree.ready`): the effect only runs once,
+ * and when wired to a "displayable media" it ran on a still-empty scene and never installed the
+ * listeners — no click selected anything.
  *
- * `resolve` passe lui aussi par une ref : il est reconstruit quand l'index de la scène arrive,
- * **après** l'installation des écouteurs. Capturé dans la portée de l'effet, il resterait celui
- * d'un index vide et tout clic résoudrait `null`.
+ * `resolve` also goes through a ref: it is rebuilt when the scene index arrives, **after** the
+ * listeners were installed. Captured in the effect's scope, it would stay that of an empty index,
+ * and every click would resolve to `null`.
  *
- * Le **clic droit** n'est plus traité ici. Il porte deux gestes contradictoires (vol maintenu,
- * menu contextuel bref) et les départager est l'affaire d'un seul module, partagé avec le splat :
- * `viewer/useSpatialContextMenu`. Ce hook lui prête seulement sa résolution de prim, rendue par
- * `pickAt` — sans quoi le menu s'ouvrirait aussi au milieu d'un vol, où le pointeur a bougé.
+ * The **right click** is no longer handled here. It carries two contradictory gestures (held
+ * flight, brief context menu) and telling them apart is the job of a single module, shared with the
+ * splat: `viewer/useSpatialContextMenu`. This hook only lends it its prim resolution, rendered by
+ * `pickAt` — otherwise the menu would also open in the middle of a flight, where the pointer moved.
  */
 export function useUsdPicking(
   getSceneHandle: () => ViewerSceneHandle | null,
   ready: boolean,
   onSelect: (path: string | null, opts?: { additive?: boolean }) => void,
   /**
-   * Traduit l'objet touché en prim — l'index de la scène, seule table faisant autorité.
+   * Translates the hit object into a prim — the scene index, the only authoritative table.
    *
-   * Le viewer y branche `resolvePick`, qui **promeut** la feuille touchée au `component` USD
-   * englobant : on clique une chaise, on sélectionne la chaise. `exact` court-circuite cette
-   * promotion pour descendre à la pièce précise ; c'est **Alt+clic** qui le demande — Ctrl/⌘
-   * sert déjà à la multi-sélection, et Maj à la plage dans l'arbre.
+   * The viewer plugs `resolvePick` in there, which **promotes** the hit leaf to the enclosing USD
+   * `component`: click a chair, select the chair. `exact` bypasses this promotion to descend to the
+   * precise part; it is **Alt+click** that requests it — Ctrl/⌘ is already used for multi-selection,
+   * and Shift for the range in the tree.
    */
   resolve: (object: THREE.Object3D, opts?: { exact?: boolean }) => string | null,
 ): UsdPickAt {
@@ -58,8 +57,8 @@ export function useUsdPicking(
   }, [resolve]);
 
   /**
-   * Prim visé par un point écran. Construit au niveau du hook, et non dans la portée de l'effet :
-   * le menu contextuel spatial s'en sert au relâchement du bouton droit, hors de cet effet.
+   * Prim targeted by a screen point. Built at hook level, not in the effect's scope: the spatial
+   * context menu uses it when the right button is released, outside that effect.
    */
   const pickAt = useCallback<UsdPickAt>(
     (clientX, clientY, exact = false) => {
@@ -90,22 +89,22 @@ export function useUsdPicking(
       down.current = null;
       if (e.button !== 0 || !start) return;
       if (!isClickGesture(e.clientX - start.x, e.clientY - start.y)) return;
-      // Ctrl/⌘+clic : ajoute ou retire le prim de la sélection (multi-sélection B1).
+      // Ctrl/⌘+click: adds or removes the prim from the selection (multi-selection B1).
       onSelect(pickAt(e.clientX, e.clientY, e.altKey), { additive: e.ctrlKey || e.metaKey });
     };
 
-    // PHASE DE CAPTURE pour les événements de pointeur.
+    // CAPTURE PHASE for pointer events.
     //
-    // Les contrôles de caméra sont posés sur le même élément et traitent le bouton GAUCHE
-    // (orbite) : leur `pointerdown` arrêtait la propagation avant que celui-ci n'enregistre
-    // l'origine du geste. `down.current` restait donc nul, `onUp` sortait aussitôt, et un
-    // clic gauche ne sélectionnait jamais rien — alors que le clic DROIT, que ces contrôles
-    // traitent autrement (vol libre), atteignait bien ce module : le menu du prim s'ouvrait
-    // et « Cadrer » visait le bon objet. C'est cette asymétrie qui a mis sur la piste.
+    // The camera controls sit on the same element and handle the LEFT button (orbit): their
+    // `pointerdown` stopped propagation before this one recorded the origin of the gesture.
+    // `down.current` thus stayed null, `onUp` exited immediately, and a left click never selected
+    // anything — whereas the RIGHT click, which those controls handle differently (free flight),
+    // did reach this module: the prim's menu opened and "Frame" targeted the right object. This
+    // asymmetry is what put us on the track.
     //
-    // La capture descend avant toute écoute en bulle : on note l'origine du geste sans rien
-    // empêcher — ces deux écouteurs n'appellent ni `preventDefault` ni `stopPropagation`,
-    // l'orbite continue de fonctionner exactement comme avant.
+    // Capture descends before any bubble listener: we note the origin of the gesture without
+    // preventing anything — these two listeners call neither `preventDefault` nor
+    // `stopPropagation`, so the orbit keeps working exactly as before.
     dom.addEventListener('pointerdown', onDown, true);
     dom.addEventListener('pointerup', onUp, true);
     return () => {

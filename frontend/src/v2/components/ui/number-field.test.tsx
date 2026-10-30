@@ -7,11 +7,11 @@ import { NumberField, type NumberFieldProps } from './number-field';
 import { SCRUB_THRESHOLD_PX } from './number-field.math';
 
 /**
- * Le geste de la primitive, celui que les maths ne peuvent pas décider seules : un appui sur
- * le champ est-il un clic (focus + sélection) ou un scrub (la valeur suit le pointeur) ?
- * happy-dom ne pose pas de pointeur : on l'émule, et on stubbe la capture qu'il n'implémente
- * pas. `onChange` est un espion — la valeur affichée reste donc celle de la prop, ce qui rend
- * la valeur de départ d'un geste vérifiable d'un test à l'autre.
+ * The primitive's gesture, which the maths cannot decide alone: does a press on the field
+ * count as a click (focus + selection) or a scrub (the value follows the pointer)?
+ * happy-dom does not provide a pointer: we emulate it, and stub the capture it does not
+ * implement. `onChange` is a spy — the displayed value therefore stays at the prop's value,
+ * which makes the starting value of a gesture verifiable from one test to the next.
  */
 const setup = (props: Partial<NumberFieldProps> = {}) => {
   const onChange = vi.fn();
@@ -29,7 +29,7 @@ const setup = (props: Partial<NumberFieldProps> = {}) => {
     />,
   );
   const field = view.getByRole('textbox') as HTMLInputElement;
-  // Le libellé peut être une icône : on ne le cherche par son texte que s'il en a un.
+  // The label may be an icon: we only look it up by its text if it has one.
   const label = view.queryByText('mm') ?? (field.previousElementSibling as HTMLElement);
   for (const el of [field, label]) {
     el.setPointerCapture = () => {};
@@ -38,15 +38,15 @@ const setup = (props: Partial<NumberFieldProps> = {}) => {
   return { onChange, field, label, view };
 };
 
-/** Appui, déplacement horizontal, relâchement — un geste complet sur un élément. */
+/** Press, horizontal move, release — a complete gesture on an element. */
 const press = (el: Element, clientX: number) =>
   fireEvent.pointerDown(el, { button: 0, pointerId: 1, clientX });
 const moveTo = (el: Element, clientX: number, shiftKey = false) =>
   fireEvent.pointerMove(el, { pointerId: 1, clientX, shiftKey });
 const release = (el: Element, clientX: number) => fireEvent.pointerUp(el, { pointerId: 1, clientX });
 
-describe('NumberField — appui sur le champ', () => {
-  it('clic sans mouvement : le champ prend le focus et sa valeur est sélectionnée', () => {
+describe('NumberField — press on the field', () => {
+  it('click without movement: the field takes focus and its value is selected', () => {
     const { field, onChange } = setup();
     press(field, 100);
     release(field, 100);
@@ -56,41 +56,41 @@ describe('NumberField — appui sur le champ', () => {
     expect(onChange).not.toHaveBeenCalled();
   });
 
-  it('déplacement sous le seuil : ni valeur modifiée, ni geste reconnu', () => {
+  it('movement below the threshold: no value changed, no gesture recognised', () => {
     const { field, onChange } = setup();
     press(field, 100);
     moveTo(field, 100 + SCRUB_THRESHOLD_PX - 1);
     expect(onChange).not.toHaveBeenCalled();
-    // Le relâchement reste un clic : c'est bien un appui tremblé, pas un scrub raté.
+    // Release stays a click: it is a shaky press, not a failed scrub.
     release(field, 100 + SCRUB_THRESHOLD_PX - 1);
     expect(field).toHaveFocus();
   });
 
-  it('déplacement au-delà du seuil : la valeur suit, le champ ne prend pas le focus', () => {
+  it('movement beyond the threshold: the value follows, the field does not take focus', () => {
     const { field, onChange } = setup();
     press(field, 100);
     moveTo(field, 140);
-    // 40 px moins le seuil de 4 px = 36 px, soit 9 pas de 1 à 4 px par pas.
+    // 40 px minus the 4 px threshold = 36 px, i.e. 9 steps of 1 at 4 px per step.
     expect(onChange).toHaveBeenLastCalledWith(59);
     release(field, 140);
     expect(field).not.toHaveFocus();
   });
 
-  it('vers la gauche, la valeur descend', () => {
+  it('leftwards, the value goes down', () => {
     const { field, onChange } = setup();
     press(field, 100);
     moveTo(field, 60);
     expect(onChange).toHaveBeenLastCalledWith(41);
   });
 
-  it('Maj multiplie le pas par dix', () => {
+  it('Shift multiplies the step by ten', () => {
     const { field, onChange } = setup({ max: 1000 });
     press(field, 100);
     moveTo(field, 140, true);
-    expect(onChange).toHaveBeenLastCalledWith(140); // 50 + 9 pas × 10
+    expect(onChange).toHaveBeenLastCalledWith(140); // 50 + 9 steps × 10
   });
 
-  it('le scrub reste borné par min et max', () => {
+  it('the scrub stays bounded by min and max', () => {
     const haut = setup({ value: 95 });
     press(haut.field, 100);
     moveTo(haut.field, 200);
@@ -103,7 +103,7 @@ describe('NumberField — appui sur le champ', () => {
     expect(bas.onChange).toHaveBeenLastCalledWith(0);
   });
 
-  it('champ déjà en saisie : le glissement laisse la sélection de texte tranquille', () => {
+  it('field already being edited: dragging leaves the text selection alone', () => {
     const { field, onChange } = setup();
     field.focus();
     press(field, 100);
@@ -112,21 +112,21 @@ describe('NumberField — appui sur le champ', () => {
   });
 });
 
-describe('NumberField — Échap', () => {
-  it('annule un scrub en cours en restituant la valeur de départ', () => {
+describe('NumberField — Escape', () => {
+  it('cancels a scrub in progress, restoring the starting value', () => {
     const { field, onChange } = setup();
     press(field, 100);
     moveTo(field, 140);
     expect(onChange).toHaveBeenLastCalledWith(59);
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(onChange).toHaveBeenLastCalledWith(50);
-    // Le geste est clos : un déplacement de plus ne rappelle plus rien.
+    // The gesture is closed: a further move no longer calls anything.
     const appels = onChange.mock.calls.length;
     moveTo(field, 200);
     expect(onChange.mock.calls).toHaveLength(appels);
   });
 
-  it('hors scrub, Échap abandonne le brouillon de saisie sans rien commettre', () => {
+  it('outside a scrub, Escape discards the draft input without committing anything', () => {
     const { field, onChange } = setup();
     field.focus();
     fireEvent.change(field, { target: { value: '77' } });
@@ -137,30 +137,30 @@ describe('NumberField — Échap', () => {
   });
 });
 
-describe('NumberField — libellé et clavier', () => {
-  it('le libellé scrube toujours, et dès le premier pixel', () => {
+describe('NumberField — label and keyboard', () => {
+  it('the label always scrubs, from the very first pixel', () => {
     const { label, onChange } = setup();
     press(label, 0);
     moveTo(label, 8);
-    // Aucun seuil retiré : 8 px / 4 px par pas = 2 pas.
+    // No threshold removed: 8 px / 4 px per step = 2 steps.
     expect(onChange).toHaveBeenLastCalledWith(52);
     release(label, 8);
   });
 
-  it('la saisie clavier reste intacte : Entrée commet la valeur tapée', () => {
+  it('keyboard input stays intact: Enter commits the typed value', () => {
     const { field, onChange } = setup();
     fireEvent.change(field, { target: { value: '42' } });
     fireEvent.keyDown(field, { key: 'Enter' });
     expect(onChange).toHaveBeenCalledWith(42);
   });
 
-  it('le champ reste un input annoncé par son libellé textuel', () => {
+  it('the field remains an input announced by its text label', () => {
     const { field, label } = setup();
     expect(field).toHaveAttribute('aria-labelledby', label.getAttribute('id'));
     expect(field).not.toHaveAttribute('aria-label');
   });
 
-  it('libellé en icône : le rappel sert d’étiquette accessible', () => {
+  it('icon label: the reminder serves as the accessible label', () => {
     const { field } = setup({ label: <svg aria-hidden="true" />, hint: 'Focal' });
     expect(field).toHaveAttribute('aria-label', 'Focal');
     expect(field).not.toHaveAttribute('aria-labelledby');

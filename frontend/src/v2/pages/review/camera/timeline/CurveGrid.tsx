@@ -5,14 +5,14 @@ import { niceTicks } from './gridTicks';
 import { rulerTicks, timeToX, valueToY, type TimeView, type ValueView } from './viewTransform';
 
 /**
- * Grille de fond du graph editor (Phase 27) : lignes verticales (temps) et horizontales (valeur),
- * graduations « rondes » (`niceTicks`) pour les valeurs. Couleurs = tokens du thème. Purement
- * visuelle (aucune interaction) — rendue sous les courbes.
+ * Graph editor background grid (Phase 27): vertical lines (time) and horizontal lines (value),
+ * "round" ticks (`niceTicks`) for the values. Colors = theme tokens. Purely visual (no
+ * interaction) — rendered under the curves.
  *
- * Les verticales sont **celles de la règle de temps** (`rulerTicks`), et ne portent aucun libellé :
- * le tiroir affichait deux systèmes de graduations temporelles concurrents — timecode `s:ff` dans
- * la règle, secondes décimales dans le graphe — qui ne tombaient jamais aux mêmes endroits. Le
- * timecode reste lu une seule fois, dans la règle, juste au-dessus.
+ * The verticals are **those of the time ruler** (`rulerTicks`), and carry no label: the drawer
+ * used to show two competing time tick systems — `s:ff` timecode on the ruler, decimal seconds
+ * on the graph — that never fell at the same places. The timecode is now read once, on the
+ * ruler, just above.
  */
 export default function CurveGrid({
   timeView,
@@ -25,7 +25,7 @@ export default function CurveGrid({
   valueView: ValueView;
   width: number;
   height: number;
-  /** Framerate du pipeline — la grille tombe sur les mêmes graduations que la règle. */
+  /** Pipeline frame rate — the grid falls on the same ticks as the ruler. */
   fps: number;
 }) {
   const tv: TimeView = { ...timeView, width };

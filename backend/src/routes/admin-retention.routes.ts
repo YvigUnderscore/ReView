@@ -11,42 +11,42 @@ import {
   retentionPolicySchema,
   setRetentionPolicy,
   sweepRetention,
-} from '../lib/retention';
+} from '../services/RetentionService';
+import { requireUser } from '../middleware/auth';
 
 /**
- * Rétention des journaux : lecture et réglage des durées de conservation, déclenchement
- * manuel du balayage. La politique elle-même vit dans `lib/retention`.
+ * Log retention: reading and setting retention durations, manual triggering of the sweep. The policy
+ * itself lives in `lib/retention`.
  *
- * Ce routeur est monté **dans** `admin.routes` (`router.use`), qui a déjà posé
- * `authenticate` + `requireRole(ADMIN)` : il n'en repose aucun de son côté, et n'expose
- * donc aucune route publique — cf. la règle de montage rappelée dans CLAUDE.md.
+ * This router is mounted **inside** `admin.routes` (`router.use`), which has already set up
+ * `authenticate` + `requireRole(ADMIN)`: it sets none of its own, and therefore exposes no public
+ * route, see the mounting rule recalled in CLAUDE.md.
  */
 const router = Router();
 
-// GET /api/admin/retention — durées en vigueur + valeurs par défaut du produit
+// GET /api/admin/retention — durations in force + product default values
 router.get('/retention', async (_req, res) => {
   res.json({ policy: await getRetentionPolicy(), defaults: RETENTION_DEFAULTS });
 });
 
 /**
- * PUT /api/admin/retention — enregistre les durées (0 = conservation illimitée).
+ * PUT /api/admin/retention: records the durations (0 = unlimited retention).
  *
- * La trace porte l'AVANT et l'APRÈS : « 365 → 90 sur l'audit » se lit, « 90 » ne dit rien.
- * Elle est inpurgeable (`AUDIT_UNPURGEABLE_ACTIONS`), donc un raccourcissement de la
- * rétention d'audit reste visible pour toujours, y compris après la purge qu'il commande.
+ * The trace carries the BEFORE and the AFTER: "365 → 90 on the audit" can be read, "90" says nothing.
+ * It is unpurgeable (`AUDIT_UNPURGEABLE_ACTIONS`), so a shortening of the audit retention remains
+ * visible forever, including after the purge it orders.
  *
- * **Pas de délai avant prise d'effet**, délibérément (A5-04). Un tel délai n'apporterait
- * rien de plus ici : le plancher `AUDIT_RETENTION_MIN_DAYS` met déjà hors d'atteinte tout
- * ce qui s'est passé récemment — la fenêtre que le délai protégerait —, et la manœuvre
- * reste consignée de façon indélébile. Il coûterait en revanche une politique « en
- * attente » à stocker, afficher et annuler, et il retarderait le cas légitime pressé :
- * une demande d'effacement RGPD, qui doit être honorée sans attendre une semaine.
+ * **No delay before taking effect**, deliberately (A5-04). Such a delay would add nothing here: the
+ * floor `AUDIT_RETENTION_MIN_DAYS` already puts out of reach everything that happened recently, which
+ * is the window a delay would protect, and the manoeuvre stays recorded indelibly. It would, however,
+ * cost a "pending" policy to store, display and cancel, and it would delay the legitimate urgent case:
+ * a GDPR erasure request, which must be honored without waiting a week.
  */
 router.put('/retention', validate({ body: retentionPolicySchema }), async (req, res) => {
   const previous = await getRetentionPolicy();
   const policy = await setRetentionPolicy(req.body);
   logAudit({
-    userId: req.user!.id,
+    userId: requireUser(req).id,
     action: 'RETENTION_CONFIG',
     entityType: 'Setting',
     metadata: { previous, policy },
@@ -55,14 +55,14 @@ router.put('/retention', validate({ body: retentionPolicySchema }), async (req, 
 });
 
 /**
- * POST /api/admin/retention/run — balayage immédiat (réponse à une demande RGPD, par
- * exemple). Budget de tranches réduit : la requête HTTP doit répondre, le reste du retard
- * est rattrapé par la passe nocturne, que `truncated` annonce à l'appelant.
+ * POST /api/admin/retention/run: immediate sweep (in response to a GDPR request, for example). Reduced
+ * slice budget: the HTTP request must respond, and the rest of the backlog is caught up by the nightly
+ * pass, which `truncated` tells the caller about.
  */
 router.post('/retention/run', async (req, res) => {
   const { families, total, truncated } = await sweepRetention({ maxBatches: MANUAL_MAX_BATCHES });
   logAudit({
-    userId: req.user!.id,
+    userId: requireUser(req).id,
     action: 'RETENTION_RUN',
     entityType: 'Setting',
     metadata: { families, total, truncated },

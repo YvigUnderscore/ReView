@@ -19,28 +19,28 @@ import {
 import { WIDGET_ROWS } from '../../components/widgets/widgetSizing';
 
 describe('visibleWidgets', () => {
-  it('rend la disposition de déclaration sans préférence', () => {
+  it('renders the declaration layout with no preference', () => {
     expect(visibleWidgets(undefined)).toEqual(ALL_WIDGET_IDS);
   });
 
-  it('respecte l’ordre sauvegardé', () => {
+  it('respects the saved order', () => {
     const pref: HomeWidgetsPref = { order: ['activity', 'stats'] };
     expect(visibleWidgets(pref).slice(0, 2)).toEqual(['activity', 'stats']);
   });
 
-  it('place les blocs livrés après la sauvegarde à leur rang de déclaration', () => {
+  it('places blocks delivered after the save at their declaration rank', () => {
     const pref: HomeWidgetsPref = { order: ['activity'] };
     const list = visibleWidgets(pref);
     expect(list[0]).toBe('activity');
-    // Aucun bloc connu ne disparaît parce qu'il n'était pas dans l'ordre enregistré.
+    // No known block disappears because it was missing from the saved order.
     expect(new Set(list)).toEqual(new Set(ALL_WIDGET_IDS));
   });
 
-  it('écarte les masqués', () => {
+  it('drops the hidden ones', () => {
     expect(visibleWidgets({ hidden: ['stats'] })).not.toContain('stats');
   });
 
-  it('ignore un identifiant inconnu resté en préférence', () => {
+  it('ignores an unknown identifier left in the preference', () => {
     const pref: HomeWidgetsPref = { order: ['fantome', 'stats'], hidden: ['fantome'] };
     expect(visibleWidgets(pref)).toEqual(expect.arrayContaining(['stats']));
     expect(visibleWidgets(pref)).not.toContain('fantome' as never);
@@ -49,7 +49,7 @@ describe('visibleWidgets', () => {
 });
 
 describe('widgetSettings', () => {
-  it('applique les défauts du registre', () => {
+  it('applies the registry defaults', () => {
     const s = widgetSettings('projects', undefined);
     expect(s.span).toBe(HOME_WIDGETS.projects.span);
     expect(s.variant).toBe('grid');
@@ -57,54 +57,54 @@ describe('widgetSettings', () => {
     expect(s.density).toBe('comfortable');
   });
 
-  it('applique les réglages du compte', () => {
+  it('applies the account settings', () => {
     const pref = setWidgetSetting('projects', { span: 12, bare: true }, undefined);
     const s = widgetSettings('projects', pref);
     expect(s.span).toBe(12);
     expect(s.bare).toBe(true);
   });
 
-  it('refuse une largeur que le bloc ne propose pas', () => {
+  it('refuses a width the block does not offer', () => {
     const pref: HomeWidgetsPref = { settings: { stats: { span: 3 } } };
     expect(widgetSettings('stats', pref).span).toBe(HOME_WIDGETS.stats.span);
   });
 
-  it('refuse une variante que le bloc ne sait pas rendre', () => {
+  it('refuses a variant the block cannot render', () => {
     const pref: HomeWidgetsPref = { settings: { myTasks: { variant: 'grid' } } };
     expect(widgetSettings('myTasks', pref).variant).toBe('list');
   });
 
-  it('ne touche pas aux réglages des autres blocs', () => {
+  it('does not touch the settings of other blocks', () => {
     const pref = setWidgetSetting('projects', { span: 12 }, { settings: { myTasks: { bare: true } } });
     expect(widgetSettings('myTasks', pref).bare).toBe(true);
     expect(widgetSettings('projects', pref).span).toBe(12);
   });
 });
 
-describe('widgetSettings — la hauteur en rangées (lot 13)', () => {
-  it('applique la hauteur par défaut du bloc', () => {
+describe('widgetSettings — height in rows (batch 13)', () => {
+  it('applies the default height of the block', () => {
     for (const id of ALL_WIDGET_IDS) {
       expect(widgetSettings(id, undefined).rows).toBe(HOME_WIDGETS[id].rows);
-      // Une hauteur hors rampe ne produirait aucune classe `row-span-*`.
+      // A height outside the scale would produce no `row-span-*` class.
       expect(WIDGET_ROWS).toContain(HOME_WIDGETS[id].rows);
     }
   });
 
-  it('applique la hauteur enregistrée', () => {
+  it('applies the saved height', () => {
     const pref = setWidgetSize('activity', { span: 8, rows: 6 }, undefined);
     expect(widgetSettings('activity', pref).rows).toBe(6);
   });
 
-  it('relit un accueil composé AVANT les rangées, sans réécrire la préférence', () => {
-    // Les dispositions d'avant ce lot ne portent que l'échelle `short`/`normal`/`tall` :
-    // elle se traduit à la lecture, pour que personne ne perde le bloc haut qu'il s'était
-    // réglé — et la préférence enregistrée, elle, reste telle quelle.
+  it('reads back a home page composed BEFORE the rows, without rewriting the preference', () => {
+    // Layouts from before this batch carry only the `short`/`normal`/`tall` scale. It is
+    // translated on read, so nobody loses the tall block they had set, and the saved preference
+    // itself stays as it is.
     const before: HomeWidgetsPref = {
       settings: { activity: { height: 'tall' }, myTasks: { height: 'short' }, stats: { span: 8 } },
     };
     expect(widgetSettings('activity', before).rows).toBe(5);
     expect(widgetSettings('myTasks', before).rows).toBe(2);
-    // Aucune hauteur enregistrée : le bloc garde son défaut de registre.
+    // No saved height: the block keeps its registry default.
     expect(widgetSettings('stats', before).rows).toBe(HOME_WIDGETS.stats.rows);
     expect(before.settings).toEqual({
       activity: { height: 'tall' },
@@ -113,23 +113,23 @@ describe('widgetSettings — la hauteur en rangées (lot 13)', () => {
     });
   });
 
-  it('refuse une hauteur hors rampe plutôt que de l’appliquer de travers', () => {
+  it('refuses a height outside the scale rather than applying it wrongly', () => {
     const pref: HomeWidgetsPref = { settings: { stats: { rows: 9 } } };
     expect(widgetSettings('stats', pref).rows).toBe(HOME_WIDGETS.stats.rows);
   });
 });
 
 describe('setWidgetSize', () => {
-  it('enregistre largeur et hauteur d’un seul geste', () => {
-    // La poignée règle les deux axes ensemble ; un enregistrement par axe doublerait les
-    // écritures de préférence.
+  it('saves width and height in a single gesture', () => {
+    // The handle sets both axes together; one save per axis would double the preference
+    // writes.
     const pref = setWidgetSize('myTasks', { span: 12, rows: 5 }, undefined);
     expect(pref.settings?.myTasks).toEqual({ span: 12, rows: 5 });
     const settings = widgetSettings('myTasks', pref);
     expect([settings.span, settings.rows]).toEqual([12, 5]);
   });
 
-  it('conserve les autres réglages du bloc', () => {
+  it('keeps the other settings of the block', () => {
     const base = setWidgetSetting('myTasks', { bare: true, density: 'compact' }, undefined);
     const pref = setWidgetSize('myTasks', { span: 8, rows: 2 }, base);
     const settings = widgetSettings('myTasks', pref);
@@ -140,38 +140,38 @@ describe('setWidgetSize', () => {
 });
 
 describe('reorderWidgets', () => {
-  it('déplace un bloc à la place d’un autre', () => {
+  it('moves a block to the place of another', () => {
     const pref = reorderWidgets('activity', 'stats', undefined);
     expect(visibleWidgets(pref)[0]).toBe('activity');
   });
 
-  it('ne change rien quand la cible est la source', () => {
+  it('changes nothing when the target is the source', () => {
     expect(reorderWidgets('stats', 'stats', undefined)).toEqual({});
   });
 
-  it('conserve les blocs masqués dans l’ordre enregistré', () => {
-    // Sans cela, démasquer un bloc le ferait réapparaître à une place arbitraire.
+  it('keeps hidden blocks in the saved order', () => {
+    // Without this, unhiding a block would make it reappear at an arbitrary place.
     const pref: HomeWidgetsPref = { hidden: ['activity'] };
     const next = reorderWidgets('myTasks', 'stats', pref);
     expect(next.order).toContain('activity');
   });
 
-  it('ignore un bloc masqué comme cible', () => {
+  it('ignores a hidden block as a target', () => {
     const pref: HomeWidgetsPref = { hidden: ['activity'] };
     expect(reorderWidgets('stats', 'activity', pref)).toEqual(pref);
   });
 });
 
 describe('toggleWidget', () => {
-  it('masque puis réaffiche', () => {
+  it('hides, then shows again', () => {
     const hiddenPref = toggleWidget('stats', false, undefined);
     expect(hiddenWidgets(hiddenPref)).toEqual(['stats']);
     expect(hiddenWidgets(toggleWidget('stats', true, hiddenPref))).toEqual([]);
   });
 
-  it('préserve l’ordre et les réglages déjà enregistrés', () => {
-    // La préférence est fusionnée côté serveur clé par clé : écraser `order` en masquant
-    // un bloc effacerait toute la disposition.
+  it('preserves the order and the settings already saved', () => {
+    // The preference is merged server-side key by key: overwriting `order` when hiding a block
+    // would erase the whole layout.
     const base: HomeWidgetsPref = { order: ['activity'], settings: { stats: { span: 6 } } };
     const next = toggleWidget('stats', false, base);
     expect(next.order).toEqual(['activity']);
@@ -180,7 +180,7 @@ describe('toggleWidget', () => {
 });
 
 describe('resetWidgets', () => {
-  it('rend la disposition d’origine', () => {
+  it('renders the original layout', () => {
     const pref = resetWidgets();
     expect(pref.hidden).toEqual([]);
     expect(pref.order).toEqual(ALL_WIDGET_IDS);
@@ -189,8 +189,8 @@ describe('resetWidgets', () => {
 });
 
 describe('spanClass', () => {
-  it('rend des classes écrites en clair, jamais interpolées', () => {
-    // Une classe construite par interpolation est purgée au build et ne produit rien.
+  it('renders classes written out in full, never interpolated', () => {
+    // A class built by interpolation is purged at build time and produces nothing.
     for (const span of [3, 4, 6, 8, 12] as const) {
       expect(spanClass(span)).toMatch(/xl:col-span-\d+/);
       expect(spanClass(span)).not.toContain('${');

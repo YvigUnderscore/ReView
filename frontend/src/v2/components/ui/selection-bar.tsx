@@ -14,16 +14,16 @@ export interface SelectionAction {
 }
 
 /**
- * Barre d'actions groupées flottante (13.A). Apparaît en bas de l'écran dès qu'au moins
- * un item est sélectionné ; les actions (Supprimer / Statut / Déplacer…) sont fournies
- * par la page. « Annuler » vide la sélection.
+ * Floating bulk-actions bar (13.A). Appears at the bottom of the screen as soon as at least
+ * one item is selected; the actions (Delete / Status / Move…) are supplied by the page.
+ * "Cancel" clears the selection.
  *
- * L'apparition et le retrait sont des `@keyframes` CSS depuis le retrait de framer-motion
- * du premier chargement (F3) : la barre reste montée le temps de redescendre, faute de quoi
- * elle disparaîtrait d'un coup là où `AnimatePresence` la faisait sortir par le bas.
+ * Appearance and removal are CSS `@keyframes` since framer-motion was dropped from the first
+ * load (F3): the bar stays mounted for the duration of its slide-down, otherwise it would vanish
+ * at once where `AnimatePresence` used to slide it out at the bottom.
  */
 
-/** Durée du retrait, en miroir exact de la classe d'animation ci-dessous (0,18 s). */
+/** Removal duration, mirroring exactly the animation class below (0.18 s). */
 const EXIT_MS = 180;
 export default function SelectionBar({
   count,
@@ -34,20 +34,20 @@ export default function SelectionBar({
   count: number;
   actions: SelectionAction[];
   onClear: () => void;
-  /** Nom accordé au nombre, sans le nombre : la barre compose « 3 » + « projets ». */
+  /** Noun agreement for the number, without the number: the bar composes "3" + "projects". */
   label?: string;
 }) {
   const t = useT();
   const [phase, setPhase] = useState<'absent' | 'in' | 'out'>(count > 0 ? 'in' : 'absent');
-  // Compte et libellé de la dernière sélection non vide : à la dernière image du retrait,
-  // la page a déjà remis le compte à zéro et la barre annoncerait « 0 sélectionnés ».
+  // Count and label of the last non-empty selection: on the last frame of the removal, the
+  // page has already reset the count to zero and the bar would announce "0 selected".
   const [frozen, setFrozen] = useState({ count, label });
   const [seenCount, setSeenCount] = useState(count);
 
   if (count > 0 && (frozen.count !== count || frozen.label !== label)) setFrozen({ count, label });
   if (seenCount !== count) {
-    // Ajusté pendant le rendu (même motif que la coquille) : pas d'image intermédiaire
-    // dans le mauvais état, et pas de `setState` dans un effet.
+    // Adjusted during render (same pattern as the shell): no intermediate frame in the wrong
+    // state, and no `setState` in an effect.
     setSeenCount(count);
     if (count > 0) setPhase('in');
     else if (phase !== 'absent') setPhase('out');
@@ -63,7 +63,7 @@ export default function SelectionBar({
 
   const shownCount = count > 0 ? count : frozen.count;
   const shownLabel = count > 0 ? label : frozen.label;
-  // 24 px de course et 0,18 s : les valeurs mêmes de l'animation d'origine.
+  // 24 px of travel and 0.18 s: the very values of the original animation.
   const move =
     phase === 'out'
       ? 'animate-out fade-out slide-out-to-bottom-6 fill-mode-forwards duration-[180ms] motion-reduce:animate-none'

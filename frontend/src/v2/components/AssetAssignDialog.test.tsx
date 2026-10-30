@@ -8,10 +8,10 @@ import type { MockRequest, MockResolver } from '../../test/apiMock';
 import { renderWithProviders } from '../../test/renderWithProviders';
 
 /**
- * Le dialogue d'assignation est un sélecteur : il doit proposer **tous** les plans du
- * projet, et il ne doit les proposer qu'une fois tous arrivés. Deux exigences opposées —
- * la liste complète coûte des allers-retours en série — que le mode `all` de
- * `useInfiniteList` concilie en demandant des pages aussi grandes que le serveur en sert.
+ * The assignment dialog is a selector: it must offer **all** the shots of the
+ * project, and only offer them once they have all arrived. Two opposing requirements:
+ * the full list costs round trips in series, and the `all` mode of
+ * `useInfiniteList` reconciles this by requesting pages as large as the server serves.
  */
 
 const shot = (id: number) => ({
@@ -23,7 +23,7 @@ const shot = (id: number) => ({
   status: 'PENDING',
 });
 
-/** Serveur à curseur : deux pages, quel que soit le nombre de lignes demandé. */
+/** Cursor server: two pages, whatever the number of rows requested. */
 function shotsInTwoPages(second: () => Promise<void> | undefined) {
   return async (req: MockRequest) => {
     const cursor = req.url.searchParams.get('cursor');
@@ -45,21 +45,21 @@ const baseApi = (shots: MockResolver): Record<string, MockResolver> => ({
 const dialog = () => <AssetAssignDialog assetId={7} projectId={3} assetName="Dragon" onClose={() => {}} />;
 
 describe('AssetAssignDialog', () => {
-  it('propose les plans des pages suivantes, en demandant la plus grande page servie', async () => {
+  it('proposes the shots of the following pages, requesting the largest page served', async () => {
     const { api } = renderWithProviders(dialog(), { api: baseApi(shotsInTwoPages(() => undefined)) });
 
-    // Le plan de la seconde page est le vrai enjeu : sans enchaînement, il serait
-    // impossible de lui rattacher l'asset.
+    // The shot of the second page is the real issue: without chaining, it would be
+    // impossible to attach the asset to it.
     expect(await screen.findAllByText('SH022')).not.toHaveLength(0);
     expect(screen.getAllByText('SH011')).not.toHaveLength(0);
     const shots = api.called('GET /api/shots');
     expect(shots).toHaveLength(2);
-    // Une page de 500 plutôt que les 100 servis par défaut : vingt allers-retours en
-    // série pour deux mille plans deviennent quatre.
+    // A page of 500 rather than the 100 served by default: twenty round trips in
+    // series for two thousand shots become four.
     expect(shots.map((c) => c.url.searchParams.get('pageSize'))).toEqual(['500', '500']);
   });
 
-  it('garde le squelette tant que la liste n’est pas entière', async () => {
+  it('keeps the skeleton until the list is complete', async () => {
     let release: () => void = () => undefined;
     const held = new Promise<void>((resolve) => {
       release = resolve;
@@ -67,8 +67,8 @@ describe('AssetAssignDialog', () => {
     const { api } = renderWithProviders(dialog(), { api: baseApi(shotsInTwoPages(() => held)) });
 
     await waitFor(() => expect(api.called('GET /api/shots')).toHaveLength(2));
-    // La première page est arrivée, la seconde pend : afficher SH011 seul ferait croire
-    // que le projet n'a qu'un plan rattachable.
+    // The first page has arrived, the second is pending: showing SH011 alone would suggest
+    // that the project has only one attachable shot.
     expect(screen.queryAllByText('SH011')).toHaveLength(0);
     release();
     expect(await screen.findAllByText('SH022')).not.toHaveLength(0);

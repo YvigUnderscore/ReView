@@ -4,7 +4,7 @@
 import { type ReactNode } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { useAuth } from '../../stores/useAuth';
 import { useT } from '../../i18n';
@@ -17,15 +17,15 @@ interface ExportState {
   state: string | null;
 }
 
-/** Un export est en cours tant que le job n'est ni terminé ni en échec. */
+/** An export is in progress as long as the job has neither finished nor failed. */
 const RUNNING = ['waiting', 'active', 'delayed', 'waiting-children', 'prioritized'];
 
 /**
- * Export d'un montage en fichier unique (Phase 45).
+ * Exports a montage as a single file (Phase 45).
  *
- * La lecture dans l'application n'encode rien : ce master n'existe que pour sortir de
- * l'outil — envoi à un client, dépôt sur un serveur, archivage. Il est donc produit à la
- * demande, et le bouton bascule en téléchargement dès qu'un fichier est disponible.
+ * Playback inside the application encodes nothing: this master only exists to leave the tool — sent
+ * to a client, dropped on a server, archived. It is therefore produced on demand, and the button
+ * switches to a download as soon as a file is available.
  */
 export default function TimelineExportButton({
   timelineId,
@@ -44,7 +44,7 @@ export default function TimelineExportButton({
   const stateQ = useQuery({
     queryKey: qk.timelineExport(timelineId),
     queryFn: () => api.get<ExportState>(`/api/timelines/${timelineId}/export`),
-    // Tant que l'encodage tourne, on redemande : c'est la seule façon de savoir qu'il a fini.
+    // While the encoding runs, keep asking: that is the only way to know it has finished.
     refetchInterval: (query) => (RUNNING.includes(query.state.data?.state ?? '') ? 4000 : false),
   });
   const status = stateQ.data ?? null;

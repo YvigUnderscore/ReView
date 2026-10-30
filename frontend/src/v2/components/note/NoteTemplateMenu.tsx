@@ -12,14 +12,13 @@ import { useDeleteTemplate, useNoteTemplates, useSaveTemplate, type NoteScope } 
 import { useT } from '../../i18n';
 
 /**
- * Modèles de fiche : les retrouver, en poser un nouveau.
+ * Note templates: finding them, and applying a new one.
  *
- * Le brief d'un plan a la même forme d'un plan à l'autre — mêmes sections, mêmes jauges.
- * Recopier trente lignes de markdown à chaque nouveau plan revenait à ne pas les écrire.
+ * The brief of a shot has the same shape from one shot to the next: same sections, same gauges. Copying thirty lines
+ * of markdown for each new shot amounted to not writing them.
  *
- * Appliquer un modèle **remplace** la fiche : fusionner deux structures markdown produirait
- * un résultat que personne n'a voulu, et l'annulation existe (le bouton « Annuler » de
- * l'éditeur n'a rien enregistré tant qu'on n'a pas cliqué « Enregistrer »).
+ * Applying a template **replaces** the note: merging two markdown structures would produce a result nobody wanted, and
+ * undo exists (the editor's "Cancel" button has saved nothing as long as "Save" has not been clicked).
  */
 export default function NoteTemplateMenu({
   projectId,
@@ -29,7 +28,7 @@ export default function NoteTemplateMenu({
 }: {
   projectId: number;
   scope: NoteScope;
-  /** La fiche en cours — c'est elle qu'on enregistre comme modèle. */
+  /** The current note: it is what gets saved as a template. */
   body: string;
   onApply: (body: string) => void;
 }) {

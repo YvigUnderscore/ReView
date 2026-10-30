@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { NO_STATUS, statusChoices } from '../../lib/statusMenu';
 import { usePipelineStatuses } from '../../lib/shotgridApi';
 import { useT } from '../../i18n';
@@ -11,15 +11,15 @@ import { Button } from '../ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 
 /**
- * Statut d'une sélection de plans.
+ * Status of a selection of shots.
  *
- * La barre de sélection n'offrait que « Assigner » et « Supprimer », quand le clic droit sur
- * un seul plan en propose neuf — dont le statut, qui est précisément ce qu'une production
- * change en lot : trente plans passés en retake après une session de review.
+ * The selection bar only offered "Assign" and "Delete", whereas right-clicking a single shot offers nine
+ * options, including its status: exactly what a production changes in bulk, e.g. thirty shots moved to
+ * retake after a review session.
  *
- * Le serveur applique le statut plan par plan, avec les mêmes garde-fous qu'au singulier.
- * Il peut donc en refuser une partie (verrou ShotGrid, projet archivé) : le retour le dit
- * plutôt que d'annoncer un succès complet.
+ * The server applies the status shot by shot, with the same safeguards as for a single one. It can
+ * therefore refuse some of them (ShotGrid lock, archived project): the result says so rather than
+ * announcing full success.
  */
 export default function BulkStatusDialog({
   projectId,
@@ -33,7 +33,7 @@ export default function BulkStatusDialog({
   onDone: () => void;
 }) {
   const t = useT();
-  // Même source que le menu contextuel : le vocabulaire de CE projet, pas l'enum figé.
+  // Same source as the context menu: the vocabulary of THIS project, not the frozen enum.
   const { data: statuses = [] } = usePipelineStatuses('shot', projectId);
   const choices = statusChoices(statuses, 'shot', t);
   const [value, setValue] = useState<string>('');
@@ -68,8 +68,8 @@ export default function BulkStatusDialog({
           <DialogTitle>{t('bulk.status.title', { count: ids.length })}</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-1">
-          {/* Le retrait du statut est proposé comme les autres : c'est une décision, pas un
-              vide — un plan « sans statut » est une réponse en soi. */}
+          {/* Clearing the status is offered like the others: it is a decision, not an absence, since
+              a shot "without status" is an answer in itself. */}
           <button
             type="button"
             onClick={() => setValue(NO_STATUS)}

@@ -6,12 +6,12 @@ import { useCallback, useEffect, useState, type RefObject } from 'react';
 export interface VolumeControl {
   volume: number;
   muted: boolean;
-  /** Régler à zéro coupe le son : c'est ce que le geste veut dire. */
+  /** Setting to zero mutes the sound: that is what the gesture means. */
   setVolume: (value: number) => void;
   toggleMute: () => void;
 }
 
-/** Volume et coupure du son du lecteur, appliqués à l'élément vidéo. */
+/** Player volume and mute, applied to the video element. */
 export function useVolumeControl(videoRef: RefObject<HTMLVideoElement | null>): VolumeControl {
   const [volume, setLevel] = useState(1);
   const [muted, setMuted] = useState(false);

@@ -4,33 +4,31 @@
 import { MediaStatus } from '@prisma/client';
 
 /**
- * État de publication d'une version au regard de ses médias — analyse PURE, testée.
+ * Publication state of a version with regard to its media — PURE analysis, tested.
  *
- * Une version n'est plus un objet qu'on publie séparément : elle est publiée **parce que**
- * ses médias le sont. Publier trois fichiers un par un puis se souvenir de publier la
- * version par-dessus était une comptabilité que personne ne tenait, et qui laissait des
- * versions « brouillon » remplies de médias visibles de toute l'équipe.
+ * A version is no longer an object published separately: it is published **because** its media are. Publishing three files one by one
+ * then remembering to publish the version on top was a bookkeeping nobody kept, and it left "draft" versions full of media visible to the whole team.
  *
- * Deux règles, symétriques :
- *  - tous les médias publiés → la version l'est ;
- *  - la version publiée → un média qui la rejoint l'est aussi.
+ * Two rules, symmetric:
+ *  - all media published → the version is;
+ *  - the version published → a media joining it is too.
  */
 
-/** Ce qu'il faut savoir d'un média pour trancher. */
+/** What needs to be known about a media to decide. */
 export interface MediaPublishState {
   published: boolean;
   status: MediaStatus;
 }
 
 /**
- * Un média échoué ne compte pas : il ne sera jamais publié, et le laisser peser
- * empêcherait la version d'être publiée à tout jamais pour cause de fichier mort.
+ * A failed media does not count: it will never be published, and letting it weigh would prevent the version from ever being published
+ * because of a dead file.
  */
 const counts = (media: MediaPublishState) => media.status !== MediaStatus.FAILED;
 
 /**
- * La version doit-elle passer publiée ? Il faut au moins un média — une version vide n'a
- * rien à montrer — et que tous ceux qui comptent soient publiés.
+ * Must the version come out published? There must be at least one media — an empty version has nothing to show — and all those that
+ * count must be published.
  */
 export function shouldPublishVersion(media: readonly MediaPublishState[]): boolean {
   const kept = media.filter(counts);
@@ -38,37 +36,32 @@ export function shouldPublishVersion(media: readonly MediaPublishState[]): boole
 }
 
 /**
- * Un média ajouté à une version déjà publiée naît publié.
+ * A media added to an already published version is born published.
  *
- * C'est la contrepartie nécessaire de la règle précédente : sans elle, ajouter un rendu à
- * une version publiée la ferait retomber en brouillon aux yeux du calcul, ou obligerait à
- * republier à la main ce qui l'était déjà.
+ * It is the necessary counterpart of the previous rule: without it, adding a render to a published version would make it drop back to draft
+ * in the eyes of the calculation, or would force republishing by hand what already was.
  */
 export function inheritsPublication(versionPublished: boolean): boolean {
   return versionPublished;
 }
 
 /**
- * Un média qui vient d'être créé naît-il publié ? (Phase 50 — publication d'office)
+ * Is a newly created media born published? (Phase 50 — automatic publication)
  *
- * C'est la troisième règle de la famille, et elle ne contourne pas les deux autres : elle
- * les prolonge. Hors mode brouillon, tout média naît publié, ce qui rend
- * `shouldPublishVersion` vraie dès que le premier fichier est finalisé — la version suit
- * ses médias, exactement comme avant. En mode brouillon, rien ne change : seul l'héritage
- * de la version publiée donne un média publié à la naissance.
+ * It is the third rule of the family, and it does not bypass the other two: it extends them. Outside draft mode, every media is born published,
+ * which makes `shouldPublishVersion` true as soon as the first file is finalised — the version follows its media, exactly as before. In draft mode,
+ * nothing changes: only the inheritance of the published version gives a media published at birth.
  *
- * Le brouillon devient donc un réglage de studio et non une étape du produit : le geste
- * « publier » n'existait que pour rattraper une relecture que personne ne faisait, et il
- * laissait des livraisons invisibles de l'équipe qui les attendait.
+ * Draft thus becomes a studio setting rather than a product step: the "publish" gesture only existed to catch up a review that nobody did, and it
+ * left deliverables invisible to the team waiting for them.
  */
 export function bornsPublished(input: { draftMode: boolean; versionPublished: boolean }): boolean {
   return input.draftMode ? inheritsPublication(input.versionPublished) : true;
 }
 
 /**
- * Une version publiée ne redescend jamais toute seule. Dépublier est une décision de
- * superviseur (elle retire la version des liens de partage, avec ses décisions de review) :
- * elle ne peut pas être l'effet de bord de la suppression d'un média.
+ * A published version never comes back down on its own. Unpublishing is a supervisor's decision (it removes the version from the sharing links,
+ * along with its review decisions): it cannot be the side effect of deleting a media.
  */
 export function shouldUnpublishVersion(): false {
   return false;

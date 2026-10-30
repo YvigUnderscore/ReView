@@ -3,7 +3,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// `vi.mock` est remonté en tête de fichier : les doublures doivent l'être aussi.
+// `vi.mock` is hoisted to the top of the file: the doubles must be too.
 const { comment, mediaObject, shotgridLink, links, touch } = vi.hoisted(() => ({
   comment: { create: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
   mediaObject: { findFirst: vi.fn() },
@@ -17,11 +17,11 @@ vi.mock('../../lib/logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), err
 vi.mock('../../lib/annotationSvg', () => ({ annotationToSvg: vi.fn(() => null) }));
 vi.mock('../../config/env', () => ({ env: { APP_URL: null } }));
 vi.mock('../MediaService', () => ({ mediaSourceKey: vi.fn(() => 'key') }));
-vi.mock('../StorageService', () => ({ storage: {} }));
+vi.mock('../../lib/storage', () => ({ storage: {} }));
 vi.mock('./ShotgridNoteAttachments', () => ({ importNoteAttachments: vi.fn(async () => 0) }));
 vi.mock('./ShotgridPullService', () => ({
   touch: (...args: unknown[]) => touch(...args),
-  // Rien n'est retiré du site dans ces scénarios : la confirmation rend une liste vide.
+  // Nothing is removed from the site in these scenarios: the confirmation returns an empty list.
   confirmGone: vi.fn(async () => []),
 }));
 vi.mock('./shotgridSettings', () => ({ can: () => true }));
@@ -71,12 +71,11 @@ beforeEach(() => {
 });
 
 /**
- * Les notes n'étaient jamais importées : l'événement Note passait par une passe qui ne
- * savait pas les lire. Maintenant qu'elle existe, elle doit rester cloisonnée au projet
- * et savoir ne relire qu'une note désignée.
+ * Notes were never imported: the Note event went through a pass that did not know how to read them. Now that it exists, it must remain confined to the project
+ * and know how to re-read only a designated note.
  */
 describe('pullNotes', () => {
-  it('cumule le filtre d’identifiants avec le filtre de projet', async () => {
+  it('combines the identifier filter with the project filter', async () => {
     const { ctx, search } = contextWith([]);
     await pullNotes(ctx, { onlySgIds: [501, 502] });
 
@@ -88,7 +87,7 @@ describe('pullNotes', () => {
     expect(args.maxRecords).toBe(2);
   });
 
-  it('balaie le projet quand aucune note n’est désignée', async () => {
+  it('sweeps the project when no note is designated', async () => {
     const { ctx, search } = contextWith([]);
     await pullNotes(ctx);
 
@@ -97,8 +96,8 @@ describe('pullNotes', () => {
     expect(args.maxRecords).toBe(500);
   });
 
-  it('écarte une note venue d’un autre projet du site', async () => {
-    // Le filtre part avec la requête, mais c'est la revérification qui fait rempart.
+  it('discards a note coming from another project of the site', async () => {
+    // The filter goes with the request, but it is the recheck that acts as the bulwark.
     const { ctx, journal } = contextWith([note(501, 78)]);
     await pullNotes(ctx, { onlySgIds: [501] });
 
@@ -106,7 +105,7 @@ describe('pullNotes', () => {
     expect(comment.create).not.toHaveBeenCalled();
   });
 
-  it('crée le commentaire et le compte dans le résumé de fin de passe', async () => {
+  it('creates the comment and counts it in the end-of-pass summary', async () => {
     const { ctx, journal } = contextWith([note(501)]);
     await pullNotes(ctx, { onlySgIds: [501] });
 
@@ -117,8 +116,8 @@ describe('pullNotes', () => {
     expect(journal.count).toHaveBeenCalledWith('notes', 'created');
   });
 
-  it('ignore une note née dans ReView', async () => {
-    // Elle reviendrait en double de son propre commentaire.
+  it('ignores a note born in ReView', async () => {
+    // It would come back as a duplicate of its own comment.
     const { ctx } = contextWith([{ ...note(501), content: 'Retour\n[ReView] Admin' }]);
     await pullNotes(ctx, { onlySgIds: [501] });
     expect(comment.create).not.toHaveBeenCalled();

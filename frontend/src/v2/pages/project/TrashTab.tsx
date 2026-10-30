@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { RotateCcw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { bulkPurge, bulkRestore, type BulkDeleteDomain } from '../../lib/bulkApi';
 import ConfirmDialog from '../../components/ConfirmDialog';
@@ -27,9 +27,9 @@ import {
 import type { AssetRef, EpisodeRef, MediaRef, SequenceRef, ShotRef, Version } from '../../types/api';
 import { useT } from '../../i18n';
 
-/** GET /api/projects/:id/trash — éléments supprimés restaurables. */
+/** GET /api/projects/:id/trash: deleted items that can be restored. */
 interface TrashData {
-  /** Niveau Épisode (facultatif) : liste vide — donc section absente — sans lui. */
+  /** Episode level (optional): without it, the list is empty and the section is absent. */
   episodes: EpisodeRef[];
   sequences: SequenceRef[];
   shots: ShotRef[];
@@ -39,11 +39,11 @@ interface TrashData {
 }
 
 /**
- * Onglet Corbeille du projet.
+ * The project's Trash tab.
  *
- * La sélection est **globale**, pas par section : cocher « tout » dans les plans ne touchait
- * ni les séquences, ni les assets, ni les versions, si bien que vider une corbeille de fin
- * de projet demandait six passes — et qu'il fallait penser aux six.
+ * The selection is **global**, not per section: ticking "all" in the shots touched neither the
+ * sequences, nor the assets, nor the versions, so emptying an end-of-project trash required six
+ * passes, and one had to remember all six.
  */
 export default function TrashTab({ projectId, reload }: { projectId: number; reload: () => Promise<void> }) {
   const t = useT();
@@ -85,7 +85,7 @@ export default function TrashTab({ projectId, reload }: { projectId: number; rel
       .catch(fail);
   };
 
-  /** Restaure ou purge la sélection, domaine par domaine — ce que les routes attendent. */
+  /** Restores or purges the selection, domain by domain: what the routes expect. */
   const runBulk = async (action: typeof bulkRestore) => {
     try {
       let total = 0;
@@ -184,7 +184,7 @@ export default function TrashTab({ projectId, reload }: { projectId: number; rel
         <h2 className="text-sm font-semibold text-muted-foreground">{t('trash.project.title')}</h2>
         {total > 0 && (
           <>
-            {/* La case « tout » porte sur la corbeille entière : c'est le geste qui manquait. */}
+            {/* The "all" checkbox covers the whole trash: it is the gesture that was missing. */}
             <label className="ml-2 flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
               <Checkbox
                 checked={picked === total}

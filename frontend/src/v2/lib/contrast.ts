@@ -2,26 +2,26 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Contraste et normalisation des couleurs de données (A2).
+ * Contrast and normalisation of data colours (A2).
  *
- * Un statut peut porter une couleur venue de la base : celle du site ShotGrid, ou celle
- * qu'un admin a choisie. Elle est pensée pour l'outil d'origine, pas pour le thème bleu
- * nuit de ReView — un bleu marine y devient illisible, un jaune pâle l'est en thème clair.
- * On garde donc la teinte (elle porte le sens) et on corrige la seule luminosité.
+ * A status may carry a colour coming from the database: that of the ShotGrid site, or one an admin
+ * chose. It was designed for the original tool, not for ReView's dark blue theme — a navy blue
+ * becomes unreadable there, a pale yellow is unreadable in light theme. We therefore keep the hue
+ * (it carries the meaning) and correct only the lightness.
  *
- * Tout est en RVB normalisé 0..1 et suit la formule de luminance relative WCAG 2.1.
+ * Everything is in normalised RGB 0..1 and follows the WCAG 2.1 relative luminance formula.
  */
 
 export type Rgb = [number, number, number];
 
-/** Rapport de contraste minimal WCAG AA pour du texte de taille normale. */
+/** Minimum WCAG AA contrast ratio for normal-size text. */
 export const AA_CONTRAST = 4.5;
 
-/** Surfaces de référence des deux thèmes (cf. `--card` et `--background` d'index.css). */
+/** Reference surfaces of the two themes (see `--card` and `--background` in index.css). */
 const DARK_SURFACE: Rgb = hslToRgb(223, 28, 10);
 const LIGHT_SURFACE: Rgb = hslToRgb(220, 25, 97);
 
-/** Opacité du fond teinté d'un badge de statut. */
+/** Opacity of a status badge's tinted background. */
 const BADGE_ALPHA = 0.15;
 
 export function hslToRgb(h: number, s: number, l: number): Rgb {
@@ -50,7 +50,7 @@ export function rgbToHsl([r, g, b]: Rgb): [number, number, number] {
   return [h * 360, s * 100, l * 100];
 }
 
-/** `#rgb` ou `#rrggbb`, avec ou sans dièse. `null` si la chaîne n'est pas une couleur. */
+/** `#rgb` or `#rrggbb`, with or without the hash. `null` if the string is not a colour. */
 export function hexToRgb(hex: string): Rgb | null {
   const raw = hex.trim().replace(/^#/, '');
   const full = raw.length === 3 ? [...raw].map((c) => c + c).join('') : raw;
@@ -70,15 +70,15 @@ export function contrastRatio(a: Rgb, b: Rgb): number {
   return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
 }
 
-/** Composition d'une couleur semi-transparente sur un fond opaque. */
+/** Composition of a semi-transparent colour over an opaque background. */
 export function mix(fg: Rgb, bg: Rgb, alpha: number): Rgb {
   return [0, 1, 2].map((i) => fg[i] * alpha + bg[i] * (1 - alpha)) as Rgb;
 }
 
 /**
- * Remonte (thème sombre) ou descend (thème clair) la luminosité jusqu'à atteindre le seuil
- * AA face au fond donné. Teinte et saturation sont conservées. Renvoie la luminosité
- * extrême si le seuil reste hors d'atteinte — mieux vaut le plus lisible possible.
+ * Raises (dark theme) or lowers (light theme) the lightness until it reaches the AA threshold
+ * against the given background. Hue and saturation are kept. Returns the extreme lightness if the
+ * threshold remains out of reach — better as readable as possible.
  */
 export function readableLightness(
   hue: number,
@@ -106,18 +106,18 @@ export interface StatusSwatch {
 }
 
 /**
- * Jeton coloré lisible pour une couleur de statut venue des données.
+ * Readable coloured token for a status colour coming from the data.
  *
- * Le fond garde la teinte d'origine (le statut reste reconnaissable d'un coup d'œil) ;
- * seul le texte est corrigé pour tenir 4,5:1 dessus. `null` en entrée — statut sans
- * couleur — renvoie `null`, l'appelant retombe alors sur les tokens du thème.
+ * The background keeps the original hue (the status stays recognisable at a glance); only the text
+ * is corrected to reach 4.5:1 over it. `null` as input — a status without colour — returns `null`,
+ * and the caller then falls back on the theme tokens.
  */
 export function statusSwatch(hex: string | null | undefined, isDark: boolean): StatusSwatch | null {
   if (!hex) return null;
   const rgb = hexToRgb(hex);
   if (!rgb) return null;
-  // Arrondi d'abord : la couleur émise est en entiers, c'est donc sur elle que le calcul
-  // de lisibilité doit porter. Sinon le rendu réel manque le seuil de quelques centièmes.
+  // Rounding first: the emitted colour is in integers, so the readability calculation must
+  // apply to it. Otherwise the real rendering misses the threshold by a few hundredths.
   const [rawH, rawS, rawL] = rgbToHsl(rgb);
   const h = Math.round(rawH);
   const s = Math.round(rawS);

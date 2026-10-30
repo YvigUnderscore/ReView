@@ -4,13 +4,13 @@
 import { useCallback } from 'react';
 import { t } from '../i18n';
 
-/** Types image acceptés par le backend (data URL) — tout autre type est ré-encodé en PNG. */
+/** Image types accepted by the backend (data URL) — any other type is re-encoded as PNG. */
 const ACCEPTED_IMAGE_TYPES = ['image/png', 'image/jpeg', 'image/webp', 'image/gif'];
 
 export const isAcceptedImageType = (type: string): boolean =>
   ACCEPTED_IMAGE_TYPES.includes(type.toLowerCase());
 
-/** Lecture brute d'un fichier en data URL. */
+/** Raw read of a file as a data URL. */
 function readAsDataUrl(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const r = new FileReader();
@@ -21,9 +21,9 @@ function readAsDataUrl(file: File): Promise<string> {
 }
 
 /**
- * Fichier image → data URL **compatible backend**. Les types hors liste (bmp, avif,
- * tiff…, ou type vide de certains presse-papiers) sont décodés puis ré-encodés en PNG
- * via canvas — corrige le « Image invalide (data URL image attendue) » au Ctrl+V.
+ * Image file → **backend-compatible** data URL. Types outside the list (bmp, avif,
+ * tiff…, or the empty type of some clipboards) are decoded then re-encoded as PNG
+ * via canvas — fixes the "Invalid image (image data URL expected)" on Ctrl+V.
  */
 export async function fileToImageDataUrl(file: File): Promise<string> {
   if (isAcceptedImageType(file.type)) return readAsDataUrl(file);
@@ -36,12 +36,12 @@ export async function fileToImageDataUrl(file: File): Promise<string> {
     bitmap.close();
     return canvas.toDataURL('image/png');
   } catch {
-    // Décodage impossible : on tente la lecture brute (le backend tranchera).
+    // Decoding impossible: we try the raw read (the backend will decide).
     return readAsDataUrl(file);
   }
 }
 
-/** Extrait les fichiers image d'un presse-papiers (paste). Pur, testable. */
+/** Extracts the image files from a clipboard (paste). Pure, testable. */
 export function imageFilesFromClipboard(data: DataTransfer | null): File[] {
   if (!data) return [];
   const out: File[] = [];
@@ -51,7 +51,7 @@ export function imageFilesFromClipboard(data: DataTransfer | null): File[] {
       if (file) out.push(file);
     }
   }
-  // Repli : certains navigateurs n'exposent que `files`.
+  // Fallback: some browsers only expose `files`.
   if (out.length === 0) {
     for (const file of Array.from(data.files ?? [])) {
       if (file.type.startsWith('image/')) out.push(file);
@@ -61,9 +61,9 @@ export function imageFilesFromClipboard(data: DataTransfer | null): File[] {
 }
 
 /**
- * Hook de collage d'images : renvoie un handler `onPaste` à poser sur un champ
- * (textarea, zone éditable…). Si des images sont présentes dans le presse-papiers,
- * appelle `onImages` et empêche le collage texte par défaut.
+ * Image paste hook: returns an `onPaste` handler to attach to a field
+ * (textarea, editable area…). If images are present in the clipboard,
+ * calls `onImages` and prevents the default text paste.
  */
 export function useImagePaste(onImages: (files: File[]) => void) {
   return useCallback(

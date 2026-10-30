@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role, ProjectStatus } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole, requireProjectAccess, requireProjectManage } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { effectiveProjectRole } from '../lib/projectRoles';
@@ -17,18 +17,18 @@ router.use(authenticate);
 
 const projectIdParam = z.object({ projectId: z.coerce.number().int() });
 
-// GET /api/projects — admin/superviseur : tout ; sinon : projets dont l'user est membre.
-// Paginé : { items, total, page, pageSize } (10.D1). `archived=1` → onglet Archivés (38.B).
+// GET /api/projects — admin and supervisor: everything; otherwise: the projects the user is a member of.
+// Paginated: { items, total, page, pageSize } (10.D1). `archived=1` → Archived tab (38.B).
 router.get(
   '/',
   validate({ query: paginationQuery.extend({ archived: z.enum(['0', '1']).optional() }) }),
   async (req, res) => {
     const onlyArchived = req.query.archived === '1';
-    res.json(await ProjectService.listProjects(req.user!, readPagination(req.query), onlyArchived));
+    res.json(await ProjectService.listProjects(requireUser(req), readPagination(req.query), onlyArchived));
   },
 );
 
-// POST /api/projects (admin/superviseur)
+// POST /api/projects (admin and supervisor)
 router.post(
   '/',
   requireRole(Role.ADMIN, Role.SUPERVISOR),
@@ -40,21 +40,21 @@ router.post(
     }),
   }),
   async (req, res) => {
-    res.status(201).json({ project: await ProjectService.createProject(req.user!, req.body) });
+    res.status(201).json({ project: await ProjectService.createProject(requireUser(req), req.body) });
   },
 );
 
-// GET /api/projects/:projectId — inclut `myRole` (rôle effectif de l'appelant, 38.E)
+// GET /api/projects/:projectId — includes `myRole` (the caller's effective role, 38.E)
 router.get('/:projectId', validate({ params: projectIdParam }), requireProjectAccess, async (req, res) => {
   const projectId = Number(req.params.projectId);
   const [project, myRole] = await Promise.all([
     ProjectService.getProject(projectId),
-    effectiveProjectRole(req.user!.id, req.user!.role, projectId),
+    effectiveProjectRole(requireUser(req).id, requireUser(req).role, projectId),
   ]);
   res.json({ project: { ...project, myRole } });
 });
 
-// PATCH /api/projects/:projectId (admin/superviseur)
+// PATCH /api/projects/:projectId (admin and supervisor)
 router.patch(
   '/:projectId',
   validate({
@@ -63,12 +63,12 @@ router.patch(
       name: z.string().min(1).max(160).optional(),
       description: z.string().max(2000).nullable().optional(),
       status: z.nativeEnum(ProjectStatus).optional(),
-      // Pas de `thumbnailKey` ici : rien n'a jamais su produire une clé de vignette de
-      // projet (le routeur dédié ne couvre que séquence, plan et asset), et une clé reçue
-      // du client faisait présigner n'importe quel objet du bucket. Le projet retombe sur
-      // la miniature de son premier média publié, comme il l'a toujours fait.
+      // No `thumbnailKey` here: nothing has ever been able to produce a project thumbnail key (the dedicated
+      // router only covers sequence, shot and asset), and a key received from the client let anyone presign
+      // any object in the bucket. The project falls back to the thumbnail of its first published media, as
+      // it always has.
       startFrame: z.number().int().optional(),
-      // Quota de stockage en octets (38.D) — null = illimité.
+      // Storage quota in bytes (38.D): null means unlimited.
       storageQuota: z.number().int().min(0).nullable().optional(),
     }),
   }),
@@ -78,18 +78,18 @@ router.patch(
   },
 );
 
-// DELETE /api/projects/:projectId — soft delete (admin/superviseur)
+// DELETE /api/projects/:projectId — soft delete (admin and supervisor)
 router.delete(
   '/:projectId',
   validate({ params: projectIdParam }),
   requireRole(Role.ADMIN, Role.SUPERVISOR),
   async (req, res) => {
-    await ProjectService.softDelete(req.user!, Number(req.params.projectId));
+    await ProjectService.softDelete(requireUser(req), Number(req.params.projectId));
     res.status(204).end();
   },
 );
 
-// GET /api/projects/:projectId/trash — éléments supprimés du projet (admin/superviseur)
+// GET /api/projects/:projectId/trash — the project's deleted items (admin and supervisor)
 router.get(
   '/:projectId/trash',
   validate({ params: projectIdParam }),
@@ -99,46 +99,46 @@ router.get(
   },
 );
 
-// POST /api/projects/:projectId/restore (admin/superviseur)
+// POST /api/projects/:projectId/restore (admin and supervisor)
 router.post(
   '/:projectId/restore',
   validate({ params: projectIdParam }),
   requireRole(Role.ADMIN, Role.SUPERVISOR),
   async (req, res) => {
-    await ProjectService.restore(req.user!, Number(req.params.projectId));
+    await ProjectService.restore(requireUser(req), Number(req.params.projectId));
     res.status(204).end();
   },
 );
 
-// DELETE /api/projects/:projectId/purge — suppression définitive DB + MinIO (admin)
+// DELETE /api/projects/:projectId/purge — permanent deletion from DB + MinIO (admin)
 router.delete(
   '/:projectId/purge',
   validate({ params: projectIdParam }),
   requireRole(Role.ADMIN),
   async (req, res) => {
-    await ProjectService.purge(req.user!, Number(req.params.projectId));
+    await ProjectService.purge(requireUser(req), Number(req.params.projectId));
     res.status(204).end();
   },
 );
 
-// POST /api/projects/:projectId/members (admin/superviseur)
+// POST /api/projects/:projectId/members (admin and supervisor)
 router.post(
   '/:projectId/members',
   validate({
     params: projectIdParam,
     body: z.object({ userId: z.number().int(), role: z.nativeEnum(Role).optional() }),
   }),
-  requireProjectManage, // 38.E : superviseur local autorisé
+  requireProjectManage, // 38.E: local supervisor allowed
   async (req, res) => {
     const { userId, role } = req.body as { userId: number; role?: Role };
-    const actor = req.user!;
+    const actor = requireUser(req);
     const membership = await ProjectService.addMember(Number(req.params.projectId), userId, role, actor);
     res.status(201).json({ membership });
   },
 );
 
-// GET /api/projects/:projectId/settings — réglages EFFECTIFS (héritage studio appliqué)
-// + `overrides` : les sections que le projet surcharge réellement.
+// GET /api/projects/:projectId/settings — EFFECTIVE settings (studio inheritance applied)
+// + `overrides`: the sections the project actually overrides.
 router.get(
   '/:projectId/settings',
   validate({ params: projectIdParam }),
@@ -148,21 +148,21 @@ router.get(
   },
 );
 
-// PUT /api/projects/:projectId/settings — remplace l'override ENTIER (admin/superviseur).
-// Les sections absentes du corps retournent à l'héritage studio ; pour n'en toucher qu'une,
-// préférer le PATCH (projects-extra.routes).
+// PUT /api/projects/:projectId/settings — replaces the WHOLE override (admin and supervisor).
+// Sections absent from the body return to studio inheritance; to touch only one, prefer the PATCH
+// (projects-extra.routes).
 router.put(
   '/:projectId/settings',
   validate({ params: projectIdParam, body: projectSettingsSchema }),
-  requireProjectManage, // 38.E : superviseur local autorisé
+  requireProjectManage, // 38.E: local supervisor allowed
   async (req, res) => {
     res.json(
-      await ProjectService.updateSettings(req.user!, Number(req.params.projectId), req.body as object),
+      await ProjectService.updateSettings(requireUser(req), Number(req.params.projectId), req.body as object),
     );
   },
 );
 
-// GET /api/projects/:projectId/activity — flux d'activité (uploads, versions) + tâches
+// GET /api/projects/:projectId/activity — activity feed (uploads, versions) + tasks
 router.get(
   '/:projectId/activity',
   validate({ params: projectIdParam }),
@@ -172,11 +172,11 @@ router.get(
   },
 );
 
-// DELETE /api/projects/:projectId/members/:userId (admin/superviseur)
+// DELETE /api/projects/:projectId/members/:userId (admin and supervisor)
 router.delete(
   '/:projectId/members/:userId',
   validate({ params: z.object({ projectId: z.coerce.number().int(), userId: z.coerce.number().int() }) }),
-  requireProjectManage, // 38.E : superviseur local autorisé
+  requireProjectManage, // 38.E: local supervisor allowed
   async (req, res) => {
     await ProjectService.removeMember(Number(req.params.projectId), Number(req.params.userId), req.user);
     res.status(204).end();

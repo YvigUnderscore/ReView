@@ -14,42 +14,40 @@ import { badRequest, notFound } from '../lib/errors';
 import { t, type Locale } from '../i18n';
 
 /**
- * Invitation d'un nouveau membre (Phase 47) : à la création d'un compte, l'administrateur
- * peut ne pas choisir de mot de passe — la personne reçoit un lien par email et choisit
- * le sien. Un mot de passe transmis par Slack ou dicté au téléphone n'est jamais changé
- * ensuite ; l'invitation supprime cette poignée de main bancale.
+ * Invitation of a new member (Phase 47): when an account is created, the administrator may choose not to set
+ * a password — the person receives a link by email and picks their own.
+ * A password passed on via Slack or dictated over the phone is never changed afterwards; the invitation
+ * removes that shaky handshake.
  *
- * Le jeton n'est stocké que haché (SHA-256), comme un mot de passe : la base ne contient
- * aucun lien d'activation rejouable.
+ * The token is only stored hashed (SHA-256), like a password: the database holds no replayable activation
+ * link.
  */
 
-/** Durée de validité d'un lien d'invitation. Assez long pour couvrir des congés, pas plus. */
+/** Validity period of an invitation link. Long enough to cover holidays, no longer. */
 export const INVITATION_TTL_DAYS = 7;
 
 /**
- * Les emails d'invitation partent en anglais : le destinataire n'a pas encore de compte
- * ouvert, donc aucune préférence de langue connue, et l'anglais est la langue de référence
- * des catalogues. Les autres emails (digest, rapport hebdo) restent, eux, dans la langue
- * du destinataire, qu'on connaît.
+ * The invitation emails go out in English: the recipient does not yet have an open account, so no language
+ * preference is known, and English is the reference language of the catalogues. The other emails (digest,
+ * weekly report), for their part, remain in the recipient's language, which is known.
  */
 const INVITATION_LOCALE: Locale = 'en';
 
 const hashToken = (token: string): string => createHash('sha256').update(token).digest('hex');
 
-/** URL de la page d'activation portée par l'email. */
+/** URL of the activation page carried by the email. */
 export function invitationUrl(token: string): string {
   return `${env.APP_URL ?? ''}/invite/${token}`;
 }
 
 /**
- * HTML de l'email d'invitation (pur — testé unitairement).
+ * HTML of the invitation email (pure — unit tested).
  *
- * `url` traverse DEUX fois `escapeHtml` : dans l'attribut `href` du lien de repli autant
- * que dans son texte. Elle vaut aujourd'hui `APP_URL` + jeton hexadécimal, donc rien n'y
- * échappe — mais `APP_URL` est une variable d'environnement, et le jour où elle porte un
- * guillemet l'attribut se referme et le reste de la ligne devient du balisage. C'est la
- * faute déjà corrigée dans `ShareMailService` : la laisser écrite ici la fait revenir au
- * premier copier-coller.
+ * `url` goes through `escapeHtml` TWICE: in the `href` attribute of the fallback link as well as in its text.
+ * Today it is `APP_URL` + a hexadecimal token, so nothing in it gets escaped — but `APP_URL` is an
+ * environment variable, and the day it carries a quotation mark the attribute closes and the rest of the line
+ * becomes markup. This is the fault already corrected in `ShareMailService`: leaving it written here would
+ * bring it back at the first copy-paste.
  */
 export function renderInvitationHtml(
   locale: Locale,
@@ -67,21 +65,18 @@ ${mailButton(url, t(locale, 'invite.cta'))}
 <p style="color:${MAIL_MUTED};font-size:12px">${escapeHtml(t(locale, 'invite.fallback'))}<br />
 <a href="${escapeHtml(url)}" style="color:${MAIL_ACCENT};word-break:break-all">${escapeHtml(url)}</a></p>
 <p style="color:${MAIL_MUTED};font-size:12px">${escapeHtml(t(locale, 'invite.ignore'))}</p>`;
-  // Le texte d'aperçu, celui que la boîte de réception affiche avant l'ouverture :
-  // sans lui, elle y répète le nom du studio, identique d'un message à l'autre.
+  // The preview text, the one the inbox shows before opening: without it, the inbox repeats the studio name,
+  // identical from one message to the next.
   return mailLayout(locale, t(locale, 'invite.title'), content, t(locale, 'invite.preview'));
 }
 
 /**
- * Refuse tôt ce qui ne pourra pas aboutir. Appelé avant de créer le compte : mieux vaut
- * un message d'erreur que le compte d'un collègue qui n'a jamais reçu son lien.
+ * Refuses early what cannot succeed. Called before creating the account: better an error message than a
+ * colleague's account that never received its link.
  */
 export async function assertCanInvite(): Promise<void> {
   if (!env.APP_URL) {
-    throw badRequest(
-      "APP_URL n'est pas configuré : le lien d'invitation serait inutilisable",
-      'APP_URL_MISSING',
-    );
+    throw badRequest('APP_URL is not configured: the invitation link would be unusable', 'APP_URL_MISSING');
   }
   if (!(await isMailerConfigured())) {
     throw badRequest('SMTP is not configured — an invitation cannot be sent', 'SMTP_NOT_CONFIGURED');
@@ -89,10 +84,9 @@ export async function assertCanInvite(): Promise<void> {
 }
 
 /**
- * Émet un jeton d'invitation pour un compte existant et envoie l'email.
- * Toute invitation encore pendante pour ce compte est supprimée au passage : relancer une
- * invitation doit périmer le lien précédent, sinon un lien oublié dans une boîte mail
- * reste une porte ouverte.
+ * Issues an invitation token for an existing account and sends the email. Any invitation still pending for
+ * this account is deleted in passing: sending a new invitation must expire the previous link, otherwise a
+ * link forgotten in a mailbox remains an open door.
  */
 export async function sendInvitation(userId: number, invitedById: number | null): Promise<void> {
   const user = await prisma.user.findUnique({
@@ -108,7 +102,7 @@ export async function sendInvitation(userId: number, invitedById: number | null)
     },
   });
   if (!user) throw notFound('User not found');
-  // Un compte de service porte une adresse non routable : rien à inviter.
+  // A service account carries a non-routable address: nothing to invite.
   if (user.isService) throw badRequest('A service account cannot be invited', 'SERVICE_ACCOUNT');
   await assertCanInvite();
 
@@ -139,12 +133,12 @@ export async function sendInvitation(userId: number, invitedById: number | null)
   );
   const sent = await sendMail(user.email, t(INVITATION_LOCALE, 'invite.subject'), html);
   if (!sent) {
-    // L'invitation reste en base : l'administrateur peut relancer une fois le relais réparé,
-    // sans avoir à supprimer puis recréer le compte.
-    logger.error({ userId }, '[Invitation] envoi impossible');
+    // The invitation remains in the database: the administrator can resend once the relay is repaired,
+    // without having to delete then recreate the account.
+    logger.error({ userId }, '[Invitation] send failed');
     throw badRequest('Could not send (SMTP error)', 'SMTP_SEND_FAILED');
   }
-  logger.info({ userId }, '[Invitation] envoyée');
+  logger.info({ userId }, '[Invitation] sent');
 }
 
 export interface InvitationView {
@@ -153,7 +147,7 @@ export interface InvitationView {
   invitedBy: string | null;
 }
 
-/** Invitation valide (non acceptée, non expirée) portée par ce jeton, sinon `null`. */
+/** Valid invitation (not accepted, not expired) carried by this token, otherwise `null`. */
 async function findValid(token: string) {
   const invitation = await prisma.invitation.findUnique({
     where: { tokenHash: hashToken(token) },
@@ -178,10 +172,10 @@ async function findValid(token: string) {
       },
     },
   });
-  // Offboarding (A1-01) : un lien d'invitation encore en boîte mail à l'heure du départ
-  // ouvrait une session — il pose un mot de passe ET connecte. Un compte désactivé n'a plus
-  // d'invitation valide : l'aperçu comme l'activation le traitent en lien périmé, sans dire
-  // pourquoi (le porteur du lien n'a pas à apprendre l'état d'un compte).
+  // Offboarding (A1-01): an invitation link still in a mailbox at the time of departure opened a session
+  // right after — it set a password AND logged in. An account that is disabled no longer has a valid
+  // invitation: the preview and the activation both treat it as an expired link, without saying why (the
+  // bearer of the link has no need to learn the state of an account).
   if (
     !invitation ||
     invitation.acceptedAt ||
@@ -194,8 +188,8 @@ async function findValid(token: string) {
 }
 
 /**
- * Aperçu affiché sur la page d'activation. Le jeton est le seul secret : on ne révèle que
- * ce que son porteur sait déjà (sa propre adresse), pas l'annuaire du studio.
+ * Preview displayed on the activation page. The token is the only secret: we reveal only what its bearer
+ * already knows (their own address), not the studio's directory.
  */
 export async function describeInvitation(token: string): Promise<InvitationView> {
   const invitation = await findValid(token);
@@ -207,13 +201,13 @@ export async function describeInvitation(token: string): Promise<InvitationView>
   };
 }
 
-/** Consomme le jeton et pose le mot de passe choisi. Renvoie le compte activé. */
+/** Consumes the token and sets the chosen password. Returns the activated account. */
 export async function acceptInvitation(token: string, password: string) {
   const invitation = await findValid(token);
   if (!invitation) throw badRequest('Invalid or expired invitation', 'INVITATION_INVALID');
   const hash = await bcrypt.hash(password, 12);
-  // `updateMany` sur `acceptedAt: null` : deux soumissions concurrentes du même lien ne
-  // doivent poser qu'un seul mot de passe.
+  // `updateMany` on `acceptedAt: null`: two concurrent submissions of the same link must set only one
+  // password.
   const consumed = await prisma.invitation.updateMany({
     where: { id: invitation.id, acceptedAt: null },
     data: { acceptedAt: new Date() },

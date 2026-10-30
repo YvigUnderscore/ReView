@@ -6,11 +6,10 @@ import type { SplatMesh } from '@sparkjsdev/spark';
 import type { Hotspot3D } from '../../reviewTypes';
 
 /**
- * Hotspot de surface (10.G) : lance un rayon **là où l'on désigne** (NDC) sur le splat
- * `raycastable` et renvoie le point le plus proche + une normale face caméra (les splats
- * n'ont pas de normale de surface). Le point est stocké en **espace-objet** du mesh
- * (10.G-V10) : il suit la transformation du média (réorientation automatique). `null` si le
- * rayon ne touche rien. Extrait de `useSplat`.
+ * Surface hotspot (10.G): casts a ray **where one points** (NDC) onto the `raycastable` splat and
+ * returns the nearest point plus a normal facing the camera (splats have no surface normal). The
+ * point is stored in the mesh's **object space** (10.G-V10): it follows the media transform
+ * (automatic reorientation). `null` if the ray hits nothing. Extracted from `useSplat`.
  */
 export function raycastAt(
   THREE: typeof import('three'),

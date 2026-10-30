@@ -5,8 +5,8 @@ import { Minimize2 } from 'lucide-react';
 import { useT } from '../../i18n';
 
 /**
- * Sortie du mode théâtre — seul chrome laissé visible quand le viewer occupe l'écran.
- * Extrait de `ReviewPage` (orchestrateur au budget de 300 lignes).
+ * Exit from theater mode — the only chrome left visible when the viewer fills the screen.
+ * Extracted from `ReviewPage` (orchestrator at its 300-line budget).
  */
 export default function TheaterExitButton({ onExit }: { onExit: () => void }) {
   const t = useT();

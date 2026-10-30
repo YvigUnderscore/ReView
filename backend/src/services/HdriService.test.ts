@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../lib/prisma', () => ({
   prisma: { setting: { findUnique: vi.fn(), upsert: vi.fn() } },
 }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: {
     getPresignedGetUrl: vi.fn(async (k: string) => `https://minio/${k}?sig`),
     getPresignedPutUrl: vi.fn(async (k: string) => `https://minio/${k}?put`),
@@ -16,7 +16,7 @@ vi.mock('./StorageService', () => ({
 
 import { listWithUrls, presignUpload, add, remove } from './HdriService';
 import { prisma } from '../lib/prisma';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 
 const findUnique = vi.mocked(prisma.setting.findUnique);
 const upsert = vi.mocked(prisma.setting.upsert);
@@ -27,24 +27,24 @@ beforeEach(() => {
 });
 
 describe('HdriService', () => {
-  it('liste vide quand aucun réglage', async () => {
+  it('empty list when no setting', async () => {
     findUnique.mockResolvedValue(null);
     expect(await listWithUrls()).toEqual([]);
   });
 
-  it('présigne un upload avec une clé sous studio/hdris et le bon type', async () => {
+  it('presigns an upload with a key under studio/hdris and the right type', async () => {
     const { storageKey, uploadUrl } = await presignUpload('exr');
     expect(storageKey).toMatch(/^studio\/hdris\/.*\.exr$/);
     expect(uploadUrl).toContain('put');
     expect(storage.getPresignedPutUrl).toHaveBeenCalledWith(storageKey, 'image/x-exr');
   });
 
-  it('refuse un format invalide', async () => {
-    // @ts-expect-error test d'un format hors énumération
+  it('refuses an invalid format', async () => {
+    // @ts-expect-error test of a format outside the enumeration
     await expect(presignUpload('png')).rejects.toMatchObject({ statusCode: 400 });
   });
 
-  it('ajoute une entrée en fusionnant la bibliothèque existante', async () => {
+  it('adds an entry by merging the existing library', async () => {
     findUnique.mockResolvedValue({ value: '[]' } as never);
     const entry = await add('Studio neutre', 'studio/hdris/x.hdr', 'hdr');
     expect(entry).toMatchObject({ name: 'Studio neutre', format: 'hdr' });
@@ -53,12 +53,12 @@ describe('HdriService', () => {
     expect(written[0].storageKey).toBe('studio/hdris/x.hdr');
   });
 
-  it('refuse une clé de stockage hors studio/hdris', async () => {
+  it('refuses a storage key outside studio/hdris', async () => {
     findUnique.mockResolvedValue({ value: '[]' } as never);
     await expect(add('x', 'autre/cle.hdr', 'hdr')).rejects.toMatchObject({ statusCode: 400 });
   });
 
-  it('supprime une entrée et son objet MinIO', async () => {
+  it('deletes an entry and its MinIO object', async () => {
     const existing = [{ id: 'a', name: 'A', storageKey: 'studio/hdris/a.hdr', format: 'hdr', createdAt: '' }];
     findUnique.mockResolvedValue({ value: JSON.stringify(existing) } as never);
     await remove('a');
@@ -67,7 +67,7 @@ describe('HdriService', () => {
     expect(written).toHaveLength(0);
   });
 
-  it('lève notFound pour un id inconnu', async () => {
+  it('raises notFound for an unknown id', async () => {
     findUnique.mockResolvedValue({ value: '[]' } as never);
     await expect(remove('zzz')).rejects.toMatchObject({ statusCode: 404 });
   });

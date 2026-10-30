@@ -9,17 +9,16 @@ import { useLinkSgAccount, useSgCrew } from '../../lib/shotgridCrewApi';
 import { useT } from '../../i18n';
 
 /**
- * Le compte ShotGrid d'un membre.
+ * A member's ShotGrid account.
  *
- * Le rapprochement automatique se fait par adresse, et couvre le cas courant. Mais un
- * studio a toujours quelques personnes dont l'adresse diffère d'un outil à l'autre —
- * `prenom.nom@studio.com` d'un côté, l'adresse personnelle de l'autre. Ces comptes
- * restaient à jamais non reliés : leurs écritures repartaient vers le site en « ReView »
- * anonyme, et l'import d'équipe les reproposait indéfiniment.
+ * Automatic matching is done by email address and covers the common case. But a studio
+ * always has a few people whose address differs between tools (for example
+ * `firstname.lastname@studio.com` on one side and a personal address on the other).
+ * Those accounts stayed unlinked forever: their writes went to the site as an anonymous
+ * "ReView" user, and the team import kept suggesting them again.
  *
- * La liste distante n'est demandée qu'au premier déploiement du sélecteur : interroger le
- * site pour chaque membre, à l'ouverture de l'onglet, coûterait autant d'allers-retours
- * qu'il y a de personnes.
+ * The remote list is only requested once the selector is first opened: querying the site
+ * for each member when the tab opens would cost one round trip per person.
  */
 export default function SgAccountLink({ projectId, userId }: { projectId: number; userId: number }) {
   const t = useT();
@@ -54,7 +53,7 @@ export default function SgAccountLink({ projectId, userId }: { projectId: number
 
   const change = (value: string) => {
     const sgId = value ? Number(value) : null;
-    // Défaire : c'est le compte actuellement relié qu'il faut nommer, pas le nouveau.
+    // Unlinking: the currently linked account is the one to name, not the new one.
     const target = sgId ?? current?.sgId ?? null;
     if (target === null) return;
     link.mutate(

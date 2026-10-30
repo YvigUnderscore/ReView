@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { useAssetsQuery } from '../../lib/queries';
 import { SkeletonRows } from '../../components/ui/skeleton';
@@ -14,10 +14,10 @@ import { useT } from '../../i18n';
 import { assetTypeLabel } from '../../lib/entityTypeLabels';
 
 /**
- * Assets rattachés à un plan : lister, détacher, rattacher un existant, créer + rattacher.
+ * Assets attached to a shot: list, detach, attach an existing one, create + attach.
  *
- * Seul endroit de l'application qui écrit `POST|DELETE /api/shots/:id/assets` — il a
- * quitté le tiroir de plan avec lui, sans quoi ces gestes auraient disparu.
+ * The only place in the application that writes `POST|DELETE /api/shots/:id/assets` — it left the
+ * shot drawer with it, otherwise these gestures would have disappeared.
  */
 export default function ShotAssets({
   shotId,
@@ -28,7 +28,7 @@ export default function ShotAssets({
   shotId: number;
   projectId: number;
   canManage: boolean;
-  /** Rafraîchir la liste d'où l'on vient, quand il y en a une. */
+  /** Refresh the list we came from, when there is one. */
   reload?: () => void;
 }) {
   const tr = useT();
@@ -38,10 +38,10 @@ export default function ShotAssets({
     queryFn: () => api.get<{ shot: { assets: AssetRef[] } }>(`/api/shots/${shotId}`),
   });
   const assets = shotQ.isError ? [] : (shotQ.data?.shot.assets ?? null);
-  // Sélecteur : toutes les pages (cf. AssetAssignDialog), pas les cent premiers assets.
-  // Conditionné à `canManage` : la liste entière des assets du projet ne sert QU'au menu
-  // « rattacher un existant », qui n'est rendu que là. Un lecteur ouvrait jusque-là la
-  // bibliothèque complète du projet, page après page, pour n'en rien afficher.
+  // Selector: all pages (see AssetAssignDialog), not just the first hundred assets.
+  // Gated on `canManage`: the project's full asset list is ONLY used by the "attach an existing
+  // one" menu, which is rendered only there. Until now a reader opened the project's full library,
+  // page after page, without displaying any of it.
   const allAssets: AssetRef[] =
     useAssetsQuery(projectId, projectId > 0 && canManage, { all: true }).data ?? [];
   const [pick, setPick] = useState('');

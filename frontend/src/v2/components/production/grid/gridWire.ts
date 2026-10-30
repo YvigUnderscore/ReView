@@ -1,35 +1,33 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { TASK_STATUS_LABEL_KEY } from '../../../lib/taskStatus';
-import type { MessageKey, Tr } from '../../../i18n';
+import { TASK_STATUS_LABEL_KEY } from '@/v2/lib/taskStatus';
+import type { MessageKey, Tr } from '@/v2/i18n';
 import type { StatusFamily } from '../productionWire';
 
 /**
- * Le contrat de la grille de suivi, et les décisions qu'elle prend sans DOM.
+ * The contract of the tracking grid, and the decisions it takes without a DOM.
  *
- * L'écran « Where the project stands » croisait des séquences et des départements, et
- * l'utilisateur l'a jugé incompréhensible : une case y valait une moyenne, aucune ne
- * disait quel plan attendait quoi, les colonnes étaient des clés techniques triées par
- * ordre alphabétique et les cinq couleurs n'étaient nommées que dans un attribut `title`.
+ * The "Where the project stands" screen crossed sequences and departments, and users judged it incomprehensible: a cell there
+ * held an average, none said which shot waited for what, the columns were technical keys sorted alphabetically, and the five
+ * colours were named only in a `title` attribute.
  *
- * La grille le remplace à la maille du PLAN. Tout ce qui se décide sans pixels vit ici —
- * regroupement, agrégat replié, colonnes visibles, nature d'une case — pour être vérifié
- * sans navigateur. Les types miroitent `backend/src/services/GridService.ts` : quand ils
- * divergeront, c'est le service qui aura raison.
+ * The grid replaces it at the level of the SHOT. Everything decided without pixels lives here (grouping, collapsed aggregate,
+ * visible columns, nature of a cell) so that it can be verified without a browser. The types mirror
+ * `backend/src/services/GridService.ts`: when they diverge, it is the service that is right.
  */
 
-/** Un département du référentiel, dans l'ordre du pipe. */
+/** A department of the reference data, in pipe order. */
 export interface GridDepartment {
   id: number;
   key: string;
   name: string;
-  /** Teinte réglée par le studio (#RRGGBB) — posée en style, jamais en classe. */
+  /** Tint set by the studio (#RRGGBB): applied as style, never as a class. */
   color: string | null;
   order: number;
 }
 
-/** Le statut PROPRE du plan — il existe en base et n'était affiché nulle part. */
+/** The shot's OWN status: it exists in the database and was displayed nowhere. */
 export interface GridShotStatus {
   id: number;
   code: string;
@@ -38,8 +36,8 @@ export interface GridShotStatus {
 }
 
 /**
- * Le statut d'une case. `name` vide signifie « le studio n'a pas de référentiel » : c'est
- * alors à l'écran de traduire `code`, qui porte la valeur de l'enum figé.
+ * The status of a cell. `name` empty means "the studio has no reference data": the screen must then translate `code`,
+ * which carries the value of the frozen enum.
  */
 export interface GridCellStatus {
   id: number | null;
@@ -57,7 +55,7 @@ export interface GridCell {
   versionCount: number;
   lastActivityAt: string | null;
   dueDate: string | null;
-  /** Ce département est-il au programme de ce plan ? */
+  /** Is this department on the schedule of this shot? */
   scheduled: boolean;
 }
 
@@ -80,15 +78,15 @@ export interface ProjectGrid {
   total: number;
 }
 
-// -- Familles de statut : nommées à l'écran, pas seulement colorées ------------
+// -- Status families: named on screen, not merely coloured -------------------
 
 /**
- * L'ordre de la légende et des barres empilées : ce qui est fait d'abord, ce qui n'a pas
- * commencé ensuite. Une barre qui rangerait `todo` en tête ferait reculer l'avancement.
+ * The order of the legend and of the stacked bars: what is done comes first, what has not started afterwards. A bar that
+ * put `todo` at the head would make progress go backwards.
  */
 export const FAMILIES: StatusFamily[] = ['done', 'review', 'progress', 'blocked', 'todo', 'inactive'];
 
-/** Le nom de chaque famille. Les clés existent déjà — le kanban les affiche en colonnes. */
+/** The name of each family. The keys already exist: the kanban displays them as columns. */
 export const FAMILY_LABEL: Record<StatusFamily, MessageKey> = {
   todo: 'kanban.family.todo',
   progress: 'kanban.family.progress',
@@ -98,22 +96,21 @@ export const FAMILY_LABEL: Record<StatusFamily, MessageKey> = {
   inactive: 'kanban.family.inactive',
 };
 
-// -- Nom d'un statut ----------------------------------------------------------
+// -- Name of a status -----------------------------------------------------------
 
-/** Libellés de l'enum figé, indexables — un code inconnu retombe sur sa famille. */
+/** Labels of the frozen enum, indexable: an unknown code falls back on its family. */
 const LEGACY_LABEL: Record<string, MessageKey | undefined> = TASK_STATUS_LABEL_KEY;
 
 /**
- * Le nom du statut, tel qu'une case l'ÉCRIT.
+ * The status name, as a cell WRITES it.
  *
- * C'est le **nom** et non le `code` : le code n'est court que dans un référentiel ShotGrid
- * (`ip`, `fin`, `rev`) ; le vocabulaire local, celui que toute instance reçoit à la
- * migration, porte des codes `in_progress`, `pending_review` — plus longs et moins
- * lisibles que les noms « In Progress » et « To Review » que le studio a écrits pour être
- * lus. Le nom est donc la bonne réponse dans la case, et le code ne sert à rien à l'écran.
+ * It is the **name** and not the `code`: a code is short only in a ShotGrid reference (`ip`, `fin`, `rev`). The local
+ * vocabulary, the one every instance receives at migration, carries codes like `in_progress` and `pending_review`, longer
+ * and less readable than the names "In Progress" and "To Review" that the studio wrote to be read. The name is therefore the
+ * right answer in the cell, and the code serves no purpose on screen.
  *
- * Sans référentiel du tout, le serveur laisse `name` vide et met la valeur de l'enum figé
- * dans `code` : c'est un identifiant, jamais un mot, et on rend son libellé traduit.
+ * Without any reference data at all, the server leaves `name` empty and puts the frozen enum value in `code`: that is an
+ * identifier, never a word, and its translated label is rendered.
  */
 export function statusName(status: GridCellStatus | null, t: Tr): string {
   if (!status) return t('production.grid.idle');
@@ -122,21 +119,20 @@ export function statusName(status: GridCellStatus | null, t: Tr): string {
 }
 
 /**
- * Longueur, en caractères, du nom le plus long qu'une case de la page va écrire.
+ * Length, in characters, of the longest name a cell on the page is going to write.
  *
- * C'est ce qui règle la largeur des colonnes : une passe sur les DONNÉES, une seule fois
- * par rendu — pas une mesure de texte par case, qui ferait douze cents lectures de mise
- * en page à chaque cran de défilement.
+ * This sets the column widths: one pass over the DATA, once per render, not a text measurement per cell, which would cause
+ * twelve hundred layout reads at each scroll step.
  *
- * Seules les colonnes visibles comptent : sous « masquer les colonnes vides », le nom
- * interminable d'un département retiré n'a plus à élargir la grille de tout le monde.
+ * Only visible columns count: under "hide empty columns", the endless name of a removed department no longer has to widen
+ * the grid for everyone.
  */
 export function widestStatus(rows: GridRow[], columns: GridDepartment[], t: Tr): number {
   const shown = new Set(columns.map((department) => department.key));
   let longest = 0;
   for (const row of rows) {
     for (const cell of row.cells) {
-      // Une case sans tâche n'écrit rien : elle garde son anneau ou son tiret.
+      // A cell without a task writes nothing: it keeps its ring or its dash.
       if (cell.taskId === null || !shown.has(cell.departmentKey)) continue;
       longest = Math.max(longest, statusName(cell.status, t).length);
     }
@@ -144,18 +140,18 @@ export function widestStatus(rows: GridRow[], columns: GridDepartment[], t: Tr):
   return longest;
 }
 
-// -- Filtres ------------------------------------------------------------------
+// -- Filters ------------------------------------------------------------------
 
-/** Plans demandés par page. La route plafonne à 200 ; 50 tient l'écran sans le saturer. */
+/** Shots requested per page. The route caps at 200; 50 fits the screen without saturating it. */
 export const GRID_PAGE = 50;
 
 export interface GridFilters {
   episodeId: number | null;
   sequenceId: number | null;
-  /** CLÉ du département (`comp`), jamais son libellé. */
+  /** KEY of the department (`comp`), never its label. */
   department: string | null;
   assigneeId: number | null;
-  /** Code de statut du studio, ou valeur de l'enum figé à défaut de référentiel. */
+  /** Studio status code, or the frozen enum value when there is no reference data. */
   status: string | null;
 }
 
@@ -171,10 +167,10 @@ export const hasFilters = (filters: GridFilters): boolean =>
   Object.values(filters).some((value) => value !== null);
 
 /**
- * La query-string de la route — et, sans curseur, la clé de cache.
+ * The query string of the route, and, without a cursor, the cache key.
  *
- * Une seule fonction pour les deux : deux écritures finiraient par diverger, et une page
- * servie sous la clé d'un autre filtre est une grille qui montre les plans du voisin.
+ * One function for both: two writings would eventually diverge, and a page served under another filter's key is a grid showing
+ * the neighbour's shots.
  */
 export function gridSearch(filters: GridFilters, cursor: string | null, limit = GRID_PAGE): string {
   const params = new URLSearchParams();
@@ -184,20 +180,19 @@ export function gridSearch(filters: GridFilters, cursor: string | null, limit = 
   if (filters.department !== null) params.set('department', filters.department);
   if (filters.assigneeId !== null) params.set('assigneeId', String(filters.assigneeId));
   if (filters.status !== null) params.set('status', filters.status);
-  // Le curseur en dernier : la clé de cache est exactement la même chaîne sans lui.
+  // The cursor comes last: the cache key is exactly the same string without it.
   if (cursor !== null) params.set('cursor', cursor);
   return `?${params.toString()}`;
 }
 
-// -- Nature d'une case --------------------------------------------------------
+// -- Nature of a cell --------------------------------------------------------
 
 /**
- * Trois cases, trois sens — et c'est la distinction qui manquait le plus.
+ * Three cells, three meanings, and that is the distinction most lacking.
  *
- * `unscheduled` : le département n'est pas au programme du plan, il n'y a rien à y
- * attendre. `idle` : il est au programme, personne n'a encore créé la tâche — c'est du
- * travail à faire. Les confondre faisait lire « rien à signaler » là où il n'y avait
- * aucun engagement, et inversement.
+ * `unscheduled`: the department is not on the shot's schedule, there is nothing to expect from it. `idle`: it is on the
+ * schedule, but nobody has created the task yet: that is work to be done. Confusing them used to read "nothing to report"
+ * where there was no commitment at all, and vice versa.
  */
 export type CellKind = 'unscheduled' | 'idle' | 'task';
 
@@ -206,16 +201,16 @@ export function cellKind(cell: GridCell): CellKind {
   return cell.scheduled ? 'idle' : 'unscheduled';
 }
 
-/** La famille d'une case, `idle` comprise : une case à faire est une case `todo`. */
+/** The family of a cell, `idle` included: a to-do cell is a `todo` cell. */
 export function cellFamily(cell: GridCell): StatusFamily | null {
   const kind = cellKind(cell);
   if (kind === 'unscheduled') return null;
   return cell.status?.family ?? 'todo';
 }
 
-// -- Regroupement par sequence ------------------------------------------------
+// -- Grouping by sequence ------------------------------------------------------
 
-/** Clé du groupe des plans qu'aucune sequence ne réclame. */
+/** Key of the group of shots that no sequence claims. */
 export const NO_SEQUENCE = 'none';
 
 export interface SequenceGroup {
@@ -227,11 +222,10 @@ export interface SequenceGroup {
 }
 
 /**
- * Les plans rangés par sequence, dans l'ordre où le serveur les sert.
+ * Shots filed by sequence, in the order the server serves them.
  *
- * Un index plutôt qu'un découpage en tranches : rien ne garantit que deux plans d'une même
- * sequence se suivent (`Shot.order` est libre), et un découpage naïf ouvrirait deux
- * groupes portant le même nom.
+ * An index rather than slicing: nothing guarantees that two shots of the same sequence are consecutive (`Shot.order` is
+ * free), and a naive slicing would open two groups bearing the same name.
  */
 export function groupBySequence(rows: GridRow[]): SequenceGroup[] {
   const groups = new Map<string, SequenceGroup>();
@@ -253,10 +247,10 @@ export function groupBySequence(rows: GridRow[]): SequenceGroup[] {
   return [...groups.values()];
 }
 
-// -- Agrégat d'un groupe replié ----------------------------------------------
+// -- Aggregate of a collapsed group ----------------------------------------------
 
 export interface FamilyTally {
-  /** Cases comptées : le hors-programme n'en fait pas partie. */
+  /** Cells counted: off-schedule ones are not part of it. */
   total: number;
   done: number;
   counts: Record<StatusFamily, number>;
@@ -272,11 +266,11 @@ const zeroCounts = (): Record<StatusFamily, number> => ({
 });
 
 /**
- * L'agrégat que porte une sequence repliée : c'est ainsi que la maille séquence survit à
- * la disparition de la matrice d'avancement — elle devient l'état replié de la grille.
+ * The aggregate carried by a collapsed sequence: this is how the sequence level survives the disappearance of the progress
+ * matrix. It becomes the collapsed state of the grid.
  *
- * Les cases hors programme sont écartées du dénominateur : un plan qui ne passe pas par
- * le compositing ne doit pas faire baisser l'avancement de sa sequence.
+ * Off-schedule cells are excluded from the denominator: a shot that does not go through compositing must not lower the
+ * progress of its sequence.
  */
 export function familyTally(rows: GridRow[]): FamilyTally {
   const counts = zeroCounts();
@@ -292,12 +286,11 @@ export function familyTally(rows: GridRow[]): FamilyTally {
   return { total, done: counts.done, counts };
 }
 
-// -- Colonnes visibles --------------------------------------------------------
+// -- Visible columns --------------------------------------------------------
 
 /**
- * Les colonnes à montrer. En mode « masquer les colonnes vides », un département ne
- * survit que si au moins un plan de la page l'a au programme ou y porte une tâche : une
- * colonne où personne n'a rien à faire ne mérite pas la largeur qu'elle prend.
+ * The columns to show. In "hide empty columns" mode, a department survives only if at least one shot on the page has it on
+ * its schedule or carries a task on it: a column where nobody has anything to do does not deserve the width it takes.
  */
 export function visibleDepartments(
   departments: GridDepartment[],
@@ -314,14 +307,14 @@ export function visibleDepartments(
   return departments.filter((department) => used.has(department.key));
 }
 
-// -- Lignes à monter ----------------------------------------------------------
+// -- Rows to mount ----------------------------------------------------------
 
 export type GridLine =
   { kind: 'group'; key: string; group: SequenceGroup } | { kind: 'row'; key: string; row: GridRow };
 
 /**
- * La liste plate que le virtualiseur indexe. Un groupe replié garde sa ligne d'en-tête —
- * c'est elle qui porte l'agrégat — et laisse tomber ses plans.
+ * The flat list the virtualiser indexes. A collapsed group keeps its header row, since it carries the aggregate, and drops
+ * its shots.
  */
 export function flattenGrid(groups: SequenceGroup[], collapsed: ReadonlySet<string>): GridLine[] {
   const lines: GridLine[] = [];

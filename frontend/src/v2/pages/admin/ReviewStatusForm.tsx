@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { Button } from '../../components/ui/button';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../components/ui/dialog';
 import { Input } from '../../components/ui/input';
@@ -12,7 +12,7 @@ import { Checkbox } from '../../components/ui/checkbox';
 import type { ReviewStatus } from '../../types/api';
 import { useT } from '../../i18n';
 
-/** Formulaire de création/édition d'un statut de review (Phase 31.A). */
+/** Form for creating/editing a review status (Phase 31.A). */
 export default function ReviewStatusForm({
   status,
   onClose,

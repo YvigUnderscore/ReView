@@ -4,19 +4,16 @@
 import { prisma } from '../lib/prisma';
 
 /**
- * Statistiques de review par projet (43.A — №123) : temps par shot, notes/retakes par
- * version, convergence par séquence.
+ * Review statistics per project (43.A, issue #123): time per shot, notes/retakes per version, convergence per sequence.
  *
- * Le comptage se fait EN BASE. Le service chargeait auparavant toutes les versions, toutes
- * les décisions et tous les commentaires racines du projet pour les compter en JavaScript :
- * à la volumétrie d'un long-métrage (~20 000 versions, ~20 000 décisions, ~50 000 notes),
- * cela occupait l'event loop du process pendant des secondes pour produire une page de
- * chiffres. Une seule requête d'agrégation rend désormais UNE ligne par plan ; les
- * fonctions pures ci-dessous (testées sans base) ne font plus que dériver statut, moyennes
- * et classements de ces lignes.
+ * Counting is done IN THE DATABASE. The service used to load every version, every decision and every root comment
+ * of the project to count them in JavaScript: at feature-film volume (about 20,000 versions, 20,000 decisions,
+ * 50,000 notes), this occupied the process's event loop for seconds to produce a page of figures. A single
+ * aggregation query now returns ONE row per shot; the pure functions below (unit-tested without a database) only
+ * derive status, averages and rankings from those rows.
  */
 
-// ── Lignes brutes (entrée des fonctions pures) ──
+// ── Raw rows (inputs of the pure functions) ──
 export interface SequenceRow {
   id: number;
   code: string;
@@ -24,9 +21,8 @@ export interface SequenceRow {
 }
 
 /**
- * Un plan, déjà compté par la base. Les dates sont celles dont dépend le délai de review ;
- * `lastIsApproval`/`lastIsRetake` décrivent la dernière version publiée, qui porte le
- * statut courant du plan.
+ * A shot, already counted by the database. The dates are those the review delay depends on;
+ * `lastIsApproval`/`lastIsRetake` describe the last published version, which carries the shot's current status.
  */
 export interface ShotAggregateRow {
   shotId: number;
@@ -44,7 +40,7 @@ export interface ShotAggregateRow {
   openNotes: number;
 }
 
-// ── Sorties ──
+// ── Outputs ──
 export type ShotStatus = 'approved' | 'inReview' | 'retake' | 'notStarted';
 
 export interface ShotStat {
@@ -54,10 +50,10 @@ export interface ShotStat {
   sequenceId: number | null;
   versions: number;
   retakes: number;
-  /** Verdicts rendus sur ce plan — le nombre de TOURS de review qu'il a coûtés. */
+  /** Verdicts given on this shot: the number of review ROUNDS it has cost. */
   reviewRounds: number;
   openNotes: number;
-  /** Délai (jours) entre la 1ʳᵉ version et la 1ʳᵉ décision d'approbation. */
+  /** Delay (days) between the 1st version and the 1st approval decision. */
   reviewDays: number | null;
   status: ShotStatus;
 }
@@ -65,12 +61,12 @@ export interface ShotStat {
 export interface SequenceConvergence {
   sequenceId: number | null;
   /**
-   * Code de la séquence. **Vide quand `sequenceId` est nul** (groupe « hors séquence ») :
-   * le serveur n'écrit aucun texte d'écran — c'est au lecteur de nommer ce groupe dans sa
-   * langue. Il portait jusqu'ici un tiret et un libellé français en dur.
+   * Sequence code. **Empty when `sequenceId` is null** (the "outside any sequence" group):
+   * the server writes no screen text; it is up to the reader to name this group in their language.
+   * Until now it carried a dash and a hard-coded French label.
    */
   code: string;
-  /** Nom de la séquence, vide pour le groupe « hors séquence » (voir `code`). */
+  /** Sequence name, empty for the "outside any sequence" group (see `code`). */
   name: string;
   total: number;
   approved: number;
@@ -80,10 +76,10 @@ export interface SequenceConvergence {
 }
 
 /**
- * Une barre de l'histogramme des retakes : « combien de plans ont coûté N retakes ».
+ * A bar of the retake histogram: "how many shots cost N retakes".
  *
- * Les bornes sont numériques et jamais nommées — un libellé « 3 et plus » serait un texte
- * d'écran écrit par le serveur. `max` nul désigne la dernière barre, ouverte.
+ * The bounds are numeric and never named: a label such as "3 and more" would be screen text written by the server.
+ * A null `max` designates the last, open bar.
  */
 export interface RetakeBucket {
   min: number;
@@ -95,15 +91,15 @@ export interface ProjectStatsTotals {
   shots: number;
   versions: number;
   decisions: number;
-  /** % de shots approuvés parmi ceux ayant au moins une version. */
+  /** % of approved shots among those with at least one version. */
   approvalRate: number;
   openNotes: number;
   avgReviewDays: number | null;
   avgRetakesPerShot: number;
-  /** Tours de review moyens par plan — un plan « bon du premier coup » en coûte un. */
+  /** Average review rounds per shot: a shot that is "right the first time" costs one. */
   avgReviewRoundsPerShot: number;
   avgNotesPerVersion: number;
-  /** Part (%) des plans approuvés SANS aucun retake, parmi ceux qui l'ont été. */
+  /** Share (%) of approved shots WITHOUT any retake, among those that were approved. */
   firstTimeRightRate: number;
 }
 
@@ -111,20 +107,20 @@ export interface ProjectStats {
   totals: ProjectStatsTotals;
   sequences: SequenceConvergence[];
   slowestShots: ShotStat[];
-  /** Les plans qui ont coûté le plus de retakes — le classement du panneau retakes. */
+  /** The shots that cost the most retakes: the ranking of the retakes panel. */
   mostRetakenShots: ShotStat[];
-  /** Distribution des retakes par plan, du meilleur au pire. */
+  /** Distribution of retakes per shot, from best to worst. */
   retakeBuckets: RetakeBucket[];
 }
 
-/** Différence en jours entiers (bornée à 0). */
+/** Difference in whole days (floored at 0). */
 export function daysBetween(from: Date, to: Date): number {
   return Math.max(0, Math.round((to.getTime() - from.getTime()) / 86_400_000));
 }
 
 const round1 = (n: number) => Math.round(n * 10) / 10;
 
-/** Dérive statut et délai de review de chaque plan déjà compté en base. */
+/** Derives the status and review delay of each shot already counted in the database. */
 export function computeShotStats(rows: ShotAggregateRow[]): ShotStat[] {
   return rows.map((row) => ({
     shotId: row.shotId,
@@ -137,7 +133,7 @@ export function computeShotStats(rows: ShotAggregateRow[]): ShotStat[] {
     openNotes: row.openNotes,
     reviewDays:
       row.firstVersionAt && row.firstApprovalAt ? daysBetween(row.firstVersionAt, row.firstApprovalAt) : null,
-    // Statut courant = statut de review dénormalisé de la dernière version.
+    // Current status = the denormalized review status of the last version.
     status:
       row.versions === 0
         ? 'notStarted'
@@ -170,11 +166,11 @@ function tally(
 }
 
 /**
- * Convergence par séquence (+ groupe hors séquence), séquences vides omises.
+ * Convergence per sequence (plus the out-of-sequence group), empty sequences omitted.
  *
- * Le groupe hors séquence sort avec `sequenceId: null` et des libellés VIDES : il portait
- * « — » et « Sans séquence » écrits en dur côté serveur, donc en français pour les quatorze
- * langues. Nommer ce groupe est le travail du lecteur.
+ * The out-of-sequence group comes out with `sequenceId: null` and EMPTY labels: it used to carry "—" and
+ * "No sequence" hard-coded on the server, hence in French for all fourteen languages. Naming this group is
+ * the reader's job.
  */
 export function computeSequenceConvergence(
   sequences: SequenceRow[],
@@ -186,8 +182,8 @@ export function computeSequenceConvergence(
 }
 
 /**
- * Bornes de l'histogramme des retakes. Zéro, un, deux, puis tout le reste : au-delà de
- * trois tours, ce n'est plus une nuance mais un plan à regarder de près.
+ * Bounds of the retake histogram. Zero, one, two, then everything else: beyond three rounds it is no longer
+ * a nuance but a shot to look at closely.
  */
 const RETAKE_BUCKETS: readonly { min: number; max: number | null }[] = [
   { min: 0, max: 0 },
@@ -196,7 +192,7 @@ const RETAKE_BUCKETS: readonly { min: number; max: number | null }[] = [
   { min: 3, max: null },
 ];
 
-/** Distribution des retakes par plan, plans jamais livrés exclus (ils n'en ont pas coûté). */
+/** Distribution of retakes per shot, never-delivered shots excluded (they cost none). */
 export function computeRetakeBuckets(shotStats: ShotStat[]): RetakeBucket[] {
   const started = shotStats.filter((s) => s.status !== 'notStarted');
   return RETAKE_BUCKETS.map((b) => ({
@@ -205,7 +201,7 @@ export function computeRetakeBuckets(shotStats: ShotStat[]): RetakeBucket[] {
   }));
 }
 
-/** Classe les plans qui ont coûté le plus de retakes, puis de tours, puis de notes. */
+/** Ranks the shots that cost the most retakes, then rounds, then notes. */
 export function rankMostRetakenShots(shotStats: ShotStat[], limit = 10): ShotStat[] {
   return [...shotStats]
     .filter((s) => s.retakes > 0)
@@ -213,7 +209,7 @@ export function rankMostRetakenShots(shotStats: ShotStat[], limit = 10): ShotSta
     .slice(0, limit);
 }
 
-/** Totaux projet à partir des stats par shot + comptes bruts. */
+/** Project totals from the per-shot stats plus raw counts. */
 export function computeTotals(
   shotStats: ShotStat[],
   totalVersions: number,
@@ -240,8 +236,8 @@ export function computeTotals(
       ? round1(shotStats.reduce((a, s) => a + s.reviewRounds, 0) / shotStats.length)
       : 0,
     avgNotesPerVersion: totalVersions ? round1(totalNotes / totalVersions) : 0,
-    // Rapporté aux plans APPROUVÉS seulement : un plan encore en review n'a pas fini de
-    // consommer ses retakes, l'inclure ferait baisser le taux au fil de la production.
+    // Reported over APPROVED shots only: a shot still in review has not finished consuming its retakes,
+    // and including it would make the rate fall as production goes on.
     firstTimeRightRate: approved
       ? Math.round(
           (shotStats.filter((s) => s.status === 'approved' && s.retakes === 0).length / approved) * 100,
@@ -250,7 +246,7 @@ export function computeTotals(
   };
 }
 
-/** Classe les shots « les plus coûteux » (délai, puis retakes, puis notes ouvertes). */
+/** Ranks the "most costly" shots (delay, then retakes, then open notes). */
 export function rankSlowestShots(shotStats: ShotStat[], limit = 10): ShotStat[] {
   return [...shotStats]
     .filter((s) => s.reviewDays !== null || s.retakes > 0 || s.openNotes > 0)
@@ -262,12 +258,11 @@ export function rankSlowestShots(shotStats: ShotStat[], limit = 10): ShotStat[] 
 }
 
 /**
- * Une ligne par plan, comptée par Postgres.
+ * One row per shot, counted by Postgres.
  *
- * Trois sous-agrégats indépendants (versions, décisions, notes) rejoignent la liste des
- * plans du projet. `DISTINCT ON` élit la dernière version de chaque plan sans en rapatrier
- * l'historique, et les `FILTER` remplacent les `Array.filter` d'origine. Tous les
- * paramètres passent par la substitution du driver — aucune concaténation.
+ * Three independent sub-aggregates (versions, decisions, notes) join the project's shot list. `DISTINCT ON` picks
+ * the last version of each shot without bringing back its history, and the `FILTER` clauses replace the original
+ * `Array.filter` calls. All parameters go through the driver's substitution: no concatenation.
  */
 function queryShotAggregates(projectId: number): Promise<ShotAggregateRow[]> {
   return prisma.$queryRaw<ShotAggregateRow[]>`
@@ -351,7 +346,7 @@ function queryShotAggregates(projectId: number): Promise<ShotAggregateRow[]> {
   `;
 }
 
-/** Agrégats SQL bornés au projet, puis calcul pur. */
+/** SQL aggregates bounded to the project, then pure computation. */
 export async function getProjectStats(projectId: number): Promise<ProjectStats> {
   const [rows, sequences] = await Promise.all([
     queryShotAggregates(projectId),

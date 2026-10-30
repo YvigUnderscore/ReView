@@ -7,32 +7,31 @@ import { isApiTokenFormat } from '../lib/apiTokens';
 import { forbidden, unauthorized } from '../lib/errors';
 
 /**
- * Contrôle de scope pour l'API v1 : chaque route déclare le scope qu'elle exige.
+ * Scope check for the v1 API: each route declares the scope it requires.
  *
- * Une session interactive (JWT) n'a pas de scopes — un utilisateur connecté est déjà
- * borné par son rôle et son appartenance aux projets. Le scope ne s'applique donc qu'aux
- * requêtes portant un token d'API, dont il restreint le pouvoir *en deçà* de celui du
- * porteur : un token ne donne jamais plus que ce que son porteur peut faire.
+ * An interactive session (JWT) has no scopes: a logged-in user is already bounded by their role and
+ * their project memberships. Scopes therefore only apply to requests carrying an API token, whose
+ * power they restrict *below* that of the holder: a token never grants more than its holder can do.
  */
-/** Middleware de scope portant les scopes exigés — lu par le générateur OpenAPI. */
+/** Scope middleware carrying the required scopes, read by the OpenAPI generator. */
 export interface ScopeMiddleware {
   (req: Request, res: Response, next: NextFunction): void;
   /**
-   * Premier scope exigé. Conservé pour les lecteurs qui n'en attendent qu'un ; la liste
-   * complète est dans `scopes`, et c'est elle qu'il faut documenter.
+   * First required scope. Kept for readers who only expect one; the full list is in `scopes`, and
+   * that is the one to document.
    */
   scope: Scope;
-  /** Tous les scopes exigés, dans l'ordre de déclaration. */
+  /** All required scopes, in declaration order. */
   scopes: readonly Scope[];
 }
 
 /**
- * Exige un ou plusieurs scopes. Une route qui touche deux familles les nomme toutes les
- * deux — la publication depuis un DCC crée une version ET dépose un média, et n'exiger
- * que `versions:write` laissait un token écrire dans le stockage sans l'avoir demandé.
+ * Requires one or more scopes. A route that touches two families names both: publishing from a DCC
+ * creates a version AND uploads a media, and requiring only `versions:write` would let a token write
+ * to storage without having asked for it.
  *
- * Le refus porte sur le **premier** scope manquant, dans l'ordre déclaré : le message dit
- * ce qu'il faut ajouter au token, sans révéler l'ensemble des exigences d'un coup.
+ * The refusal concerns the **first** missing scope, in declared order: the message says what must be
+ * added to the token, without revealing the full set of requirements at once.
  */
 export const requireScope = (...scopes: [Scope, ...Scope[]]): ScopeMiddleware => {
   const middleware = (req: Request, _res: Response, next: NextFunction): void => {
@@ -55,9 +54,9 @@ export const requireScope = (...scopes: [Scope, ...Scope[]]): ScopeMiddleware =>
 };
 
 /**
- * Vérifie qu'un token cantonné à un projet ne sort pas de ce projet.
- * À appeler dans les handlers dès qu'un projectId est résolu — le cantonnement est le
- * garde-fou qui rend un token de ferme de rendu diffusable sur un seul film.
+ * Checks that a token confined to a project does not leave that project.
+ * To be called in handlers as soon as a projectId is resolved: confinement is the safeguard that makes
+ * a render-farm token shareable across a single film.
  */
 export function assertTokenProject(req: Request, projectId: number): void {
   const bound = req.apiToken?.projectId;
@@ -67,45 +66,43 @@ export function assertTokenProject(req: Request, projectId: number): void {
 }
 
 /**
- * ── Surface d'un token d'API : `/api/v1`, et rien d'autre ────────────────────
+ * ── Surface of an API token: `/api/v1`, and nothing else ────────────────────
  *
- * Le cantonnement projet (`assertTokenProject`) et les scopes fins (`requireScope`) ne
- * sont posés que par les routes v1. L'API interne `/api`, elle, acceptait le même
- * `rvk_…` sans jamais les consulter : un token de ferme de rendu cantonné au projet X
- * lisait et écrivait tous les projets dès qu'il visait `/api/projects`,
- * `/api/media/:id/url` ou `/api/admin/*`. La garantie vendue par le cantonnement était
- * donc fausse hors de v1.
+ * Project confinement (`assertTokenProject`) and the fine-grained scopes (`requireScope`) are only
+ * applied by the v1 routes. The internal `/api` API, however, accepted the same `rvk_…` without ever
+ * consulting them: a render-farm token confined to project X read and wrote all projects as soon as it
+ * targeted `/api/projects`, `/api/media/:id/url` or `/api/admin/*`. The guarantee sold with
+ * confinement was therefore false outside v1.
  *
- * On la rend vraie au seul endroit qui ne s'oublie pas : un middleware monté sur `/api`,
- * AVANT les routeurs. Un token d'API n'ouvre plus que le contrat stable qui lui est
- * destiné ; l'API interne reste réservée aux sessions humaines (JWT), qui sont bornées
- * par leur rôle et leur appartenance aux projets.
+ * We make it true at the one place that cannot be forgotten: a middleware mounted on `/api`, BEFORE
+ * the routers. An API token now only opens the stable contract intended for it; the internal API
+ * remains reserved to human sessions (JWT), which are bounded by their role and their project
+ * memberships.
  *
- * Conséquences assumées : un script qui appelait `/api/...` avec un `rvk_` reçoit un 403
- * explicite (`API_TOKEN_V1_ONLY`) plutôt qu'un accès trop large. Les équivalents v1
- * existent (`/api/v1/me`, `/api/v1/schema`, `/api/v1/media/:id/url`).
+ * Accepted consequences: a script calling `/api/...` with a `rvk_` gets an explicit 403
+ * (`API_TOKEN_V1_ONLY`) rather than an overly broad access. The v1 equivalents exist (`/api/v1/me`,
+ * `/api/v1/schema`, `/api/v1/media/:id/url`).
  *
- * ⚠ Le middleware lit l'en-tête `Authorization` lui-même : il court avant
- * `authenticate`, donc `req.apiToken` n'est pas encore posé. Il ne valide rien — un
- * jeton faux ou révoqué sera refusé plus loin — il ne fait qu'orienter la surface.
+ * ⚠ The middleware reads the `Authorization` header itself: it runs before `authenticate`, so
+ * `req.apiToken` is not set yet. It validates nothing (a wrong or revoked token will be refused
+ * further on): it only orients the surface.
  */
 export const V1_SURFACE_PREFIX = '/api/v1';
 
 /**
- * Servis à l'identique avec ou sans jeton (aucune donnée, seulement la forme de l'API) :
- * les refuser ne protégerait rien et casserait la découverte d'une instance.
+ * Served identically with or without a token (no data, only the shape of the API): refusing them
+ * would protect nothing and would break the discovery of an instance.
  */
 const PUBLIC_SURFACE = new Set(['/api/docs', '/api/openapi.json']);
 
 const BEARER_SCHEME = /^Bearer[ ]+(.+)$/i;
 
 /**
- * Chemin de la requête, tel qu'Express l'a routé.
+ * Path of the request, as Express routed it.
  *
- * On repart de `originalUrl` (le middleware est monté sur `/api`, `req.path` serait
- * amputé du point de montage), on retire la query, et on tolère la forme absolue
- * (`GET http://host/api/…`, licite en HTTP/1.1). Toute forme non reconnue retombe sur le
- * refus : la garde est fermée par défaut.
+ * We start from `originalUrl` (the middleware is mounted on `/api`, so `req.path` would be stripped of
+ * the mount point), remove the query, and tolerate the absolute form (`GET http://host/api/…`, legal in
+ * HTTP/1.1). Any unrecognized form falls back to refusal: the guard is closed by default.
  */
 function requestPathname(req: Request): string {
   const target = (req.originalUrl || req.url) ?? '';
@@ -116,20 +113,20 @@ function requestPathname(req: Request): string {
   try {
     decoded = decodeURIComponent(pathname);
   } catch {
-    // Échappement invalide : on garde la forme brute, qui ne correspondra à rien d'autorisé.
+    // Invalid escape: we keep the raw form, which will match nothing allowed.
   }
-  // Express route `/api/docs/` comme `/api/docs` : la barre finale ne doit pas décider.
+  // Express routes `/api/docs/` the same as `/api/docs`: the trailing slash must not decide.
   const trimmed = decoded.length > 1 ? decoded.replace(/\/+$/, '') : decoded;
   return (trimmed || '/').toLowerCase();
 }
 
-/** Le chemin vise-t-il l'API v1 ? Un segment `..` disqualifie d'office. */
+/** Does the path target the v1 API? A `..` segment disqualifies it outright. */
 function targetsV1(pathname: string): boolean {
   if (pathname.split('/').includes('..')) return false;
   return pathname === V1_SURFACE_PREFIX || pathname.startsWith(`${V1_SURFACE_PREFIX}/`);
 }
 
-/** Refuse un token d'API partout ailleurs que sur `/api/v1`. À monter sur `/api`. */
+/** Refuses an API token everywhere other than `/api/v1`. To be mounted on `/api`. */
 export const apiTokenSurface = (req: Request, _res: Response, next: NextFunction): void => {
   const bearer = BEARER_SCHEME.exec(req.headers['authorization'] ?? '')?.[1]?.trim();
   const carriesApiToken = req.apiToken !== undefined || (bearer !== undefined && isApiTokenFormat(bearer));

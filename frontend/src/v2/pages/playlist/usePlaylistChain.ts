@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useState, type RefObject } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { reviewPath } from '../../lib/slug';
 import type { PlaylistDetail, PlaylistItemEntry } from '../../types/api';
@@ -12,7 +12,7 @@ import { carryParams } from '../review/playlistNav';
 import { loadAutoAdvance, nextPlayableAfterMedia, saveAutoAdvance } from './playlistChain';
 
 export interface PlaylistChain {
-  /** La review est ouverte dans le contexte d'une playlist (`?playlist=`). */
+  /** The review is opened in the context of a playlist (`?playlist=`). */
   active: boolean;
   enabled: boolean;
   toggle: () => void;
@@ -20,12 +20,12 @@ export interface PlaylistChain {
 }
 
 /**
- * Enchaînement de la playlist dans le lecteur : la fin d'un plan ouvre le suivant.
+ * Chaining of the playlist in the player: the end of a shot opens the next one.
  *
- * Même mécanique que le montage automatique (`useTimelineChain`) — écoute de `ended`,
- * navigation en **remplacement** pour ne pas empiler vingt entrées d'historique. Quand la
- * review porte aussi un montage (`?timeline=`), c'est lui qui mène : deux enchaînements
- * sur le même événement navigueraient deux fois.
+ * Same mechanism as the automatic edit (`useTimelineChain`): listening to `ended`, and navigating
+ * with **replacement** so as not to stack twenty history entries. When the review also carries an
+ * edit (`?timeline=`), it is that one which leads: two chainings on the same event would navigate
+ * twice.
  */
 export function usePlaylistChain(
   mediaId: number,

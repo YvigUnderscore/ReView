@@ -13,14 +13,14 @@ import { cameraPoseFromView } from '../camera/cameraPose';
 import { useCameraPresentation } from '../camera/useCameraPresentation';
 import { importCameraFile } from './importCameraAbc';
 import type { Model3DThreeState } from './useModel3DThree';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
- * Contrôleur caméra du viewer 3D Three (Phase 16/17) : lecteur keyframe (piloté par la caméra
- * layout en PiP, sinon la caméra principale), rejeu de la **présentation persistée** à
- * l'ouverture (pour tous), mode layout, et enregistrement de la présentation par le gestionnaire
- * (champ `splatPresentation` réutilisé, générique caméra). Extrait de l'ex-`Model3DCameraBar`
- * pour que l'orchestrateur `Model3DReview` reste sous le budget.
+ * Camera controller of the Three 3D viewer (Phase 16/17): keyframe reader (driven by the layout
+ * camera in PiP, otherwise by the main camera), replay of the **persisted presentation** on opening
+ * (for everyone), layout mode, and recording of the presentation by the manager (`splatPresentation`
+ * field reused, camera-generic). Extracted from the former `Model3DCameraBar` so that the
+ * `Model3DReview` orchestrator stays under the budget.
  */
 export function useModel3DCamera(
   model3d: Model3DThreeState,
@@ -35,7 +35,7 @@ export function useModel3DCamera(
   const { setAnim, play } = anim;
   const { ready, restoreCamera, setFov, setRoll } = model3d;
 
-  // Mode layout : rejoue l'animation caméra jointe au commentaire sélectionné.
+  // Layout mode: replays the camera animation attached to the selected comment.
   const viewedCameraAnim = ann.viewedCameraAnim;
   useEffect(() => {
     if (viewedCameraAnim) {
@@ -44,8 +44,8 @@ export function useModel3DCamera(
     }
   }, [viewedCameraAnim, setAnim, play]);
 
-  // Joindre / détacher : le bouton porte l'état, il doit donc aussi savoir le défaire. Et rien
-  // ne part plus en silence — un appui sans animation le dit au lieu de ne rien faire.
+  // Attach / detach: the button carries the state, so it must also know how to undo it. And nothing
+  // goes silent anymore — a press without an animation says so instead of doing nothing.
   const toggleAttach = useCallback(() => {
     if (ann.cameraAnim) {
       ann.setCameraAnim(null);
@@ -77,7 +77,7 @@ export function useModel3DCamera(
     [setAnim, play, t],
   );
 
-  // Rejeu de la présentation persistée à l'ouverture (une fois la scène prête), pour tous.
+  // Replay of the persisted presentation on opening (once the scene is ready), for everyone.
   const appliedRef = useRef(false);
   const pres = data.splatPresentation;
   useEffect(() => {
@@ -108,9 +108,9 @@ export function useModel3DCamera(
 
   const save = useCallback(async () => {
     const view = model3d.captureCamera();
-    // Préserve les autres champs persistés (dont l'éclairage HDRI, Phase 29).
+    // Preserves the other persisted fields (including the HDRI lighting, Phase 29).
     const presentation: SplatPresentation = { ...(data.splatPresentation ?? {}) };
-    // Idem splat : l'aspect déjà enregistré est reconduit, jamais recapturé de la vue.
+    // Same as splat: the already-recorded aspect is carried over, never recaptured from the view.
     if (view) presentation.camera = cameraPoseFromView(view, data.splatPresentation?.camera?.aspect);
     if (hasAnimation(anim.anim)) presentation.cameraAnim = anim.anim;
     await persist(presentation);
@@ -124,7 +124,7 @@ export function useModel3DCamera(
   return {
     anim,
     busy,
-    // L'action et son état partent ensemble : le bouton du transport doit dire ce qui est joint.
+    // The action and its state leave together: the transport button must say what is attached.
     attach: { toggle: toggleAttach, attached: ann.cameraAnim != null },
     importGltf,
     applyOrbitPreset,

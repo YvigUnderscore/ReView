@@ -8,7 +8,7 @@
 export const slugify = (s: string): string =>
   s
     .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '') // diacritiques combinants
+    .replace(/[̀-ͯ]/g, '') // combining diacritics
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, '-')

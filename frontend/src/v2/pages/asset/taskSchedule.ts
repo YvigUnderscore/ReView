@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Fenêtre de travail d'une tâche, telle qu'elle se lit sur une fiche.
+ * Working window of a task, as read on a card.
  *
- * La règle d'affichage est séparée du rendu parce qu'elle porte une décision : une
- * échéance dépassée l'emporte sur la fenêtre complète. Sur une fiche, ce qu'on cherche
- * n'est pas « du 10 au 20 » mais « c'était pour hier ».
+ * The display rule is separated from rendering because it carries a decision: an
+ * overdue due date outweighs the full window. On a card, what one looks for
+ * is not "from the 10th to the 20th" but "it was due yesterday".
  */
 
 export interface TaskDates {
@@ -14,7 +14,7 @@ export interface TaskDates {
   dueDate?: string | null;
 }
 
-/** Une échéance est dépassée dès que le jour dit est passé. */
+/** A due date is overdue as soon as its day has passed. */
 export function isLate(due: string | null | undefined, now: number = Date.now()): boolean {
   if (!due) return false;
   const time = new Date(due).getTime();
@@ -28,8 +28,8 @@ export type ScheduleLabel =
   | null;
 
 /**
- * Ce qu'il faut afficher, sous forme de clé et de dates brutes : le formatage suit la
- * locale du lecteur et n'a rien à faire ici.
+ * What to display, as a key and raw dates: formatting follows the
+ * reader's locale and has no business here.
  */
 export function scheduleLabel(task: TaskDates, now: number = Date.now()): ScheduleLabel {
   if (!task.startDate && !task.dueDate) return null;

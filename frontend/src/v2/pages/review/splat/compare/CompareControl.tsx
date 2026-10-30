@@ -2,16 +2,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Columns3 } from 'lucide-react';
-import { SegmentedControl } from '../../../../components/ui/segmented-control';
+import { SegmentedControl } from '@/v2/components/ui/segmented-control';
 import type { SplatCompareState } from './useSplatCompare';
-import { useT } from '../../../../i18n';
+import { useT } from '@/v2/i18n';
 
 const shortName = (name: string) => (name.length > 22 ? `${name.slice(0, 20)}…` : name);
 
 /**
- * Choix du splat comparé, dans l'en-tête du chrome : un onglet par splat de la version, plus
- * « Voir tous » (côte à côte). Remplace `CompareBar`, qui flottait sur la scène ; l'échelle
- * brute des nuages a rejoint le panneau Affichage, avec les autres réglages de rendu.
+ * Choice of the compared splat, in the chrome's header: one tab per splat of the version, plus "See all"
+ * (side by side). Replaces `CompareBar`, which floated over the scene; the raw scale of the clouds has joined
+ * the Display panel, with the other render settings.
  */
 export default function CompareControl({ compare }: { compare: SplatCompareState }) {
   const t = useT();

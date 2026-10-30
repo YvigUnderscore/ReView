@@ -9,19 +9,19 @@ import type { VariantSelection } from '../review/three/sceneOverrideApply';
 import type { ClientMediaSource } from './clientTypes';
 
 /**
- * Traduction du payload de partage vers ce qu'attendent les viewers internes réutilisés.
- * Tout est pur : le partage n'a le droit à aucune requête authentifiée, ces fonctions sont
- * donc le seul endroit où l'on décide ce qui est affichable avec ce que la route donne.
+ * Translation of the share payload into what the reused internal viewers expect.
+ * Everything is pure: a share has no right to any authenticated request, so these functions
+ * are the only place where what is displayable is decided from what the route gives.
  */
 
-/** Extensions que Spark sait ouvrir — `.sogs` est normalisé en `.sog` par le viewer. */
+/** Extensions Spark can open. `.sogs` is normalized to `.sog` by the viewer. */
 const SPLAT_EXT = /\.(ply|spz|splat|ksplat|sog|sogs)(\?|$)/i;
 const GLTF_EXT = /\.(glb|gltf)(\?|$)/i;
 
 /**
- * GLB affichable pour un invité : le dérivé converti quand la route l'expose, sinon le
- * fichier source s'il est déjà du glTF. `null` = rien à charger — le pane affiche son état
- * « modèle inaffichable » plutôt qu'un canvas noir.
+ * Displayable GLB for a guest: the converted derivative when the route exposes it, otherwise
+ * the source file if it is already glTF. `null` means nothing to load: the pane shows its
+ * "model not displayable" state rather than a black canvas.
  */
 export function resolveClientGlb(source: ClientMediaSource | undefined): string | null {
   if (!source) return null;
@@ -30,8 +30,8 @@ export function resolveClientGlb(source: ClientMediaSource | undefined): string 
 }
 
 /**
- * Fichier splat affichable : Spark déduit le décodeur de l'extension, qui vit sur le nom
- * d'origine du média et non sur l'URL présignée (laquelle porte une query de signature).
+ * Displayable splat file: Spark infers the decoder from the extension, which lives on the
+ * media's original name and not on the presigned URL (which carries a signature query).
  */
 export function resolveClientSplat(
   source: ClientMediaSource | undefined,
@@ -44,10 +44,10 @@ export function resolveClientSplat(
 }
 
 /**
- * Aspect du cadre de livraison rejoué chez l'invité : exactement la règle de la review
- * interne (`reviewAspect`) — l'aspect gelé dans la présentation d'abord, sinon le ratio
- * hérité des réglages pipeline servi par la route de partage. L'invité annote dans le même
- * cadre que l'artiste, sinon ses annotations normalisées ne tombent pas au même endroit.
+ * Delivery frame aspect replayed for the guest: exactly the internal review's rule
+ * (`reviewAspect`). The aspect frozen in the presentation comes first, otherwise the ratio
+ * inherited from pipeline settings served by the share route. The guest annotates in the same
+ * frame as the artist, otherwise normalized annotations would not land in the same place.
  */
 export function clientFrameAspect(source: ClientMediaSource | undefined): number {
   return reviewAspect({
@@ -57,9 +57,9 @@ export function clientFrameAspect(source: ClientMediaSource | undefined): number
 }
 
 /**
- * Éclairage rejoué : réglage propre au média, sinon défaut du projet, sinon neutre — même
- * cascade que la review interne (39.F), fusionnée sur `DEFAULT_LIGHTING` pour tolérer les
- * enregistrements antérieurs à un champ.
+ * Replayed lighting: media-specific setting, otherwise project default, otherwise neutral.
+ * Same cascade as the internal review (39.F), merged over `DEFAULT_LIGHTING` to tolerate
+ * records that predate a field.
  */
 export function clientLighting(source: ClientMediaSource | undefined): LightingConfig {
   const own = source?.splatPresentation?.lighting;
@@ -67,7 +67,7 @@ export function clientLighting(source: ClientMediaSource | undefined): LightingC
   return { ...DEFAULT_LIGHTING, ...(own ?? project ?? {}) };
 }
 
-/** Options de variantes actives à la conversion, indexées par prim (base de l'override). */
+/** Variant options active at conversion, indexed by prim (base of the override). */
 export function clientVariantDefaults(sets: UsdVariantSet[] | null | undefined): VariantSelection {
   const defaults: VariantSelection = {};
   for (const set of sets ?? [])
@@ -76,27 +76,27 @@ export function clientVariantDefaults(sets: UsdVariantSet[] | null | undefined):
 }
 
 /**
- * Position dans le **média** à partir de la position dans le lecteur. Le dérivé client porte
- * un slate en tête (35.A) que la review interne ne connaît pas : sans ce retrait, chaque
- * commentaire d'invité serait décalé de la durée du slate.
+ * Position in the **media** from the position in the player. The client derivative carries
+ * a slate at the head (35.A) that the internal review does not know: without this removal,
+ * every guest comment would be offset by the slate duration.
  */
 export function mediaTimeOf(playerTime: number, slateSec: number): number {
   return Math.max(0, playerTime - slateSec);
 }
 
-/** Réciproque : où se placer dans le lecteur pour atteindre une position du média. */
+/** Inverse: where to place oneself in the player to reach a media position. */
 export function playerTimeOf(mediaTime: number, slateSec: number): number {
   return Math.max(0, mediaTime + slateSec);
 }
 
 /**
- * Commentaires du partage vus par la timeline interne, qui raisonne en **temps lecteur** :
- * les timestamps sont donc décalés du slate. Les champs que le partage n'expose pas
- * (réactions, fils, états) restent vides — la timeline ne s'en sert que pour l'affichage.
+ * Share comments as seen by the internal timeline, which reasons in **player time**: the
+ * timestamps are therefore offset by the slate. Fields the share does not expose (reactions,
+ * threads, states) stay empty, since the timeline only uses them for display.
  *
- * `annotation` était forcé à `null` : le dessin arrivait bien du serveur et le front le
- * jetait, si bien qu'une note annotée s'affichait sans son trait. Il voyage désormais, et
- * c'est lui qui s'affiche quand le client clique une note.
+ * `annotation` used to be forced to `null`: the drawing did arrive from the server and the
+ * front end discarded it, so an annotated note displayed without its stroke. It now travels,
+ * and it is what displays when the client clicks a note.
  */
 export function toPlayerComments(comments: readonly ClientComment[], slateSec: number): ReviewComment[] {
   return comments.map((c) => ({
@@ -106,8 +106,8 @@ export function toPlayerComments(comments: readonly ClientComment[], slateSec: n
     createdAt: c.createdAt,
     author: c.author ? { id: c.author.id, name: c.author.name } : null,
     guestName: c.guestName,
-    // La pose caméra reste hors du partage : la restaurer supposerait de rendre pilotables
-    // les viewers spatiaux invités, qui sont montés en lecture seule.
+    // The camera pose stays out of the share: restoring it would mean making the invited
+    // spatial viewers controllable, and they are mounted read-only.
     cameraState: null,
     annotation: c.annotation ?? null,
     isEdited: c.isEdited,

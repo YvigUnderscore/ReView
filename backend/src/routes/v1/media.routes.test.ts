@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 
-/** Identité jouée par le middleware d'authentification factice de ce fichier. */
+/** Identity injected by this file's fake authentication middleware. */
 type Caller = { user: Request['user']; apiToken: Request['apiToken'] };
 
 const { db, caller } = vi.hoisted(() => {
@@ -13,8 +13,8 @@ const { db, caller } = vi.hoisted(() => {
     db: {
       mediaObject: { findUnique: vi.fn() },
       version: { findUnique: vi.fn() },
-      // `count` : la garde d'accès projet commence par vérifier que le projet n'est pas à
-      // la corbeille (`middleware/rbac`). Il ne l'est jamais dans ce fichier.
+      // `count`: the project access guard first checks that the project is not in the trash
+      // (`middleware/rbac`). It never is in this file.
       project: { count: vi.fn(() => Promise.resolve(1)) },
       projectMembership: { findUnique: vi.fn() },
     },
@@ -23,7 +23,7 @@ const { db, caller } = vi.hoisted(() => {
 });
 
 vi.mock('../../lib/prisma', () => ({ prisma: db }));
-vi.mock('../../services/StorageService', () => ({
+vi.mock('../../lib/storage', () => ({
   storage: {
     getPresignedGetUrl: vi.fn((key: string, ttl?: number) =>
       Promise.resolve(`https://minio/${key}?ttl=${ttl}`),
@@ -31,9 +31,9 @@ vi.mock('../../services/StorageService', () => ({
   },
   StorageService: { mediaKey: vi.fn(), thumbnailKey: vi.fn() },
 }));
-// `mediaSourceKey` reste le vrai : c'est lui qui décide quel fichier on sert. Seules les
-// dépendances lourdes de MediaService (files, socket, audit) sont neutralisées.
-vi.mock('../../services/JobService', () => ({ enqueueMediaJob: vi.fn(), enqueueSpatialThumb: vi.fn() }));
+// `mediaSourceKey` remains the real one: it decides which file gets served. Only the heavy
+// MediaService dependencies (files, socket, audit) are stubbed.
+vi.mock('../../lib/queues', () => ({ enqueueMediaJob: vi.fn(), enqueueSpatialThumb: vi.fn() }));
 vi.mock('../../services/SocketService', () => ({ emitToProject: vi.fn() }));
 vi.mock('../../services/AuditService', () => ({ logAudit: vi.fn() }));
 
@@ -51,7 +51,7 @@ const app = express()
   .use('/api/v1', mediaRoutes)
   .use(errorHandler);
 
-/** Média publié d'un plan du projet 42, tel que la base le rend. */
+/** Published media of a shot in project 42, as the database returns it. */
 const media = {
   id: 128,
   kind: 'VIDEO',
@@ -79,7 +79,7 @@ beforeEach(() => {
 });
 
 describe('GET /api/v1/media/:id/url', () => {
-  it('rend une URL présignée de la source, avec la fiche du média', async () => {
+  it('returns a presigned URL for the source, with the media record', async () => {
     const res = await request(app).get('/api/v1/media/128/url');
     expect(res.status).toBe(200);
     expect(res.body.url).toContain(media.storageKey);
@@ -87,8 +87,8 @@ describe('GET /api/v1/media/:id/url', () => {
     expect(res.body.media).toMatchObject({ id: 128, filename: media.originalName, size: 184_320_000 });
   });
 
-  // Après transcodage l'original est effacé : servir `storageKey` rendrait une URL morte.
-  it('sert le proxy quand la source a été supprimée après transcodage', async () => {
+  // After transcoding the original is deleted: serving `storageKey` would return a dead URL.
+  it('serves the proxy when the source was deleted after transcoding', async () => {
     db.mediaObject.findUnique.mockResolvedValue({
       ...media,
       metadata: { sourceDeleted: true, proxyKey: 'derived/128/proxy.mp4' },
@@ -97,9 +97,9 @@ describe('GET /api/v1/media/:id/url', () => {
     expect(res.body.url).toContain('derived/128/proxy.mp4');
   });
 
-  // Coupe historique (la découpe a été retirée en Phase 50) : c'est toujours elle que la
-  // review joue, donc celle qu'un outil doit obtenir — sinon il conforme un plan plus long.
-  it('sert le proxy coupé quand une coupe historique existe', async () => {
+  // Historical cut (trimming was removed in Phase 50): it is still what the review plays, so it is
+  // what a tool must get, otherwise it conforms to a longer shot.
+  it('serves the trimmed proxy when a historical cut exists', async () => {
     db.mediaObject.findUnique.mockResolvedValue({
       ...media,
       metadata: {
@@ -112,13 +112,13 @@ describe('GET /api/v1/media/:id/url', () => {
     expect(res.body.url).toContain('derived/128/trim.mp4');
   });
 
-  it('refuse une variante que ce média ne porte pas', async () => {
+  it('refuses a variant this media does not have', async () => {
     const res = await request(app).get('/api/v1/media/128/url?variant=thumbnail');
     expect(res.status).toBe(404);
     expect(res.body.code).toBe('VARIANT_UNAVAILABLE');
   });
 
-  it('honore une durée de validité demandée, et refuse celles hors bornes', async () => {
+  it('honours a requested validity duration, and refuses those out of bounds', async () => {
     const ok = await request(app).get('/api/v1/media/128/url?expiresIn=120');
     expect(ok.body).toMatchObject({ expiresIn: 120 });
     expect(ok.body.url).toContain('ttl=120');
@@ -126,35 +126,35 @@ describe('GET /api/v1/media/:id/url', () => {
     expect((await request(app).get('/api/v1/media/128/url?expiresIn=999999')).status).toBe(400);
   });
 
-  it('cache un brouillon déposé par quelqu’un d’autre', async () => {
+  it('hides a draft uploaded by someone else', async () => {
     db.mediaObject.findUnique.mockResolvedValue({ ...media, published: false, uploaderId: 99 });
     expect((await request(app).get('/api/v1/media/128/url')).status).toBe(404);
   });
 
-  it('rend son propre brouillon à celui qui l’a déposé', async () => {
+  it('returns their own draft to the person who uploaded it', async () => {
     db.mediaObject.findUnique.mockResolvedValue({ ...media, published: false, uploaderId: 7 });
     expect((await request(app).get('/api/v1/media/128/url')).status).toBe(200);
   });
 
-  it('cache un média mis à la corbeille', async () => {
+  it('hides a media that was moved to the trash', async () => {
     db.mediaObject.findUnique.mockResolvedValue({ ...media, deletedAt: new Date() });
     expect((await request(app).get('/api/v1/media/128/url')).status).toBe(404);
   });
 
-  it('refuse un porteur qui n’est pas membre du projet', async () => {
+  it('refuses a bearer who is not a project member', async () => {
     db.projectMembership.findUnique.mockResolvedValue(null);
     expect((await request(app).get('/api/v1/media/128/url')).status).toBe(403);
   });
 
-  // Le cantonnement projet est la garantie qui rend un token diffusable sur une ferme.
-  it('refuse un token cantonné à un autre projet', async () => {
+  // Project scoping is the guarantee that makes a token safe to distribute to a farm.
+  it('refuses a token scoped to another project', async () => {
     caller.apiToken = { id: 3, scopes: ['media:read'], projectId: 7, kind: 'SERVICE' };
     const res = await request(app).get('/api/v1/media/128/url');
     expect(res.status).toBe(403);
     expect(res.body.code).toBe('TOKEN_PROJECT_SCOPE');
   });
 
-  it('refuse un token sans le scope de lecture des médias', async () => {
+  it('refuses a token without the media read scope', async () => {
     caller.apiToken = { id: 3, scopes: ['tasks:read'], kind: 'SERVICE' };
     const res = await request(app).get('/api/v1/media/128/url');
     expect(res.status).toBe(403);
@@ -163,7 +163,7 @@ describe('GET /api/v1/media/:id/url', () => {
 });
 
 describe('GET /api/v1/media/:id', () => {
-  it('rend la fiche du média et sa version, sans URL', async () => {
+  it('returns the media record and its version, without a URL', async () => {
     const res = await request(app).get('/api/v1/media/128');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({
@@ -181,7 +181,7 @@ describe('GET /api/v1/media/:id', () => {
     });
   });
 
-  it('répond 404 sur un média inexistant', async () => {
+  it('answers 404 for a nonexistent media', async () => {
     db.mediaObject.findUnique.mockResolvedValue(null);
     expect((await request(app).get('/api/v1/media/404')).status).toBe(404);
   });

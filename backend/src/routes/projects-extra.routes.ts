@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole, requireProjectAccess, requireProjectManage } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { projectSettingsPatchSchema, type ProjectSettingsPatch } from '../lib/projectSettings';
@@ -14,22 +14,22 @@ import * as ProjectImportService from '../services/ProjectImportService';
 import * as DepartmentService from '../services/DepartmentService';
 
 /**
- * Routes projet additionnelles (Phase 38) montées AVANT projects.routes pour que les chemins
- * spécifiques (`/usage`, `/:id/duplicate`, `/:id/usage`) priment sur le `GET /:projectId`
- * générique. Duplication (38.A) + usage/quotas de stockage (38.D) + lecture/écriture
- * d'override des réglages (héritage studio).
+ * Additional project routes (Phase 38), mounted BEFORE projects.routes so that the specific paths
+ * (`/usage`, `/:id/duplicate`, `/:id/usage`) take precedence over the generic `GET /:projectId`.
+ * Duplication (38.A), storage usage and quotas (38.D), and reading and writing overrides of the
+ * settings (studio inheritance).
  */
 const router = Router();
 router.use(authenticate);
 
 const projectIdParam = z.object({ projectId: z.coerce.number().int() });
 
-// GET /api/projects/usage — conso de stockage de tous les projets (38.D, admin/superviseur).
+// GET /api/projects/usage — storage consumption of all projects (38.D, admin and supervisor).
 router.get('/usage', requireRole(Role.ADMIN, Role.SUPERVISOR), async (_req, res) => {
   res.json({ projects: await ProjectService.listUsage() });
 });
 
-// POST /api/projects/:projectId/duplicate — copie structure (+ tâches opt.), sans médias (38.A).
+// POST /api/projects/:projectId/duplicate — copies the structure (+ optional tasks), without media (38.A).
 router.post(
   '/:projectId/duplicate',
   validate({
@@ -40,7 +40,7 @@ router.post(
   async (req, res) => {
     const { name, includeTasks } = req.body as { name: string; includeTasks?: boolean };
     const project = await ProjectService.duplicateProject(
-      req.user!,
+      requireUser(req),
       Number(req.params.projectId),
       name,
       includeTasks ?? false,
@@ -49,7 +49,7 @@ router.post(
   },
 );
 
-// GET /api/projects/:projectId/usage — usage/quota de stockage du projet (38.D).
+// GET /api/projects/:projectId/usage — storage usage and quota of the project (38.D).
 router.get(
   '/:projectId/usage',
   validate({ params: projectIdParam }),
@@ -59,7 +59,7 @@ router.get(
   },
 );
 
-// GET /api/projects/:projectId/import-csv/template — gabarit d'import, en-tête complet.
+// GET /api/projects/:projectId/import-csv/template — import template, full header.
 router.get(
   '/:projectId/import-csv/template',
   validate({ params: projectIdParam }),
@@ -71,14 +71,14 @@ router.get(
   },
 );
 
-// POST /api/projects/:projectId/import-csv — import de nomenclature (38.F).
-// `commit=false` (défaut) rend l'aperçu : ce qui serait créé, mis à jour, laissé tel quel,
-// et les lignes refusées avec leur motif. Aucune écriture tant que `commit` n'est pas vrai.
+// POST /api/projects/:projectId/import-csv — bill-of-materials import (38.F).
+// `commit=false` (default) returns the preview: what would be created, updated, left as is, and the
+// refused rows with their reason. No write happens until `commit` is true.
 const importBody = z.object({
   csv: z.string().min(1).max(1_000_000),
   commit: z.boolean().optional(),
-  // Correspondance imposée par l'utilisateur quand l'en-tête du fichier ne parle pas
-  // notre vocabulaire — `field: null` neutralise la colonne.
+  // Mapping imposed by the user when the file's header does not speak our vocabulary:
+  // `field: null` neutralizes the column.
   mapping: z
     .array(z.object({ index: z.number().int().min(0).max(999), field: z.enum(CSV_FIELDS).nullable() }))
     .max(200)
@@ -93,14 +93,14 @@ router.post(
     const projectId = Number(req.params.projectId);
     res.json(
       commit
-        ? await ProjectImportService.commit(req.user!, projectId, csv, mapping ?? [])
+        ? await ProjectImportService.commit(requireUser(req), projectId, csv, mapping ?? [])
         : await ProjectImportService.preview(projectId, csv, mapping ?? []),
     );
   },
 );
 
-// GET /api/projects/:projectId/settings/override — ce que le projet surcharge RÉELLEMENT
-// (+ les défauts studio dont il hérite). Vue d'édition : réservée à qui gère le projet.
+// GET /api/projects/:projectId/settings/override — what the project ACTUALLY overrides (+ the studio
+// defaults it inherits). Editing view: reserved to whoever manages the project.
 router.get(
   '/:projectId/settings/override',
   validate({ params: projectIdParam }),
@@ -110,8 +110,8 @@ router.get(
   },
 );
 
-// PATCH /api/projects/:projectId/settings — écriture SECTION PAR SECTION : section absente
-// = inchangée, section `null` = retour à l'héritage studio.
+// PATCH /api/projects/:projectId/settings — section-by-section write: an absent section means
+// unchanged, a `null` section means back to studio inheritance.
 router.patch(
   '/:projectId/settings',
   validate({ params: projectIdParam, body: projectSettingsPatchSchema }),
@@ -119,7 +119,7 @@ router.patch(
   async (req, res) => {
     res.json(
       await ProjectService.patchSettings(
-        req.user!,
+        requireUser(req),
         Number(req.params.projectId),
         req.body as ProjectSettingsPatch,
       ),
@@ -127,9 +127,9 @@ router.patch(
   },
 );
 
-// PATCH /api/projects/:projectId/members/:userId/departments — départements d'un membre
-// sur CE projet (lot 10). On coche et on décoche : remplacer la liste entière depuis un
-// écran qui n'affiche qu'un projet effacerait les étapes venues des autres.
+// PATCH /api/projects/:projectId/members/:userId/departments — departments of a member on THIS project
+// (batch 10). We tick and untick: replacing the whole list from a screen showing only one project would
+// erase the steps that came from the others.
 router.patch(
   '/:projectId/members/:userId/departments',
   validate({
@@ -142,7 +142,7 @@ router.patch(
   requireProjectManage,
   async (req, res) => {
     const departments = await DepartmentService.setMemberDepartments(
-      req.user!,
+      requireUser(req),
       Number(req.params.projectId),
       Number(req.params.userId),
       req.body as { add?: number[]; remove?: number[] },
@@ -151,7 +151,7 @@ router.patch(
   },
 );
 
-// GET /api/projects/:projectId/export-csv — export shots/tâches en CSV (38.G).
+// GET /api/projects/:projectId/export-csv — export of shots and tasks as CSV (38.G).
 router.get(
   '/:projectId/export-csv',
   validate({ params: projectIdParam }),

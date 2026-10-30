@@ -2,21 +2,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Gestion couleur du viewer — **celle du projet**, et rien d'autre : le couple display/view
- * défini dans les paramètres du projet (`ProjectColorSection`) décide de la transformée
- * d'affichage appliquée à l'image. Rien n'est renvoyé au serveur, rien n'est écrit sur le
- * fichier : c'est une transformée d'affichage, jamais une modification du média.
+ * Viewer color management — **the project's**, and nothing else: the display/view pair defined in
+ * the project settings (`ProjectColorSection`) decides the display transform applied to the image.
+ * Nothing is sent back to the server, nothing is written to the file: it is a display transform,
+ * never a modification of the media.
  *
- * Le réglage au coup par coup (display/view choisis dans le dock, exposition, gamma, bascule
- * avant/après) a disparu en Phase 50 avec le panneau Color — décision produit. Ce module ne
- * garde donc que ce qui sert encore : le pipeline du studio, et sa résolution contre la liste
- * des displays que la config expose vraiment.
+ * Ad hoc adjustment (display/view chosen in the dock, exposure, gamma, before/after toggle)
+ * disappeared in Phase 50 with the Color panel — a product decision. This module therefore only
+ * keeps what is still used: the studio pipeline, and its resolution against the list of displays
+ * the config actually exposes.
  *
- * Module **pur** : la lecture des displays et de la LUT est dans `colorQueries.ts`, le rendu
- * dans `renderTransform.ts`.
+ * **Pure** module: reading the displays and the LUT lives in `colorQueries.ts`, rendering in
+ * `renderTransform.ts`.
  */
 
-/** Configuration couleur héritée du projet, telle que la sert `GET /api/media/:id`. */
+/** Color configuration inherited from the project, as served by `GET /api/media/:id`. */
 export interface ProjectColor {
   configId?: string;
   display?: string;
@@ -30,9 +30,9 @@ export interface ResolvedDisplayView {
 }
 
 /**
- * Couple display/view effectivement demandé au serveur — celui du projet, s'il existe **dans
- * la config chargée**. Une config remplacée laisse les projets qui la citaient avec un couple
- * mort : il ne faut pas cuire une LUT qui n'a plus de sens ici.
+ * Display/view pair actually requested from the server — the project's, if it exists **in the
+ * loaded config**. A replaced config leaves the projects that cited it with a dead pair: a LUT that
+ * no longer makes sense here must not be baked.
  */
 export function resolveDisplayView(
   project: ProjectColor | null | undefined,
@@ -42,8 +42,8 @@ export function resolveDisplayView(
   if (!configId) return null;
   const { display, view } = project;
   if (!display || !view) return null;
-  // Tant que la liste n'est pas chargée on fait confiance au projet ; une fois chargée, un
-  // couple absent de la config (config remplacée) ne vaut plus rien.
+  // While the list is not loaded we trust the project; once loaded, a
+  // pair absent from the config (replaced config) is no longer valid.
   if (displays.length > 0 && !displays.some((d) => d.name === display && d.views.includes(view))) return null;
   return { configId, display, view };
 }

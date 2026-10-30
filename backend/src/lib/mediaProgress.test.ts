@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import { ffmpegFraction, mediaJobProgress, parseTimemarkSec, type MediaJobStep } from './mediaProgress';
 
 describe('mediaJobProgress', () => {
-  it('début d’étape : borne basse de la plage', () => {
+  it('start of a step — lower bound of the range', () => {
     expect(mediaJobProgress('transcode', 'download')).toEqual({ step: 'download', percent: 0 });
     expect(mediaJobProgress('transcode', 'proxy')).toEqual({ step: 'proxy', percent: 10 });
     expect(mediaJobProgress('transcode', 'renditions')).toEqual({ step: 'renditions', percent: 36 });
@@ -16,12 +16,12 @@ describe('mediaJobProgress', () => {
     expect(mediaJobProgress('convert3d', 'done').percent).toBe(100);
   });
 
-  it('interpole avec la progression ffmpeg à l’intérieur d’une étape', () => {
+  it('interpolates with the ffmpeg progress within a step', () => {
     expect(mediaJobProgress('transcode', 'proxy', { fraction: 0.5 }).percent).toBe(21);
     expect(mediaJobProgress('transcode', 'proxy', { fraction: 1 }).percent).toBe(32);
   });
 
-  it('renditions : la plage se partage entre les paliers, index 1-based publié', () => {
+  it('renditions — the range is shared between the rungs, 1-based index published', () => {
     expect(mediaJobProgress('transcode', 'renditions', { index: 0, total: 3 })).toEqual({
       step: 'renditions',
       percent: 36,
@@ -32,7 +32,7 @@ describe('mediaJobProgress', () => {
     expect(mediaJobProgress('transcode', 'renditions', { index: 2, total: 3, fraction: 1 }).percent).toBe(84);
   });
 
-  it('la progression d’un transcodage est monotone dans l’ordre des étapes', () => {
+  it('the progress of a transcode is monotonic in the order of the steps', () => {
     const order: MediaJobStep[] = [
       'download',
       'probe',
@@ -48,7 +48,7 @@ describe('mediaJobProgress', () => {
     for (let i = 1; i < values.length; i++) expect(values[i]!).toBeGreaterThan(values[i - 1]!);
   });
 
-  it('borne les entrées aberrantes plutôt que de sortir de 0-100', () => {
+  it('bounds aberrant inputs rather than leaving 0-100', () => {
     expect(mediaJobProgress('transcode', 'proxy', { fraction: 5 }).percent).toBe(32);
     expect(mediaJobProgress('transcode', 'proxy', { fraction: -3 }).percent).toBe(10);
     expect(mediaJobProgress('transcode', 'proxy', { fraction: Number.NaN }).percent).toBe(10);
@@ -56,12 +56,12 @@ describe('mediaJobProgress', () => {
     expect(mediaJobProgress('transcode', 'renditions', { index: -4, total: 2 }).percent).toBe(36);
   });
 
-  it('étape étrangère au type de travail : 0, jamais d’exception', () => {
+  it('a step foreign to the type of work: 0, never an exception', () => {
     expect(mediaJobProgress('thumbnail', 'renditions')).toEqual({ step: 'renditions', percent: 0 });
     expect(mediaJobProgress('scan', 'proxy').percent).toBe(0);
   });
 
-  it('chaque type de travail reste dans 0-100', () => {
+  it('each type of work stays within 0-100', () => {
     const kinds = ['transcode', 'thumbnail', 'convert3d', 'scan'] as const;
     const steps: MediaJobStep[] = [
       'download',
@@ -86,7 +86,7 @@ describe('mediaJobProgress', () => {
 });
 
 describe('parseTimemarkSec', () => {
-  it('lit le timemark ffmpeg', () => {
+  it('reads the ffmpeg timemark', () => {
     expect(parseTimemarkSec('00:00:00.00')).toBe(0);
     expect(parseTimemarkSec('00:01:23.45')).toBeCloseTo(83.45, 5);
     expect(parseTimemarkSec('01:00:00.00')).toBe(3600);
@@ -102,22 +102,22 @@ describe('parseTimemarkSec', () => {
 });
 
 describe('ffmpegFraction', () => {
-  it('utilise percent quand ffmpeg le connaît', () => {
+  it('uses percent when ffmpeg knows it', () => {
     expect(ffmpegFraction({ percent: 42 })).toBeCloseTo(0.42, 5);
     expect(ffmpegFraction({ percent: 0 })).toBe(0);
   });
 
-  it('borne un percent aberrant (ffmpeg dépasse parfois 100)', () => {
+  it('bounds an aberrant percent (ffmpeg sometimes exceeds 100)', () => {
     expect(ffmpegFraction({ percent: 130 })).toBe(1);
     expect(ffmpegFraction({ percent: -5 })).toBe(0);
   });
 
-  it('retombe sur le timemark rapporté à la durée sondée', () => {
+  it('falls back on the timemark relative to the probed duration', () => {
     expect(ffmpegFraction({ timemark: '00:00:30.00' }, 60)).toBeCloseTo(0.5, 5);
     expect(ffmpegFraction({ percent: null, timemark: '00:01:00.00' }, 60)).toBe(1);
   });
 
-  it('sans percent ni durée : null, l’appelant n’invente rien', () => {
+  it('without percent or duration: null, the caller invents nothing', () => {
     expect(ffmpegFraction({ timemark: '00:00:30.00' })).toBeNull();
     expect(ffmpegFraction({ timemark: '00:00:30.00' }, 0)).toBeNull();
     expect(ffmpegFraction({})).toBeNull();

@@ -5,39 +5,35 @@ import jwt, { type VerifyOptions } from 'jsonwebtoken';
 import { env } from '../config/env';
 
 /**
- * Jeton de lecture média (vague 2 — diffusion HLS hors du process web).
+ * Media playback token (wave 2 — HLS broadcast outside the web process).
  *
- * Le manifeste maître `/api/media/:id/hls/master.m3u8` est le SEUL point où l'autorisation
- * est vérifiée en base (média publié ou brouillon de son uploader + appartenance au projet).
- * Il émet ce jeton, que les sous-playlists portent en query : la requête suivante coûte une
- * vérification HMAC et zéro aller-retour PostgreSQL. Les segments, eux, ne repassent plus
- * du tout par Node (URL MinIO présignées écrites dans la sous-playlist).
+ * The master manifest `/api/media/:id/hls/master.m3u8` is the ONLY point where authorisation is checked against the
+ * database (media published or in draft by its uploader + project membership). It issues this token, which the
+ * sub-playlists carry in their query: the next request costs an HMAC check and zero PostgreSQL round trips. The
+ * segments no longer go through Node at all (MinIO presigned URLs written into the sub-playlist).
  *
- * Trois propriétés tiennent la sûreté du dispositif, toutes couvertes par les tests :
- *  1. **Portée** — le jeton nomme le média ET l'utilisateur ; il n'ouvre rien d'autre.
- *  2. **Durée** — il expire (`HLS_PLAYBACK_TTL_SEC`), comme les URL présignées qu'il permet
- *     d'obtenir ; le lecteur recharge le manifeste quand elles périment.
- *  3. **Cloisonnement** — il porte `kind: 'media-playback'`, or `middleware/auth` n'accepte
- *     comme jeton d'accès qu'un payload SANS `kind` : ce jeton ne peut donc jamais servir à
- *     authentifier une requête d'API, ni un jeton d'accès à autoriser une lecture ici.
+ * Three properties hold the safety of the scheme, all covered by the tests:
+ *  1. **Scope** — the token names the media AND the user; it opens nothing else.
+ *  2. **Duration** — it expires (`HLS_PLAYBACK_TTL_SEC`), like the presigned URLs it allows obtaining; the player
+ *     reloads the manifest when they go stale.
+ *  3. **Isolation** — it carries `kind: 'media-playback'`, and `middleware/auth` only accepts as an access token a
+ *     payload WITHOUT `kind`: this token can therefore never authenticate an API request, nor can an access token
+ *     authorise playback here.
  */
 
 /**
- * Durée de vie du jeton — alignée sur celle des URL présignées de segments.
+ * Token lifetime — aligned with that of the presigned segment URLs.
  *
- * Ce jeton nomme son porteur (`uid`), mais il ne le fait qu'à l'ouverture : comme les URL
- * qu'il permet d'obtenir, il ne repasse par aucun contrôle en base une fois émis. Une
- * révocation d'accès ne mord donc qu'au bout de ces deux heures — même délai que
- * `HLS_URL_TTL_SEC`, et pour la même raison. Il est le bon endroit où accrocher un contrôle
- * par requête le jour où l'on voudra fermer A3-05 : il porte déjà la portée (média +
- * lecteur), il ne lui manque que la relecture de l'état du média à chaque appel.
+ * This token names its holder (`uid`), but only at opening: like the URLs it allows obtaining, it is not re-checked
+ * against the database once issued. An access revocation therefore only bites after these two hours — the same delay
+ * as `HLS_URL_TTL_SEC`, and for the same reason. It is the right place to hook a per-request check the day we want to
+ * close A3-05: it already carries the scope (media + player), it only lacks re-reading the media's state at each call.
  */
 export const HLS_PLAYBACK_TTL_SEC = 2 * 60 * 60;
 
 const PLAYBACK_KIND = 'media-playback';
 
-// Même règle que lib/jwt : l'algorithme est fixé des deux côtés, jamais lu dans l'en-tête
-// du jeton présenté.
+// Same rule as lib/jwt: the algorithm is fixed on both sides, never read from the header of the presented token.
 const ALGORITHM = 'HS256' as const;
 const VERIFY_OPTIONS: VerifyOptions = { algorithms: [ALGORITHM] };
 
@@ -47,7 +43,7 @@ interface PlaybackClaims {
   uid?: number;
 }
 
-/** Jeton de lecture pour ce média et cet utilisateur. */
+/** Playback token for this media and this user. */
 export function signMediaPlaybackToken(
   mediaId: number,
   userId: number,
@@ -59,7 +55,7 @@ export function signMediaPlaybackToken(
   });
 }
 
-/** Vrai si `token` est un jeton de lecture valide, non expiré, pour CE média et CE lecteur. */
+/** True if `token` is a valid, unexpired playback token, for THIS media and THIS player. */
 export function verifyMediaPlaybackToken(
   token: string | undefined | null,
   mediaId: number,

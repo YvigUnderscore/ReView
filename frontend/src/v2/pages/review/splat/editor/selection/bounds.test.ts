@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import type { SplatSceneHandle } from '../../useSplat';
 import { meshBounds, selectionBounds } from './bounds';
 
-/** Mesh factice : splats en (0,0,0), (2,0,0), (0,2,0) — le 3ᵉ masqué (opacité 0). */
+/** Dummy mesh: splats at (0,0,0), (2,0,0), (0,2,0); the 3rd is hidden (opacity 0). */
 function makeHandle(matrix = new THREE.Matrix4()): SplatSceneHandle {
   const centers = [new THREE.Vector3(0, 0, 0), new THREE.Vector3(2, 0, 0), new THREE.Vector3(0, 2, 0)];
   const opacities = [1, 1, 0];
@@ -22,21 +22,21 @@ function makeHandle(matrix = new THREE.Matrix4()): SplatSceneHandle {
 }
 
 describe('selectionBounds', () => {
-  it('englobe les splats sélectionnés visibles, en monde', () => {
+  it('bounds the visible selected splats, in world space', () => {
     const b = selectionBounds(makeHandle(), new Set([0, 1, 2]));
-    // Le splat 2 est masqué : sphère entre (0,0,0) et (2,0,0).
+    // Splat 2 is hidden: sphere between (0,0,0) and (2,0,0).
     expect(b).not.toBeNull();
     expect(b!.center.x).toBeCloseTo(1);
     expect(b!.center.y).toBeCloseTo(0);
     expect(b!.radius).toBeCloseTo(1);
   });
 
-  it('applique la transformation du mesh (gizmos)', () => {
+  it('applies the mesh transform (gizmos)', () => {
     const b = selectionBounds(makeHandle(new THREE.Matrix4().makeTranslation(10, 0, 0)), new Set([0, 1]));
     expect(b!.center.x).toBeCloseTo(11);
   });
 
-  it('sélection vide → null ; splat unique → rayon plancher', () => {
+  it('empty selection gives null; single splat gives the floor radius', () => {
     expect(selectionBounds(makeHandle(), new Set())).toBeNull();
     const single = selectionBounds(makeHandle(), new Set([0]));
     expect(single!.radius).toBeGreaterThan(0);
@@ -44,9 +44,9 @@ describe('selectionBounds', () => {
 });
 
 describe('meshBounds', () => {
-  it('englobe les splats visibles (masqué exclu, 11.D) et applique la transform monde', () => {
+  it('bounds the visible splats (hidden excluded, 11.D) and applies the world transform', () => {
     const b = meshBounds(makeHandle(new THREE.Matrix4().makeScale(2, 2, 2)));
-    // Splats visibles (0,0,0) et (2,0,0) → bbox locale [0..2] ; échelle ×2 → centre (2,0,0), rayon 2.
+    // Visible splats (0,0,0) and (2,0,0) → local bbox [0..2]; scale ×2 → center (2,0,0), radius 2.
     expect(b!.center.x).toBeCloseTo(2);
     expect(b!.center.y).toBeCloseTo(0);
     expect(b!.radius).toBeCloseTo(2);

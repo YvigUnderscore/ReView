@@ -29,7 +29,7 @@ const row = (over: Partial<WebhookDeliveryRow> = {}): WebhookDeliveryRow => ({
 });
 
 describe('statuts de livraison', () => {
-  it('associe une clé de libellé et une teinte à chaque statut', () => {
+  it('maps a label key and a tint to each status', () => {
     expect(deliveryStatusKey('DELIVERED')).toBe('webhooks.delivery.delivered');
     expect(deliveryTone('DELIVERED')).toBe('success');
     expect(deliveryTone('FAILED')).toBe('destructive');
@@ -38,33 +38,33 @@ describe('statuts de livraison', () => {
 });
 
 describe('rejeu', () => {
-  it('ne se propose que sur un échec', () => {
+  it('is offered only on a failure', () => {
     expect(canReplay(row())).toBe(true);
     expect(canReplay(row({ status: 'DELIVERED' }))).toBe(false);
-    // Encore en reprise : rejouer maintenant ferait deux appels chez le consommateur.
+    // Still being retried: replaying now would make two calls on the consumer's side.
     expect(canReplay(row({ status: 'PENDING' }))).toBe(false);
   });
 });
 
-describe('extrait de réponse', () => {
-  it('préfère le motif d’erreur au corps, et compacte les blancs', () => {
-    expect(responseExcerpt(row({ error: 'HTTP  500\n', responseBody: 'ignoré' }))).toBe('HTTP 500');
+describe('response excerpt', () => {
+  it('prefers the error reason to the body, and compacts whitespace', () => {
+    expect(responseExcerpt(row({ error: 'HTTP  500\n', responseBody: 'ignored' }))).toBe('HTTP 500');
     expect(responseExcerpt(row({ responseBody: '  {"ok":\n false}  ' }))).toBe('{"ok": false}');
   });
 
-  it('rend une chaîne vide quand il n’y a rien à montrer', () => {
+  it('returns an empty string when there is nothing to show', () => {
     expect(responseExcerpt(row())).toBe('');
   });
 
-  it('tronque au-delà de la longueur demandée', () => {
+  it('truncates beyond the requested length', () => {
     const out = responseExcerpt(row({ error: 'x'.repeat(300) }), 20);
     expect(out).toHaveLength(20);
     expect(out.endsWith('…')).toBe(true);
   });
 });
 
-describe('webhook éteint par le serveur', () => {
-  it('distingue la désactivation automatique du simple décochage', () => {
+describe('webhook switched off by the server', () => {
+  it('tells automatic deactivation apart from a simple untick', () => {
     expect(
       isSilencedByFailures({ active: false, projectId: null, failureStreak: FAILURE_STREAK_LIMIT }),
     ).toBe(true);
@@ -73,14 +73,14 @@ describe('webhook éteint par le serveur', () => {
   });
 });
 
-describe('portée', () => {
+describe('scope', () => {
   const projects = [{ id: 4, name: 'Le Voyage' }];
 
-  it('rend null pour un webhook de studio', () => {
+  it('returns null for a studio webhook', () => {
     expect(scopeName({ projectId: null }, projects)).toBeNull();
   });
 
-  it('rend le nom du projet, et son identifiant à défaut', () => {
+  it('returns the project name, or its identifier as a fallback', () => {
     expect(scopeName({ projectId: 4 }, projects)).toBe('Le Voyage');
     expect(scopeName({ projectId: 9 }, projects)).toBe('#9');
   });

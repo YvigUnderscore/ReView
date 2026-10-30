@@ -10,23 +10,22 @@ import { emitToProject } from './SocketService';
 import { avatarUrl } from '../lib/userView';
 
 /**
- * Qui est sur ce plan, cette séquence, cet asset.
+ * Who is on this shot, this sequence, this asset.
  *
- * L'assignation existait déjà, mais uniquement sur les **tâches** : « donne cet asset à
- * Alice » se traduisait en « pose Alice sur chacune de ses tâches » (`AssignmentService`).
- * C'est la donnée juste du pipeline, et elle reste. Mais elle ne sait pas dire « cette
- * séquence est suivie par Bruno » quand Bruno n'a aucune tâche dessus — le superviseur de
- * séquence, la production, le lead qui couvre trois plans. Une production énonce
- * couramment cette responsabilité-là ; ReView ne savait pas l'écrire.
+ * Assignment already existed, but only on **tasks**: "give this asset to Alice" translated into "put Alice on
+ * each of her tasks" (`AssignmentService`). That is the pipeline's correct data, and it stays. But it cannot
+ * say "this sequence is followed by Bruno" when Bruno has no task on it — the sequence supervisor, the
+ * production, the lead covering three shots. A production commonly states that responsibility; ReView could
+ * not record it.
  *
- * Les deux coexistent donc et ne se remplacent pas : la tâche porte le travail, l'entité
- * porte la responsabilité. Les écrans les affichent ensemble, la tâche en premier.
+ * The two therefore coexist and do not replace each other: the task carries the work, the entity carries the
+ * responsibility. The screens display them together, the task first.
  */
 
 export const ASSIGNEE_KINDS = ['episode', 'sequence', 'shot', 'asset'] as const;
 export type AssigneeKind = (typeof ASSIGNEE_KINDS)[number];
 
-/** Ce qu'une carte a besoin de savoir d'un assigné : de quoi l'afficher, rien de plus. */
+/** What a card needs to know about an assignee: what to display it, nothing more. */
 export const ASSIGNEE_SELECT = {
   id: true,
   name: true,
@@ -38,7 +37,7 @@ export const ASSIGNEE_SELECT = {
   jobTitle: true,
 } as const;
 
-/** Une personne lue en base : la clé objet de sa photo, pas encore signée. */
+/** A person read from the database: the object key of their photo, not yet signed. */
 interface RawAssignee {
   id: number;
   name: string | null;
@@ -51,26 +50,25 @@ interface RawAssignee {
 }
 
 /**
- * La même, telle que l'API la rend : photo signée.
+ * The same, as the API returns it: photo signed.
  *
- * Les listes de plans et d'assets rendent déjà `avatarUrl` ; rendre `avatarKey` ici
- * aurait donné deux formes pour la même personne selon qu'on lit une liste ou qu'on
- * vient d'écrire — et l'écran aurait affiché la pastille à initiales juste après
- * l'assignation, puis la vraie photo au rechargement.
+ * Shot and asset lists already return `avatarUrl`; returning `avatarKey` here would have produced two forms
+ * for the same person depending on whether one reads a list or has just written — and the screen would have
+ * shown the initials badge right after assignment, then the real photo on reload.
  */
 export type AssigneeView = Omit<RawAssignee, 'avatarKey'> & { avatarUrl: string | null };
 
-/** Une personne, telle que l'API la rend — photo signée. */
+/** A person, as the API returns them — photo signed. */
 export async function toAssigneeView({ avatarKey, ...person }: RawAssignee): Promise<AssigneeView> {
   return { ...person, avatarUrl: await avatarUrl(avatarKey) };
 }
 
-/** Signe les photos d'un lot, une fois par personne. */
+/** Signs the photos of a batch, once per person. */
 async function signed(people: RawAssignee[]): Promise<AssigneeView[]> {
   return Promise.all(people.map(toAssigneeView));
 }
 
-/** Le projet de l'entité porteuse, et son existence. */
+/** The project of the carrying entity, and its existence. */
 async function resolveProject(kind: AssigneeKind, id: number): Promise<number> {
   const row = await findEntity(kind, id);
   if (!row) throw notFound('Entity not found');
@@ -93,18 +91,16 @@ async function findEntity(kind: AssigneeKind, id: number): Promise<{ projectId: 
 }
 
 /**
- * Qui peut recevoir du travail ou une responsabilité — **garde unique** des trois chemins
- * d'assignation : l'entité (ici), la tâche (`AssignmentService`) et la review
- * (`ReviewAssignmentService`).
+ * Who can receive work or a responsibility — **single guard** for the three assignment paths: the entity
+ * (here), the task (`AssignmentService`) and the review (`ReviewAssignmentService`).
  *
- * Quatre refus : un compte de service (une identité machine n'ouvre pas Maya), un compte
- * désactivé, un client (il commente, il ne livre pas) et quelqu'un qui n'est pas membre du
- * projet — l'assigner l'avertirait d'un travail qu'il ne peut même pas ouvrir.
+ * Four refusals: a service account (a machine identity does not open Maya), a disabled account, a client
+ * (they comment, they do not deliver) and someone who is not a member of the
+ * project — assigning them would notify them of work they cannot even open.
  *
- * `AssignmentService` en gardait une copie privée à trois refus, sans `disabledAt` : un
- * compte désactivé était donc refusé comme responsable de plan et accepté comme assigné de
- * tâche. Une copie de garde qui diverge devient la porte de service de l'autre ; il n'en
- * reste qu'une.
+ * `AssignmentService` kept a private copy with three refusals, without `disabledAt`: a disabled account was
+ * therefore refused as a shot owner and accepted as a task assignee. A guard copy that diverges becomes the
+ * service door of the other; only one remains.
  */
 export async function assertAssignable(projectId: number, userIds: number[]): Promise<void> {
   if (userIds.length === 0) return;
@@ -123,11 +119,10 @@ export async function assertAssignable(projectId: number, userIds: number[]): Pr
 }
 
 /**
- * Remplace la liste des personnes responsables d'une entité.
+ * Replaces the list of people responsible for an entity.
  *
- * `set` plutôt qu'`connect` : l'appelant envoie la liste qu'il veut voir, et deux
- * enregistrements concurrents ne peuvent pas laisser un assigné fantôme que personne
- * n'a choisi.
+ * `set` rather than `connect`: the caller sends the list it wants to see, and two concurrent writes cannot
+ * leave a ghost assignee that no one chose.
  */
 export async function setAssignees(
   actor: SessionUser,
@@ -167,17 +162,16 @@ async function writeAssignees(
 }
 
 /**
- * Toutes les personnes d'un périmètre, l'entité et ses enfants compris.
+ * All the people of a scope, the entity and its children included.
  *
- * C'est ce que l'en-tête d'une page de séquence montre : « qui travaille là-dessus »
- * n'a pas de sens s'il s'arrête à la séquence elle-même — le travail est sur ses plans,
- * et sur les tâches de ses plans. Trois sources donc, fusionnées et dédoublonnées, avec
- * l'origine de chacune pour que l'écran puisse la dire.
+ * This is what a sequence page header shows: "who works on this" has no meaning if it stops at the sequence
+ * itself — the work is on its shots, and on the tasks of its shots. Three sources therefore, merged and
+ * de-duplicated, with the origin of each so that the screen can say it.
  */
 export interface ScopeAssignee extends RawAssignee {
-  /** `direct` = posé sur l'entité ; `child` = sur un enfant ; `task` = sur une tâche. */
+  /** `direct` = set on the entity; `child` = on a child; `task` = on a task. */
   origins: ('direct' | 'child' | 'task')[];
-  /** Nombre d'éléments qui rattachent cette personne au périmètre (pour trier). */
+  /** Number of items linking this person to the scope (for sorting). */
   count: number;
 }
 
@@ -200,8 +194,8 @@ export async function scopeAssignees(
   for (const user of await childAssignees(kind, id)) add(user, 'child');
   for (const user of await taskAssignees(kind, id)) add(user, 'task');
 
-  // Les responsables directs d'abord, puis le plus impliqué : c'est l'ordre dans lequel on
-  // cherche quelqu'un quand on ouvre une séquence.
+  // Direct owners first, then the most involved: this is the order in which one looks for someone when
+  // opening a sequence.
   const ordered = [...collected.values()].sort((a, b) => {
     const direct = Number(b.origins.includes('direct')) - Number(a.origins.includes('direct'));
     return direct !== 0 ? direct : b.count - a.count;
@@ -228,7 +222,7 @@ async function directAssignees(kind: AssigneeKind, id: number): Promise<RawAssig
   }
 }
 
-/** Les responsables posés sur les enfants — un plan n'en a pas, un asset non plus. */
+/** Owners set on children — a shot has none, nor does an asset. */
 async function childAssignees(kind: AssigneeKind, id: number): Promise<RawAssignee[]> {
   if (kind === 'shot' || kind === 'asset') return [];
   const shots = await prisma.shot.findMany({
@@ -248,7 +242,7 @@ async function childAssignees(kind: AssigneeKind, id: number): Promise<RawAssign
   return [...shots, ...sequences].flatMap((row) => row.assignees);
 }
 
-/** Les assignés des tâches du périmètre : le travail réel, celui qui a un statut. */
+/** Assignees of the tasks in the scope: the real work, the one that carries a status. */
 async function taskAssignees(kind: AssigneeKind, id: number): Promise<RawAssignee[]> {
   const where =
     kind === 'asset'

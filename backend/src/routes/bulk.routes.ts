@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { TaskStatus, VersionStatus } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import * as BulkService from '../services/BulkService';
 import * as AssignmentService from '../services/AssignmentService';
@@ -12,8 +12,8 @@ import * as ReviewDecisionService from '../services/ReviewDecisionService';
 import { DELETE_DOMAINS } from '../services/BulkService';
 
 /**
- * Actions groupées (13.C). Routeur fin : valide (Zod, max 200 ids) puis délègue au
- * `BulkService` qui revalide le RBAC par id. Monté sur `/api/bulk`.
+ * Bulk actions (13.C). Thin router: validates (Zod, max 200 ids) then delegates to `BulkService`,
+ * which re-checks the RBAC per id. Mounted on `/api/bulk`.
  */
 const router = Router();
 router.use(authenticate);
@@ -21,14 +21,14 @@ router.use(authenticate);
 const ids = z.array(z.number().int()).min(1).max(200);
 const domainParam = z.object({ domain: z.enum(DELETE_DOMAINS) });
 
-// POST /api/bulk/:domain/delete — mise à la corbeille en lot
+// POST /api/bulk/:domain/delete — bulk move to the trash
 router.post(
   '/:domain/delete',
   validate({ params: domainParam, body: z.object({ ids }) }),
   async (req, res) => {
     const { ids: list } = req.body as { ids: number[] };
     const count = await BulkService.bulkDelete(
-      req.user!,
+      requireUser(req),
       req.params.domain as BulkService.DeleteDomain,
       list,
     );
@@ -36,14 +36,14 @@ router.post(
   },
 );
 
-// POST /api/bulk/:domain/restore — restauration en lot
+// POST /api/bulk/:domain/restore — bulk restore
 router.post(
   '/:domain/restore',
   validate({ params: domainParam, body: z.object({ ids }) }),
   async (req, res) => {
     const { ids: list } = req.body as { ids: number[] };
     const count = await BulkService.bulkRestore(
-      req.user!,
+      requireUser(req),
       req.params.domain as BulkService.DeleteDomain,
       list,
     );
@@ -51,18 +51,22 @@ router.post(
   },
 );
 
-// POST /api/bulk/:domain/purge — purge définitive en lot (DB + MinIO, irréversible)
+// POST /api/bulk/:domain/purge — bulk permanent purge (DB + MinIO, irreversible)
 router.post(
   '/:domain/purge',
   validate({ params: domainParam, body: z.object({ ids }) }),
   async (req, res) => {
     const { ids: list } = req.body as { ids: number[] };
-    const count = await BulkService.bulkPurge(req.user!, req.params.domain as BulkService.DeleteDomain, list);
+    const count = await BulkService.bulkPurge(
+      requireUser(req),
+      req.params.domain as BulkService.DeleteDomain,
+      list,
+    );
     res.json({ count });
   },
 );
 
-// PATCH /api/bulk/tasks — statut / réassignation en lot
+// PATCH /api/bulk/tasks — bulk status / reassignment
 router.patch(
   '/tasks',
   validate({
@@ -82,31 +86,31 @@ router.patch(
       status?: TaskStatus;
       assigneeId?: number | null;
     };
-    // Ne transmet que les champs réellement fournis (l'assigné ne peut patcher que le statut).
+    // Only forwards the fields actually provided (the assignee can only patch the status).
     const patch: BulkService.BulkTaskPatch = {};
     if (status !== undefined) patch.status = status;
     if (assigneeId !== undefined) patch.assigneeId = assigneeId;
-    const count = await BulkService.bulkPatchTasks(req.user!, taskIds, patch);
+    const count = await BulkService.bulkPatchTasks(requireUser(req), taskIds, patch);
     res.json({ count });
   },
 );
 
-// PATCH /api/bulk/versions — changement de statut en lot
+// PATCH /api/bulk/versions — bulk status change
 router.patch(
   '/versions',
   validate({ body: z.object({ ids, status: z.nativeEnum(VersionStatus) }) }),
   async (req, res) => {
     const { ids: versionIds, status } = req.body as { ids: number[]; status: VersionStatus };
-    const count = await BulkService.bulkPatchVersions(req.user!, versionIds, status);
+    const count = await BulkService.bulkPatchVersions(requireUser(req), versionIds, status);
     res.json({ count });
   },
 );
 
 /**
- * PATCH /api/bulk/versions/decision — décision de review sur une sélection (Phase 31).
+ * PATCH /api/bulk/versions/decision: review decision on a selection (Phase 31).
  *
- * La sélection de la page Reviews traverse volontiers plusieurs projets : le service
- * revérifie donc la supervision et le vocabulaire projet par projet, et compte les refus.
+ * The selection on the Reviews page readily spans several projects: the service therefore re-checks
+ * supervision and the project vocabulary project by project, and counts the refusals.
  */
 router.patch(
   '/versions/decision',
@@ -115,27 +119,27 @@ router.patch(
   }),
   async (req, res) => {
     const b = req.body as { ids: number[]; statusId: number; comment?: string };
-    res.json(await ReviewDecisionService.decideMany(req.user!, b.ids, b.statusId, b.comment));
+    res.json(await ReviewDecisionService.decideMany(requireUser(req), b.ids, b.statusId, b.comment));
   },
 );
 
-// PATCH /api/bulk/shots/move — déplacement de shots vers une séquence (null = hors séquence)
+// PATCH /api/bulk/shots/move — moves shots to a sequence (null = outside any sequence)
 router.patch(
   '/shots/move',
   validate({ body: z.object({ ids, sequenceId: z.number().int().nullable() }) }),
   async (req, res) => {
     const { ids: shotIds, sequenceId } = req.body as { ids: number[]; sequenceId: number | null };
-    const count = await BulkService.bulkMoveShots(req.user!, shotIds, sequenceId);
+    const count = await BulkService.bulkMoveShots(requireUser(req), shotIds, sequenceId);
     res.json({ count });
   },
 );
 
 /**
- * PATCH /api/bulk/shots/status — statut d'une sélection de plans.
+ * PATCH /api/bulk/shots/status: status of a selection of shots.
  *
- * `pipelineStatusId: null` retire le statut, comme au singulier. Le service revérifie
- * l'accès au projet et applique le statut plan par plan : la réponse dit combien ont
- * abouti et combien ont été refusés (verrou ShotGrid, projet archivé).
+ * `pipelineStatusId: null` removes the status, as in the single variant. The service re-checks project
+ * access and applies the status shot by shot: the response says how many succeeded and how many were
+ * refused (ShotGrid lock, archived project).
  */
 router.patch(
   '/shots/status',
@@ -145,16 +149,15 @@ router.patch(
       ids: number[];
       pipelineStatusId: number | null;
     };
-    res.json(await BulkService.bulkPatchShotStatus(req.user!, shotIds, pipelineStatusId));
+    res.json(await BulkService.bulkPatchShotStatus(requireUser(req), shotIds, pipelineStatusId));
   },
 );
 
 /**
- * Assignation d'une sélection d'assets ou de plans.
+ * Assignment of a selection of assets or shots.
  *
- * Une entité qu'on ne peut pas assigner (droits, projet archivé, aucune tâche) est
- * comptée à part plutôt que de faire échouer tout le lot : sur cinquante assets,
- * tout perdre pour un seul serait absurde.
+ * An entity that cannot be assigned (rights, archived project, no task) is counted separately rather
+ * than failing the whole batch: out of fifty assets, losing everything for a single one would be absurd.
  */
 for (const holder of ['assets', 'shots'] as const) {
   router.patch(
@@ -168,7 +171,7 @@ for (const holder of ['assets', 'shots'] as const) {
     }),
     async (req, res) => {
       const result = await AssignmentService.assignMany(
-        req.user!,
+        requireUser(req),
         holder === 'assets' ? 'asset' : 'shot',
         req.body.ids as number[],
         { userId: req.body.userId, departmentIds: req.body.departmentIds },
@@ -178,7 +181,7 @@ for (const holder of ['assets', 'shots'] as const) {
   );
 }
 
-// PATCH /api/bulk/assets/departments — cocher/décocher des étapes sur une sélection
+// PATCH /api/bulk/assets/departments — tick or untick steps on a selection
 router.patch(
   '/assets/departments',
   validate({
@@ -189,7 +192,7 @@ router.patch(
     }),
   }),
   async (req, res) => {
-    const count = await BulkService.bulkAssetDepartments(req.user!, req.body.ids as number[], {
+    const count = await BulkService.bulkAssetDepartments(requireUser(req), req.body.ids as number[], {
       add: req.body.add ?? [],
       remove: req.body.remove ?? [],
     });

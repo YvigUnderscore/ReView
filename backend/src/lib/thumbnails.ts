@@ -3,12 +3,12 @@
 
 import { Prisma } from '@prisma/client';
 import { prisma } from './prisma';
-import { storage } from '../services/StorageService';
+import { storage } from './storage';
 
 /**
- * Résolution des miniatures « effectives » pour les cartes (projets, assets, shots).
- * Règle : miniature explicite (thumbnailKey) si définie, sinon celle du premier média
- * publié rattaché. Renvoie une URL présignée prête à l'affichage (ou null).
+ * Resolution of "effective" thumbnails for cards (projects, assets, shots).
+ * Rule: explicit thumbnail (thumbnailKey) if set, otherwise that of the first linked
+ * published media. Returns a presigned URL ready for display (or null).
  */
 
 const firstMediaThumbKey = async (versionFilter: object): Promise<string | null> => {
@@ -31,11 +31,11 @@ export const firstMediaThumbKeyForAsset = (assetId: number) =>
 export const firstMediaThumbKeyForShot = (shotId: number) => firstMediaThumbKey({ task: { shotId } });
 
 /**
- * Une séquence et un épisode n'avaient, eux, aucune image de repli : seule une vignette
- * déposée à la main leur en donnait une, si bien que leurs cartes restaient vides alors
- * que leurs plans, eux, en avaient. Ils héritent donc de la même règle — la miniature du
- * premier média publié d'un de leurs plans. Les plans supprimés ou masqués sont écartés :
- * une séquence ne doit pas s'afficher avec l'image d'un plan qu'on n'y voit plus.
+ * A sequence and an episode used to have no fallback image either: only a thumbnail
+ * uploaded by hand gave them one, so their cards stayed empty while their shots had one.
+ * They therefore inherit the same rule: the thumbnail of the first published media of one
+ * of their shots. Deleted or hidden shots are excluded: a sequence must not display the
+ * image of a shot that is no longer visible in it.
  */
 export const firstMediaThumbKeyForSequence = (sequenceId: number) =>
   firstMediaThumbKey({ task: { shot: { sequenceId, deletedAt: null, hiddenAt: null } } });
@@ -46,30 +46,30 @@ export const firstMediaThumbKeyForEpisode = (episodeId: number) =>
   });
 
 /**
- * Variantes groupées (B3) : une seule requête pour toute une page de cartes.
+ * Grouped variants (B3): a single query for a whole page of cards.
  *
- * Les listes appelaient la variante unitaire dans un `.map` : cent plans, cent requêtes,
- * suivies de cent signatures MinIO. C'est ce qui rendait l'ouverture d'un projet lente
- * bien avant que le volume ne devienne un problème.
+ * The lists called the single variant inside a `.map`: a hundred shots, a hundred queries,
+ * followed by a hundred MinIO signatures. That is what made opening a project slow long
+ * before volume became a problem.
  *
- * Le regroupement se faisait ensuite par un `findMany` SANS `take`, suivi d'une élection
- * du premier par parent EN MÉMOIRE : une page de cent plans rapatriait tous les médias
- * publiés de ces cent plans (2 009 lignes mesurées à dix versions par plan) pour n'en
- * garder que cent — et le facteur d'amplification, c'est le nombre de médias par plan,
- * que rien ne borne dans un projet qui vit.
+ * Grouping was then done by a `findMany` WITHOUT `take`, followed by an in-memory election
+ * of the first media per parent: a page of a hundred shots pulled back all published media
+ * of those hundred shots (2,009 rows measured at ten versions per shot) to keep only one
+ * per shot. The amplification factor is the number of media per shot, which nothing bounds
+ * in a living project.
  *
- * L'élection se fait donc là où elle coûte le moins : `DISTINCT ON` côté PostgreSQL rend
- * UNE ligne par parent, comme le fait déjà `firstMediaThumbKeysForProjects` plus bas. Les
- * identifiants de la page voyagent en paramètres liés (`Prisma.join`), jamais concaténés.
+ * The election therefore happens where it costs least: `DISTINCT ON` on the PostgreSQL side
+ * returns ONE row per parent, as `firstMediaThumbKeysForProjects` already does further down.
+ * The page's identifiers travel as bound parameters (`Prisma.join`), never concatenated.
  *
- * `m.id` départage deux médias créés à la même milliseconde : l'élection précédente les
- * départageait par le hasard du plan d'exécution (le premier rendu par le tri), donc sans
- * garantie de rendre deux fois la même image.
+ * `m.id` breaks ties between two media created in the same millisecond: the previous
+ * election broke them by chance (whichever came first in the execution plan), so there was
+ * no guarantee of rendering the same image twice.
  */
 async function firstThumbKeysBy(
-  // Fragments SQL écrits ici, jamais construits à partir d'une entrée : `parentKey` est
-  // l'expression qui identifie le parent, `joins` le chemin qui y mène depuis la version,
-  // `filter` la restriction à la page demandée.
+  // SQL fragments written here, never built from input: `parentKey` is the expression
+  // identifying the parent, `joins` the path leading there from the version, and `filter`
+  // the restriction to the requested page.
   parentKey: Prisma.Sql,
   joins: Prisma.Sql,
   filter: Prisma.Sql,
@@ -91,7 +91,7 @@ async function firstThumbKeysBy(
   return out;
 }
 
-/** Miniature de repli de chaque plan de la liste, en une requête. */
+/** Fallback thumbnail of each shot in the list, in one query. */
 export function firstMediaThumbKeysForShots(shotIds: number[]): Promise<Map<number, string>> {
   if (shotIds.length === 0) return Promise.resolve(new Map());
   return firstThumbKeysBy(
@@ -102,10 +102,10 @@ export function firstMediaThumbKeysForShots(shotIds: number[]): Promise<Map<numb
 }
 
 /**
- * Miniature de repli de chaque asset de la liste, en une requête.
+ * Fallback thumbnail of each asset in the list, in one query.
  *
- * Une version peut pendre directement à l'asset ou passer par une tâche : le parent est le
- * premier des deux rattachements, exactement comme l'élection en mémoire le faisait.
+ * A version can hang directly off the asset or go through a task: the parent is the first
+ * of the two attachments, exactly as the in-memory election did.
  */
 export function firstMediaThumbKeysForAssets(assetIds: number[]): Promise<Map<number, string>> {
   if (assetIds.length === 0) return Promise.resolve(new Map());
@@ -116,18 +116,18 @@ export function firstMediaThumbKeysForAssets(assetIds: number[]): Promise<Map<nu
   );
 }
 
-/** Miniature de repli de chaque séquence de la liste, en une requête. */
+/** Fallback thumbnail of each sequence in the list, in one query. */
 export function firstMediaThumbKeysForSequences(sequenceIds: number[]): Promise<Map<number, string>> {
   if (sequenceIds.length === 0) return Promise.resolve(new Map());
   return firstThumbKeysBy(
     Prisma.sql`sh."sequenceId"`,
     Prisma.sql`JOIN "Task" t ON t.id = v."taskId" JOIN "Shot" sh ON sh.id = t."shotId"`,
-    // Un plan supprimé ou masqué ne prête pas son image à sa séquence (règle d'origine).
+    // A deleted or hidden shot does not lend its image to its sequence (original rule).
     Prisma.sql`sh."sequenceId" IN (${Prisma.join(sequenceIds)}) AND sh."deletedAt" IS NULL AND sh."hiddenAt" IS NULL`,
   );
 }
 
-/** Miniature de repli de chaque épisode de la liste : le premier média d'un de ses plans. */
+/** Fallback thumbnail of each episode in the list: the first media of one of its shots. */
 export function firstMediaThumbKeysForEpisodes(episodeIds: number[]): Promise<Map<number, string>> {
   if (episodeIds.length === 0) return Promise.resolve(new Map());
   return firstThumbKeysBy(
@@ -141,14 +141,13 @@ export function firstMediaThumbKeysForEpisodes(episodeIds: number[]): Promise<Ma
                AND sh."hiddenAt" IS NULL`,
   );
 }
-
 /**
- * Miniature de repli de chaque projet de la page, en UNE requête.
+ * Fallback thumbnail of each project on the page, in ONE query.
  *
- * La liste appelait `firstMediaThumbKeyForProject` dans un `.map` : cent projets, cent
- * `findFirst` portant chacun un triple OR version → tâche → plan/asset → projet. Or la
- * barre latérale appelle cette route sur presque chaque écran. `DISTINCT ON` élit le
- * premier média publié de chaque projet côté PostgreSQL, sans rapatrier le reste.
+ * The list called `firstMediaThumbKeyForProject` inside a `.map`: a hundred projects, a
+ * hundred `findFirst` each carrying a triple OR version → task → shot/asset → project. Yet
+ * the sidebar calls this route on almost every screen. `DISTINCT ON` elects the first
+ * published media of each project on the PostgreSQL side, without pulling back the rest.
  */
 export async function firstMediaThumbKeysForProjects(projectIds: number[]): Promise<Map<number, string>> {
   const out = new Map<number, string>();
@@ -173,7 +172,7 @@ export async function firstMediaThumbKeysForProjects(projectIds: number[]): Prom
   return out;
 }
 
-/** URL présignée de la miniature effective (explicite ou fallback premier média). */
+/** Signed URL of the effective thumbnail (explicit, or first-media fallback). */
 export async function effectiveThumbnailUrl(
   explicitKey: string | null,
   fallbackKey: string | null,

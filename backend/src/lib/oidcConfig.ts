@@ -4,30 +4,30 @@
 import { z } from 'zod';
 import { prisma } from './prisma';
 import { encryptSecret, decryptSecret } from './crypto';
-import { storage } from '../services/StorageService';
+import { storage } from './storage';
 import { imageTypeFromKey } from './uploadContentType';
 import { badRequest } from './errors';
 
 /**
- * SSO OIDC (36.A) — configuration studio (Setting `oidc_config`). Le client secret est
- * chiffré (AES-GCM) et write-only : jamais renvoyé à l'admin, conservé si absent du PUT.
+ * OIDC SSO (36.A) — studio configuration (Setting `oidc_config`). The client secret is encrypted (AES-GCM) and
+ * write-only: never returned to the admin, kept when absent from the PUT.
  */
 
 export interface OidcConfig {
   enabled: boolean;
-  issuer: string; // ex https://accounts.google.com
+  issuer: string; // e.g. https://accounts.google.com
   clientId: string;
-  clientSecret: string; // en clair côté serveur uniquement (déchiffré à la lecture)
-  publicUrl: string; // base publique de l'app — redirect_uri = publicUrl + /api/auth/oidc/callback
-  autoProvision: boolean; // créer un compte ARTIST à la volée si l'email est inconnu
+  clientSecret: string; // plaintext, server side only (decrypted on read)
+  publicUrl: string; // public base URL of the app — redirect_uri = publicUrl + /api/auth/oidc/callback
+  autoProvision: boolean; // create an ARTIST account on the fly if the email is unknown
   buttonLabel: string;
-  passwordLoginDisabled: boolean; // « SSO seul » : plus de connexion email + mot de passe
-  logoKey: string; // clé MinIO du logo affiché dans le bouton SSO (`branding/sso-*`)
+  passwordLoginDisabled: boolean; // "SSO only": no more email + password login
+  logoKey: string; // MinIO key of the logo shown on the SSO button (`branding/sso-*`)
 }
 
 const OIDC_KEY = 'oidc_config';
 
-/** Emplacement imposé au logo SSO : le reste du bucket n'a rien à faire dans un `<img>`. */
+/** Imposed location of the SSO logo: the rest of the bucket has no business in an `<img>`. */
 const LOGO_KEY_RE = /^branding\/[A-Za-z0-9._-]{1,120}$/;
 
 const FALLBACK: OidcConfig = {
@@ -56,34 +56,33 @@ function sanitize(raw: unknown, base: OidcConfig): OidcConfig {
     buttonLabel: str(o.buttonLabel, base.buttonLabel, 80),
     passwordLoginDisabled:
       typeof o.passwordLoginDisabled === 'boolean' ? o.passwordLoginDisabled : base.passwordLoginDisabled,
-    // Une clé hors `branding/` est écartée plutôt que refusée : le vide vaut « pas de logo ».
+    // A key outside `branding/` is discarded rather than refused: empty means "no logo".
     logoKey: logoKey === '' || LOGO_KEY_RE.test(logoKey) ? logoKey : base.logoKey,
   };
 }
 
-/** Le SSO peut-il réellement prendre une connexion en charge ? (config complète) */
+/** Can SSO actually take a login in charge? (complete config) */
 export function isOidcReady(cfg: OidcConfig): boolean {
   return cfg.enabled && !!cfg.clientId && !!cfg.clientSecret && !!cfg.publicUrl;
 }
 
 /**
- * « SSO seul » effectif : le mot de passe n'est refusé QUE si le SSO est en état de
- * prendre le relais. Sans ce garde-fou, un secret révoqué chez le fournisseur ou une
- * config à moitié effacée fermerait l'instance à tout le monde, admins compris, sans
- * autre issue qu'un accès direct à la base.
+ * Effective "SSO only": the password is refused ONLY if SSO is in a state to take over. Without this safeguard, a secret
+ * revoked at the provider or a half-erased config would lock the instance to everyone, admins included, with no way out
+ * but direct database access.
  */
 export async function isPasswordLoginBlocked(): Promise<boolean> {
   const cfg = await getOidcConfig();
   return cfg.passwordLoginDisabled && isOidcReady(cfg);
 }
 
-/** URL présignée du logo SSO (1 h), `null` si aucun logo n'est configuré. */
+/** Presigned URL of the SSO logo (1 h), `null` if no logo is configured. */
 export async function getOidcLogoUrl(logoKey: string): Promise<string | null> {
   if (!logoKey) return null;
   return storage.getPresignedGetUrl(logoKey, 3600, imageTypeFromKey(logoKey));
 }
 
-/** Config effective (secret déchiffré) — usage serveur uniquement. */
+/** Effective config (secret decrypted) — server-side use only. */
 export async function getOidcConfig(): Promise<OidcConfig> {
   const row = await prisma.setting.findUnique({ where: { key: OIDC_KEY } });
   if (!row) return FALLBACK;
@@ -95,7 +94,7 @@ export async function getOidcConfig(): Promise<OidcConfig> {
   }
 }
 
-/** Vue admin : jamais le secret, juste sa présence — et le logo en URL affichable. */
+/** Admin view: never the secret, just its presence — and the logo as a displayable URL. */
 export async function getPublicOidcConfig(): Promise<
   Omit<OidcConfig, 'clientSecret'> & { hasSecret: boolean; logoUrl: string | null }
 > {
@@ -104,7 +103,7 @@ export async function getPublicOidcConfig(): Promise<
   return { ...rest, hasSecret: clientSecret.length > 0, logoUrl: await getOidcLogoUrl(cfg.logoKey) };
 }
 
-/** Enregistre (secret write-only : absent/vide = conservé). */
+/** Saves (write-only secret: absent/empty = kept). */
 export async function setOidcConfig(value: unknown): Promise<void> {
   const current = await getOidcConfig();
   const next = sanitize(value, { ...current, clientSecret: '' });
@@ -122,20 +121,19 @@ export async function setOidcConfig(value: unknown): Promise<void> {
 }
 
 /**
- * Applique un patch admin en gardant l'instance ouvrable.
+ * Applies an admin patch while keeping the instance openable.
  *
- * « SSO seul » n'a de sens que si le SSO peut prendre le relais. Deux cas se distinguent :
- * une demande explicite de couper le mot de passe sans SSO opérationnel est refusée net
- * (l'admin l'apprend tout de suite, pas à sa prochaine connexion) ; si c'est au contraire
- * le SSO qu'on vient de désactiver ou de vider, le mot de passe reprend la main de
- * lui-même, plutôt que de bloquer une modification légitime.
+ * "SSO only" only makes sense if SSO can take over. Two cases are distinguished: an explicit request to cut the password
+ * without an operational SSO is refused outright (the admin learns it now, not at their next login); whereas if it is
+ * SSO that has just been disabled or emptied, the password takes control again by itself, rather than blocking a
+ * legitimate change.
  */
 export async function updateOidcConfig(patch: Record<string, unknown>): Promise<void> {
   const next = { ...(await getOidcConfig()), ...patch };
   if (next.passwordLoginDisabled && !isOidcReady(next)) {
     if (patch.passwordLoginDisabled === true) {
       throw badRequest(
-        'Le SSO doit être activé et complet (issuer, client ID, secret, URL publique) avant de couper la connexion par mot de passe',
+        'SSO must be enabled and complete (issuer, client ID, secret, public URL) before turning off password login',
         'SSO_NOT_READY',
       );
     }

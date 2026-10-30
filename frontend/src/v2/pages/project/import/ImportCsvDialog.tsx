@@ -5,15 +5,9 @@ import { useState, type ChangeEvent, type DragEvent } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import { Download, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button } from '../../../components/ui/button';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '../../../components/ui/dialog';
-import { useT } from '../../../i18n';
+import { Button } from '@/v2/components/ui/button';
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/v2/components/ui/dialog';
+import { useT } from '@/v2/i18n';
 import { fetchTemplate, runImport, saveTextFile } from './api';
 import ColumnMapper from './ColumnMapper';
 import ImportIssues from './ImportIssues';
@@ -22,12 +16,11 @@ import ImportSummary from './ImportSummary';
 import { hasWork, type ColumnOverride, type CsvField, type ImportReport } from './types';
 
 /**
- * Import de nomenclature : le chemin d'entrée d'un studio dans ReView.
+ * Bill-of-materials (BOM) import: a studio's entry path into ReView.
  *
- * L'écran suit l'ordre dans lequel on se pose les questions — quel fichier, quelles
- * colonnes, qu'est-ce que ça va faire, puis seulement écrire. Rien n'est envoyé en base
- * tant que l'aperçu n'a pas été demandé, et le bouton d'écriture reste éteint tant qu'il
- * n'y a rien à écrire.
+ * The screen follows the order in which one asks oneself the questions: which file, which columns,
+ * what it is going to do, and only then write. Nothing is sent to the database until the preview
+ * has been requested, and the write button stays off as long as there is nothing to write.
  */
 export default function ImportCsvDialog({
   projectId,
@@ -110,8 +103,8 @@ export default function ImportCsvDialog({
         <div className="space-y-3">
           <p className="text-xs text-muted-foreground">{t('csvImport.intro')}</p>
 
-          {/* Dépôt de fichier : confort à la souris seulement — le champ ci-dessous ouvre
-              le même sélecteur au clavier, et la zone de saisie accepte un collage. */}
+          {/* File drop: mouse convenience only. The field below opens the same picker from the
+              keyboard, and the input area accepts a paste. */}
           <div onDrop={onDrop} onDragOver={(e) => e.preventDefault()} className="space-y-2">
             <div className="flex flex-wrap items-center gap-2">
               <input

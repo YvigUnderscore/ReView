@@ -6,12 +6,12 @@ import { Mic, Square } from 'lucide-react';
 import { toast } from 'sonner';
 import { useT } from '../../i18n';
 
-/** mm:ss d'une durée en secondes. */
+/** mm:ss format of a duration in seconds. */
 const fmt = (s: number) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
 
 /**
- * Note vocale (32.F) : enregistre au micro (MediaRecorder, webm/opus) et remet le
- * fichier au composer comme pièce jointe audio — lue inline dans le fil.
+ * Voice note (32.F): records from the microphone (MediaRecorder, webm/opus) and hands the
+ * file to the composer as an audio attachment, played inline in the thread.
  */
 export default function VoiceRecorderButton({ onRecorded }: { onRecorded: (file: File) => void }) {
   const t = useT();
@@ -20,14 +20,14 @@ export default function VoiceRecorderButton({ onRecorded }: { onRecorded: (file:
   const recorderRef = useRef<MediaRecorder | null>(null);
   const chunksRef = useRef<Blob[]>([]);
 
-  // Chronomètre d'enregistrement (arrêté avec l'enregistreur).
+  // Recording timer (stopped together with the recorder).
   useEffect(() => {
     if (!recording) return;
     const t = setInterval(() => setElapsed((s) => s + 1), 1000);
     return () => clearInterval(t);
   }, [recording]);
 
-  // Coupe le micro si le composant est démonté en cours d'enregistrement.
+  // Stops the microphone if the component unmounts while recording.
   useEffect(
     () => () => {
       recorderRef.current?.stream.getTracks().forEach((tr) => tr.stop());

@@ -9,11 +9,11 @@ import { runBake, type BakeRequest } from './bakeJob';
 import { OCIO_BAKE_QUEUE } from './queue';
 
 /**
- * Worker de cuisson des LUT d'affichage OCIO. Il tourne dans le process worker, seul endroit
- * où vit l'outillage lourd (venv Python) : l'API, elle, ne sait cuire que le repli intégré.
+ * OCIO display LUT baking worker. It runs in the worker process, the only place where
+ * the heavy tooling (Python venv) lives: the API can only bake the built-in fallback.
  *
- * Concurrence 1 : cuire deux configs en parallèle ne rend rien de plus vite (un `.cube` 33³
- * se calcule en moins d'une seconde) et sérialiser évite deux téléchargements du `.ocio`.
+ * Concurrency 1: baking two configs in parallel gains nothing (a 33³ `.cube` takes under
+ * a second to compute), and serializing avoids two downloads of the `.ocio`.
  */
 export const ocioBakeWorker = new Worker<BakeRequest, void, string>(
   OCIO_BAKE_QUEUE,
@@ -24,11 +24,11 @@ export const ocioBakeWorker = new Worker<BakeRequest, void, string>(
 );
 
 ocioBakeWorker.on('completed', (job) => logger.info(`[ocio.bake.worker] ✓ config ${job.data.configId}`));
-ocioBakeWorker.on('failed', (_job, err) => logger.warn({ err }, '[ocio.bake.worker] ✗ (sera retenté)'));
+ocioBakeWorker.on('failed', (_job, err) => logger.warn({ err }, '[ocio.bake.worker] ✗ (will be retried)'));
 
-/** Démarre le worker (appelé depuis le process worker principal). */
+/** Starts the worker (called from the main worker process). */
 export function startOcioBakeWorker(): void {
   void ocioBakeWorker.run();
   registerWorkerShutdown('ocio.bake.worker', ocioBakeWorker);
-  logger.info('[ocio.bake.worker] démarré.');
+  logger.info('[ocio.bake.worker] started.');
 }

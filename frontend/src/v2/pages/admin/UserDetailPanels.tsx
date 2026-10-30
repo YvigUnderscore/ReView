@@ -16,7 +16,7 @@ import type {
   AdminUserSession,
 } from '../../types/api';
 
-/** Panneaux de la fiche utilisateur admin (projets, sessions, tokens, activité). */
+/** Panels of the admin user sheet (projects, sessions, tokens, activity). */
 
 export function MembershipsPanel({ memberships }: { memberships: AdminUserMembership[] }) {
   const t = useT();
@@ -49,11 +49,11 @@ export function MembershipsPanel({ memberships }: { memberships: AdminUserMember
 }
 
 /**
- * Combien de sessions s'affichent avant de devoir le demander.
+ * How many sessions are shown before having to ask for more.
  *
- * La liste était rendue d'un seul tenant : sur un compte actif, deux cents lignes écrasaient
- * tout le reste de la fiche. Toutes les autres listes denses de l'administration (activité,
- * accès média, versions, commentaires) sont paginées ; celle-ci était la seule à tout déverser.
+ * The list used to be rendered in one go: on an active account, two hundred rows swamped
+ * the rest of the sheet. All the other dense administration lists (activity,
+ * media access, versions, comments) are paginated; this one was the only one dumping everything.
  */
 const SESSIONS_PREVIEW = 8;
 

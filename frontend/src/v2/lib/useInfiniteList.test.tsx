@@ -11,10 +11,10 @@ import { FIRST_PAGE, type Page } from './infiniteList';
 import { useInfiniteList } from './useInfiniteList';
 
 /**
- * Le mode « toutes les pages » (`all`) sert les sélecteurs : assigner un asset au 1 500e
- * plan suppose que le 1 500e plan soit dans la liste. Ce qui se joue ici n'est donc pas la
- * vitesse pour elle-même mais le nombre d'allers-retours en série — un curseur ne se
- * parallélise pas, chaque page réclamant celui de la précédente.
+ * The "all pages" mode (`all`) serves the selectors: assigning an asset to the 1,500th
+ * shot assumes that the 1,500th shot is in the list. What is at stake here is therefore not
+ * speed for its own sake but the number of round trips in series — a cursor does not
+ * parallelise, each page claiming the one from the previous page.
  */
 
 interface Row {
@@ -24,7 +24,7 @@ interface Row {
 const rows = (from: number, count: number): Row[] =>
   Array.from({ length: Math.max(0, count) }, (_, i) => ({ id: from + i }));
 
-/** Serveur à curseur — celui de `/api/shots` : le curseur porte le nombre de lignes servies. */
+/** Cursor-based server — that of `/api/shots`: the cursor carries the number of rows served. */
 function cursorServer(total: number, onCall?: (req: MockRequest) => unknown) {
   return (req: MockRequest): unknown => {
     const held = onCall?.(req);
@@ -43,7 +43,7 @@ function cursorServer(total: number, onCall?: (req: MockRequest) => unknown) {
   };
 }
 
-/** Serveur page/pageSize — celui de `/api/projects` : le décalage se calcule en pages. */
+/** page/pageSize server — that of `/api/projects`: the offset is computed in pages. */
 function pagedServer(total: number) {
   return (req: MockRequest): Page<Row> => {
     const size = Number(req.url.searchParams.get('pageSize') ?? 100);
@@ -71,8 +71,8 @@ afterEach(() => {
 
 const sizes = (mock: ApiMock): (string | null)[] => mock.calls.map((c) => c.url.searchParams.get('pageSize'));
 
-describe('useInfiniteList — mode « toutes les pages »', () => {
-  it('peuple un sélecteur de 2 000 plans en quatre requêtes au lieu de vingt', async () => {
+describe('useInfiniteList — "all pages" mode', () => {
+  it('fills a selector of 2,000 shots in four requests instead of twenty', async () => {
     api = mockApi({ 'GET /api/shots': cursorServer(2000) });
     qc = createTestQueryClient();
     const { result } = renderHook(
@@ -81,8 +81,8 @@ describe('useInfiniteList — mode « toutes les pages »', () => {
     );
 
     await waitFor(() => expect(result.current.isComplete).toBe(true), { timeout: 5000 });
-    // La liste reste complète et dans l'ordre : un sélecteur tronqué ou mélangé serait un
-    // défaut bien pire que sa lenteur.
+    // The list stays complete and in order: a truncated or shuffled selector would be a
+    // far worse defect than its slowness.
     expect(result.current.data).toHaveLength(2000);
     expect(result.current.data?.[0]?.id).toBe(1);
     expect(result.current.data?.[1999]?.id).toBe(2000);
@@ -91,19 +91,19 @@ describe('useInfiniteList — mode « toutes les pages »', () => {
     expect(sizes(api)).toEqual(['500', '500', '500', '500']);
   });
 
-  it('reprend à la taille que le serveur a servie, pas à celle demandée', async () => {
-    // Deux écrans partagent une clé de cache (le rail latéral et la page des projets, la
-    // modale et l'onglet) sans partager l'option `all` : la page 1 peut déjà être en
-    // cache, servie par 100. En pagination par numéro de page, enchaîner sur une page 2
-    // de 500 sauterait les lignes 101 à 500 — la liste mentirait en se croyant complète.
+  it('resumes at the size the server served, not the one requested', async () => {
+    // Two screens share a cache key (the side rail and the projects page, the
+    // modal and the tab) without sharing the `all` option: page 1 may already be in
+    // cache, served at 100. With page-number pagination, chaining onto a page 2
+    // of 500 would skip rows 101 to 500 — the list would lie while believing itself complete.
     api = mockApi({ 'GET /api/projects': pagedServer(300) });
     qc = createTestQueryClient();
     const first: Page<Row> = { items: rows(1, 100), total: 300, page: 1, pageSize: 100, hasMore: true };
     qc.setQueryData(['projects'], { pages: [first], pageParams: [FIRST_PAGE] });
 
     const { result } = renderHook(
-      // `staleTime` non nul : sans lui le montage refetcherait la page 1 déjà en cache et
-      // le scénario — poursuivre une liste commencée par un autre écran — s'évanouirait.
+      // Non-zero `staleTime`: without it, mounting would refetch the page 1 already cached and
+      // the scenario — continuing a list started by another screen — would vanish.
       () => useInfiniteList<Row>(['projects'], '/api/projects', { all: true, staleTime: 60_000 }),
       { wrapper: wrapper(qc) },
     );
@@ -114,7 +114,7 @@ describe('useInfiniteList — mode « toutes les pages »', () => {
     expect(sizes(api)).toEqual(['100', '100']);
   });
 
-  it('ne cache le sélecteur qu’une fois la liste entière arrivée', async () => {
+  it('only reveals the selector once the whole list has arrived', async () => {
     let release: () => void = () => undefined;
     const held = new Promise<void>((resolve) => {
       release = resolve;
@@ -131,15 +131,15 @@ describe('useInfiniteList — mode « toutes les pages »', () => {
     );
 
     await waitFor(() => expect(result.current.data).toHaveLength(500));
-    // La première page est là, la seconde pas encore : le sélecteur ne doit pas se
-    // déclarer prêt sur une moitié de liste.
+    // The first page is there, the second not yet: the selector must not
+    // declare itself ready on half a list.
     expect(result.current.isComplete).toBe(false);
     release();
     await waitFor(() => expect(result.current.isComplete).toBe(true), { timeout: 5000 });
     expect(result.current.data).toHaveLength(1000);
   });
 
-  it('se déclare terminé quand une page échoue — sinon le sélecteur attendrait sans fin', async () => {
+  it('declares itself done when a page fails — otherwise the selector would wait forever', async () => {
     api = mockApi({ 'GET /api/shots': httpError(500, 'boom') });
     qc = createTestQueryClient();
     const { result } = renderHook(
@@ -152,8 +152,8 @@ describe('useInfiniteList — mode « toutes les pages »', () => {
   });
 });
 
-describe('useInfiniteList — pagination à la demande', () => {
-  it('ne demande ni taille ni page de plus quand l’appelant pagine lui-même', async () => {
+describe('useInfiniteList — on-demand pagination', () => {
+  it('requests no extra size or page when the caller paginates itself', async () => {
     api = mockApi({ 'GET /api/shots': cursorServer(2000) });
     qc = createTestQueryClient();
     const { result } = renderHook(() => useInfiniteList<Row>(['shots', 4], '/api/shots?projectId=4', {}), {
@@ -167,7 +167,7 @@ describe('useInfiniteList — pagination à la demande', () => {
     expect(result.current.isComplete).toBe(false);
   });
 
-  it('respecte une taille de page explicite, même en mode « toutes les pages »', async () => {
+  it('honours an explicit page size, even in "all pages" mode', async () => {
     api = mockApi({ 'GET /api/shots': cursorServer(300) });
     qc = createTestQueryClient();
     const { result } = renderHook(

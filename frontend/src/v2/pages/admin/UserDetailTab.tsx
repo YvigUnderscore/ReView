@@ -6,7 +6,7 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ArrowLeft, Pencil, ShieldCheck, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { useAuth } from '../../stores/useAuth';
 import Avatar from '../../components/Avatar';
@@ -22,7 +22,7 @@ import { ActivityPanel, MembershipsPanel, SessionsPanel, TokensPanel } from './U
 import type { AdminUserDetail } from '../../types/api';
 import { useT } from '../../i18n';
 
-/** Fiche détaillée d'un compte (refonte admin) : profil, projets, sessions, activité. */
+/** Detailed sheet of an account (admin overhaul): profile, projects, sessions, activity. */
 export default function UserDetailTab() {
   const t = useT();
   const { id } = useParams();

@@ -29,7 +29,7 @@ const base: ScheduleRow = {
   pipelineStatus: null,
 };
 
-/** Un statut du studio, tel que la synchronisation ShotGrid l'écrit. */
+/** A studio status, as the ShotGrid synchronisation writes it. */
 const studioStatus = {
   id: 42,
   code: 'ip',
@@ -40,7 +40,7 @@ const studioStatus = {
   legacyStatus: 'IN_PROGRESS' as const,
 };
 
-/** Jeu de lignes distinctes, pour vérifier qu'on rend exactement ce qu'on a lu. */
+/** Set of distinct rows, to check that exactly what was read is returned. */
 const rows = (count: number): ScheduleRow[] =>
   Array.from({ length: count }, (_, i) => ({ ...base, id: i + 1, name: `task-${i + 1}` }));
 
@@ -49,8 +49,8 @@ beforeEach(() => {
   findMany.mockResolvedValue([]);
 });
 
-describe('ScheduleService — toScheduleTask', () => {
-  it('compose la localisation shot avec séquence et expose les dates ISO', () => {
+describe('ScheduleService: toScheduleTask', () => {
+  it('builds the shot location with its sequence and exposes ISO dates', () => {
     const t = toScheduleTask(base);
     expect(t.location).toBe('SQ010 · SH020');
     expect(t.sequenceId).toBe(3);
@@ -60,19 +60,19 @@ describe('ScheduleService — toScheduleTask', () => {
     expect(t.assignee).toEqual({ id: 9, name: 'Ada' });
   });
 
-  it('rend le statut du studio, couleur comprise — le Gantt ne colore plus par l’enum', () => {
+  it('returns the studio status, colour included: the Gantt no longer colours by enum', () => {
     const t = toScheduleTask({ ...base, pipelineStatus: studioStatus });
     expect(t.pipelineStatus).toEqual({ id: 42, code: 'ip', name: 'In Progress', color: '#3B82F6' });
     expect(t.family).toBe('progress');
   });
 
-  it('sans référentiel, la famille vient de l’enum et le statut du studio est nul', () => {
+  it('without a reference list, the family comes from the enum and the studio status is null', () => {
     const t = toScheduleTask(base);
     expect(t.pipelineStatus).toBeNull();
     expect(t.family).toBe('progress');
   });
 
-  it('un statut terminal du studio compte comme fait, même si l’enum dit le contraire', () => {
+  it('a terminal studio status counts as done, even if the enum says otherwise', () => {
     const t = toScheduleTask({
       ...base,
       status: 'IN_PROGRESS',
@@ -82,19 +82,19 @@ describe('ScheduleService — toScheduleTask', () => {
     expect(t.pipelineStatus!.code).toBe('fin');
   });
 
-  it('demande le statut du studio à la base', async () => {
+  it('asks the database for the studio status', async () => {
     await getProjectSchedule(7);
     const select = findMany.mock.calls[0]![0].select as Record<string, unknown>;
     expect(select.pipelineStatus).toBeDefined();
   });
 
-  it('gère un shot sans séquence', () => {
+  it('handles a shot without a sequence', () => {
     const t = toScheduleTask({ ...base, shot: { code: 'SH999', sequence: null } });
     expect(t.location).toBe('SH999');
     expect(t.sequenceId).toBeNull();
   });
 
-  it('utilise le nom d’asset et gère l’absence de dates/assigné', () => {
+  it('uses the asset name and handles missing dates/assignee', () => {
     const t = toScheduleTask({
       ...base,
       shot: null,
@@ -110,25 +110,24 @@ describe('ScheduleService — toScheduleTask', () => {
   });
 });
 
-describe('ScheduleService — fenêtre de temps', () => {
+describe('ScheduleService: time window', () => {
   const from = new Date('2026-09-01T00:00:00Z');
   const to = new Date('2026-12-01T00:00:00Z');
 
-  it('sans borne, n’ajoute aucune clause — la lecture reste celle d’avant', () => {
+  it('without a bound, adds no clause: the read stays as before', () => {
     expect(scheduleWindowFilter({})).toEqual([]);
   });
 
-  it('retient une tâche qui déborde la fenêtre des deux côtés (chevauchement, pas échéance)', () => {
-    // Deux clauses : fin effective ≥ from, début effectif ≤ to. Une tâche commencée avant
-    // la fenêtre et due après satisfait les deux — c'est le cas qu'un filtre sur la seule
-    // échéance perdrait.
+  it('keeps a task that overflows the window on both sides (overlap, not due date)', () => {
+    // Two clauses: effective end >= from, effective start <= to. A task that started before
+    // the window and is due after it satisfies both: this is the case a filter on the due date alone would lose.
     expect(scheduleWindowFilter({ from, to })).toEqual([
       { OR: [{ dueDate: { gte: from } }, { dueDate: null, startDate: { gte: from } }] },
       { OR: [{ startDate: { lte: to } }, { startDate: null, dueDate: { lte: to } }] },
     ]);
   });
 
-  it('tient la borne manquante par l’autre date', () => {
+  it('takes the missing bound from the other date', () => {
     expect(scheduleWindowFilter({ from })).toEqual([
       { OR: [{ dueDate: { gte: from } }, { dueDate: null, startDate: { gte: from } }] },
     ]);
@@ -137,7 +136,7 @@ describe('ScheduleService — fenêtre de temps', () => {
     ]);
   });
 
-  it('passe la fenêtre au where, en plus des filtres de projet et de date', async () => {
+  it('passes the window to the where clause, in addition to the project and date filters', async () => {
     await getProjectSchedule(7, { from, to });
     const where = findMany.mock.calls[0]![0].where as { AND: unknown[] };
     expect(where.AND).toHaveLength(4);
@@ -145,15 +144,15 @@ describe('ScheduleService — fenêtre de temps', () => {
   });
 });
 
-describe('ScheduleService — plafond de sécurité', () => {
-  it('borne la lecture : jamais plus de SCHEDULE_MAX_TASKS + 1 lignes demandées', async () => {
-    // La mesure du correctif : le nombre de lignes rapatriées. Sans `take`, la requête
-    // ramenait tout le projet daté (huit mille lignes sur un long-métrage).
+describe('ScheduleService: safety cap', () => {
+  it('bounds the read: never more than SCHEDULE_MAX_TASKS + 1 rows requested', async () => {
+    // The measure of the fix: the number of rows fetched. Without `take`, the query returned the
+    // whole dated project (eight thousand rows on a feature film).
     await getProjectSchedule(7);
     expect(findMany.mock.calls[0]![0].take).toBe(SCHEDULE_MAX_TASKS + 1);
   });
 
-  it('ferme le tri par id pour que la troncature soit reproductible', async () => {
+  it('closes the sort with id so the truncation is reproducible', async () => {
     await getProjectSchedule(7);
     expect(findMany.mock.calls[0]![0].orderBy).toEqual([
       { dueDate: 'asc' },
@@ -162,7 +161,7 @@ describe('ScheduleService — plafond de sécurité', () => {
     ]);
   });
 
-  it('au plafond exactement, rend tout et ne crie pas', async () => {
+  it('at exactly the cap, returns everything and does not warn', async () => {
     findMany.mockResolvedValue(rows(SCHEDULE_MAX_TASKS));
     const out = await getProjectSchedule(7);
     expect(out.tasks).toHaveLength(SCHEDULE_MAX_TASKS);
@@ -170,16 +169,16 @@ describe('ScheduleService — plafond de sécurité', () => {
     expect(out.limit).toBe(SCHEDULE_MAX_TASKS);
   });
 
-  it('au-delà, coupe au plafond et le dit', async () => {
+  it('beyond it, cuts at the cap and says so', async () => {
     findMany.mockResolvedValue(rows(SCHEDULE_MAX_TASKS + 1));
     const out = await getProjectSchedule(7);
     expect(out.tasks).toHaveLength(SCHEDULE_MAX_TASKS);
     expect(out.truncated).toBe(true);
-    // La ligne-sonde ne sert qu'à détecter le débordement : elle n'est pas servie.
+    // The probe row only serves to detect overflow: it is not returned.
     expect(out.tasks.at(-1)!.id).toBe(SCHEDULE_MAX_TASKS);
   });
 
-  it('en deçà, rend exactement les lignes lues, dans l’ordre, telles que converties', async () => {
+  it('below it, returns exactly the rows read, in order, as converted', async () => {
     const read = rows(3);
     findMany.mockResolvedValue(read);
     const out = await getProjectSchedule(7);

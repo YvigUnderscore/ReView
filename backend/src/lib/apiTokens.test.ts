@@ -19,23 +19,23 @@ import {
 } from './apiTokens';
 
 describe('apiTokens', () => {
-  it('génère un token rvk_ de 40 hex avec son hash sha256', () => {
+  it('generates a 40-hex rvk_ token with its sha256 hash', () => {
     const { token, tokenHash } = generateApiToken();
     expect(token).toMatch(/^rvk_[0-9a-f]{40}$/);
     expect(tokenHash).toBe(hashApiToken(token));
     expect(tokenHash).toMatch(/^[0-9a-f]{64}$/);
   });
 
-  it('deux générations ne se ressemblent pas', () => {
+  it('two generations do not look alike', () => {
     expect(generateApiToken().token).not.toBe(generateApiToken().token);
   });
 
-  it('reconnaît le format token API vs JWT', () => {
+  it('recognises the API token format vs a JWT', () => {
     expect(isApiTokenFormat(API_TOKEN_PREFIX + 'abc')).toBe(true);
     expect(isApiTokenFormat('eyJhbGciOi...')).toBe(false);
   });
 
-  it('classe les méthodes lecture/écriture', () => {
+  it('classifies read and write methods', () => {
     expect(isWriteMethod('GET')).toBe(false);
     expect(isWriteMethod('head')).toBe(false);
     expect(isWriteMethod('OPTIONS')).toBe(false);
@@ -46,12 +46,11 @@ describe('apiTokens', () => {
 });
 
 /**
- * A1-01 — troisième porte : un token d'API authentifie aussi bien qu'un mot de passe, par
- * une table entièrement séparée. Son `select` ne lisait que `{ id, email, role }` : la
- * désactivation du compte porteur ne s'y voyait pas, et un token que la révocation n'aurait
- * pas emporté rendait la main à quelqu'un de parti.
+ * A1-01, third gate: an API token authenticates just like a password, through a fully separate
+ * table. Its `select` only read `{ id, email, role }`: disabling the owning account was invisible to
+ * it, and a token that revocation would not have taken away handed control back to someone who had left.
  */
-describe('authenticateApiToken — compte désactivé', () => {
+describe('authenticateApiToken — disabled account', () => {
   const run = async (disabledAt: Date | null) => {
     db.apiToken.findUnique.mockResolvedValue({
       id: 1,
@@ -82,26 +81,26 @@ describe('authenticateApiToken — compte désactivé', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    // `lastUsedAt` est rafraîchi en tâche de fond (throttlé) : le mock doit rendre une
-    // promesse, sinon c'est ce détour-là qui fait échouer le test et non la garde.
+    // `lastUsedAt` is refreshed in the background (throttled): the mock must return a promise,
+    // otherwise it is this detour that fails the test rather than the guard.
     db.apiToken.update.mockResolvedValue({});
   });
 
-  it('refuse un token dont le compte porteur est désactivé', async () => {
+  it('refuses a token whose owning account is disabled', async () => {
     const { res, next } = await run(new Date());
     expect(next).not.toHaveBeenCalled();
     expect(res.statusCode).toBe(401);
     expect(res.body).toMatchObject({ code: 'ACCOUNT_DISABLED' });
   });
 
-  it('laisse passer un compte actif, sans propager disabledAt', async () => {
+  it('lets an active account through, without propagating disabledAt', async () => {
     const { req, next } = await run(null);
     expect(next).toHaveBeenCalled();
     expect(req.user).toEqual({ id: 7, email: 'a@b.c', role: 'ARTIST' });
   });
 
-  // La colonne doit être demandée : sans elle, la garde ci-dessus ne verrait jamais rien.
-  it('charge la désactivation du porteur dans son select', async () => {
+  // The column must be requested: without it, the guard above would never see anything.
+  it("loads the owner's disabling in its select", async () => {
     await run(null);
     const call = db.apiToken.findUnique.mock.calls[0]![0] as {
       select: { user: { select: Record<string, boolean> } };

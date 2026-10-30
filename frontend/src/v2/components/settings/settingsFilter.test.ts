@@ -5,23 +5,22 @@ import { describe, expect, it } from 'vitest';
 import { fold, haystack, matchesQuery } from './settingsFilter';
 
 /**
- * Le moteur commun aux trois familles de réglages — studio, projet, profil. Il vivait dans
- * l'administration seule : un projet et un profil posent pourtant la même question, « où
- * règle-t-on ça ».
+ * The engine shared by the three families of settings: studio, project, profile. It used to live in administration alone,
+ * yet a project and a profile ask the same question: "where does one set this".
  */
 describe('fold', () => {
-  it('replie accents et casse', () => {
+  it('folds accents and case', () => {
     expect(fold('Éléments Masqués')).toBe('elements masques');
   });
 });
 
 describe('haystack', () => {
-  it('assemble titre, aide et mots-clés en un seul texte replié', () => {
+  it('assembles title, help and keywords into a single folded text', () => {
     const hay = haystack(['Burn-ins', 'Template studio', undefined, 'filigrane', 'watermark']);
     expect(hay).toBe('burn-ins template studio filigrane watermark');
   });
 
-  it('écarte les parties absentes plutôt que d’y laisser des trous', () => {
+  it('discards absent parts rather than leaving holes in it', () => {
     expect(haystack([undefined, 'Avatar', undefined])).toBe('avatar');
   });
 });
@@ -29,27 +28,27 @@ describe('haystack', () => {
 describe('matchesQuery', () => {
   const hay = haystack(['Burn-ins', 'filigrane', 'watermark', 'slate']);
 
-  it('trouve par un mot qu’on emploie vraiment, pas par le titre', () => {
+  it('finds by a word one actually uses, not by the title', () => {
     expect(matchesQuery(hay, 'filigrane')).toBe(true);
     expect(matchesQuery(hay, 'SLATE')).toBe(true);
   });
 
-  it('ignore accents et casse', () => {
+  it('ignores accents and case', () => {
     expect(matchesQuery(haystack(['Rétention']), 'retention')).toBe(true);
     expect(matchesQuery(haystack(['Retention']), 'RÉTENTION')).toBe(true);
   });
 
-  it('exige tous les mots : « quota slack » ne rend pas la moitié de l’écran', () => {
+  it('requires all the words: "quota slack" does not return half the screen', () => {
     expect(matchesQuery(hay, 'watermark slate')).toBe(true);
     expect(matchesQuery(hay, 'watermark quota')).toBe(false);
   });
 
-  it('laisse tout passer quand la recherche est vide', () => {
+  it('lets everything through when the search is empty', () => {
     expect(matchesQuery(hay, '')).toBe(true);
     expect(matchesQuery(hay, '   ')).toBe(true);
   });
 
-  it('ne trouve rien sur un mot absent — le message « aucun réglage » doit pouvoir sortir', () => {
+  it('finds nothing for an absent word: the "no settings" message must be able to appear', () => {
     expect(matchesQuery(hay, 'zzzz')).toBe(false);
   });
 });

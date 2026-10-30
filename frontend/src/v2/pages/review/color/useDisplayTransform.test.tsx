@@ -5,8 +5,8 @@ import { describe, it, expect } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
-import { createTestQueryClient } from '../../../../test/renderWithProviders';
-import { mockApi } from '../../../../test/apiMock';
+import { createTestQueryClient } from '@/test/renderWithProviders';
+import { mockApi } from '@/test/apiMock';
 import { useDisplayTransform } from './useDisplayTransform';
 
 const CONFIG = 'cfg-1';
@@ -20,13 +20,13 @@ const wrapper = () => {
 };
 
 /**
- * Le hook ne lit plus aucun réglage de review : le panneau Color est retiré (Phase 50) et la
- * transformée est celle du projet. Le test « la bascule coupée n'interroge pas la LUT » n'a donc
- * plus d'objet et disparaît avec la bascule ; ce qui compte reste vrai — sans config de projet
- * on ne demande rien, et sans LUT cuite on ne superpose rien.
+ * The hook no longer reads any review setting: the Color panel is removed (Phase 50) and
+ * the transform is the project's. The "toggle off does not query the LUT" test therefore
+ * has no purpose left and disappears with the toggle. What still holds: without a project
+ * config nothing is requested, and without a baked LUT nothing is overlaid.
  */
 describe('useDisplayTransform', () => {
-  it('sans configuration couleur de projet, rien n’est superposé et rien n’est demandé au serveur', () => {
+  it('without a project colour configuration, nothing is overlaid and nothing is requested from the server', () => {
     const api = mockApi({});
     const { result } = renderHook(() => useDisplayTransform(SRC, null), { wrapper: wrapper() });
     expect(result.current.url).toBeNull();
@@ -34,7 +34,7 @@ describe('useDisplayTransform', () => {
     api.restore();
   });
 
-  it('un couple display/view absent de la config chargée ne superpose rien', async () => {
+  it('a display/view pair absent from the loaded config overlays nothing', async () => {
     const api = mockApi({
       [`GET /api/studio/ocio/configs/${CONFIG}/displays`]: {
         displays: [{ name: 'sRGB - Display', views: ['ACES 1.0 - SDR Video'] }],
@@ -47,9 +47,9 @@ describe('useDisplayTransform', () => {
       () => useDisplayTransform(SRC, { configId: CONFIG, display: 'Gone - Display', view: 'Raw' }),
       { wrapper: wrapper() },
     );
-    // La config est demandée ; le couple du projet n'y est pas, donc plus rien à appliquer.
-    // (La LUT, elle, a pu être demandée au premier rendu : tant que la liste n'est pas
-    // arrivée, on fait confiance au projet — c'est le repli assumé de `resolveDisplayView`.)
+    // The config is requested; the project pair is not in it, so there is nothing to apply.
+    // (The LUT itself may have been requested at the first render: until the list arrives,
+    // we trust the project. This is the deliberate fallback of `resolveDisplayView`.)
     await waitFor(() =>
       expect(api.called(`GET /api/studio/ocio/configs/${CONFIG}/displays`)).toHaveLength(1),
     );
@@ -57,7 +57,7 @@ describe('useDisplayTransform', () => {
     api.restore();
   });
 
-  it('sans LUT cuite, rien n’est superposé à l’image', async () => {
+  it('without a baked LUT, nothing is overlaid on the image', async () => {
     const api = mockApi({
       [`GET /api/studio/ocio/configs/${CONFIG}/displays`]: {
         displays: [{ name: 'sRGB - Display', views: ['ACES 1.0 - SDR Video'] }],

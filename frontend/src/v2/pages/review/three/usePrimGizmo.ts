@@ -9,7 +9,7 @@ import type { GizmoMode } from '../viewer/gizmos/useTransformGizmo';
 import { objectsBoundingSphere } from '../viewer/frameCamera';
 import { pivotedPose, type Pose, type Vec3 } from './primPivot';
 
-/** Instantané d'un représentant au début du drag — les deltas s'y rapportent, jamais cumulés. */
+/** Snapshot of a representative at the start of the drag — the deltas are relative to it, never accumulated. */
 interface RepSnap {
   object: THREE.Object3D;
   base: Pose;
@@ -19,32 +19,32 @@ interface RepSnap {
 }
 
 /**
- * Gizmo TRS d'une sélection de prims USD (46.N, centré 46.Q, groupe B1) : le `TransformControls`
- * est attaché à un **proxy** posé au centre englobant commun des objets affichés — pas aux
- * objets eux-mêmes, dont l'origine locale est souvent au centre du monde (transformations
- * cuites dans les sommets par l'export Blender).
+ * TRS gizmo of a USD prim selection (46.N, centered 46.Q, group B1): the `TransformControls` is
+ * attached to a **proxy** placed at the common bounding center of the displayed objects — not to the
+ * objects themselves, whose local origin is often at the world center (transforms baked into the
+ * vertices by the Blender export).
  *
- * Chaque delta du proxy (depuis le début du drag) est converti dans l'espace parent de **chaque
- * représentant** puis appliqué autour du pivot commun (`pivotedPose`) — les prims tournent et
- * s'échelonnent autour du centre du groupe, comme dans un DCC. Au lâcher, `onCommit` relève la
- * pose de chacun — les deltas d'override en découlent exactement (inverse de `planOverride`).
+ * Each delta of the proxy (since the start of the drag) is converted into the parent space of **each
+ * representative**, then applied around the common pivot (`pivotedPose`) — the prims rotate and scale
+ * around the group's center, as in a DCC. On release, `onCommit` reads each one's pose — the override
+ * deltas follow exactly (inverse of `planOverride`).
  */
 export function usePrimGizmo(
   viewer: SceneViewer,
   opts: {
     enabled: boolean;
     mode: GizmoMode;
-    /** Un objet représentatif par prim sélectionné — chacun reçoit la pose du gizmo. */
+    /** One representative object per selected prim — each receives the gizmo's pose. */
     representatives: () => THREE.Object3D[];
-    /** Tous les objets affichés de la sélection : leur centre englobant est le pivot. */
+    /** All displayed objects of the selection: their bounding center is the pivot. */
     targets: () => THREE.Object3D[];
-    /** Change quand la sélection change — le gizmo est réinstallé sur le nouveau groupe. */
+    /** Changes when the selection changes — the gizmo is reinstalled on the new group. */
     selectionKey: string;
     onCommit: (objects: THREE.Object3D[]) => void;
     /**
-     * Change quand l'override appliqué change (commit, annulation, revert, proposition) : le
-     * proxy est alors reposé au centre de la géométrie. Sans cela, le gizmo restait là où le
-     * dernier drag l'avait laissé — centre désaligné, axes inclinés par les rotations.
+     * Changes when the applied override changes (commit, cancel, revert, proposal): the proxy is then
+     * re-placed at the center of the geometry. Without this, the gizmo stayed where the last drag had
+     * left it — off-center, axes tilted by the rotations.
      */
     syncKey?: unknown;
   },
@@ -89,8 +89,8 @@ export function usePrimGizmo(
       const helper = control.getHelper();
       scene.add(helper);
 
-      // Repose le proxy sur la géométrie après chaque application d'override (l'objet vient
-      // de bouger sans drag) — jamais pendant un drag, où le proxy est la main de l'utilisateur.
+      // Re-places the proxy on the geometry after each override application (the object has just
+      // moved without a drag) — never during a drag, when the proxy is the user's hand.
       syncRef.current = () => {
         if (control.dragging) return;
         const next = objectsBoundingSphere(T, targetsRef.current());
@@ -99,8 +99,8 @@ export function usePrimGizmo(
         proxy.scale.set(1, 1, 1);
       };
 
-      // Instantané au début du drag : pose de chaque représentant, pivot commun exprimé dans
-      // son repère parent — les deltas du proxy sont mesurés par rapport à cet état.
+      // Snapshot at the start of the drag: pose of each representative, common pivot expressed in
+      // its parent frame — the proxy's deltas are measured against this state.
       let snap: {
         reps: RepSnap[];
         proxyStart: { position: THREE.Vector3; quaternion: THREE.Quaternion; scale: THREE.Vector3 };
@@ -150,7 +150,7 @@ export function usePrimGizmo(
       const onObjectChange = () => {
         if (!snap) return;
         for (const rep of snap.reps) {
-          // Delta du proxy en espace monde, puis conversion dans l'espace parent du représentant.
+          // Proxy delta in world space, then conversion into the representative's parent space.
           const invParent = rep.parentQuat.clone().invert();
           const tParent = proxy.position
             .clone()
@@ -197,13 +197,13 @@ export function usePrimGizmo(
     };
   }, [enabled, ready, getSceneHandle, selectionKey]);
 
-  // Changement de mode sans réinstaller le gizmo.
+  // Mode change without reinstalling the gizmo.
   useEffect(() => {
     controlRef.current?.setMode(mode);
   }, [mode]);
 
-  // L'override vient d'être réappliqué (les effets de `useUsdScene` passent avant ceux-ci) :
-  // le centre englobant a pu bouger, le proxy suit.
+  // The override has just been reapplied (the `useUsdScene` effects run before these): the bounding
+  // center may have moved, so the proxy follows.
   useEffect(() => {
     syncRef.current?.();
   }, [syncKey]);

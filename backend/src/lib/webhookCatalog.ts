@@ -4,21 +4,20 @@
 import { WEBHOOK_EVENTS, type WebhookEvent } from './webhooks';
 
 /**
- * Ce qu'un webhook peut réellement recevoir.
+ * What a webhook can actually receive.
  *
- * Le catalogue `WEBHOOK_EVENTS` sert de vocabulaire (types, `/api/v1/schema`), mais huit
- * de ses dix-huit noms n'ont jamais eu de point d'émission : un administrateur pouvait
- * s'abonner à `shot.created` ou à `media.failed` et attendre indéfiniment un appel qui ne
- * viendrait pas. Un abonnement qu'on ne peut pas honorer est pire qu'un événement absent —
- * il fait croire à une alerte branchée.
+ * The `WEBHOOK_EVENTS` catalog serves as vocabulary (types, `/api/v1/schema`), but eight of its
+ * eighteen names never had an emission point: an administrator could subscribe to `shot.created`
+ * or `media.failed` and wait indefinitely for a call that would never come. A subscription that
+ * cannot be honored is worse than a missing event: it makes them believe an alert is wired up.
  *
- * `EMITTED_WEBHOOK_EVENTS` est donc la liste que l'administration propose et que la
- * validation accepte à la création d'un webhook ; `PHANTOM_WEBHOOK_EVENTS` recense ce qui
- * reste à câbler. Le test voisin relit les sources : si l'un des fantômes se met à être
- * publié, ou si un événement émis manque à la liste, la suite le dit.
+ * `EMITTED_WEBHOOK_EVENTS` is therefore the list that administration offers and that validation
+ * accepts when a webhook is created; `PHANTOM_WEBHOOK_EVENTS` lists what remains to be wired up.
+ * The neighboring test re-reads the sources: if one of the phantoms starts being published, or if
+ * an emitted event is missing from the list, the suite reports it.
  */
 
-/** Événements réellement publiés par au moins un point du code (auditable, testé). */
+/** Events actually published by at least one point in the code (auditable, tested). */
 export const EMITTED_WEBHOOK_EVENTS = [
   'media.published',
   'review.decision',
@@ -36,13 +35,12 @@ export const EMITTED_WEBHOOK_EVENTS = [
 export type EmittedWebhookEvent = (typeof EMITTED_WEBHOOK_EVENTS)[number];
 
 /**
- * Noms du catalogue sans point d'émission. Ils restent typés (un consommateur historique
- * peut les avoir en base) mais ne sont plus proposés ni acceptés à l'abonnement.
+ * Names of the catalog with no emission point. They remain typed (a legacy consumer may have them
+ * in the database) but are no longer offered or accepted for subscription.
  *
- * Les câbler demande de toucher les services d'écriture correspondants
- * (`ProjectService`, `SequenceService`, `ShotService`, `AssetService`,
- * `MediaUploadService`, `workers/ffmpeg.worker`) : le jour où c'est fait, l'entrée passe
- * simplement dans `EMITTED_WEBHOOK_EVENTS`.
+ * Wiring them requires touching the corresponding write services (`ProjectService`,
+ * `SequenceService`, `ShotService`, `AssetService`, `MediaUploadService`, `workers/ffmpeg.worker`):
+ * the day it is done, the entry simply moves into `EMITTED_WEBHOOK_EVENTS`.
  */
 export const PHANTOM_WEBHOOK_EVENTS = WEBHOOK_EVENTS.filter(
   (e): e is Exclude<WebhookEvent, EmittedWebhookEvent> =>

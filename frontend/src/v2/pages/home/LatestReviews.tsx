@@ -11,7 +11,7 @@ import { contentCapacity, type WidgetRows } from '../../components/widgets/widge
 import type { DashboardReview } from './homeTypes';
 import { useT } from '../../i18n';
 
-/** Timecode mm:ss du commentaire (temps vidéo en secondes). */
+/** Timecode mm:ss of the comment (video time in seconds). */
 function tc(s: number): string {
   const m = Math.floor(s / 60);
   return `${String(m).padStart(2, '0')}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
@@ -48,10 +48,9 @@ function CommentLine({ review }: { review: DashboardReview }) {
       <span className="truncate">
         <span className="font-medium text-foreground">{c.author ?? t('common.guest')}</span>
         {c.timestamp != null && <span className="ml-1 text-primary">@ {tc(c.timestamp)}</span>}
-        {/* Le corps d'un commentaire est du HTML : le rendre tel quel dans un aperçu d'une
-            ligne montrerait le balisage au lecteur, ce que l'accueil faisait pour toute note
-            venue de ShotGrid. Ici on n'en veut que le texte — les balises de bloc n'ont rien
-            à faire au milieu d'une phrase. */}
+        {/* The body of a comment is HTML. Rendering it as-is in a one-line preview would show
+            the markup to the reader, as the home page did for any note coming from ShotGrid.
+            Here only the text is wanted: block tags have no business in the middle of a sentence. */}
         <span className="ml-1">« {stripHtml(c.content)} »</span>
       </span>
       <span className="ml-auto shrink-0">{timeAgo(c.createdAt)}</span>
@@ -60,17 +59,17 @@ function CommentLine({ review }: { review: DashboardReview }) {
 }
 
 /**
- * Hauteur d'une carte de la colonne de droite : sa vignette (`h-14`, 56 px), ses marges
- * (`p-2`) et l'interligne (`space-y-2`) — environ 80 px.
+ * Height of a card in the right-hand column: its thumbnail (`h-14`, 56 px), its margins (`p-2`)
+ * and its line spacing (`space-y-2`), about 80 px in total.
  */
 const REVIEW_CARD = 80;
 
 /**
- * Hero « Dernières reviews » : dernier média commenté en grand + reviews récentes.
+ * "Latest reviews" hero: the most recently commented media in large format, plus recent reviews.
  *
- * Le héros occupe sa propre colonne ; c'est donc la hauteur du bloc qui décide de ce que la
- * colonne de droite montre à côté de lui (lot 13). Une carte plus haute montre réellement
- * plus de reviews, au lieu d'en aligner deux et de laisser du vide sous elles.
+ * The hero occupies its own column, so the height of the block decides how many reviews the
+ * right-hand column shows beside it (batch 13). A taller card really shows more reviews, instead
+ * of stacking two and leaving empty space beneath them.
  */
 export default function LatestReviews({ reviews, rows }: { reviews: DashboardReview[]; rows: WidgetRows }) {
   const t = useT();

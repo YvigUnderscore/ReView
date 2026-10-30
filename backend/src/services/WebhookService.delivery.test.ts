@@ -4,12 +4,11 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 
 /**
- * Portée et trace des webhooks.
+ * Scope and trace of webhooks.
  *
- * Deux promesses qu'on ne pouvait pas tenir jusqu'ici : « ce webhook ne voit que ce
- * projet » et « on sait ce qui a été livré ». La première est une question de
- * confidentialité (le Slack d'un client recevait les publications de tous les films du
- * studio) ; la seconde décide de ce qu'on peut rattraper après cinq échecs.
+ * Two promises that could not be kept until now: "this webhook only sees this project" and "we know what was delivered".
+ * The first is a confidentiality question (a client's Slack received the publications of every film in the studio); the
+ * second decides what can be recovered after five failures.
  */
 vi.mock('node:dns/promises', () => ({ lookup: vi.fn() }));
 vi.mock('../lib/prisma', () => ({
@@ -20,12 +19,12 @@ vi.mock('../lib/prisma', () => ({
 }));
 vi.mock('../lib/logger', () => ({ logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() } }));
 vi.mock('../lib/crypto', () => ({ decryptSecret: vi.fn(() => 'shh') }));
-vi.mock('./JobService', () => ({ enqueueWebhookDelivery: vi.fn() }));
+vi.mock('../lib/queues', () => ({ enqueueWebhookDelivery: vi.fn() }));
 
 import { lookup } from 'node:dns/promises';
 import { prisma } from '../lib/prisma';
 import { decryptSecret } from '../lib/crypto';
-import { enqueueWebhookDelivery } from './JobService';
+import { enqueueWebhookDelivery } from '../lib/queues';
 import {
   deliver,
   emitWebhookEvent,
@@ -49,7 +48,7 @@ const activeHook = () =>
     secret: 'enc',
   } as never);
 
-/** Laisse se dérouler la promesse non attendue de `emitWebhookEvent`. */
+/** Lets the unawaited promise of `emitWebhookEvent` run to completion. */
 const settle = async () => {
   for (let i = 0; i < 5; i++) await Promise.resolve();
 };
@@ -65,8 +64,8 @@ beforeEach(() => {
   vi.stubGlobal('fetch', fetchMock);
 });
 
-describe('portée projet', () => {
-  it('un événement de projet va aux webhooks du studio ET à ceux de ce projet', () => {
+describe('project scope', () => {
+  it('a project event goes to the studio webhooks AND to those of that project', () => {
     expect(subscriberFilter('version.published', 12)).toEqual({
       active: true,
       events: { has: 'version.published' },
@@ -74,7 +73,7 @@ describe('portée projet', () => {
     });
   });
 
-  it('un événement sans projet ne va qu’aux webhooks du studio', () => {
+  it('an event without a project goes only to the studio webhooks', () => {
     expect(subscriberFilter('version.published', null)).toEqual({
       active: true,
       events: { has: 'version.published' },
@@ -82,7 +81,7 @@ describe('portée projet', () => {
     });
   });
 
-  it('émettre n’interroge que les abonnés de la portée', async () => {
+  it('emitting only queries the subscribers in scope', async () => {
     emitWebhookEvent('version.published', { versionId: 3 }, { projectId: 12, apiEventId: 5 });
     await settle();
     expect(prisma.webhook.findMany).toHaveBeenCalledWith(
@@ -90,7 +89,7 @@ describe('portée projet', () => {
     );
   });
 
-  it('ouvre une ligne de journal par abonné avant d’enfiler', async () => {
+  it('opens one journal line per subscriber before enqueuing', async () => {
     vi.mocked(prisma.webhook.findMany).mockResolvedValue([{ id: 1 }, { id: 2 }] as never);
     emitWebhookEvent('version.published', { versionId: 3 }, { projectId: 12, apiEventId: 5 });
     await settle();
@@ -99,8 +98,8 @@ describe('portée projet', () => {
   });
 });
 
-describe('journal des livraisons', () => {
-  it('enfile la charge accompagnée de l’identifiant de livraison', async () => {
+describe('delivery log', () => {
+  it('enqueues the payload together with the delivery identifier', async () => {
     const id = await queueDelivery(1, 'version.published', { versionId: 3 }, { apiEventId: 5 });
     expect(id).toBe(77);
     expect(prisma.webhookDelivery.create).toHaveBeenCalledWith(
@@ -115,12 +114,12 @@ describe('journal des livraisons', () => {
     });
   });
 
-  it('retire l’enveloppe de la charge envoyée au destinataire', () => {
+  it('strips the envelope from the payload sent to the recipient', () => {
     expect(unpackDelivery({ a: 1, _reviewDeliveryId: 9 })).toEqual({ deliveryId: 9, data: { a: 1 } });
     expect(unpackDelivery({ a: 1 })).toEqual({ deliveryId: null, data: { a: 1 } });
   });
 
-  it('signe un corps qui porte l’identifiant, et l’annonce en en-tête', async () => {
+  it('signs a body carrying the identifier, and announces it in a header', async () => {
     activeHook();
     await deliver(1, 'version.published', { versionId: 3, _reviewDeliveryId: 77 });
     const init = fetchMock.mock.calls[0]![1] as RequestInit;
@@ -134,7 +133,7 @@ describe('journal des livraisons', () => {
     });
   });
 
-  it('marque la livraison remise et efface la série d’échecs', async () => {
+  it('marks the delivery as delivered and clears the failure streak', async () => {
     activeHook();
     await deliver(1, 'version.published', { versionId: 3, _reviewDeliveryId: 77 });
     expect(prisma.webhookDelivery.update).toHaveBeenCalledWith(
@@ -148,7 +147,7 @@ describe('journal des livraisons', () => {
     );
   });
 
-  it('tronque le corps de réponse conservé', async () => {
+  it('truncates the stored response body', async () => {
     fetchMock.mockResolvedValueOnce(new Response('x'.repeat(5000), { status: 500 }));
     activeHook();
     await expect(deliver(1, 'x', { _reviewDeliveryId: 77 })).rejects.toThrow(/HTTP 500/);
@@ -161,7 +160,7 @@ describe('journal des livraisons', () => {
 });
 
 describe('webhook mort', () => {
-  it('ne compte une perte qu’une fois les reprises épuisées', async () => {
+  it('counts a loss only once the retries are exhausted', async () => {
     vi.mocked(prisma.webhookDelivery.update).mockResolvedValue({ attempts: 2 } as never);
     fetchMock.mockResolvedValue(new Response('', { status: 502 }));
     activeHook();
@@ -171,7 +170,7 @@ describe('webhook mort', () => {
     expect(data.failureStreak).toBeUndefined();
   });
 
-  it('désactive le webhook après assez de livraisons définitivement perdues', async () => {
+  it('deactivates the webhook after enough permanently lost deliveries', async () => {
     vi.mocked(prisma.webhookDelivery.update).mockResolvedValue({ attempts: 5 } as never);
     vi.mocked(prisma.webhook.update).mockResolvedValue({ failureStreak: FAILURE_STREAK_LIMIT } as never);
     fetchMock.mockResolvedValue(new Response('', { status: 502 }));
@@ -182,18 +181,17 @@ describe('webhook mort', () => {
 });
 
 describe('secret illisible', () => {
-  it('n’émet rien plutôt que de signer avec une clé vide', async () => {
-    // decryptSecret rend null dès que la clé de chiffrement a changé. Le repli en chaîne
-    // vide signait alors avec une clé HMAC VIDE : la livraison partait avec un en-tête
-    // X-ReView-Signature bien formé, mais recalculable par quiconque connaît l'URL — de
-    // quoi forger un événement ReView et déclencher le pipeline aval du studio.
+  it('emits nothing rather than sign with an empty key', async () => {
+    // decryptSecret returns null as soon as the encryption key has changed. The empty-string fallback then
+    // signed with an EMPTY HMAC key: the delivery left with a well-formed X-ReView-Signature header, yet one that anyone
+    // knowing the URL could recompute, enough to forge a ReView event and trigger the studio's downstream pipeline.
     vi.mocked(decryptSecret).mockReturnValueOnce(null);
     activeHook();
     await deliver(1, 'version.published', { versionId: 3, _reviewDeliveryId: 77 });
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  it('laisse le motif lisible dans le journal du webhook', async () => {
+  it('leaves the reason readable in the webhook journal', async () => {
     vi.mocked(decryptSecret).mockReturnValueOnce(null);
     activeHook();
     await deliver(1, 'version.published', { versionId: 3, _reviewDeliveryId: 77 });
@@ -213,7 +211,7 @@ describe('secret illisible', () => {
     );
   });
 
-  it('ne relance pas : une reprise ne réparerait pas une clé changée', async () => {
+  it('does not retry: a retry would not repair a changed key', async () => {
     vi.mocked(decryptSecret).mockReturnValueOnce(null);
     activeHook();
     await expect(deliver(1, 'version.published', { _reviewDeliveryId: 77 })).resolves.toBeUndefined();
@@ -221,7 +219,7 @@ describe('secret illisible', () => {
 });
 
 describe('rejeu', () => {
-  it('crée une nouvelle ligne qui référence la perdue', async () => {
+  it('creates a new line that references the lost one', async () => {
     vi.mocked(prisma.webhookDelivery.findFirst).mockResolvedValue({
       id: 40,
       event: 'version.published',
@@ -241,7 +239,7 @@ describe('rejeu', () => {
     );
   });
 
-  it('rend null pour une livraison qui n’appartient pas à ce webhook', async () => {
+  it('returns null for a delivery that does not belong to this webhook', async () => {
     vi.mocked(prisma.webhookDelivery.findFirst).mockResolvedValue(null);
     expect(await replayDelivery(1, 40)).toBeNull();
     expect(prisma.webhookDelivery.create).not.toHaveBeenCalled();

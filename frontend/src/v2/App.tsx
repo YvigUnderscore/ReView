@@ -22,15 +22,15 @@ import AssetLatestRedirect from './pages/asset/AssetLatestRedirect';
 import { useT } from './i18n';
 
 /**
- * Chargement différé par route (D3).
+ * Lazy loading per route (D3).
  *
- * L'espace de review et les vingt-sept onglets d'administration partaient dans le fichier
- * d'entrée : ils étaient téléchargés avant la page de connexion, par quelqu'un qui n'avait
- * encore rien demandé. Chacun s'ouvre maintenant à l'usage.
+ * The review space and the twenty-seven administration tabs went into the entry file:
+ * they were downloaded before the sign-in page, by someone who had not
+ * yet asked for anything. Each one now opens on use.
  *
- * La page projet et ses douze onglets (dont les six panneaux ShotGrid) y partaient eux
- * aussi — 28,8 ko gzip d'écrans qu'on n'ouvre qu'après avoir choisi un projet, téléchargés
- * avant même la saisie du mot de passe (F4).
+ * The project page and its twelve tabs (including the six ShotGrid panels) went there too,
+ * as well: 28.8 kB gzipped of screens that are only opened after choosing a project, downloaded
+ * even before the password is typed (F4).
  */
 const ProjectPage = lazy(() => import('./pages/ProjectPage'));
 const ReviewPage = lazy(() => import('./pages/ReviewPage'));
@@ -40,8 +40,8 @@ const ShotPage = lazy(() => import('./pages/ShotPage'));
 const SequencePage = lazy(() => import('./pages/SequencePage'));
 const EpisodePage = lazy(() => import('./pages/EpisodePage'));
 const UserProfilePage = lazy(() => import('./pages/UserProfilePage'));
-// Les deux vues transverses qui déplient les compteurs de l'Accueil (« mes tâches » et le
-// fil des commentaires) : on n'y passe qu'en cliquant un chiffre, elles se chargent alors.
+// The two cross-cutting views that expand the Home page counters ("my tasks" and the
+// comment thread): they are only reached by clicking a number, and then they load.
 const MyTasksPage = lazy(() => import('./pages/MyTasksPage'));
 const CommentsPage = lazy(() => import('./pages/CommentsPage'));
 const ProfilePage = lazy(() => import('./pages/ProfilePage'));
@@ -50,22 +50,22 @@ const TimelinePlayerPage = lazy(() => import('./pages/TimelinePlayerPage'));
 const DocsPage = lazy(() => import('./pages/DocsPage'));
 const KanbanPage = lazy(() => import('./pages/KanbanPage'));
 const PlaylistPage = lazy(() => import('./pages/PlaylistPage'));
-// Board (Excalidraw) chargé en lazy pour code-splitter sa lourde dépendance
+// Board (Excalidraw) loaded lazily to code-split its heavy dependency
 const BoardPage = lazy(() => import('./pages/BoardPage'));
-// Page client publique (35.D) : lazy — les visiteurs anonymes ne chargent pas l'app interne.
+// Public client page (35.D): lazy, so anonymous visitors do not load the internal app.
 const ClientSharePage = lazy(() => import('./pages/ClientSharePage'));
 
 /**
- * Route layout des pages authentifiées (A1) : garde d'accès + coquille montée une seule
- * fois. Les pages vivent dans le `<Outlet/>` de `Shell` et n'ont plus à le rendre elles-mêmes.
+ * Layout route for authenticated pages (A1): access guard + shell, mounted only
+ * once. The pages live in the `<Outlet/>` of `Shell` and no longer need to render it themselves.
  */
 function ProtectedShell() {
   const user = useAuth((s) => s.user);
   const location = useLocation();
   if (!user) return <Navigate to="/login" state={{ from: location }} replace />;
-  // Une seule frontière pour toutes les pages différées (D3) : la coquille reste montée
-  // pendant le chargement, seule la zone de contenu attend. Sans elle, ouvrir une review
-  // ferait disparaître la barre latérale le temps du téléchargement.
+  // A single boundary for all the deferred pages (D3): the shell stays mounted
+  // during loading, only the content area waits. Without it, opening a review
+  // would make the sidebar disappear for the duration of the download.
   return <Shell />;
 }
 
@@ -93,7 +93,7 @@ function AppRoutes() {
   const init = useAuth((s) => s.init);
   const ready = useAuth((s) => s.ready);
   const theme = useTheme((s) => s.theme);
-  // Thème studio (42.B — №101) : applique l'accent défini par l'admin, globalement.
+  // Studio theme (42.B, №101): applies the accent color set by the admin, globally.
   useBranding();
   const { data: setup } = useQuery({
     queryKey: qk.setupStatus,

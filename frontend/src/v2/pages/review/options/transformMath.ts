@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Conversions euler degrés ↔ quaternion (ordre XYZ intrinsèque, conventions three.js) pour les
- * champs numériques TRS (10.G-V4). Pur et sans dépendance Three — testable, et utilisable des
- * deux côtés (affichage du quaternion du gizmo en degrés, saisie en degrés → quaternion).
+ * Euler degrees ↔ quaternion conversions (intrinsic XYZ order, three.js conventions) for the numeric
+ * TRS fields (10.G-V4). Pure and without a Three dependency: testable, and usable on both sides
+ * (display of the gizmo's quaternion in degrees, input in degrees → quaternion).
  */
 export type Quat = [number, number, number, number];
 export type EulerDeg = [number, number, number];
@@ -12,9 +12,9 @@ export type EulerDeg = [number, number, number];
 const RAD = Math.PI / 180;
 const clamp = (v: number, min: number, max: number) => Math.min(Math.max(v, min), max);
 
-/** Quaternion [x,y,z,w] → angles euler XYZ en degrés (mêmes formules que THREE.Euler). */
+/** Quaternion [x,y,z,w] → XYZ Euler angles in degrees (same formulas as THREE.Euler). */
 export function quatToEulerDeg([x, y, z, w]: Quat): EulerDeg {
-  // Termes de la matrice de rotation nécessaires à l'ordre XYZ.
+  // Terms of the rotation matrix needed for the XYZ order.
   const m11 = 1 - 2 * (y * y + z * z);
   const m12 = 2 * (x * y - w * z);
   const m13 = 2 * (x * z + w * y);
@@ -29,14 +29,14 @@ export function quatToEulerDeg([x, y, z, w]: Quat): EulerDeg {
     ex = Math.atan2(-m23, m33);
     ez = Math.atan2(-m12, m11);
   } else {
-    // Gimbal lock : Z arbitrairement à 0 (convention three.js).
+    // Gimbal lock: Z arbitrarily set to 0 (three.js convention).
     ex = Math.atan2(m32, m22);
     ez = 0;
   }
   return [ex / RAD, ey / RAD, ez / RAD];
 }
 
-/** Angles euler XYZ en degrés → quaternion [x,y,z,w] (mêmes formules que THREE.Quaternion). */
+/** XYZ Euler angles in degrees → quaternion [x,y,z,w] (same formulas as THREE.Quaternion). */
 export function eulerDegToQuat([exDeg, eyDeg, ezDeg]: EulerDeg): Quat {
   const c1 = Math.cos((exDeg * RAD) / 2);
   const s1 = Math.sin((exDeg * RAD) / 2);

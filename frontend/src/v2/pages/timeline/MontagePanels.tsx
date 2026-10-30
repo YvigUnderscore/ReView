@@ -14,13 +14,13 @@ import type { DepartmentSummary, TimelineView } from '../../types/api';
 import { useT } from '../../i18n';
 
 /**
- * Dock inspecteur du montage (Phase 46) — mêmes onglets, mêmes primitives que la review, donc
- * **Infos et Export** depuis que le dock des médias plats s'y réduit (Phase 50).
+ * Inspector dock of the montage (Phase 46) — same tabs, same primitives as the review, hence
+ * **Info and Export** since the flat-media dock was reduced to them (Phase 50).
  *
- * L'onglet « Lecture » a suivi le reste : il disait la cadence, la durée, le nombre de plans et
- * les trous, tous déjà dans la fiche technique. Ce qu'il portait de vraiment réglable —
- * l'étape du pipe que le montage montre — est passé dans l'onglet Infos, sous la fiche : c'est
- * le seul choix de ce dock, il n'avait pas besoin d'un onglet à lui.
+ * The "Playback" tab was folded into the rest: it showed the frame rate, duration, number of shots
+ * and gaps, all already in the technical sheet. What it really had to offer — the pipeline step the
+ * montage shows — moved to the Info tab, under the sheet: it is the only choice in this dock and
+ * did not need a tab of its own.
  */
 export default function MontagePanels({
   panel,
@@ -48,8 +48,8 @@ export default function MontagePanels({
           { label: t('timeline.shots'), value: String(timeline.items.length) },
           {
             label: t('timeline.gaps'),
-            // Un trou dans le montage change ce qu'on regarde : la fiche le dit en badge, pas
-            // en chiffre nu — c'était le seul apport de l'ancien onglet « Lecture ».
+            // A gap in the montage changes what is being watched: the sheet says so with a badge,
+            // not a bare figure — it was the only contribution of the former "Playback" tab.
             value:
               gaps > 0 ? (
                 <Badge variant="warning">{t('timeline.gapCount', { count: gaps })}</Badge>
@@ -103,9 +103,9 @@ export default function MontagePanels({
             icon={<Download size={13} />}
           />
         </Group>
-        {/* Le montage est la seule portée qui porte un timecode continu : c'est ici que
-            l'EDL et l'OTIO ont un sens, et c'est par eux que les retours repassent en
-            salle de montage. */}
+        {/* The montage is the only scope that carries a continuous timecode: this is where the
+            EDL and OTIO make sense, and it is through them that notes flow back to the editing
+            suite. */}
         <Group title={t('notesExport.title')}>
           <NotesExportButtons scope="timeline" id={timeline.id} />
           <span className="rv-optbar__hint whitespace-normal">{t('notesExport.editorialHint')}</span>
@@ -113,7 +113,7 @@ export default function MontagePanels({
       </>
     );
 
-  // Le dock plat n'a plus que ces deux onglets : il n'y a plus de cas « sans objet » à
-  // expliquer au lecteur.
+  // The flat dock now has only these two tabs: there is no "not applicable" case left to
+  // explain to the reader.
   return null;
 }

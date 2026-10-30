@@ -12,30 +12,29 @@ import {
 import { shouldRenderTooltip } from './tooltip.variants';
 
 /**
- * Façade de l'infobulle — la seule chose que les composants importent.
+ * Tooltip facade — the only thing components import.
  *
- * ## Pourquoi une façade
+ * ## Why a facade
  *
- * Radix Tooltip pèse ~10 ko gzip. Importé par `IconButton`, qui est sur le chemin d'entrée,
- * il entrait dans le **premier chargement** : 429,8 ko pour un budget de 430,0, soit 0,2 ko
- * de marge — le changement suivant, quel qu'il soit, aurait fait échouer la suite. Or une
- * infobulle est par définition inutile au premier rendu : personne ne survole un bouton
- * qui n'est pas encore peint.
+ * Radix Tooltip weighs ~10 kB gzip. Imported by `IconButton`, which sits on the entry path,
+ * it entered the **first load**: 429.8 kB for a budget of 430.0, i.e. 0.2 kB of margin — the
+ * next change, whatever it was, would have failed the suite. Yet a tooltip is by definition
+ * useless on the first render: nobody hovers a button that has not been painted yet.
  *
- * Ce module ne contient donc aucun code Radix. Il rend l'enfant tel quel, demande le vrai
- * module dès que le navigateur est inoccupé, et bascule dessus quand il arrive. Entre les
- * deux, l'attribut `title` natif tient le rôle : c'est ce qu'il y avait avant, ce n'est pas
- * une régression, et cela ne dure que le temps d'un chargement de chunk.
+ * This module therefore contains no Radix code. It renders the child as is, requests the real
+ * module as soon as the browser is idle, and switches over when it arrives. In between, the
+ * native `title` attribute fills the role: that is what was there before, it is not a
+ * regression, and it lasts only for the duration of a chunk load.
  *
- * ## Ce qui se perd, et pourquoi c'est le bon compromis
+ * ## What is lost, and why it is the right trade-off
  *
- * Le provider de Radix mémorise la **fenêtre de grâce** — balayer une barre dense sans
- * repayer le délai à chaque icône. Le monter à la racine imposerait de l'avoir dès le
- * premier rendu (donc dans le chunk d'entrée : on tourne en rond) ou de l'insérer plus tard
- * au-dessus de l'application, ce qui la **remonterait entièrement**. Chaque infobulle se
- * fournit donc son provider, avec les mêmes délais. On perd la grâce partagée : survoler la
- * deuxième icône d'une barre repaie 250 ms. On reste six fois plus rapide que le `title`
- * natif qu'on remplace, et sans peser sur le premier écran de tous les visiteurs.
+ * Radix's provider remembers the **grace window** — sweeping a dense bar without paying the
+ * delay on every icon. Mounting it at the root would require having it from the first render
+ * (hence in the entry chunk: going round in circles), or inserting it later above the
+ * application, which would **remount it entirely**. Each tooltip therefore supplies its own
+ * provider, with the same delays. The shared grace is lost: hovering the second icon of a bar
+ * costs 250 ms. We remain six times faster than the native `title` we replace, without weighing
+ * on the first screen of every visitor.
  */
 
 type Module = typeof import('./tooltip.radix');
@@ -44,18 +43,18 @@ let chargee: Module | null = null;
 let enCours: Promise<Module> | null = null;
 const abonnes = new Set<() => void>();
 
-/** Une seule demande pour toute l'application, quel que soit le nombre d'infobulles. */
+/** A single request for the whole application, however many tooltips there are. */
 function demander(): Promise<Module> {
   enCours ??= import('./tooltip.radix').then((m) => {
     chargee = m;
-    // Copie : un abonné qui se retire pendant la diffusion ne doit pas décaler l'itération.
+    // Copy: a subscriber unsubscribing during the broadcast must not shift the iteration.
     for (const prevenir of [...abonnes]) prevenir();
     return m;
   });
   return enCours;
 }
 
-/** `requestIdleCallback` manque encore à Safari : le repli n'a pas à être fin, juste tardif. */
+/** `requestIdleCallback` is still missing in Safari: the fallback need not be precise, just late. */
 function quandLibre(tache: () => void): () => void {
   if (typeof requestIdleCallback === 'function') {
     const id = requestIdleCallback(tache, { timeout: 2_000 });
@@ -80,8 +79,8 @@ function useModuleInfobulle(): Module | null {
 }
 
 /**
- * Enveloppe un contrôle déjà nommé. `label` vide ne monte rien : les appelants peuvent
- * passer une valeur optionnelle sans se garder eux-mêmes.
+ * Wraps an already named control. An empty `label` renders nothing: callers can pass an
+ * optional value without guarding it themselves.
  */
 export function Tooltip({
   label,
@@ -96,8 +95,8 @@ export function Tooltip({
   if (!shouldRenderTooltip(label)) return <>{children}</>;
 
   if (!module) {
-    // Repli le temps du chargement. `title` n'accepte qu'une chaîne : un libellé riche
-    // (rare) n'a pas de repli, et n'en avait pas davantage avant cette primitive.
+    // Fallback while loading. `title` only accepts a string: a rich label (rare) has no
+    // fallback, and had none before this primitive either.
     return typeof label === 'string' && isValidElement(children) ? (
       cloneElement(children as ReactElement<{ title?: string }>, { title: label })
     ) : (

@@ -4,20 +4,20 @@
 import { useCallback, useEffect, type RefObject } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { reviewPath } from '../../lib/slug';
 import { clipIndexOfMedia, playableNeighbor, playablePosition } from './timelineNav';
 import type { TimelineClip, TimelineView } from '../../types/api';
 
 /**
- * Lecture d'un montage automatique dans le lecteur de review (Phase 45).
+ * Playback of an automatic montage in the review player (Phase 45).
  *
- * Actif quand la review est ouverte avec `?timeline=ID`. Deux services :
- *  - la navigation manuelle (plan précédent / suivant) ;
- *  - l'ENCHAÎNEMENT : la fin d'un plan passe au suivant, ce qui fait la différence entre
- *    « une liste de plans » et « un montage ». Les cartons sont sautés à la lecture, mais
- *    restent comptés dans le montage : c'est là qu'on voit ce qui manque.
+ * Active when the review is opened with `?timeline=ID`. Two services:
+ *  - manual navigation (previous / next shot);
+ *  - the CHAINING: the end of a shot passes to the next one, which makes the difference between
+ *    "a list of shots" and "a montage". Title cards are skipped on playback but stay counted in the
+ *    montage: that is where what is missing shows.
  */
 export interface TimelineChain {
   timeline: TimelineView | null;
@@ -30,7 +30,7 @@ export interface TimelineChain {
   go: (clip: TimelineClip | null) => void;
 }
 
-/** Paramètres d'URL à conserver d'un plan à l'autre (montage, session live). */
+/** URL parameters to keep from one shot to the next (montage, live session). */
 function carry(params: URLSearchParams): string {
   const out = new URLSearchParams();
   for (const key of ['timeline', 'live']) {
@@ -68,15 +68,15 @@ export function useTimelineChain(
       if (!clip || clip.mediaId === null) return;
       void navigate(
         reviewPath({ id: clip.mediaId, originalName: clip.mediaName }) + carry(searchParams),
-        // La lecture continue : empiler chaque plan obligerait à autant de retours arrière
-        // pour sortir du montage.
+        // Playback continues: stacking each shot would require as many back steps to leave the
+        // montage.
         { replace: true },
       );
     },
     [navigate, searchParams],
   );
 
-  // Enchaînement : le plan suivant démarre là où le précédent s'arrête.
+  // Chaining: the next shot starts where the previous one stops.
   useEffect(() => {
     const video = videoRef?.current;
     if (!video || timelineId <= 0 || !next) return;

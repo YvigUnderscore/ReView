@@ -8,12 +8,11 @@ import type { AssigneeRef } from '../../types/entities';
 import { useT } from '../../i18n';
 
 /**
- * Les visages d'une carte : qui s'occupe de ça.
+ * The faces on a card: who is working on this.
  *
- * Empilés avec un léger recouvrement, comme partout où l'on montre une équipe — c'est ce
- * qui permet d'en loger cinq dans la largeur d'une carte sans écraser le reste. Au-delà,
- * un jeton « +N » : allonger la pile ferait déborder la carte, et personne ne lit huit
- * visages d'un coup de toute façon.
+ * Stacked with a slight overlap, as everywhere a team is shown: this is what fits five in the width
+ * of a card without crushing the rest. Beyond that, a "+N" token: a longer stack would overflow the
+ * card, and nobody reads eight faces at once anyway.
  */
 
 export default function AssigneeStack({
@@ -23,7 +22,7 @@ export default function AssigneeStack({
 }: {
   people: AssigneeRef[];
   size?: number;
-  /** Visages montrés avant le jeton de débordement. */
+  /** Faces shown before the overflow token. */
   max?: number;
 }) {
   const t = useT();
@@ -34,15 +33,15 @@ export default function AssigneeStack({
   return (
     <div
       className="flex items-center"
-      // Le titre porte la liste entière : la pile en montre quatre, mais survoler doit
-      // répondre à « qui d'autre ? » sans avoir à ouvrir quoi que ce soit.
+      // The title carries the whole list: the stack shows four, but hovering must answer
+      // "who else?" without having to open anything.
       title={people.map(assigneeName).join(', ')}
       aria-label={t('assignees.label', { count: people.length })}
     >
       {shown.map((person, index) => (
         <span
           key={person.id}
-          // Le recouvrement ne s'applique pas au premier : il collerait au bord gauche.
+          // The overlap does not apply to the first one: it would stick to the left edge.
           className={index > 0 ? '-ml-1.5' : ''}
           style={{ zIndex: shown.length - index }}
         >

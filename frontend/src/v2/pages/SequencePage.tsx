@@ -25,17 +25,17 @@ import EntityUnavailable from '../components/EntityUnavailable';
 import { isBadId, isMissingOrForbidden } from '../components/entityAvailability';
 
 /**
- * La séquence, comme page (C3).
+ * The sequence, as a page (C3).
  *
- * Elle n'en avait pas : c'était un accordéon dans l'onglet Séquences, et son montage se
- * cachait derrière un dépliage. Or c'est l'unité de travail d'un montage — on l'ouvre pour
- * voir où en est la scène. D'où l'ordre : le cut d'abord, ses plans ensuite.
+ * It had none: it was an accordion in the Sequences tab, and its editing was
+ * hidden behind an expansion. Yet it is the unit of work of an edit — one opens it to
+ * see where the scene stands. Hence the order: the cut first, its shots after.
  */
 export default function SequencePage() {
   const t = useT();
   const { id } = useParams();
   const sequenceId = parseIdParam(id);
-  // Ouvrir, c'est consulter : la lueur « non consulté » s'éteint ici (lot 9).
+  // Opening is consulting: the "not consulted" glow switches off here (batch 9).
   useMarkVisited('SEQUENCE', sequenceId);
 
   const { data, isLoading, error, refetch } = useQuery({
@@ -47,15 +47,15 @@ export default function SequencePage() {
   const projectId = data?.projectId ?? 0;
   const { canManage } = useProjectRole(projectId);
   const playlistMenu = useAddToPlaylistMenu(projectId);
-  // Toute la séquence dans les dailies : la dernière version publiée de chacun de ses
-  // plans. La liste n'est demandée qu'au clic — pas à l'ouverture de la page.
+  // The whole sequence into the dailies: the latest published version of each of its
+  // shots. The list is only requested on click — not when the page opens.
   const playlistEntry = playlistMenu.entry(async () => {
     const candidates = await fetchSequenceCandidates(projectId, sequenceId);
     return { versionIds: candidates.map((c) => c.versionId) };
   });
   const { entry: statusEntry } = useStatusMenu(projectId, 'sequence');
-  // Peupler la séquence : au clic droit d'abord (UI simple), et par un unique « + » que la
-  // grille des plans expose — l'action principale de cet écran mérite d'être visible.
+  // Populating the sequence: via right click first (simple UI), and through a single "+" that the
+  // shot grid exposes — the main action of this screen deserves to be visible.
   const addShots = useSequenceShotAdd({
     projectId,
     sequenceId,
@@ -68,7 +68,7 @@ export default function SequencePage() {
     ...(playlistEntry ? [playlistEntry] : []),
   ];
 
-  // `/sequences/abc` ou une sequence supprimée : la page rendait sa coquille sans sujet.
+  // `/sequences/abc` or a deleted sequence: the page rendered its shell with no subject.
   if (isBadId(sequenceId) || (error && isMissingOrForbidden(error)))
     return <EntityUnavailable kind="sequence" error={isBadId(sequenceId) ? undefined : error} />;
   if (error) return <EntityUnavailable kind="sequence" error={error} onRetry={() => void refetch()} />;
@@ -86,8 +86,8 @@ export default function SequencePage() {
       canManage={canManage}
       menuExtras={menuExtras}
     >
-      {/* Remontée vers l'épisode — le niveau étant facultatif, ce lien n'existe que sur un
-          projet qui l'a activé et une séquence qui y est rattachée. */}
+      {/* Link back up to the episode — the level being optional, this link only exists on a
+           project that has enabled it and a sequence attached to it. */}
       {data?.episode && (
         <Link
           to={episodePath(data.episode)}
@@ -106,7 +106,7 @@ export default function SequencePage() {
       ) : (
         data && (
           <div className="space-y-6">
-            {/* Le montage se met à jour à chaque publication : il est en tête, pas en annexe. */}
+            {/* The edit updates on each publication: it sits at the top, not in an annex. */}
             <TimelineCard projectId={projectId} sequenceId={sequenceId} />
             <SequenceShotGrid
               shots={data.shots}

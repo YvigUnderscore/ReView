@@ -6,13 +6,13 @@ import { visibleLocalBox } from '../../scene/visibleBounds';
 import type { SplatSceneHandle } from '../../useSplat';
 
 /**
- * Sphères englobantes pour le cadrage caméra (raccourci `F`, 10.G-V1) : sélection courante ou
- * splat entier, exprimées en **monde** (la transformation du mesh — gizmos — est appliquée).
- * Les splats masqués (opacité 0, suppression non-destructive) sont ignorés.
+ * Bounding spheres for camera framing (`F` shortcut, 10.G-V1): current selection or
+ * whole splat, expressed in **world** space (the mesh transform, i.e. gizmos, is applied).
+ * Hidden splats (opacity 0, non-destructive deletion) are ignored.
  */
 /**
- * Ce qu'un cadrage a besoin de lire : le module Three et le mesh, rien de plus. Le type était
- * la poignée de scène entière, ce qui obligeait à en fabriquer une pour mesurer un rayon.
+ * What framing needs to read: the Three module and the mesh, nothing more. The type used to be
+ * the whole scene handle, which forced building one just to measure a radius.
  */
 export type SplatBoundsSource = Pick<SplatSceneHandle, 'THREE' | 'mesh'>;
 
@@ -21,7 +21,7 @@ export interface BoundsSphere {
   radius: number;
 }
 
-/** Sphère englobante des splats sélectionnés (monde), ou null si sélection vide/dégénérée. */
+/** Bounding sphere of the selected splats (world), or null if the selection is empty or degenerate. */
 export function selectionBounds(
   handle: SplatBoundsSource,
   selected: ReadonlySet<number>,
@@ -30,23 +30,23 @@ export function selectionBounds(
   const { THREE, mesh } = handle;
   const box = new THREE.Box3();
   const world = new THREE.Vector3();
-  mesh.updateWorldMatrix(true, false); // ancêtres inclus (pivot de flip, 11.E)
+  mesh.updateWorldMatrix(true, false); // ancestors included (flip pivot, 11.E)
   mesh.forEachSplat((index, center, _scales, _quat, opacity) => {
     if (opacity <= 0 || !selected.has(index)) return;
     world.copy(center).applyMatrix4(mesh.matrixWorld);
     box.expandByPoint(world);
   });
   const sphere = sphereFromBox(THREE, box);
-  // Sélection quasi ponctuelle (1 splat) : rayon plancher pour un cadrage exploitable.
+  // Near-point selection (1 splat): floor radius for a usable framing.
   return sphere ? { ...sphere, radius: Math.max(sphere.radius, 0.05) } : null;
 }
 
-/** Sphère englobante des splats visibles du mesh (monde), ou null si indisponible (11.D). */
+/** Bounding sphere of the visible splats of the mesh (world), or null if unavailable (11.D). */
 export function meshBounds(handle: SplatBoundsSource): BoundsSphere | null {
   const { THREE, mesh } = handle;
   const local = visibleLocalBox(THREE, mesh);
   if (!local) return null;
-  mesh.updateWorldMatrix(true, false); // ancêtres inclus (pivot de flip, 11.E)
+  mesh.updateWorldMatrix(true, false); // ancestors included (flip pivot, 11.E)
   const box = local.applyMatrix4(mesh.matrixWorld);
   return sphereFromBox(THREE, box);
 }

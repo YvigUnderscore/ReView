@@ -17,9 +17,9 @@ interface LayoutRuntime {
 }
 
 /**
- * Mode layout du viewer 3D : cœur commun `viewer/useLayoutMode` + spécificités Three — la caméra
- * layout est un objet local (`runtime.layoutCam`) et la 2ᵉ passe scissor du PiP est rendue ici
- * (`renderPip`, appelé par la boucle du viewer).
+ * Layout mode of the 3D viewer: common core `viewer/useLayoutMode` + Three specifics — the layout
+ * camera is a local object (`runtime.layoutCam`) and the PiP's second scissor pass is rendered here
+ * (`renderPip`, called by the viewer's loop).
  */
 export function useModelLayout(opts: {
   runtimeRef: RefObject<LayoutRuntime | null>;
@@ -29,7 +29,7 @@ export function useModelLayout(opts: {
   captureCamera: CameraController['captureCamera'];
 }) {
   const { runtimeRef, threeRef, subscribeFrame, getDom, captureCamera } = opts;
-  // Rect de la fenêtre PiP (px CSS, origine haut-gauche) — suivi par la passe scissor (PipFrame).
+  // PiP window rect (CSS px, top-left origin) — tracked by the scissor pass (PipFrame).
   const pipRectRef = useRef<PipRect | null>(null);
 
   const restoreMain = useCallback(
@@ -57,15 +57,15 @@ export function useModelLayout(opts: {
     pipRectRef.current = rect;
   }, []);
 
-  /** 2ᵉ passe de rendu : le PiP de la caméra layout (appelé par la boucle du viewer). */
+  /** Second render pass: the PiP of the layout camera (called by the viewer's loop). */
   const renderPip = useCallback(() => {
     if (!layoutModeRef.current) return;
     const rt = runtimeRef.current;
     const rect = pipRectRef.current;
     if (!rt || !rect) return;
     const dom = rt.scene.renderer.domElement;
-    // La profondeur suit la caméra libre : `F`, « taille réelle » et le chargement d'un autre
-    // modèle recalent near/far sur l'échelle de la scène, la caméra du PiP gardait les anciens.
+    // Depth follows the free camera: `F`, real size and loading another model re-set near/far on
+    // the scene's scale, while the PiP camera kept the old ones.
     renderPipPass(
       rt.scene.renderer,
       rt.scene.scene,

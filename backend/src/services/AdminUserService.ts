@@ -8,9 +8,8 @@ import { getOnlineUserIds } from './PresenceService';
 import { redactAuditMetadata } from './AuditService';
 
 /**
- * Fiche détaillée d'un compte pour l'administration : profil complet, projets
- * (memberships + rôle effectif), sessions actives, tokens d'API, activité récente
- * (journal d'audit) et compteurs de contribution.
+ * Detailed record of an account for administration: full profile, projects (memberships + effective
+ * role), active sessions, API tokens, recent activity (audit log) and contribution counters.
  */
 export async function userDetail(id: number) {
   const user = await prisma.user.findUnique({
@@ -85,15 +84,15 @@ export async function userDetail(id: number) {
       prisma.task.count({ where: { assigneeId: id } }),
     ]);
 
-  // `totpEnabledAt` ne sort pas tel quel : on n'expose qu'un booléen 2FA.
+  // `totpEnabledAt` is not returned as is: only a 2FA boolean is exposed.
   const { totpEnabledAt, ...publicFields } = user;
 
   /*
-   * A5-03 : cette vue rendait l'activité SANS `metadata`, alors que la vue studio le rend
-   * désormais — « MEDIA_PURGE · MediaObject · 812 » sans dire lesquels des trois cents
-   * identifiants du lot étaient partis. Le champ passe donc par la MÊME rédaction que
-   * l'autre vue : sans elle, l'écran par personne exposerait (URL de webhook, secret glissé
-   * dans le contexte d'une action) exactement ce que l'écran studio protège.
+   * A5-03: this view returned the activity WITHOUT `metadata`, whereas the studio view now returns it:
+   * "MEDIA_PURGE · MediaObject · 812" without saying which of the three hundred identifiers in the batch
+   * had gone. The field therefore goes through the SAME redaction as the other view: without it, the
+   * per-person screen would expose (webhook URLs, a secret slipped into an action's context) exactly what
+   * the studio screen protects.
    */
   const redactedActivity = activity.map(({ metadata, ...row }) => ({
     ...row,

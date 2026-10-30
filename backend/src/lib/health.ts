@@ -3,28 +3,27 @@
 
 import { prisma } from './prisma';
 import { getRedis } from './redis';
-import { storage } from '../services/StorageService';
+import { storage } from './storage';
 
 /**
- * Mécanique des sondes de santé : délais, exécution parallèle, mémorisation.
+ * Health probe mechanics: timeouts, parallel execution, memoisation.
  *
- * Sortie de la route pour deux raisons. La convention du projet veut que la logique vive
- * dans lib/ et que la route se contente de valider puis répondre ; et le fichier de route
- * dépassait son budget de 200 lignes, que l'on tient en extrayant, jamais en désactivant
- * la règle. Ce qui reste ici ne parle à personne : ce sont des fonctions pures, plus la
- * liste des dépendances à interroger.
+ * Moved out of the route for two reasons. The project convention is that logic lives in lib/ and the route
+ * only validates then responds; and the route file was over its 200-line budget, which is addressed by
+ * extracting, never by disabling the rule. What remains here speaks to nobody: they are pure functions, plus
+ * the list of dependencies to query.
  */
 
-/** Délai maximal d'un contrôle de dépendance. Au-delà, la dépendance est réputée absente. */
+/** Maximum delay of a dependency check. Beyond it, the dependency is deemed absent. */
 export const CHECK_TIMEOUT_MS = 2_000;
-/** Durée de validité d'un résultat de disponibilité (protège des sondes trop fréquentes). */
+/** Validity period of an availability result (protects against over-frequent probes). */
 export const READY_CACHE_MS = 5_000;
 
 export interface CheckResult {
   ok: boolean;
-  /** Durée du contrôle en millisecondes (mesurée même en cas d'échec). */
+  /** Duration of the check in milliseconds (measured even on failure). */
   ms: number;
-  /** Motif d'échec, borné : un message d'erreur brut peut porter une URL de connexion. */
+  /** Failure reason, bounded: a raw error message may carry a connection URL. */
   error?: string;
 }
 
@@ -33,17 +32,16 @@ export interface ReadinessReport {
   checks: Record<string, CheckResult>;
 }
 
-/** Motif d'échec exploitable, sans divulguer d'identifiants ni de topologie. */
+/** Usable failure reason, without disclosing credentials or topology. */
 export function failureReason(err: unknown): string {
   if (err instanceof Error && err.message) return err.message.slice(0, 120);
   return 'unavailable';
 }
 
 /**
- * Exécute un contrôle sous délai maximal. Le `timeout` ne se contente pas de rendre la
- * main : sans lui, une dépendance qui ne répond jamais (Redis injoignable, socket ouverte
- * mais muette) ferait pendre la requête de supervision — le mode de panne exact de
- * `GET /api/admin/system`.
+ * Runs a check under a maximum delay. The `timeout` does more than return control: without it, a dependency
+ * that never answers (unreachable Redis, socket open but silent) would hang the monitoring request — the exact
+ * failure mode of `GET /api/admin/system`.
  */
 export async function timedCheck(
   run: () => Promise<unknown>,
@@ -67,7 +65,7 @@ export async function timedCheck(
   }
 }
 
-/** Joue tous les contrôles en parallèle : la sonde dure le plus lent, pas leur somme. */
+/** Runs all checks in parallel: the probe lasts as long as the slowest, not their sum. */
 export async function runChecks(
   probes: Record<string, () => Promise<unknown>>,
   timeoutMs = CHECK_TIMEOUT_MS,
@@ -80,8 +78,8 @@ export async function runChecks(
 }
 
 /**
- * Mémorise le dernier rapport et regroupe les appels concurrents. Deux superviseurs et un
- * frontal qui sondent en même temps ne produisent qu'une seule interrogation des dépendances.
+ * Memorises the last report and groups concurrent calls. Two supervisors and a front proxy probing at the same
+ * time trigger only one query of the dependencies.
  */
 export function createReadinessCache(
   run: () => Promise<ReadinessReport>,
@@ -105,7 +103,7 @@ export function createReadinessCache(
   };
 }
 
-/** Les trois dépendances sans lesquelles l'instance ne sert rien d'utile. */
+/** The three dependencies without which the instance serves no useful purpose. */
 export const dependencyProbes: Record<string, () => Promise<unknown>> = {
   database: () => prisma.$queryRaw`SELECT 1`,
   redis: () => getRedis().call('PING'),

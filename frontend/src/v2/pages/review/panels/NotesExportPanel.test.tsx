@@ -11,14 +11,14 @@ const { download, toasts } = vi.hoisted(() => ({
   toasts: { success: vi.fn(), error: vi.fn(), warning: vi.fn() },
 }));
 
-vi.mock('../../../lib/notesExport', () => ({ downloadNotes: download }));
+vi.mock('@/v2/lib/notesExport', () => ({ downloadNotes: download }));
 vi.mock('sonner', () => ({ toast: toasts }));
 
 import NotesExportPanel from './NotesExportPanel';
 
 /**
- * Le panneau ne fait que trois choses, mais chacune se voit : déclencher le bon format,
- * dire que le fichier est parti, et dire aussi quand il est incomplet.
+ * The panel does only three things, but each one is visible: triggering the right format, saying that
+ * the file has left, and also saying when it is incomplete.
  */
 
 function mount() {
@@ -38,12 +38,12 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('NotesExportPanel', () => {
-  it('offre exactement deux sorties : le tableur et la planche', () => {
+  it('offers exactly two outputs: the spreadsheet and the contact sheet', () => {
     mount();
     expect(screen.getAllByRole('button')).toHaveLength(2);
   });
 
-  it('demande le CSV de la portée affichée et confirme le téléchargement', async () => {
+  it('requests the CSV of the displayed scope and confirms the download', async () => {
     mount();
     await userEvent.click(screen.getAllByRole('button')[0]);
     await waitFor(() => expect(download).toHaveBeenCalledWith({ scope: 'media', id: 7, format: 'csv' }));
@@ -51,20 +51,20 @@ describe('NotesExportPanel', () => {
     expect(toasts.warning).not.toHaveBeenCalled();
   });
 
-  it('demande la planche imprimable sur le second bouton', async () => {
+  it('requests the printable contact sheet from the second button', async () => {
     mount();
     await userEvent.click(screen.getAllByRole('button')[1]);
     await waitFor(() => expect(download).toHaveBeenCalledWith({ scope: 'media', id: 7, format: 'sheet' }));
   });
 
-  it('prévient quand le serveur a plafonné l’export', async () => {
+  it('warns when the server capped the export', async () => {
     download.mockResolvedValue({ filename: 'notes-media-7.csv', truncated: true });
     mount();
     await userEvent.click(screen.getAllByRole('button')[0]);
     await waitFor(() => expect(toasts.warning).toHaveBeenCalled());
   });
 
-  it('remonte l’échec sans laisser l’interface bloquée', async () => {
+  it('surfaces the failure without leaving the interface blocked', async () => {
     download.mockRejectedValue(new Error('No access to this project'));
     mount();
     const csv = screen.getAllByRole('button')[0] as HTMLButtonElement;

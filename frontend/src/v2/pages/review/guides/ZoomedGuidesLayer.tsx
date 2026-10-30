@@ -6,16 +6,16 @@ import CompositionGuides from '../CompositionGuides';
 import type { FitBox } from '../zoom/useFitBox';
 
 /**
- * Repères de composition posés dans un calque À PART, au-dessus de la comparaison A/B.
+ * Composition guides placed in a SEPARATE layer, above the A/B comparison.
  *
- * Ils vivaient dans le calque média. Or ce calque porte la transformation du zoom, ce qui en
- * fait un contexte d'empilement : son `z-index` interne n'a plus cours à l'extérieur. La
- * surcouche de comparaison, frère rendu APRÈS lui, recouvrait donc tout — repères compris, qui
- * disparaissaient dès qu'on ouvrait un wipe ou une différence.
+ * They used to live in the media layer. That layer carries the zoom transform, which makes it a
+ * stacking context: its internal `z-index` no longer applies outside it. The comparison overlay,
+ * a sibling rendered AFTER it, therefore covered everything, guides included, which disappeared
+ * as soon as a wipe or a difference was opened.
  *
- * D'où ce troisième calque, frère lui aussi, rendu en dernier : il rejoue la géométrie du
- * calque média (même boîte, même transformation, même centrage) pour que les repères tombent
- * sur l'image et non sur la zone du lecteur, et il ne capte aucun pointeur.
+ * Hence this third layer, also a sibling, rendered last: it replays the geometry of the media
+ * layer (same box, same transform, same centering) so that the guides land on the image rather
+ * than on the player area, and it captures no pointer events.
  */
 export default function ZoomedGuidesLayer({
   box,

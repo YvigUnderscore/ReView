@@ -4,14 +4,13 @@
 import { Link } from 'react-router-dom';
 import { FileVideo, Layers } from 'lucide-react';
 import { useProjectActivity } from './useProjectActivity';
-import { intlLocale, useT } from '../../../i18n';
+import { intlLocale, useT } from '@/v2/i18n';
 
 /**
- * Les dernières mises à jour du projet : versions déposées et médias publiés.
+ * The project's latest updates: uploaded versions and published media.
  *
- * `limit` est ce que la carte peut montrer — la hauteur réglée traduite en lignes. Une
- * carte haute montre donc réellement plus de choses ; sans cela, l'agrandir n'aurait
- * ajouté que du vide.
+ * `limit` is what the card can show: the height set, translated into rows. A tall card therefore
+ * really shows more items. Without this, enlarging it would only have added empty space.
  */
 export default function ActivityWidget({ projectId, limit }: { projectId: number; limit: number }) {
   const t = useT();

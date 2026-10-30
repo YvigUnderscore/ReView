@@ -4,7 +4,7 @@
 import { describe, it, expect, vi } from 'vitest';
 import { __testing, isOidcReady, type OidcConfig } from './oidcConfig';
 
-vi.mock('../services/StorageService', () => ({ storage: { getPresignedGetUrl: vi.fn() } }));
+vi.mock('./storage', () => ({ storage: { getPresignedGetUrl: vi.fn() } }));
 
 const { sanitize, FALLBACK } = __testing;
 
@@ -17,23 +17,23 @@ const ready: OidcConfig = {
 };
 
 describe('oidcConfig.sanitize', () => {
-  it('repli complet sur la base', () => {
+  it('full fallback to the base', () => {
     expect(sanitize({}, FALLBACK)).toEqual(FALLBACK);
   });
 
-  it('normalise publicUrl (slash final retiré) et tronque', () => {
+  it('normalises publicUrl (trailing slash removed) and truncates', () => {
     const out = sanitize({ publicUrl: 'https://studio.example.com/' }, FALLBACK);
     expect(out.publicUrl).toBe('https://studio.example.com');
   });
 
-  it('ignore les types invalides', () => {
+  it('ignores invalid types', () => {
     const out = sanitize({ enabled: 'oui', clientId: 42, autoProvision: 1 }, FALLBACK);
     expect(out.enabled).toBe(false);
     expect(out.clientId).toBe('');
     expect(out.autoProvision).toBe(false);
   });
 
-  it('conserve les champs fournis', () => {
+  it('keeps the supplied fields', () => {
     const out = sanitize(
       { enabled: true, issuer: ' https://accounts.google.com ', clientId: 'abc', buttonLabel: 'SSO' },
       FALLBACK,
@@ -44,23 +44,23 @@ describe('oidcConfig.sanitize', () => {
     expect(out.buttonLabel).toBe('SSO');
   });
 
-  it('accepte un logo dans branding/ et le vide, écarte le reste', () => {
+  it('accepts a logo under branding/ and empty, discards the rest', () => {
     expect(sanitize({ logoKey: 'branding/sso-1700.png' }, FALLBACK).logoKey).toBe('branding/sso-1700.png');
     expect(sanitize({ logoKey: '' }, { ...FALLBACK, logoKey: 'branding/sso-1.png' }).logoKey).toBe('');
-    // Une clé hors du préfixe ne doit jamais finir dans un <img> de la page de connexion.
+    // A key outside the prefix must never end up in an <img> of the login page.
     for (const bad of ['avatars/1.png', '../../etc/passwd', 'branding/../secrets/x.png']) {
       expect(sanitize({ logoKey: bad }, FALLBACK).logoKey).toBe('');
     }
   });
 
-  it('passwordLoginDisabled suit le même repli typé que les autres booléens', () => {
+  it('passwordLoginDisabled follows the same typed fallback as the other booleans', () => {
     expect(sanitize({ passwordLoginDisabled: true }, FALLBACK).passwordLoginDisabled).toBe(true);
     expect(sanitize({ passwordLoginDisabled: 'oui' }, FALLBACK).passwordLoginDisabled).toBe(false);
   });
 });
 
 describe('isOidcReady', () => {
-  it('vrai seulement si activé et complet', () => {
+  it('true only if enabled and complete', () => {
     expect(isOidcReady(ready)).toBe(true);
     expect(isOidcReady({ ...ready, enabled: false })).toBe(false);
     expect(isOidcReady({ ...ready, clientId: '' })).toBe(false);

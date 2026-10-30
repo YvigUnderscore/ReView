@@ -6,14 +6,13 @@ import { foldKeepingLength, highlightDocHtml, matchSpans } from './docsHighlight
 import { extractChapters, renderDocHtml, slugifyHeading, type CalloutLabels } from './docsRender';
 
 /**
- * Surlignage du terme cherché dans la page ouverte.
+ * Highlights the searched term in the open page.
  *
- * Le piège de cette fonction est connu d'avance : le contenu est du **HTML généré**. Un
- * `replace()` sur la chaîne repeindrait un nom de classe, un `href` ou un identifiant
- * d'ancre, et un `<mark>` ouvert au milieu d'une balise casserait la page. Les tests
- * ci-dessous verrouillent les trois propriétés qui l'interdisent : on ne touche qu'au texte,
- * on ne casse ni le balisage ni les ancres, et la saisie de l'utilisateur ne peut rien
- * injecter.
+ * The pitfall of this function is known in advance: the content is **generated HTML**. A
+ * `replace()` on the string would repaint a class name, an `href` or an anchor identifier, and
+ * an unclosed `<mark>` in the middle of a tag would break the page. The tests below lock down
+ * the three properties that forbid this: only text is touched, neither markup nor anchors are
+ * broken, and the user's input cannot inject anything.
  */
 
 const text = (html: string): string => {
@@ -22,7 +21,7 @@ const text = (html: string): string => {
   return tpl.content.textContent ?? '';
 };
 
-/** Toutes les ancres de la page, dans l'ordre — ce qu'un surlignage ne doit jamais déplacer. */
+/** All anchors of the page, in order: what a highlight must never move. */
 const anchors = (html: string): string[] => {
   const tpl = document.createElement('template');
   tpl.innerHTML = html;
@@ -30,7 +29,7 @@ const anchors = (html: string): string[] => {
 };
 
 describe('foldKeepingLength', () => {
-  it('replie casse et accents SANS changer la longueur — les positions doivent rester valides', () => {
+  it('folds case and accents WITHOUT changing length: positions must remain valid', () => {
     for (const sample of ['Défences', 'ÉÀÇ', 'plain text', 'Ærø', '中文', 'á'])
       expect(foldKeepingLength(sample).length, sample).toBe(sample.length);
     expect(foldKeepingLength('Défences')).toBe('defences');
@@ -38,18 +37,18 @@ describe('foldKeepingLength', () => {
 });
 
 describe('matchSpans', () => {
-  it('rend chaque occurrence, de gauche à droite', () => {
+  it('returns each occurrence, from left to right', () => {
     expect(matchSpans('note and note again', ['note'])).toEqual([
       { start: 0, end: 4 },
       { start: 9, end: 13 },
     ]);
   });
 
-  it('fusionne les occurrences qui se chevauchent — un seul surlignage, pas deux imbriqués', () => {
+  it('merges overlapping occurrences: one highlight, not two nested ones', () => {
     expect(matchSpans('watermarking', ['watermark', 'marking'])).toEqual([{ start: 0, end: 12 }]);
   });
 
-  it('désigne les mêmes caractères qu’avant repli', () => {
+  it('designates the same characters as before folding', () => {
     const source = 'Les défences du studio';
     const [span] = matchSpans(source, ['defences']);
     expect(source.slice(span.start, span.end)).toBe('défences');
@@ -57,32 +56,32 @@ describe('matchSpans', () => {
 });
 
 describe('highlightDocHtml', () => {
-  it('enveloppe le terme trouvé dans un <mark>, et compte les occurrences', () => {
+  it('wraps the found term in a <mark> and counts the occurrences', () => {
     const out = highlightDocHtml('<p>The watermark, then the watermark again.</p>', 'watermark');
     expect(out.count).toBe(2);
     expect(out.html).toContain('<mark class="doc-hit" data-doc-hit="first">watermark</mark>');
     expect(out.html).toContain('<mark class="doc-hit">watermark</mark>');
   });
 
-  it('ne marque que la PREMIÈRE occurrence de la page — celle qu’on rejoint', () => {
+  it('marks only the FIRST occurrence in the page: the one that is jumped to', () => {
     const out = highlightDocHtml('<p>note</p><p>note</p><p>note</p>', 'note');
     expect(out.html.match(/data-doc-hit="first"/g)).toHaveLength(1);
   });
 
-  it('ne touche pas aux attributs : ancres, classes et liens sortent intacts', () => {
+  it('does not touch attributes: anchors, classes and links come out intact', () => {
     const source =
       '<h2 id="viewer-watermark">Viewer watermark</h2>' +
       '<p><a data-doc="admin-guide/secure-distribution.md">watermark</a></p>';
     const out = highlightDocHtml(source, 'watermark');
     expect(out.html).toContain('id="viewer-watermark"');
     expect(out.html).toContain('data-doc="admin-guide/secure-distribution.md"');
-    // Le mot du nom de classe n'est pas repeint : `doc-callout` survit à une recherche « note ».
+    // A word in a class name is not repainted: `doc-callout` survives a search for "note".
     const callout = highlightDocHtml('<div class="doc-callout"><p>A note.</p></div>', 'note');
     expect(callout.html).toContain('class="doc-callout"');
     expect(callout.count).toBe(1);
   });
 
-  it('ne casse pas la structure : le texte de la page est celui d’avant', () => {
+  it('does not break the structure: the page text is the same as before', () => {
     const source =
       '<div class="doc-table"><table><thead><tr><th>Setting</th></tr></thead>' +
       '<tbody><tr><td>Watermark</td></tr></tbody></table></div>';
@@ -92,27 +91,27 @@ describe('highlightDocHtml', () => {
     expect(out.html).toContain('<mark');
   });
 
-  it('surligne à accents près, sans décaler le texte', () => {
+  it('highlights ignoring accents, without shifting the text', () => {
     const out = highlightDocHtml('<p>Les défences du studio.</p>', 'DEFENCES');
     expect(out.count).toBe(1);
     expect(out.html).toContain('>défences</mark>');
     expect(text(out.html)).toBe('Les défences du studio.');
   });
 
-  it('se retire en effaçant le champ : sans recherche, la page est rendue telle quelle', () => {
+  it('is removed by clearing the field: with no search, the page is rendered as is', () => {
     const source = '<p>The watermark.</p>';
     for (const query of ['', '   ', 'a'])
       expect(highlightDocHtml(source, query), query).toEqual({ html: source, count: 0 });
   });
 
-  it('rend la page inchangée quand rien ne correspond', () => {
+  it('renders the page unchanged when nothing matches', () => {
     const source = '<p>The watermark.</p>';
     expect(highlightDocHtml(source, 'kanban')).toEqual({ html: source, count: 0 });
   });
 
-  it('n’injecte rien : ce qui ressemble à une balise reste du texte échappé', () => {
-    // Le texte de la page contient « <b> » (échappé par renderDocHtml) et c'est lui que la
-    // recherche trouve : le surlignage doit le reposer échappé, pas ouvrir une balise.
+  it('injects nothing: what looks like a tag stays escaped text', () => {
+    // The page text contains "<b>" (escaped by renderDocHtml) and it is that the search finds:
+    // the highlight must wrap it escaped, not open a tag.
     const out = highlightDocHtml('<p>a &lt;b&gt; c</p>', '<b>');
     expect(out.count).toBe(1);
     expect(out.html).toContain('&lt;b&gt;</mark>');
@@ -120,7 +119,7 @@ describe('highlightDocHtml', () => {
     expect(text(out.html)).toBe('a <b> c');
   });
 
-  it('préserve les entités du HTML rendu', () => {
+  it('preserves the entities of the rendered HTML', () => {
     const out = highlightDocHtml('<p>1 &lt; 2 and a &amp; b</p>', 'and');
     expect(out.html).toContain('&lt;');
     expect(out.html).toContain('&amp;');
@@ -129,15 +128,15 @@ describe('highlightDocHtml', () => {
 });
 
 /**
- * Le moteur entier, bout à bout : une page de documentation telle qu'elle est écrite, rendue
- * par `renderDocHtml`, puis surlignée.
+ * The whole engine, end to end: a documentation page as written, rendered by `renderDocHtml`,
+ * then highlighted.
  *
- * C'est la composition qui compte ici, pas chaque pièce : le sommaire latéral navigue par
- * les **ancres** des titres et le panneau de chapitres les relit sur le HTML rendu. Si le
- * surlignage déplaçait une ancre ou renommait un chapitre, la page trouvée s'ouvrirait à
- * côté de ce qu'on cherchait — exactement le défaut qu'on répare.
+ * The composition is what matters here, not each piece: the side table of contents navigates
+ * by the **anchors** of the headings, and the chapter panel reads them back from the rendered
+ * HTML. If the highlight moved an anchor or renamed a chapter, the page found would open beside
+ * what was sought, which is exactly the defect being fixed.
  */
-describe('composition avec le rendu markdown', () => {
+describe('composition with markdown rendering', () => {
   const LABELS: CalloutLabels = {
     note: 'Note',
     tip: 'Astuce',
@@ -175,20 +174,20 @@ describe('composition avec le rendu markdown', () => {
 
   const rendered = renderDocHtml(MARKDOWN, 'admin-guide/secure-distribution.md', LABELS);
 
-  it('surligne le terme partout où il se lit, titres et tableau compris', () => {
+  it('highlights the term wherever it reads, titles and tables included', () => {
     const out = highlightDocHtml(rendered, 'watermark');
-    // Titre de chapitre, paragraphe, encart, cellule, bloc de code et légende.
+    // Chapter title, paragraph, callout, cell, code block and caption.
     expect(out.count).toBeGreaterThanOrEqual(6);
   });
 
-  it('ne déplace aucune ancre et ne renomme aucun chapitre', () => {
+  it('moves no anchor and renames no chapter', () => {
     const out = highlightDocHtml(rendered, 'watermark');
     expect(anchors(out.html)).toEqual(anchors(rendered));
     expect(extractChapters(out.html)).toEqual(extractChapters(rendered));
     expect(text(out.html)).toBe(text(rendered));
   });
 
-  it('laisse intacts les liens, les encarts et la structure du tableau', () => {
+  it('leaves links, callouts and table structure intact', () => {
     const out = highlightDocHtml(rendered, 'watermark');
     expect(out.html).toContain('data-doc="admin-guide/transcoding.md#renditions"');
     expect(out.html).toContain('data-callout="warning"');
@@ -197,15 +196,15 @@ describe('composition avec le rendu markdown', () => {
   });
 
   /**
-   * Le chemin que suit un clic sur un chapitre trouvé dans le sommaire : le libellé vient du
-   * manifest, l'ancre est calculée à partir de lui, et elle doit désigner le titre rendu.
+   * The path followed by a click on a chapter found in the table of contents: the label comes
+   * from the manifest, the anchor is computed from it, and it must designate the rendered heading.
    */
-  it('l’ancre calculée depuis un titre de chapitre existe dans la page rendue', () => {
+  it('the anchor computed from a chapter title exists in the rendered page', () => {
     for (const heading of ['Viewer watermark', 'Défences on the share link'])
       expect(anchors(rendered), heading).toContain(slugifyHeading(heading));
   });
 
-  it('surligne aussi un titre accentué sans casser son ancre', () => {
+  it('also highlights an accented title without breaking its anchor', () => {
     const out = highlightDocHtml(rendered, 'defences');
     expect(out.count).toBe(1);
     expect(anchors(out.html)).toEqual(anchors(rendered));

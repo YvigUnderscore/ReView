@@ -6,18 +6,18 @@ import type { SectionAxis } from './sectionPlane';
 import { DEFAULT_LIGHTING, type LightingConfig } from '../reviewTypes';
 
 /**
- * État de vue du viewer 3D joint à la vue caméra d'un commentaire (`Comment.cameraState.view`).
+ * View state of the 3D viewer attached to a comment's camera view (`Comment.cameraState.view`).
  *
- * Un commentaire capturait la caméra, le hotspot, l'animation et l'override de scène — mais
- * ni le mode d'affichage, ni le plan de coupe, ni l'éclairage. « Regarde ce que je vois »
- * était donc faux dès qu'on écrivait la note en wireframe ou une coupe ouverte : le lecteur
- * retrouvait la bonne caméra devant une image différente. On complète l'état capturé.
+ * A comment used to capture the camera, the hotspot, the animation and the scene override — but
+ * neither the display mode, nor the section plane, nor the lighting. "Look at what I see" was
+ * therefore wrong as soon as the note was written in wireframe or with an open cut: the reader
+ * found the right camera in front of a different image. We complete the captured state.
  *
- * Champ **optionnel et tolérant** : les commentaires antérieurs n'en portent pas, et le
- * serveur (Zod non strict) le laisse tomber des présentations persistées — un bookmark caméra
- * ne rejoue donc jamais un mode d'affichage, seul le commentaire le fait.
+ * An **optional and lenient** field: earlier comments carry none, and the server (non-strict Zod)
+ * drops it from persisted presentations — a camera bookmark therefore never replays a display mode,
+ * only the comment does.
  *
- * Pur et testable : la lecture/écriture des hooks vit dans `useModel3DViewState`.
+ * Pure and testable: reading/writing hooks live in `useModel3DViewState`.
  */
 export interface SectionState {
   active: boolean;
@@ -37,7 +37,7 @@ const AXES: SectionAxis[] = ['x', 'y', 'z'];
 const num = (v: unknown, fallback: number): number =>
   typeof v === 'number' && Number.isFinite(v) ? v : fallback;
 
-/** Relit l'état de vue attaché à une vue caméra ; `null` si le blob n'en porte pas. */
+/** Reads the view state attached to a camera view; `null` if the blob carries none. */
 export function readViewState(cameraState: unknown): ReviewViewState | null {
   if (!cameraState || typeof cameraState !== 'object') return null;
   const raw = (cameraState as { view?: unknown }).view;
@@ -65,9 +65,9 @@ export function readViewState(cameraState: unknown): ReviewViewState | null {
 }
 
 /**
- * Égalité de deux états de vue. La session live rejoue la caméra de l'hôte plusieurs fois par
- * seconde : sans cette comparaison, chaque paquet réappliquerait le mode d'affichage et
- * relancerait le chargement de l'HDRI — le viewer du spectateur clignoterait.
+ * Equality of two view states. The live session replays the host's camera several times per
+ * second: without this comparison, every packet would reapply the display mode and reload the HDRI
+ * — the viewer's audience would flicker.
  */
 export function sameViewState(a: ReviewViewState | null, b: ReviewViewState | null): boolean {
   if (a === b) return true;

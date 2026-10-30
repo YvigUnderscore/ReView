@@ -33,35 +33,35 @@ import { taskTypeLabel } from '../lib/entityTypeLabels';
 import { useUrlFilters } from '../lib/useUrlFilters';
 
 /**
- * Kanban du projet (C4).
+ * Project kanban (C4).
  *
- * Colonnes bâties sur le vocabulaire réel du projet — un site ShotGrid en a couramment
- * quinze, là où le board n'en montrait que six — regroupées en familles dépliables.
+ * Columns built on the project's real vocabulary — a ShotGrid site commonly has
+ * fifteen, where the board showed only six — grouped into collapsible families.
  *
- * **Tableau plein écran** (Phase 50). Le board était une pile : chaque famille portait sa
- * propre bande horizontale, chaque colonne faisait 68 % de la hauteur de fenêtre, et les
- * cinq familles s'ouvraient toutes au chargement — d'où trois écrans de débordement, et des
- * colonnes qui ne s'alignaient pas d'une famille à l'autre puisque chaque bande défilait
- * pour son compte. La page occupe maintenant exactement la fenêtre (`flush`), les en-têtes
- * restent visibles, chaque colonne défile à l'intérieur de sa hauteur, et une seule bande
- * horizontale porte tout le board : un mouvement de molette déplace les colonnes ensemble.
+ * **Full-screen board** (Phase 50). The board was a stack: each family had its own
+ * horizontal strip, each column took 68% of the window height, and
+ * the five families all opened on load — hence three screens of overflow, and
+ * columns that did not line up from one family to the next since each strip scrolled
+ * on its own. The page now occupies exactly the window (`flush`), the headers
+ * stay visible, each column scrolls within its height, and a single
+ * horizontal strip carries the whole board: a wheel movement moves the columns together.
  */
 export default function KanbanPage() {
   const t = useT();
   const { id } = useParams();
   const projectId = parseIdParam(id);
   const board = useKanbanBoard(projectId);
-  // Extraits du board : ces deux-là ont une identité stable et sont les seuls à voyager
-  // jusqu'aux cartes mémoïsées.
+  // Extracts from the board: these two have a stable identity and are the only ones to travel
+  // down to the memoised cards.
   const { applyOptimisticStatus, move } = board;
-  // Menu de carte (statut, assignation, étape, renommage, suppression) + ses dialogues.
-  // `menuFor` y est mémoïsé sur une signature explicite : cf. `useKanbanCardMenu`.
+  // Card menu (status, assignment, step, rename, delete) + its dialogs.
+  // `menuFor` is memoised on an explicit signature: see `useKanbanCardMenu`.
   const { menuFor, dialogs } = useKanbanCardMenu(projectId, applyOptimisticStatus);
   const [filters, setFilters] = useUrlFilters();
   /**
-   * Le filtre appliqué suit la frappe d'un temps de retard : sur une colonne dense, la
-   * saisie restait en arrière du curseur pendant que le board se recalculait à chaque
-   * lettre. Le champ, lui, reste piloté par `filters` — il répond au clavier tout de suite.
+   * The applied filter follows the typing with a delay: on a dense column, the
+   * input lagged behind the cursor while the board recalculated on each
+   * letter. The field itself stays driven by `filters` — it responds to the keyboard at once.
    */
   const deferredFilters = useDeferredValue(filters);
   const [collapsed, setCollapsed] = useState<ReadonlySet<FamilyKey>>(new Set());
@@ -75,7 +75,7 @@ export default function KanbanPage() {
   const columns = useMemo(() => buildColumns(board.statuses, t), [board.statuses, t]);
   const groups = useMemo(() => groupByFamily(columns, new Set()), [columns]);
 
-  // Assignés réellement présents sur le board : proposer tout l'annuaire n'aiderait pas.
+  // Assignees actually present on the board: offering the whole directory would not help.
   const assignees = useMemo(() => {
     const m = new Map<number, string | null>();
     board.tasks.forEach((task) => {
@@ -98,7 +98,7 @@ export default function KanbanPage() {
     [deferredFilters, board.tasks],
   );
 
-  /** Une passe pour ranger les cartes, plutôt qu'un filtrage par colonne. */
+  /** One pass to file the cards, rather than filtering per column. */
   const tasksByColumn = useMemo(() => {
     const map = new Map<string, BoardTask[]>();
     for (const task of filtered) {
@@ -124,8 +124,8 @@ export default function KanbanPage() {
   );
   const onDragCancel = useCallback(() => setActiveId(null), []);
 
-  // Rappel stable, la famille dit laquelle elle est : une fermeture par famille rendrait
-  // toutes les colonnes à chaque rendu de la page.
+  // Stable callback, the family says which it is: a closure per family would re-render
+  // all the columns on every render of the page.
   const toggleFamily = useCallback(
     (key: FamilyKey) =>
       setCollapsed((prev) => {
@@ -160,7 +160,7 @@ export default function KanbanPage() {
           />
         </div>
         {board.loadError && <p className="mb-4 shrink-0 text-sm text-destructive">{board.loadError}</p>}
-        {/* Une troncature silencieuse se lirait comme un board complet. */}
+        {/* A silent truncation would read as a complete board. */}
         {board.truncated && (
           <p className="mb-3 shrink-0 rounded-md border border-warning/40 bg-warning/10 px-3 py-2 text-xs text-warning">
             {t('kanban.truncated', { shown: board.tasks.length, total: board.total })}
@@ -177,9 +177,9 @@ export default function KanbanPage() {
             onDragEnd={onDragEnd}
             onDragCancel={onDragCancel}
           >
-            {/* Bande unique : toutes les familles côte à côte dans le même ascenseur
-                horizontal, donc alignées. La hauteur est celle qui reste — les colonnes
-                défilent à l'intérieur, la page ne défile pas. */}
+            {/* Single strip: all families side by side in the same horizontal scroller,
+                hence aligned. The height is what remains — the columns
+                scroll inside, the page does not scroll. */}
             <div className="flex min-h-0 flex-1 gap-6 overflow-x-auto pb-2">
               {groups.map((group) => (
                 <KanbanFamily

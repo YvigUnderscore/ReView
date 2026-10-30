@@ -16,7 +16,7 @@ const status = (over: Partial<ColumnStatus> & { id: number }): ColumnStatus => (
 });
 
 describe('familyOf', () => {
-  it('range chaque valeur de l’énumération dans sa famille', () => {
+  it('places each value of the enumeration in its family', () => {
     expect(familyOf('TODO')).toBe('todo');
     expect(familyOf('IN_PROGRESS')).toBe('progress');
     expect(familyOf('PENDING_REVIEW')).toBe('review');
@@ -25,20 +25,20 @@ describe('familyOf', () => {
     expect(familyOf('REJECTED')).toBe('blocked');
   });
 
-  it('range un statut sans équivalent dans « à faire » plutôt que nulle part', () => {
+  it('places a status with no equivalent in "to do" rather than nowhere', () => {
     expect(familyOf(null)).toBe('todo');
   });
 });
 
 describe('buildColumns', () => {
-  it('retombe sur les six valeurs figées quand le projet n’a pas de référentiel', () => {
+  it('falls back to the six fixed values when the project has no reference data', () => {
     const columns = buildColumns([], t);
     expect(columns).toHaveLength(6);
     expect(columns.every((c) => c.statusId === null)).toBe(true);
     expect(columns[0].id).toBe('TODO');
   });
 
-  it('bâtit les colonnes sur le vocabulaire du projet', () => {
+  it('builds the columns from the project vocabulary', () => {
     const columns = buildColumns(
       [
         status({ id: 10, name: 'Waiting to Start', legacyStatus: 'TODO' }),
@@ -51,7 +51,7 @@ describe('buildColumns', () => {
     expect(columns.map((c) => c.id)).toEqual(['10', '11', '12']);
   });
 
-  it('ordonne par famille sans mélanger l’ordre du référentiel', () => {
+  it('orders by family without mixing up the reference order', () => {
     const columns = buildColumns(
       [
         status({ id: 1, legacyStatus: 'APPROVED' }),
@@ -61,7 +61,7 @@ describe('buildColumns', () => {
       ],
       t,
     );
-    // à faire → en cours → terminé, et « 1 avant 3 » à l'intérieur de « terminé ».
+    // to do → in progress → done, and "1 before 3" within "done".
     expect(columns.map((c) => c.id)).toEqual(['2', '4', '1', '3']);
   });
 });
@@ -76,11 +76,11 @@ describe('groupByFamily', () => {
     t,
   );
 
-  it('ne rend que les familles qui ont une colonne', () => {
+  it('renders only the families that have a column', () => {
     expect(groupByFamily(columns, new Set()).map((g) => g.key)).toEqual(['todo', 'progress']);
   });
 
-  it('retire les colonnes masquées, et la famille avec quand elle se vide', () => {
+  it('removes hidden columns, and the family with them when it empties', () => {
     expect(groupByFamily(columns, new Set(['1'])).map((g) => g.key)).toEqual(['progress']);
     expect(groupByFamily(columns, new Set(['2'])).flatMap((g) => g.columns.map((c) => c.id))).toEqual([
       '1',
@@ -99,17 +99,17 @@ describe('columnIdOf', () => {
     t,
   );
 
-  it('range la tâche dans la colonne de son statut', () => {
+  it('places the task in the column of its status', () => {
     expect(columnIdOf({ pipelineStatusId: 11, status: 'TODO' }, columns)).toBe('11');
   });
 
-  it('retombe sur l’énumération quand le statut n’est pas offert au projet', () => {
-    // Une tâche importée porte l'identifiant d'un statut du site d'un autre projet : sans
-    // ce repli, elle disparaîtrait purement et simplement du board.
+  it('falls back to the enumeration when the status is not offered to the project', () => {
+    // An imported task carries the identifier of a status from another project's site: without
+    // this fallback, it would simply disappear from the board.
     expect(columnIdOf({ pipelineStatusId: 999, status: 'APPROVED' }, columns)).toBe('12');
   });
 
-  it('rend null quand aucune colonne ne peut l’accueillir', () => {
+  it('returns null when no column can accept it', () => {
     expect(columnIdOf({ pipelineStatusId: null, status: 'RETAKE' }, columns)).toBeNull();
   });
 });

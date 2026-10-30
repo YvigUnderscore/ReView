@@ -8,54 +8,53 @@ import { safeFetch } from '../lib/safeFetch';
 import { appVersion, compareSemver } from '../lib/version';
 
 /**
- * Les versions publiées de ReView, telles que l'administration les propose.
+ * Published ReView versions, as the administration screen lists them.
  *
- * Ce service ne met rien à jour : il **répond à la question « quoi de neuf »**, et c'est
- * la moitié utile de l'écran — celle qui fonctionne sur toute instance, y compris celles
- * qui n'ont aucun mécanisme d'exécution installé.
+ * This service updates nothing: it **answers the question "what's new"**, which is the useful
+ * half of the screen. It works on every instance, including those with no update mechanism installed.
  *
- * Trois principes :
+ * Three principles:
  *
- *  1. **`safeFetch`, jamais `fetch` nu** (règle en tête de `lib/safeFetch.ts`) : le
- *     backend vit dans le réseau applicatif où MinIO, Redis et Postgres répondent sans
- *     authentification. `RELEASE_REPO` vient d'un `.env` d'exploitant, donc d'ailleurs.
- *  2. **Aucune exception ne remonte.** Un studio dont le pare-feu ferme le sortant doit
- *     voir « injoignable », pas un écran d'administration en erreur. L'indisponibilité
- *     est une donnée de la réponse, pas un incident.
- *  3. **Le corps des notes est du markdown distant**, donc du contenu que nous n'écrivons
- *     pas : il est borné en taille ici, et rendu échappé côté navigateur (`renderDocHtml`).
+ *  1. **`safeFetch`, never a bare `fetch`** (see the header of `lib/safeFetch.ts`): the
+ *     backend lives on the application network where MinIO, Redis and Postgres answer without
+ *     authentication. `RELEASE_REPO` comes from an operator's `.env`, so it is untrusted.
+ *  2. **No exception propagates.** A studio whose firewall blocks outbound traffic must see
+ *     "unreachable", not an error page in the admin area. Unavailability is data in the
+ *     response, not an incident.
+ *  3. **Release notes are remote markdown**, so it is content we do not write: its size is
+ *     bounded here, and it is rendered escaped in the browser (`renderDocHtml`).
  */
 
-/** Une release publiée, réduite à ce que l'écran affiche. */
+/** A published release, reduced to what the screen displays. */
 export interface ReleaseInfo {
-  /** Étiquette git, telle que publiée (`v2.4.0`). */
+  /** Git tag, as published (`v2.4.0`). */
   tag: string;
   name: string;
   publishedAt: string | null;
-  /** Notes de version, en markdown — le corps de la release GitHub. */
+  /** Release notes in markdown: the body of the GitHub release. */
   notesMd: string;
   htmlUrl: string;
   prerelease: boolean;
 }
 
-/** Pourquoi le catalogue est vide, quand il l'est. */
+/** Why the catalog is empty, when it is. */
 export type ReleaseError = 'DISABLED' | 'UNREACHABLE' | 'RATE_LIMITED';
 
 export interface ReleaseCatalog {
   releases: ReleaseInfo[];
-  /** Horodatage de la dernière interrogation aboutie ; `null` si aucune. */
+  /** Timestamp of the last successful poll; `null` if none. */
   checkedAt: string | null;
   error: ReleaseError | null;
 }
 
-/** Étiquette de version publiable — la même forme que celle qui déclenche `release.yml`. */
+/** Publishable version tag, in the same form that triggers `release.yml`. */
 export const VERSION_TAG = /^v\d+\.\d+\.\d+(?:-[0-9A-Za-z.]+)?$/;
 
-/** Le corps d'une release est de la prose : borné pour qu'un dépôt distant ne l'enfle pas. */
+/** Release bodies are prose: bounded so a remote repository cannot inflate them. */
 const MAX_NOTES_CHARS = 20_000;
-/** Fenêtre de fraîcheur : une release ne paraît pas deux fois dans la demi-heure. */
+/** Freshness window: a release is not re-fetched more than once in half an hour. */
 const TTL_MS = 30 * 60_000;
-/** Releases demandées : de quoi couvrir plusieurs versions de retard sans pagination. */
+/** Requested releases: enough to cover several versions of lag without pagination. */
 const PAGE_SIZE = 20;
 
 const githubRelease = z.object({
@@ -71,13 +70,13 @@ const githubRelease = z.object({
 let cache: ReleaseCatalog | null = null;
 let cachedAtMs = 0;
 
-/** Vide le cache — appelée par « Vérifier maintenant », et par les tests. */
+/** Clears the cache. Called by "Check now" and by the tests. */
 export function invalidate(): void {
   cache = null;
   cachedAtMs = 0;
 }
 
-/** Interroge GitHub. Ne jette jamais : traduit toute panne en `ReleaseError`. */
+/** Queries GitHub. Never throws: maps any failure to a `ReleaseError`. */
 async function fetchReleases(): Promise<ReleaseCatalog> {
   const url = `https://api.github.com/repos/${env.RELEASE_REPO}/releases?per_page=${PAGE_SIZE}`;
   const headers: Record<string, string> = {
@@ -90,8 +89,8 @@ async function fetchReleases(): Promise<ReleaseCatalog> {
     const res = await safeFetch(
       url,
       { headers },
-      // Une redirection : un dépôt renommé répond 301 vers son nouveau nom, et la garde
-      // SSRF revérifie la cible du saut. 512 Kio : vingt corps de release tiennent large.
+      // A redirect: a renamed repository answers 301 with its new name, and the SSRF guard
+      // rechecks the target of each hop. 512 KiB: twenty release bodies fit comfortably.
       { timeoutMs: 8_000, maxRedirects: 1, maxBytes: 512 * 1024 },
     );
     if (res.status === 403 || res.status === 429) {
@@ -120,15 +119,15 @@ async function fetchReleases(): Promise<ReleaseCatalog> {
   }
 }
 
-/** Le catalogue des releases, servi depuis le cache tant qu'il est frais. */
+/** The release catalog, served from cache while it is fresh. */
 export async function catalog(options: { force?: boolean } = {}): Promise<ReleaseCatalog> {
   if (!env.RELEASE_CHECK_ENABLED) return { releases: [], checkedAt: null, error: 'DISABLED' };
   const fresh = cache !== null && Date.now() - cachedAtMs < TTL_MS;
   if (fresh && !options.force) return cache as ReleaseCatalog;
 
   const fetched = await fetchReleases();
-  // Un échec passager ne doit pas effacer un catalogue déjà obtenu : l'écran continue de
-  // montrer ce qu'il sait, en disant que la dernière vérification n'a pas abouti.
+  // A transient failure must not erase a catalog already obtained: the screen keeps
+  // showing what it knows, noting that the last check did not succeed.
   if (fetched.error !== null && cache !== null && cache.releases.length > 0) {
     cache = { ...cache, error: fetched.error };
     return cache;
@@ -139,23 +138,23 @@ export async function catalog(options: { force?: boolean } = {}): Promise<Releas
 }
 
 /**
- * La release à proposer : la plus haute version **stable**. Une pré-version reste visible
- * dans la liste — on ne la propose pas d'un bouton, on ne la cache pas non plus.
+ * The release to offer: the highest **stable** version. A pre-release stays visible in the
+ * list: it is not offered by a button, nor is it hidden.
  */
 export function latestOf(releases: ReleaseInfo[]): ReleaseInfo | null {
   return releases.find((r) => !r.prerelease) ?? null;
 }
 
-/** Les releases parues depuis la version en service : ce que la mise à jour apporterait. */
+/** Releases published since the installed version: what the update would bring. */
 export function newerThan(releases: ReleaseInfo[], installed: string): ReleaseInfo[] {
   return releases.filter((r) => compareSemver(r.tag, installed) > 0);
 }
 
 /**
- * Refuse une étiquette qui n'a pas été publiée. Contrôle d'ERGONOMIE — il évite de lancer
- * une bascule vers une version inexistante, dont l'échec ne se verrait qu'après la
- * sauvegarde. Le garde-fou de sécurité, lui, est côté agent (monotonie de version) :
- * celui-ci s'appuie sur une réponse distante, donc sur quelque chose qu'on ne maîtrise pas.
+ * Rejects a tag that was not published. This is an ERGONOMICS check: it prevents switching to a
+ * nonexistent version, whose failure would only show after the backup. The security guard is on
+ * the agent side (version monotonicity): this check relies on a remote response, so on something
+ * we do not control.
  */
 export async function isPublishedTag(tag: string): Promise<boolean> {
   if (!VERSION_TAG.test(tag)) return false;

@@ -5,9 +5,8 @@ import { describe, it, expect } from 'vitest';
 import { foldForSearch, matchDestinations } from './paletteMatch';
 
 /**
- * La palette proposait quatre destinations, et les faisait disparaître dès la première
- * lettre tapée : impossible d'y faire ce pour quoi une palette existe, taper « kanb » pour
- * aller au kanban. Le filtrage se fait ici, `Command` étant monté avec
+ * The palette offered four destinations, and made them vanish as soon as the first letter was typed: it was impossible to
+ * do what a palette is for, typing "kanb" to go to the kanban. Filtering is done here, `Command` being mounted with
  * `shouldFilter={false}`.
  */
 const ITEMS = [
@@ -18,31 +17,31 @@ const ITEMS = [
 ];
 
 describe('matchDestinations', () => {
-  it('rend tout quand rien n’est tapé', () => {
+  it('renders everything when nothing is typed', () => {
     expect(matchDestinations(ITEMS, '')).toHaveLength(4);
     expect(matchDestinations(ITEMS, '   ')).toHaveLength(4);
   });
 
-  it('trouve une destination sur un début de mot', () => {
+  it('finds a destination on the start of a word', () => {
     expect(matchDestinations(ITEMS, 'kanb').map((i) => i.key)).toEqual(['kanban']);
   });
 
-  it('ignore les accents et la casse', () => {
+  it('ignores accents and case', () => {
     expect(matchDestinations(ITEMS, 'reglages').map((i) => i.key)).toEqual(['admin']);
     expect(matchDestinations(ITEMS, 'RÉGLAGES').map((i) => i.key)).toEqual(['admin']);
   });
 
-  it('accepte aussi la clé technique, stable d’une langue à l’autre', () => {
+  it('also accepts the technical key, which is stable from one language to another', () => {
     expect(matchDestinations(ITEMS, 'admin').map((i) => i.key)).toEqual(['admin']);
   });
 
-  it('ne rend rien quand rien ne correspond — le message « aucun résultat » doit pouvoir sortir', () => {
+  it('renders nothing when nothing matches: the "no results" message must be able to appear', () => {
     expect(matchDestinations(ITEMS, 'zzzz')).toHaveLength(0);
   });
 });
 
 describe('foldForSearch', () => {
-  it('replie accents et casse', () => {
+  it('folds accents and case', () => {
     expect(foldForSearch('Éléments Masqués')).toBe('elements masques');
   });
 });

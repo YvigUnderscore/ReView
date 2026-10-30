@@ -2,25 +2,25 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Link } from 'react-router-dom';
-import { qk } from '../../../lib/query';
-import { useInfiniteList } from '../../../lib/useInfiniteList';
-import AssignedTaskRow from '../../../components/AssignedTaskRow';
-import ListSentinel from '../../../components/ListSentinel';
-import { SkeletonRows } from '../../../components/ui/skeleton';
+import { qk } from '@/v2/lib/query';
+import { useInfiniteList } from '@/v2/lib/useInfiniteList';
+import AssignedTaskRow from '@/v2/components/AssignedTaskRow';
+import ListSentinel from '@/v2/components/ListSentinel';
+import { SkeletonRows } from '@/v2/components/ui/skeleton';
 import type { MyTaskItem } from '../../mywork/myWorkTypes';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
- * Ce que ce projet me demande à moi — la seule question qu'un artiste vient poser à la vue
- * d'ensemble, et à laquelle la page ne répondait pas.
+ * What this project asks of me: the one question an artist comes to the overview with, and which
+ * the page did not answer.
  *
- * La liste est celle de « mes tâches », vue par le trou d'un projet : même route, même
- * périmètre serveur (`lib/homeScope`), même ligne actionnable. Deux lectures différentes
- * auraient fini par donner deux chiffres différents pour la même question.
+ * The list is that of "my tasks", seen through the hole of a project: same route, same server
+ * scope (`lib/homeScope`), same actionable row. Two different readings would eventually have given
+ * two different figures for the same question.
  *
- * `limit` est ce que la carte peut montrer — la hauteur réglée traduite en lignes. La
- * sentinelle ne reste que tant que la carte a de la place : une fois pleine, réclamer une
- * page de plus ne servirait à afficher rien de plus.
+ * `limit` is what the card can show: the height set, translated into rows. The sentinel only
+ * remains as long as the card has room: once full, asking for one more page would display nothing
+ * more.
  */
 export default function MyTasksWidget({ projectId, limit }: { projectId: number; limit: number }) {
   const t = useT();

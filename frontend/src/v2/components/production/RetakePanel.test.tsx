@@ -4,17 +4,16 @@
 import { describe, expect, it } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import RetakePanel from './RetakePanel';
-import type { MockResolver } from '../../../test/apiMock';
-import { renderWithProviders } from '../../../test/renderWithProviders';
+import type { MockResolver } from '@/test/apiMock';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import { t } from '../../i18n';
 
 /**
- * Le panneau des retakes.
+ * The retakes panel.
  *
- * Trois exigences : il ne doit pas afficher un zéro là où le serveur ne sait pas (un
- * ancien serveur ne rend ni les tours de review ni la distribution), il doit classer le
- * pire plan en tête, et il doit rester lisible sur un projet qui n'a encore aucun retake —
- * c'est même l'état le plus fréquent en début de production.
+ * Three requirements: it must not display a zero where the server does not know (an old server returns neither the review
+ * rounds nor the distribution), it must rank the worst shot first, and it must remain readable on a project that has no
+ * retake yet: that is in fact the most frequent state at the start of production.
  */
 
 const shot = (id: number, retakes: number, over: Record<string, unknown> = {}) => ({
@@ -57,7 +56,7 @@ const render = (stats: MockResolver = STATS) =>
   renderWithProviders(<RetakePanel projectId={7} />, { api: { 'GET /api/projects/7/stats': stats } });
 
 describe('RetakePanel', () => {
-  it('résume les retakes en quatre chiffres', async () => {
+  it('summarises the retakes in four figures', async () => {
     render();
     expect(await screen.findByText(t('production.retakes.avgRetakes'))).toBeTruthy();
     expect(screen.getByText('1.4')).toBeTruthy();
@@ -66,23 +65,23 @@ describe('RetakePanel', () => {
     expect(screen.getByText(t('production.retakes.percent', { value: 45 }))).toBeTruthy();
   });
 
-  it('classe le plan le plus repris en tête', async () => {
+  it('ranks the most retaken shot first', async () => {
     render();
     const rows = await screen.findAllByRole('row');
-    // Ligne 0 = l'en-tête du tableau ; le pire plan vient juste après.
+    // Row 0 = the table header; the worst shot comes right after.
     expect(within(rows[1]).getByRole('link').textContent).toBe('SH02');
     expect(within(rows[1]).getByText('5')).toBeTruthy();
     expect(within(rows[1]).getByText('6')).toBeTruthy();
   });
 
-  it('trace la distribution par nombre de retakes', async () => {
+  it('plots the distribution by number of retakes', async () => {
     render();
     expect(await screen.findByText(t('production.retakes.distribution'))).toBeTruthy();
     expect(screen.getByText(t('production.retakes.bucketRange', { min: 1, max: 2 }))).toBeTruthy();
     expect(screen.getByText(t('production.retakes.bucketFrom', { min: 5 }))).toBeTruthy();
   });
 
-  it('n’invente rien quand le serveur ne rend pas encore les tours de review', async () => {
+  it('invents nothing when the server does not yet return the review rounds', async () => {
     const old = {
       totals: { ...STATS.totals, avgReviewRoundsPerShot: undefined, firstTimeRightRate: undefined },
       sequences: [],
@@ -90,21 +89,20 @@ describe('RetakePanel', () => {
     };
     render(old);
     await screen.findByText(t('production.retakes.avgRetakes'));
-    // Deux tuiles sans valeur connue : un « — », jamais un zéro qui affirmerait le contraire.
+    // Two tiles with no known value: a "—", never a zero that would assert the opposite.
     expect(screen.getAllByText('—').length).toBeGreaterThanOrEqual(2);
-    // Le classement retombe sur les plans les plus lents, les seuls que l'ancienne
-    // réponse nommait — partiel, mais jamais faux.
+    // Ranking falls back to the slowest shots, the only ones the old response named: partial, but never wrong.
     expect(screen.getByRole('link', { name: 'SH03' })).toBeTruthy();
     expect(screen.queryByText(t('production.retakes.distribution'))).toBeNull();
   });
 
-  it('le dit quand aucun retake n’a encore été enregistré', async () => {
+  it('says so when no retake has been recorded yet', async () => {
     render({ ...STATS, mostRetakenShots: [], slowestShots: [], retakeBuckets: [] });
     expect(await screen.findByText(t('production.retakes.empty'))).toBeTruthy();
     expect(screen.queryByRole('table')).toBeNull();
   });
 
-  it('montre l’erreur du serveur plutôt qu’un tableau vide', async () => {
+  it('shows the server error rather than an empty table', async () => {
     render(() => {
       throw new Error('nope');
     });

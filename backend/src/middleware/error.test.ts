@@ -2,12 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { NextFunction, Request, Response } from 'express';
+import { Prisma } from '@prisma/client';
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { AppError } from '../lib/errors';
-import { errorHandler } from './error';
+import { errorHandler, prismaErrorResponse } from './error';
 
-/** Double de réponse Express : on ne garde que ce que le client verrait. */
+/** Express response double: we only keep what the client would see. */
 function responseSpy() {
   const sent: { status?: number; body?: Record<string, unknown> } = {};
   const res = {
@@ -23,27 +24,36 @@ function responseSpy() {
   return { res: res as unknown as Response, sent };
 }
 
-/** Requête portant un logger muet — le handler journalise les erreurs non gérées. */
+/** Request carrying a silent logger: the handler logs unhandled errors. */
 const request = () =>
-  ({ log: { error: vi.fn() } }) as unknown as Request & { log: { error: ReturnType<typeof vi.fn> } };
+  ({ log: { error: vi.fn(), warn: vi.fn() } }) as unknown as Request & {
+    log: { error: ReturnType<typeof vi.fn>; warn: ReturnType<typeof vi.fn> };
+  };
+
+const prismaError = (code: string, meta?: Record<string, unknown>) =>
+  new Prisma.PrismaClientKnownRequestError(`prisma ${code} on model Secret`, {
+    code,
+    clientVersion: 'test',
+    meta,
+  });
 
 const next = (() => undefined) as NextFunction;
 
 describe('errorHandler', () => {
-  it('erreur applicative : statut, message et code du client', () => {
+  it('application error: status, message and client code', () => {
     const { res, sent } = responseSpy();
     errorHandler(new AppError('Project is archived', 403, 'PROJECT_ARCHIVED'), request(), res, next);
     expect(sent.status).toBe(403);
     expect(sent.body).toEqual({ error: 'Project is archived', code: 'PROJECT_ARCHIVED' });
   });
 
-  it('erreur applicative : les détails accompagnent le code', () => {
+  it('application error: details accompany the code', () => {
     const { res, sent } = responseSpy();
     errorHandler(new AppError('Locked', 409, 'SG_LOCKED', { url: 'https://sg/x' }), request(), res, next);
     expect(sent.body).toMatchObject({ code: 'SG_LOCKED', url: 'https://sg/x' });
   });
 
-  it('schéma refusé : 400 avec un code traduisible et les champs fautifs', () => {
+  it('schema rejected: 400 with a translatable code and the offending fields', () => {
     const { res, sent } = responseSpy();
     const parsed = z.object({ email: z.string().email() }).safeParse({ email: 'x' });
     errorHandler(parsed.success ? null : parsed.error, request(), res, next);
@@ -52,7 +62,7 @@ describe('errorHandler', () => {
     expect(sent.body?.details).toHaveProperty('email');
   });
 
-  it('erreur non gérée : 500 anonyme, codé, et journalisé', () => {
+  it('unhandled error: anonymous, coded and logged 500', () => {
     const { res, sent } = responseSpy();
     const req = request();
     errorHandler(new Error('secret de la stack'), req, res, next);
@@ -62,9 +72,9 @@ describe('errorHandler', () => {
     expect(req.log.error).toHaveBeenCalledTimes(1);
   });
 
-  it('les deux réponses fabriquées ici portent un code, comme les erreurs typées', () => {
-    // Sans code, les deux fautes les plus fréquentes seraient les seules à rester
-    // anglaises dans une interface traduite en quatorze langues.
+  it('both responses built here carry a code, like typed errors', () => {
+    // Without a code, the two most frequent faults would be the only ones left in English in an
+    // interface translated into fourteen languages.
     for (const err of [
       new Error('x'),
       z.string().safeParse(1).success ? null : z.string().safeParse(1).error,
@@ -73,5 +83,46 @@ describe('errorHandler', () => {
       errorHandler(err, request(), res, next);
       expect(sent.body?.code).toBeTruthy();
     }
+  });
+
+  it('P2002 uniqueness violation: 409 conflict with the constrained fields, no schema leak', () => {
+    const { res, sent } = responseSpy();
+    const req = request();
+    errorHandler(prismaError('P2002', { target: ['projectId', 'name'] }), req, res, next);
+    expect(sent.status).toBe(409);
+    expect(sent.body).toEqual({
+      error: 'Resource already exists',
+      code: 'CONFLICT',
+      fields: ['projectId', 'name'],
+    });
+    expect(JSON.stringify(sent.body)).not.toContain('Secret');
+    expect(req.log.warn).toHaveBeenCalledTimes(1);
+    expect(req.log.error).not.toHaveBeenCalled();
+  });
+
+  it('P2002 with a string target or no target', () => {
+    expect(prismaErrorResponse(prismaError('P2002', { target: 'User_email_key' }))?.body.fields).toEqual([
+      'User_email_key',
+    ]);
+    expect(prismaErrorResponse(prismaError('P2002'))?.body).toEqual({
+      error: 'Resource already exists',
+      code: 'CONFLICT',
+    });
+  });
+
+  it('P2025 record not found: 404', () => {
+    const { res, sent } = responseSpy();
+    errorHandler(prismaError('P2025', { cause: 'Record to update not found.' }), request(), res, next);
+    expect(sent.status).toBe(404);
+    expect(sent.body).toEqual({ error: 'Resource not found', code: 'NOT_FOUND' });
+  });
+
+  it('other Prisma errors stay unhandled 500s', () => {
+    const { res, sent } = responseSpy();
+    const req = request();
+    errorHandler(prismaError('P1001'), req, res, next);
+    expect(sent.status).toBe(500);
+    expect(req.log.error).toHaveBeenCalledTimes(1);
+    expect(prismaErrorResponse(new Error('x'))).toBeNull();
   });
 });

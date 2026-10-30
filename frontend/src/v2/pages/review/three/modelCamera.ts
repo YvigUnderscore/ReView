@@ -5,17 +5,17 @@ import type * as THREE from 'three';
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { applyRoll, captureCameraView } from './cameraRoll';
 
-/** Vue caméra d'un modèle Three (position/cible libres) — stockée dans `Comment.cameraState`. */
+/** Camera view of a Three model (free position/target), stored in `Comment.cameraState`. */
 export interface ModelCameraState {
   position: { x: number; y: number; z: number };
   target: { x: number; y: number; z: number };
   fov?: number;
   aspect?: number;
-  /** Tilt (roll) autour de l'axe de vue, en radians (mode layout). */
+  /** Tilt (roll) around the view axis, in radians (layout mode). */
   roll?: number;
 }
 
-/** Orbite héritée de model-viewer (azimut/polaire/rayon) — relue de façon tolérante. */
+/** Orbit inherited from model-viewer (azimuth/polar/radius), read back leniently. */
 interface LegacyOrbit {
   orbit?: { theta: number; phi: number; radius: number };
   target?: { x: number; y: number; z: number };
@@ -23,8 +23,8 @@ interface LegacyOrbit {
 }
 
 /**
- * Convertit une orbite model-viewer (theta autour de Y, phi depuis +Y, rayon) en position
- * cartésienne autour de `target`. Pure/testable — sert la relecture des vues 3D héritées.
+ * Converts a model-viewer orbit (theta around Y, phi from +Y, radius) into a Cartesian position
+ * around `target`. Pure, testable — used to read back legacy 3D views.
  */
 export function orbitToPosition(
   three: typeof import('three'),
@@ -44,13 +44,13 @@ export function captureModelCamera(
   camera: THREE.PerspectiveCamera,
   controls: OrbitControls,
 ): ModelCameraState {
-  // Pose réelle (quaternion) : suit aussi la rotation en cours de vol (live, retours 33).
+  // Real pose (quaternion): also follows the rotation in progress during a flight (live, feedback 33).
   return captureCameraView(three, camera, controls);
 }
 
 /**
- * Restaure une vue caméra (V5). Tolérant : format position (nouveau viewer Three) ou orbite
- * (comments 3D hérités de model-viewer). No-op si l'état est inexploitable.
+ * Restores a camera view (V5). Lenient: position format (new Three viewer) or orbit
+ * (legacy 3D comments from model-viewer). No-op if the state is unusable.
  */
 export function restoreModelCamera(
   three: typeof import('three'),
@@ -73,7 +73,7 @@ export function restoreModelCamera(
     camera.fov = s.fov;
     camera.updateProjectionMatrix();
   }
-  // Tilt (roll) : oriente `camera.up` selon la direction de vue (mode layout).
+  // Tilt (roll): orients `camera.up` according to the view direction (layout mode).
   const forward = new three.Vector3().subVectors(controls.target, camera.position);
   applyRoll(three, camera, forward, s.roll ?? 0);
   controls.update();

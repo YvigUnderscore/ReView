@@ -19,40 +19,40 @@ import {
 } from './model3dChrome';
 
 /**
- * Chrome du viewer modèle 3D : la bascule et le rail que ce média offre vraiment, l'outil armé
- * qui en découle, et les deux conséquences directes de cet outil sur la scène — le calque de la
- * brosse de surface et l'atelier caméra. Jumeau de `splat/useSplatView`.
+ * Chrome of the 3D model viewer: the switcher and the rail this media actually offers, the tool
+ * armed from it, and the two direct consequences of that tool on the scene — the layer of the
+ * surface brush and the camera workshop. Twin of `splat/useSplatView`.
  *
- * Le hook générique (`useChromeState`) accepte les deux listes ; c'est ici qu'on les calcule,
- * une fois, pour que la bascule d'en-tête, les touches numériques, le rail et les lettres
- * d'outils lisent tous la même source. Sans cette unicité, un mode retiré de l'en-tête restait
- * armable au clavier — le bouton mort revenait par la porte de service.
+ * The generic hook (`useChromeState`) accepts both lists; they are computed here, once, so that the
+ * header switcher, the number keys, the rail and the tool letters all read the same source. Without
+ * this uniqueness, a mode removed from the header stayed armable from the keyboard — the dead button
+ * came back through the service door.
  *
- * `reach` dit où les gizmos du mode « Nettoyer » peuvent écrire : la transformation de version
- * (droit rendu par le serveur) ou l'override de scène USD. Sans ni l'un ni l'autre, le mode
- * n'offre qu'un enregistrement refusé — il disparaît.
+ * `reach` says where the gizmos of the "Clean" mode can write: the version transform (right granted
+ * by the server) or the USD scene override. Without either, the mode only offers a refused save — it
+ * disappears.
  *
- * La garde de vol vient du viewer (`isFlying`) : clic droit maintenu = mode de navigation, où
- * aucune lettre n'arme d'outil (`S`, recul en ZQSD comme en WASD, armait le gizmo Échelle).
+ * The flight guard comes from the viewer (`isFlying`): right click held = navigation mode, where no
+ * letter arms a tool (`S`, moving backward with ZQSD as with WASD, armed the scale gizmo).
  */
 export interface Model3DChromeView {
-  /** État du chrome (mode, outil, panneau, tiroir) et son patcheur — préférences persistées. */
+  /** Chrome state (mode, tool, panel, drawer) and its patcher — persisted preferences. */
   state: ChromeState;
   update: (patch: Partial<ChromeState>) => void;
-  /** Bascule réellement offerte — la MÊME liste pour l'en-tête et pour les touches numériques. */
+  /** Switcher actually offered — the SAME list for the header and for the number keys. */
   modes: ReviewMode[];
-  /** Outils du rail pour le mode courant. */
+  /** Rail tools for the current mode. */
   tools: ReviewTool[];
-  /** Outil armé résolu dans le mode courant (repli : premier outil du mode). */
+  /** Armed tool resolved in the current mode (fallback: first tool of the mode). */
   activeTool: ReviewTool;
-  /** Calque de la brosse de surface — `null` tant qu'aucun de ses deux outils n'est armé. */
+  /** Layer of the surface brush — `null` as long as neither of its two tools is armed. */
   brushLayer: ReactNode;
 }
 
 export function useModel3DModes(
   reach: Model3DCleanReach,
   m: Model3DThreeState,
-  /** Annotation en cours et brosse de surface : ce que l'outil armé pilote hors du chrome. */
+  /** Ongoing annotation and surface brush: what the armed tool drives outside the chrome. */
   annotation: { ann: Annotations; paint: SplatPaintState },
 ): Model3DChromeView {
   const { canEditTransform, hasScenegraph } = reach;
@@ -65,19 +65,19 @@ export function useModel3DModes(
   const toolsOf = useCallback((mode: ModeId) => model3dToolsFor(mode, canClean), [canClean]);
   const { state, update } = useChromeState('MODEL_3D', { modes, tools: toolsOf, isFlying });
 
-  // Le droit d'écrire la transformation peut tomber sous les pieds de l'utilisateur (version
-  // publiée par un superviseur pendant la session) : on ne le laisse pas dans un mode dont le
-  // segment vient de disparaître, à manipuler des gizmos qui ne s'enregistreront pas.
+  // The right to write the transform can fall from under the user's feet (version published by a
+  // manager during the session): we do not leave them in a mode whose segment has just disappeared,
+  // manipulating gizmos that will not save.
   useEffect(() => {
     if (!canClean && state.mode === 'clean') update({ mode: DEFAULT_MODE });
   }, [canClean, state.mode, update]);
 
-  // Bouton « Annoter » du composer ↔ mode « Annoter » du rail : sans ce pont, cliquer « Annoter »
-  // sur un modèle n'armait que le crayon 2D et les outils de la scène restaient invisibles.
+  // "Annotate" button of the composer ↔ "Annotate" mode of the rail: without this bridge, clicking
+  // "Annotate" on a model only armed the 2D pencil and the scene tools stayed invisible.
   useSpatialAnnotate({ state, update, ann: annotation.ann });
 
-  // Mode Mise en scène = atelier caméra : y entrer sort de la caméra du plan, en sortir y rentre.
-  // Seule écriture du « dans / hors caméra » — modèle en tête de `viewer/useLayoutMode`.
+  // Staging mode = camera workshop: entering it takes the camera out of the plan, leaving it puts
+  // it back. Sole write of the "in / out of camera" — model at the head of `viewer/useLayoutMode`.
   useEffect(() => {
     setLayoutMode(state.mode === 'stage');
   }, [state.mode, setLayoutMode]);

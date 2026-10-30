@@ -8,9 +8,9 @@ import { join } from 'node:path';
 import { mkdtemp, rm, stat, writeFile } from 'node:fs/promises';
 
 import { redisConnectionOptions } from '../lib/redis';
-import { QUEUE_NAMES, type SpatialThumbJobData } from '../services/JobService';
+import { QUEUE_NAMES, type SpatialThumbJobData } from '../lib/queues';
 import { prisma } from '../lib/prisma';
-import { storage, StorageService } from '../services/StorageService';
+import { storage, StorageService } from '../lib/storage';
 import { logger } from '../lib/logger';
 import { getExtension } from '../lib/fileSignatures';
 import { spatialThumbSource } from '../lib/mediaJobKind';
@@ -18,36 +18,37 @@ import { readSplatCloud } from '../lib/splatPoints';
 import { renderPointCloudPng } from '../lib/pointThumbnail';
 import { renderModelThumbnail } from '../services/ModelConvertService';
 import { registerWorkerShutdown } from './shutdown';
+import { ignoreFailure } from '../lib/ignoreFailure';
 
 /**
- * Worker de **vignette spatiale** : produit l'aperçu des médias 3D et gaussian splat.
+ * **Spatial thumbnail** worker: produces the preview of 3D media and Gaussian splats.
  *
- * Le manque comblé : `jobKindFor` ne déclenchait rien pour un splat ni pour un `.glb` natif,
- * et la branche `convert3d` du worker FFmpeg n'écrivait aucun `thumbnailKey`. Une page de
- * plan pleine d'assets 3D n'affichait donc que des tuiles vides jusqu'à ce qu'un humain
- * ouvre chaque review pour capturer la vue à la main.
+ * The gap it fills: `jobKindFor` triggered nothing for a splat nor for a native `.glb`,
+ * and the `convert3d` branch of the FFmpeg worker wrote no `thumbnailKey`. A shot page full of
+ * 3D assets only showed empty tiles until a human
+ * opened each review to capture the view by hand.
  *
  * Trois invariants tenus par ce worker :
- *  1. **Il ne touche jamais au statut du média.** Aucun média ne peut rester coincé en
- *     `PROCESSING` à cause d'une vignette, et un rendu impossible (Blender absent de
- *     l'image, splat dans un conteneur illisible) est un job *réussi* sans image.
- *  2. **Il n'écrase jamais une vignette existante** — écriture conditionnelle sur
- *     `thumbnailKey IS NULL`, la même garde que la capture client (`setAutoThumbnail`).
- *     Le job est donc idempotent, et rejouable sans risque.
- *  3. **Il est borné en durée** : le rendu Blender a son propre délai maximal
- *     (`BLENDER_THUMB_TIMEOUT_MS`, même motif que `lib/ffmpegTimeout`), et la lecture d'un
- *     splat est un parcours en flux à mémoire constante.
+ *  1. **It never touches the media status.** No media can stay stuck in
+ *     `PROCESSING` because of a thumbnail, and an impossible render (Blender missing from
+ *     the image, splat in an unreadable container) is a *successful* job without an image.
+ *  2. **It never overwrites an existing thumbnail**: conditional write on
+ *     `thumbnailKey IS NULL`, the same guard as the client capture (`setAutoThumbnail`).
+ *     The job is therefore idempotent and safe to replay.
+ *  3. **It is bounded in time**: the Blender render has its own maximum delay
+ *     (`BLENDER_THUMB_TIMEOUT_MS`, same pattern as `lib/ffmpegTimeout`), and reading a
+ *     splat is a streaming pass with constant memory.
  */
 
-/** Budget de points retenus dans un splat : au-delà, la vignette ne gagne plus rien. */
+/** Budget of retained points in a splat: beyond it, the thumbnail gains nothing. */
 export const SPLAT_THUMB_MAX_POINTS = 160_000;
 
 export type SpatialThumbOutcome =
   'missing' | 'exists' | 'unsupported' | 'pending' | 'no-render' | 'raced' | 'rendered';
 
 /**
- * Le GLB dérivé n'existe pas encore : la conversion est en vol. Erreur *attendue*, dont la
- * seule fonction est de faire replanifier le job par BullMQ (recul exponentiel).
+ * The derived GLB does not exist yet: the conversion is in flight. An *expected* error whose
+ * sole purpose is to make BullMQ reschedule the job (exponential backoff).
  */
 export class SpatialThumbPendingError extends Error {
   readonly mediaObjectId: number;
@@ -59,7 +60,7 @@ export class SpatialThumbPendingError extends Error {
   }
 }
 
-/** Rend et pose la vignette d'un média spatial. Ne lève que sur incident d'infrastructure. */
+/** Renders and stores the thumbnail of a spatial media. Only throws on infrastructure incidents. */
 export async function renderSpatialThumb(mediaId: number): Promise<SpatialThumbOutcome> {
   const media = await prisma.mediaObject.findUnique({ where: { id: mediaId } });
   if (!media) return 'missing';
@@ -77,14 +78,14 @@ export async function renderSpatialThumb(mediaId: number): Promise<SpatialThumbO
     if (source === 'model') {
       const glbKey =
         typeof metadata.glbKey === 'string' ? metadata.glbKey : ext === '.glb' ? media.storageKey : null;
-      // Pas encore de GLB : soit la conversion tourne (on repassera), soit elle a échoué et
-      // il n'y a rien à rendre — dans les deux cas le statut du média n'est pas notre affaire.
+      // No GLB yet: either the conversion is running (we'll come back), or it failed and
+      // there is nothing to render. Either way the media status is not our concern.
       if (!glbKey) return media.status === MediaStatus.PROCESSING ? 'pending' : 'unsupported';
       const glb = join(dir, 'model.glb');
       await storage.downloadToFile(glbKey, glb);
       const result = await renderModelThumbnail(glb, png);
       if (!result.rendered) {
-        logger.warn(`[spatialThumb.worker] média ${mediaId} non rendu (${result.reason})`);
+        logger.warn(`[spatialThumb.worker] media ${mediaId} not rendered (${result.reason})`);
         return 'no-render';
       }
     } else {
@@ -93,12 +94,12 @@ export async function renderSpatialThumb(mediaId: number): Promise<SpatialThumbO
       const { size } = await stat(src);
       const read = await readSplatCloud(src, ext, size, SPLAT_THUMB_MAX_POINTS);
       if (!read.ok) {
-        logger.warn(`[spatialThumb.worker] splat ${mediaId} illisible (${read.reason})`);
+        logger.warn(`[spatialThumb.worker] splat ${mediaId} unreadable (${read.reason})`);
         return 'no-render';
       }
       const buf = renderPointCloudPng(read.cloud);
       if (!buf) {
-        logger.warn(`[spatialThumb.worker] splat ${mediaId} : nuage dégénéré, aucune vignette`);
+        logger.warn(`[spatialThumb.worker] splat ${mediaId}: degenerate cloud, no thumbnail`);
         return 'no-render';
       }
       await writeFile(png, buf);
@@ -106,13 +107,13 @@ export async function renderSpatialThumb(mediaId: number): Promise<SpatialThumbO
 
     const key = StorageService.thumbnailKey(mediaId, 'png');
     await storage.uploadFile(key, png, 'image/png');
-    // Écriture conditionnelle : une capture client concurrente peut avoir gagné entre-temps.
+    // Conditional write: a concurrent client capture may have won in the meantime.
     const { count } = await prisma.mediaObject.updateMany({
       where: { id: mediaId, thumbnailKey: null },
       data: { thumbnailKey: key },
     });
     if (count === 0) {
-      await storage.deleteObject(key).catch(() => undefined);
+      await storage.deleteObject(key).catch(ignoreFailure('[spatial-thumb] object cleanup failed', { key }));
       return 'raced';
     }
     return 'rendered';
@@ -129,21 +130,21 @@ export const spatialThumbWorker = new Worker<SpatialThumbJobData, void, string>(
     if (outcome === 'pending') throw new SpatialThumbPendingError(mediaId);
     logger.info(`[spatialThumb.worker] media=${mediaId} → ${outcome}`);
   },
-  // Concurrence 1 : un rendu Cycles sature les cœurs disponibles, en lancer deux ne ferait
-  // que les ralentir tous les deux — et voler du CPU au transcodage, lui bloquant.
+  // Concurrency 1: a Cycles render saturates the available cores; running two would
+  // only slow both down, and steal CPU from transcoding, blocking it.
   { connection: redisConnectionOptions, autorun: false, concurrency: 1 },
 );
 
 spatialThumbWorker.on('failed', (job, err) =>
   err instanceof SpatialThumbPendingError
-    ? logger.debug(`[spatialThumb.worker] media=${job?.data.mediaObjectId} en attente du GLB`)
+    ? logger.debug(`[spatialThumb.worker] media=${job?.data.mediaObjectId} waiting for the GLB`)
     : logger.warn({ err }, `[spatialThumb.worker] ✗ media=${job?.data.mediaObjectId}`),
 );
 
-/** Démarre le worker (appelé depuis le process worker principal). */
+/** Starts the worker (called from the main worker process). */
 export function startSpatialThumbWorker(): void {
-  // La boucle du worker vit aussi longtemps que le process : rien à attendre ici.
+  // The worker loop lives as long as the process: nothing to wait for here.
   void spatialThumbWorker.run();
   registerWorkerShutdown('spatialThumb.worker', spatialThumbWorker);
-  logger.info('[spatialThumb.worker] démarré.');
+  logger.info('[spatialThumb.worker] started.');
 }

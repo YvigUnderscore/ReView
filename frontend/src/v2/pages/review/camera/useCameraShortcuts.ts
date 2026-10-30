@@ -3,36 +3,35 @@
 
 import { useEffect, useRef } from 'react';
 import { toast } from 'sonner';
-import { isEditable } from '../../../lib/shortcuts';
+import { isEditable } from '@/v2/lib/shortcuts';
 import { snapToFrame } from './timeline/viewTransform';
 import type { CameraAnimState } from './useCameraAnim';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
- * Raccourcis du transport caméra (promis de longue date par les libellés du transport) :
- * **Espace** lecture/pause, **K** poser une clé, **←/→** clé précédente/suivante, **Début/Fin**
- * bornes de la lecture. Quand l'atelier layout est actif (`undoActive`), **Ctrl+Z / Ctrl+Maj+Z /
- * Ctrl+Y** pilotent l'historique de l'animation — en phase capture, pour passer avant l'undo de
- * l'éditeur splat qui écoute les mêmes touches.
+ * Camera transport shortcuts (long promised by the transport labels): **Space** play/pause,
+ * **K** set a key, **←/→** previous/next key, **Home/End** playback bounds. When the layout
+ * workshop is active (`undoActive`), **Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y** drive the animation's
+ * history — in the capture phase, to run before the splat editor's undo, which listens to the
+ * same keys.
  *
- * Signale aussi la **reprise en main** : quand la lecture s'interrompt parce que l'utilisateur a
- * bougé la caméra (`autoPaused`), un toast explique comment reprendre — l'arrêt silencieux
- * passait pour un bug.
+ * It also signals the **takeover**: when playback stops because the user moved the camera
+ * (`autoPaused`), a toast explains how to resume — a silent stop looked like a bug.
  */
 export function useCameraShortcuts(opts: {
   anim: CameraAnimState;
-  /** Piste caméra visible (média spatial, pas la piste clips). */
+  /** Camera track visible (spatial media, not the clips track). */
   active: boolean;
-  /** Droit d'écrire des clés (K). */
+  /** Right to write keys (K). */
   editable: boolean;
-  /** Ctrl+Z routé vers l'historique de l'animation (mode Layout). */
+  /** Ctrl+Z routed to the animation's history (Layout mode). */
   undoActive: boolean;
-  /** Framerate du pipeline (snap Début/Fin). */
+  /** Pipeline frame rate (Home/End snap). */
   fps: number;
 }): void {
   const { anim, active, editable, undoActive, fps } = opts;
   const t = useT();
-  // Réf synchronisée en effet (jamais pendant le rendu) : lue seulement dans les handlers clavier.
+  // Ref synced in an effect (never during render): only read in the keyboard handlers.
   const animRef = useRef(anim);
   useEffect(() => {
     animRef.current = anim;
@@ -83,7 +82,7 @@ export function useCameraShortcuts(opts: {
     return () => window.removeEventListener('keydown', onKey);
   }, [active, editable, fps]);
 
-  // Undo/redo de l'animation en phase capture : l'atelier layout prend la main sur l'éditeur.
+  // Animation undo/redo in the capture phase: the layout workshop takes over from the editor.
   useEffect(() => {
     if (!active || !undoActive || !editable) return;
     const onKey = (e: KeyboardEvent) => {
@@ -104,7 +103,7 @@ export function useCameraShortcuts(opts: {
     return () => window.removeEventListener('keydown', onKey, true);
   }, [active, undoActive, editable]);
 
-  // Reprise en main : l'auto-pause devient visible (elle passait pour une lecture cassée).
+  // Takeover: the auto-pause becomes visible (it used to look like broken playback).
   const wasAutoPaused = useRef(false);
   useEffect(() => {
     if (anim.autoPaused && !wasAutoPaused.current) toast.info(t('camera.autoPaused'));

@@ -1,42 +1,42 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-// Types des tâches (module séparé du budget de lignes d'api.ts). Refs importées d'api.ts
-// (imports de type uniquement — le re-export `export * from './task'` côté api.ts n'induit
-// aucun cycle à l'exécution).
+// Task types (separate module from the line budget of api.ts). Refs imported from api.ts
+// (type-only imports — the `export * from './task'` re-export on the api.ts side creates no
+// runtime cycle).
 import type { TaskType, TaskStatus, UserRef, ShotRef, ProjectRef, SequenceRef, AssetRef } from './api';
 
 export interface Task {
   id: number;
   name: string;
   type: TaskType;
-  /** Département du pipe (clé des réglages projet) — null tant qu'aucun n'est posé. */
+  /** Pipeline department (key of the project settings) — null until one is set. */
   department?: string | null;
   status: TaskStatus;
   /**
-   * Statut du référentiel personnalisable (Phase 48) — celui du site ShotGrid sur un
-   * projet relié. `status` reste écrit en parallèle pour le kanban et les statistiques.
+   * Status from the customisable reference list (Phase 48) — the one from the ShotGrid site on a
+   * linked project. `status` is still written in parallel for the kanban and the statistics.
    */
   pipelineStatusId?: number | null;
-  /** Consigne : ce qu'il y a à faire (Phase 50). `null` = aucune consigne écrite. */
+  /** Brief: what there is to do (Phase 50). `null` = no brief written. */
   description?: string | null;
 }
-/** Listes (kanban, activité projet) : assigné joint. */
+/** Lists (kanban, project activity): assignee included. */
 export type TaskWithAssignee = Task & { assignee: UserRef | null };
-/** Élément de checklist d'une tâche (38.F). */
+/** Checklist item of a task (38.F). */
 export interface ChecklistItem {
   text: string;
   done: boolean;
 }
-/** GET /api/tasks/:id — contexte de localisation (shot/asset + projet). */
+/** GET /api/tasks/:id — location context (shot/asset + project). */
 export type TaskDetail = Task & {
   shot?: (ShotRef & { project: ProjectRef; sequence?: SequenceRef | null }) | null;
   asset?: (AssetRef & { project: ProjectRef }) | null;
-  /** Commentaire de review d'origine (32.D) — lien retour `?comment=`. */
+  /** Originating review comment (32.D) — return link `?comment=`. */
   sourceComment?: { id: number; mediaObjectId: number } | null;
-  /** Checklist (38.F) + assigné (pour les droits d'édition). */
+  /** Checklist (38.F) + assignee (for edit rights). */
   checklist?: ChecklistItem[];
   assignee?: UserRef | null;
-  startDate?: string | null; // planification 43.C (ISO)
-  dueDate?: string | null; // échéance 43.C (ISO)
+  startDate?: string | null; // scheduling 43.C (ISO)
+  dueDate?: string | null; // due date 43.C (ISO)
 };

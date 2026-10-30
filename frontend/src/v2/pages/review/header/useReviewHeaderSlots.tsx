@@ -6,7 +6,7 @@ import ReviewHeaderActions from './ReviewHeaderActions';
 import ReviewHeaderIdentity from './ReviewHeaderIdentity';
 import ReviewCommentsColumn from './ReviewCommentsColumn';
 import { chromeHostsHeader } from './headerComposition';
-import type { ReviewComment } from '../../../types/api';
+import type { ReviewComment } from '@/v2/types/api';
 import type { MediaResp } from '../reviewTypes';
 import type { useAnnotations } from '../useAnnotations';
 import type { useCompareState } from '../useCompareState';
@@ -41,12 +41,12 @@ interface Params {
   loop: { in: number | null; out: number | null };
   submitComment: Parameters<typeof ReviewCommentsColumn>[0]['onSubmit'];
   toggleAnnotating: () => void;
-  /** Retour caméra sur un point d'intérêt relu (numéro cliqué dans le fil). */
+  /** Camera return to a point of interest being reviewed (number clicked in the thread). */
   onPoiFocus: (point: PoiPoint, index: number) => void;
 }
 
 export interface ReviewHeaderSlots {
-  /** Le chrome du viewer héberge-t-il l'en-tête, ou la page doit-elle le rendre elle-même ? */
+  /** Does the viewer chrome host the header, or must the page render it itself? */
   hosted: boolean;
   identity: ReactNode;
   actions: ReactNode;
@@ -54,16 +54,16 @@ export interface ReviewHeaderSlots {
 }
 
 /**
- * Composition de l'en-tête unique de la review.
+ * Composition of the review's single header.
  *
- * La page rendait sa propre barre au-dessus du chrome du viewer, qui porte déjà la bascule
- * de mode et l'A/B : deux en-têtes empilés pour un seul écran. Identité, actions et
- * commentaires descendent maintenant dans le chrome par contexte — pour les quatre types de
- * média, sans traverser `ReviewViewer` ni ses quatre branches.
+ * The page used to render its own bar above the viewer chrome, which already carries the mode
+ * toggle and the A/B: two headers stacked for a single screen. Identity, actions and comments now
+ * go down into the chrome through a context, for the four media types, without passing through
+ * `ReviewViewer` or its four branches.
  *
- * Un seul état ne monte aucun chrome : le chargement. `hosted` est alors faux et la page rend
- * l'en-tête elle-même — d'où trois emplacements rendus ici, et un drapeau qui dit où les
- * poser, plutôt que deux constructions parallèles à garder d'accord.
+ * Only one state mounts no chrome: loading. `hosted` is then false and the page renders the header
+ * itself. Hence three slots rendered here, and a flag saying where to place them, rather than two
+ * parallel constructions to keep in agreement.
  */
 export function useReviewHeaderSlots(p: Params): ReviewHeaderSlots {
   const hosted = !p.theater && chromeHostsHeader({ hasData: !!p.data, kind: p.kind });

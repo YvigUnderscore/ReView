@@ -7,27 +7,26 @@ import { getSocket } from '../../lib/socket';
 import type { ChatConversation, ChatMessage } from '../types/chat';
 
 /**
- * Messagerie interne (MP & groupes) — état partagé par le pied de sidebar et la fenêtre
- * de conversation. Un store plutôt qu'une requête TanStack : le fil vit en temps réel
- * (socket), reste ouvert pendant la navigation, et son compteur de non-lus est lu depuis
- * plusieurs endroits de l'interface.
+ * Internal messaging (DMs & groups) — state shared by the sidebar footer and the conversation
+ * window. A store rather than a TanStack query: the thread lives in real time (socket), stays open
+ * while navigating, and its unread counter is read from several places in the interface.
  */
 
 interface ChatState {
   conversations: ChatConversation[];
-  /** Messages chargés par fil, du plus ancien au plus récent. */
+  /** Messages loaded per thread, from oldest to newest. */
   messages: Record<number, ChatMessage[]>;
-  /** Fil affiché dans la fenêtre flottante (`null` = fermée). */
+  /** Thread shown in the floating window (`null` = closed). */
   openId: number | null;
   loading: boolean;
-  /** `true` quand la page la plus ancienne du fil est atteinte. */
+  /** `true` when the oldest page of the thread has been reached. */
   atStart: Record<number, boolean>;
 
   start: () => void;
   reload: () => Promise<void>;
   open: (id: number) => void;
   close: () => void;
-  /** Ouvre (ou crée) le tête-à-tête avec un utilisateur. */
+  /** Opens (or creates) the one-to-one thread with a user. */
   openWith: (userId: number) => Promise<void>;
   createGroup: (userIds: number[], title: string) => Promise<void>;
   send: (id: number, body: string) => Promise<void>;
@@ -35,15 +34,15 @@ interface ChatState {
   markRead: (id: number) => Promise<void>;
   rename: (id: number, title: string) => Promise<void>;
   addMembers: (id: number, userIds: number[]) => Promise<void>;
-  /** Quitte un groupe (`selfId` = son propre identifiant : la route retire un membre). */
+  /** Leaves a group (`selfId` = one's own identifier: the route removes a member). */
   leave: (id: number, selfId: number) => Promise<void>;
 }
 
-/** Fils triés du plus récemment actif au plus ancien (ordre de la liste). */
+/** Threads sorted from most recently active to oldest (list order). */
 const byRecency = (list: ChatConversation[]) =>
   [...list].sort((a, b) => new Date(b.lastMessageAt).getTime() - new Date(a.lastMessageAt).getTime());
 
-/** Un même fil ne doit apparaître qu'une fois, la version reçue faisant foi. */
+/** A given thread must appear only once; the received version is authoritative. */
 const upsert = (list: ChatConversation[], next: ChatConversation) =>
   byRecency([next, ...list.filter((c) => c.id !== next.id)]);
 
@@ -56,7 +55,7 @@ export const useChat = create<ChatState>((set, get) => ({
   loading: false,
   atStart: {},
 
-  /** Charge les fils et branche le temps réel — idempotent (monté par le pied de sidebar). */
+  /** Loads the threads and wires up real time — idempotent (mounted by the sidebar footer). */
   start: () => {
     if (socketBound) return;
     socketBound = true;
@@ -66,8 +65,8 @@ export const useChat = create<ChatState>((set, get) => ({
     socket.on('chat:message', ({ message }: { message: ChatMessage }) => {
       const { openId, messages, conversations } = get();
       const known = messages[message.conversationId];
-      // On n'insère que dans un fil déjà chargé : sinon la première ouverture rejouerait
-      // l'historique avec un trou entre ce message et la page réellement chargée.
+      // Only insert into an already loaded thread: otherwise the first opening would replay the
+      // history with a gap between this message and the page actually loaded.
       if (known && !known.some((m) => m.id === message.id)) {
         set({ messages: { ...messages, [message.conversationId]: [...known, message] } });
       }
@@ -82,8 +81,8 @@ export const useChat = create<ChatState>((set, get) => ({
               body: message.body,
               authorId: message.author?.id ?? null,
               isSystem: message.isSystem,
-              // La clé suit le message : sans elle, l'aperçu du fil retomberait sur le
-              // `body` anglais alors que la ligne du fil, elle, est bien traduite.
+              // The key follows the message: without it, the thread preview would fall back to
+              // the English `body` while the thread row is properly translated.
               systemKey: message.systemKey,
               systemVars: message.systemVars,
             },
@@ -93,7 +92,7 @@ export const useChat = create<ChatState>((set, get) => ({
         });
         if (isOpen) void get().markRead(conv.id);
       } else {
-        // Fil inconnu (on vient d'y être ajouté) : la liste complète fait autorité.
+        // Unknown thread (we have just been added to it): the full list is authoritative.
         void get().reload();
       }
     });
@@ -135,7 +134,7 @@ export const useChat = create<ChatState>((set, get) => ({
       );
       set({ conversations: byRecency(conversations) });
     } catch {
-      /* hors ligne : la liste courante reste affichée */
+      /* offline: the current list stays displayed */
     }
   },
 
@@ -181,7 +180,7 @@ export const useChat = create<ChatState>((set, get) => ({
     const { message } = await api.post<{ message: ChatMessage }>(`/api/chat/conversations/${id}/messages`, {
       body,
     });
-    // L'écho socket arrive aussi à l'auteur : on n'ajoute que si l'événement a été perdu.
+    // The socket echo also reaches the author: we only add if the event was lost.
     const list = get().messages[id] ?? [];
     if (!list.some((m) => m.id === message.id)) {
       set({ messages: { ...get().messages, [id]: [...list, message] } });
@@ -201,9 +200,9 @@ export const useChat = create<ChatState>((set, get) => ({
   },
 
   markRead: async (id) => {
-    // Pas de garde « déjà à zéro » : un message reçu alors que le fil est ouvert est mis
-    // à zéro localement dès l'arrivée, et la garde empêchait alors le serveur d'en être
-    // informé — le fil ressortait non lu au rechargement suivant.
+    // No "already at zero" guard: a message received while the thread is open is zeroed locally
+    // on arrival, and the guard would then stop the server from being told — the thread would come
+    // back unread on the next reload.
     if (!get().conversations.some((c) => c.id === id)) return;
     set({ conversations: get().conversations.map((c) => (c.id === id ? { ...c, unread: 0 } : c)) });
     await api.post(`/api/chat/conversations/${id}/read`).catch(() => undefined);
@@ -227,8 +226,8 @@ export const useChat = create<ChatState>((set, get) => ({
 
   leave: async (id, selfId) => {
     await api.del(`/api/chat/conversations/${id}/members/${selfId}`);
-    // `chat:left` fait le ménage local, mais l'auteur du départ ne doit pas attendre
-    // l'aller-retour socket pour voir le fil disparaître.
+    // `chat:left` cleans up locally, but the one leaving must not wait for the socket round trip
+    // to see the thread disappear.
     const rest = { ...get().messages };
     delete rest[id];
     set({
@@ -239,12 +238,12 @@ export const useChat = create<ChatState>((set, get) => ({
   },
 }));
 
-/** Total de non-lus, tous fils confondus (pastille du pied de sidebar). */
+/** Total unread count, all threads combined (badge of the sidebar footer). */
 export const selectUnreadTotal = (s: ChatState): number => s.conversations.reduce((n, c) => n + c.unread, 0);
 
 /**
- * Nom affiché d'un fil : son titre s'il en a un, sinon les participants autres que soi —
- * un tête-à-tête s'appelle par la personne en face, pas « Conversation 12 ».
+ * Display name of a thread: its title if it has one, otherwise the participants other than oneself —
+ * a one-to-one is called after the other person, not "Conversation 12".
  */
 export function conversationLabel(c: ChatConversation, selfId: number, fallback: string): string {
   if (c.title) return c.title;

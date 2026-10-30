@@ -6,9 +6,9 @@ import type { SplatCamera } from '../reviewTypes';
 import { applyRoll } from './cameraRoll';
 
 /**
- * Applique une pose caméra (position/cible/fov/roll) à une caméra **sans OrbitControls** — la
- * caméra « layout » du mode PiP (Phase 15/16). Le roll oriente `camera.up`, puis `lookAt` cale
- * l'orientation vers la cible. Pur/testable.
+ * Applies a camera pose (position/target/fov/roll) to a camera **without OrbitControls**: the
+ * "layout" camera of the PiP mode (Phase 15/16). The roll orients `camera.up`, then `lookAt` sets
+ * the orientation towards the target. Pure and testable.
  */
 export function applyPoseToCamera(
   three: typeof import('three'),

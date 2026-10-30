@@ -7,16 +7,16 @@ import ImageViewerHud from './image/ImageViewerHud';
 import { useViewShortcuts } from '../pages/review/zoom/useViewShortcuts';
 
 /**
- * Visionneuse d'image pour la review : zoom (molette) + pan, avec overlay d'annotation ancré
- * au pixel. Image et overlay partagent la même transformation, donc restent alignés au
- * zoom/pan ; la marge dessinable autorise les annotations hors cadre.
+ * Image viewer for review: zoom (wheel) + pan, with an annotation overlay anchored
+ * at the pixel. Image and overlay share the same transform, so they stay aligned under
+ * zoom/pan; the drawable margin allows off-frame annotations.
  */
 const MIN_SCALE = 0.1;
 const MAX_SCALE = 20;
-// Marge dessinable autour de l'image (50% de chaque côté) pour les annotations hors-cadre.
+// Drawable margin around the image (50% on each side) for off-frame annotations.
 const MARGIN = 0.5;
 
-/** Vue courante normalisée (session live) : zoom relatif au fit + centre en fraction d'image. */
+/** Current normalized view (live session): zoom relative to fit, plus the centre as a fraction of the image. */
 export interface ImageView {
   scale: number;
   cx: number;
@@ -54,23 +54,23 @@ export default function ImageReviewViewer({
   color: string;
   width: number;
   alpha: number;
-  /** Métadonnées affichées dans le panneau infos repliable (14.D). */
+  /** Metadata displayed in the collapsible info panel (14.D). */
   info?: { format?: string | null; sizeBytes?: number | null };
-  /** Éléments épinglés au canvas (images de référence…) : rendus dans le plan transformé,
-   *  ils suivent le zoom/pan comme l'image. */
+  /** Elements pinned to the canvas (reference images…): rendered in the transformed plane,
+   *  they follow zoom/pan like the image. */
   pinned?: ReactNode;
-  /** Plein écran de tout le bloc review (fourni par la page) ; sinon plein écran local. */
+  /** Full screen of the whole review block (provided by the page); otherwise local full screen. */
   onFullscreen?: () => void;
-  /** API impérative de la vue (zoom/pan) — session live : capture pilote / application spectateur. */
+  /** Imperative API of the view (zoom/pan). Live session: driver capture / viewer application. */
   viewApiRef?: React.MutableRefObject<ImageViewApi | null>;
-  /** Interaction zoom/pan locale (molette, pan, boutons) — prise de main en session live. */
+  /** Local zoom/pan interaction (wheel, pan, buttons): takeover in a live session. */
   onUserView?: () => void;
-  /** Vue émise à chaque changement (fit inclus) — réplication A/B de la comparaison (34.D). */
+  /** View emitted at each change (fit included): A/B replication of the comparison (34.D). */
   onViewChange?: (v: ImageView) => void;
   /**
-   * Cette visionneuse porte les raccourcis de vue `F` (ajuster) et `H` (taille réelle) — les
-   * deux actions que le rail annonce. Réservé au viewer **principal** de la review : les panes
-   * de comparaison répondraient sinon à la même frappe, chacun de leur côté.
+   * This viewer carries the view shortcuts `F` (fit) and `H` (actual size): the
+   * two actions the rail announces. Reserved for the **main** viewer of the review, since the comparison
+   * panes would otherwise respond to the same keystroke, each on their own side.
    */
   viewShortcuts?: boolean;
 }) {
@@ -80,19 +80,19 @@ export default function ImageReviewViewer({
   const [scale, setScale] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
   const pan = useRef<{ x: number; y: number; ox: number; oy: number } | null>(null);
-  // L'outil `ref` place une référence collée : il ne dessine pas, et le clic gauche pane.
+  // The `ref` tool places a pasted reference: it does not draw, and the left click pans.
   const drawing = editable && tool !== 'ref';
 
-  // Re-fit si la source change : ajustement d'état pendant le render
-  // (https://react.dev/learn/you-might-not-need-an-effect) — le onLoad de la
-  // nouvelle image refera le fit.
+  // Re-fit if the source changes: state adjustment during render
+  // (https://react.dev/learn/you-might-not-need-an-effect); the onLoad of the
+  // new image will redo the fit.
   const [prevSrc, setPrevSrc] = useState(src);
   if (src !== prevSrc) {
     setPrevSrc(src);
     setBase(null);
   }
 
-  // Taille de base : ajuste l'image dans le viewport (contain), centrée.
+  // Base size: fits the image in the viewport (contain), centred.
   const fit = (natW: number, natH: number) => {
     const vp = viewportRef.current;
     if (!vp) return;
@@ -110,8 +110,8 @@ export default function ImageReviewViewer({
     fit(e.currentTarget.naturalWidth, e.currentTarget.naturalHeight);
   };
 
-  // Vue partagée en session live : capture (pilote) / application (spectateur) — le centre
-  // est en fraction de l'image de base, indépendant de la taille de viewport de chacun.
+  // View shared in a live session: capture (driver) / application (viewer). The centre
+  // is a fraction of the base image, independent of each one's viewport size.
   useEffect(() => {
     const capture = (): ImageView | null => {
       const vp = viewportRef.current;
@@ -122,8 +122,8 @@ export default function ImageReviewViewer({
         cy: (vp.clientHeight / 2 - offset.y) / (base.h * scale),
       };
     };
-    // Réplication A/B (34.D) : chaque changement de vue est poussé au relais, qui
-    // l'applique à l'autre pane (l'écho est coupé côté relais).
+    // A/B replication (34.D): each view change is pushed to the relay, which
+    // applies it to the other pane (the echo is cut on the relay side).
     if (onViewChange) {
       const v = capture();
       if (v) onViewChange(v);
@@ -146,7 +146,7 @@ export default function ImageReviewViewer({
     };
   }, [viewApiRef, base, scale, offset, onViewChange]);
 
-  // Zoom molette centré sur le curseur
+  // Wheel zoom centred on the cursor
   const onWheel = (e: React.WheelEvent) => {
     if (!base) return;
     e.preventDefault();
@@ -157,12 +157,12 @@ export default function ImageReviewViewer({
     const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
     const next = Math.min(MAX_SCALE, Math.max(MIN_SCALE, scale * factor));
     const k = next / scale;
-    // Garde le point sous le curseur fixe
+    // Keeps the point under the cursor fixed
     setOffset((o) => ({ x: cx - (cx - o.x) * k, y: cy - (cy - o.y) * k }));
     setScale(next);
   };
 
-  // Pan : clic milieu/droit toujours ; clic gauche si on ne dessine pas
+  // Pan: middle/right click always; left click if not drawing
   const onPointerDown = (e: React.PointerEvent) => {
     const panButton = e.button === 1 || e.button === 2 || (e.button === 0 && !drawing);
     if (!panButton) return;
@@ -196,7 +196,7 @@ export default function ImageReviewViewer({
   const reset = () => {
     if (natural) fit(natural.w, natural.h);
   };
-  // 100 % : un pixel image = un pixel écran (scale = taille naturelle / taille de base), centré.
+  // 100%: one image pixel = one screen pixel (scale = natural size / base size), centred.
   const oneToOne = () => {
     const vp = viewportRef.current;
     if (!vp || !base || !natural) return;
@@ -207,11 +207,11 @@ export default function ImageReviewViewer({
     setOffset((o) => ({ x: cx - (cx - o.x) * k, y: cy - (cy - o.y) * k }));
     setScale(next);
   };
-  // `F` ajuste, `H` revient au 100 % : les deux boutons du HUD, au clavier. Le rail les
-  // déclarait depuis toujours sans que personne les écoute.
+  // `F` fits, `H` returns to 100%: the two HUD buttons, via the keyboard. The rail
+  // declared them forever without anyone listening.
   useViewShortcuts(viewShortcuts ? { fit: reset, oneToOne } : null);
   const rootRef = useRef<HTMLDivElement>(null);
-  // Plein écran : celui fourni par la page (bloc review complet) sinon repli local à l'image.
+  // Full screen: the one provided by the page (whole review block), otherwise a local fallback to the image.
   const fullscreen = onFullscreen ?? (() => void rootRef.current?.requestFullscreen?.());
 
   return (
@@ -223,16 +223,16 @@ export default function ImageReviewViewer({
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
-        // Surtout pas de `preventDefault` ici (A3) : ce viewport est un descendant du
-        // ContextMenuTrigger de la review image, et Radix compose les gestionnaires avec
-        // `checkForDefaultPrevented` — marquer l'événement comme traité empêchait le menu
-        // métier (copier/télécharger l'image, miniature, playlist, annoter) de s'ouvrir.
-        // Le menu natif est déjà bloqué en amont par ContextMenuGuard.
+        // Above all, no `preventDefault` here (A3): this viewport is a descendant of the
+        // ContextMenuTrigger of the image review, and Radix composes the handlers with
+        // `checkForDefaultPrevented`: marking the event as handled prevented the business
+        // menu (copy/download the image, thumbnail, playlist, annotate) from opening.
+        // The native menu is already blocked upstream by ContextMenuGuard.
         style={{
           cursor: drawing ? 'crosshair' : 'grab',
           touchAction: 'none',
-          // Fond gris + grille de lignes blanches légères, fixée au canvas : la grille
-          // suit le pan (background-position) et le zoom (background-size).
+          // Grey background + light white line grid, fixed to the canvas: the grid
+          // follows the pan (background-position) and the zoom (background-size).
           backgroundColor: 'hsl(var(--muted) / 0.35)',
           backgroundImage:
             'linear-gradient(to right, rgba(255,255,255,0.07) 1px, transparent 1px),' +

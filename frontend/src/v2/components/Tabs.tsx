@@ -14,7 +14,7 @@ export interface TabDef {
   badge?: number;
 }
 
-/** Gouttière réelle entre onglets (`gap-1` = 0.25rem à la taille de police racine). */
+/** Real gutter between tabs (`gap-1` = 0.25rem at the root font size). */
 const GAP_PX = 4;
 
 const TAB_CLASS =
@@ -31,22 +31,22 @@ function TabButton({
   tab: TabDef;
   isActive: boolean;
   onClick?: () => void;
-  /** Vrai dans le bloc de mesure hors écran : ni tabulation, ni cible pour le soulignement. */
+  /** True in the off-screen measuring block: neither tabbable nor a target for the underline. */
   measuring: boolean;
 }) {
   return (
     <button
       type="button"
-      // Sans `role="tab"` ni `aria-selected`, rien ne disait à la synthèse vocale que ces
-      // boutons formaient un jeu d'onglets, ni lequel était actif : on entendait quatre
-      // boutons interchangeables. La règle jsx-a11y ne peut pas l'attraper — un `<button>`
-      // nu lui est parfaitement valide ; c'est le MOTIF qui était incomplet.
+      // Without `role="tab"` or `aria-selected`, nothing told the screen reader that these
+      // buttons formed a set of tabs, nor which one was active: one heard four
+      // interchangeable buttons. The jsx-a11y rule cannot catch it, since a bare `<button>`
+      // is perfectly valid; it is the PATTERN that was incomplete.
       role="tab"
       aria-selected={isActive}
       onClick={onClick}
       tabIndex={measuring ? -1 : undefined}
-      // Cible de la mesure du soulignement : le bloc hors écran n'en porte pas, sinon il
-      // serait trouvé le premier.
+      // Target for measuring the underline: the off-screen block carries none, otherwise
+      // it would be found first.
       data-tab={measuring ? undefined : tab.key}
       className={`${TAB_CLASS} ${isActive ? 'text-foreground' : 'text-muted-foreground hover:text-foreground'}`}
     >
@@ -60,9 +60,9 @@ function TabButton({
 }
 
 /**
- * Barre d'onglets à débordement (A1) : ce qui ne tient pas part dans un menu « … »,
- * l'onglet actif restant toujours visible. Aucun défilement horizontal — la page projet
- * peut porter onze onglets et rester utilisable dans une fenêtre de 900 px.
+ * Overflowing tab bar (A1): what does not fit goes into a "…" menu,
+ * the active tab always remaining visible. No horizontal scrolling: the project page
+ * can carry eleven tabs and remain usable in a 900 px window.
  */
 export default function Tabs({
   tabs,
@@ -76,17 +76,17 @@ export default function Tabs({
   const t = useT();
   const barRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
-  // Soulignement de l'onglet actif : un seul nœud déplacé par transition CSS, là où
-  // framer-motion faisait glisser un `layoutId` (F3). Sa position est une mesure du DOM,
-  // écrite directement dans le style — la passer par un état relancerait un rendu complet
-  // de la barre à chaque changement d'onglet.
+  // Underline of the active tab: a single node moved by a CSS transition, where
+  // framer-motion used to slide a `layoutId` (F3). Its position is a DOM measurement,
+  // written directly into the style: passing it through state would re-run a full render
+  // of the bar at each tab change.
   const underlineRef = useRef<HTMLSpanElement>(null);
   const placed = useRef(false);
   const [visibleCount, setVisibleCount] = useState(tabs.length);
   const [menuOpen, setMenuOpen] = useState(false);
 
-  // Signature plutôt que le tableau : les appelants le reconstruisent à chaque rendu,
-  // et réabonner un ResizeObserver soixante fois par seconde ne sert à rien.
+  // Signature rather than the array: callers rebuild it at each render, and
+  // re-subscribing a ResizeObserver sixty times per second serves no purpose.
   const signature = tabs.map((tab) => `${tab.key}|${tab.label}|${tab.badge ?? ''}`).join('§');
 
   useLayoutEffect(() => {
@@ -120,8 +120,8 @@ export default function Tabs({
         line.style.opacity = '0';
         return;
       }
-      // Premier placement sans transition : sinon le trait arriverait en glissant depuis
-      // le bord gauche au montage, ce que l'animation de layout ne faisait pas.
+      // First placement without transition: otherwise the bar would arrive sliding from
+      // the left edge on mount, which the layout animation did not do.
       if (!placed.current) line.style.transition = 'none';
       line.style.opacity = '1';
       line.style.width = `${node.offsetWidth}px`;

@@ -2,24 +2,23 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Dérive entre `schema.prisma` et les migrations.
+ * Drift between `schema.prisma` and the migrations.
  *
- * `prisma validate` ne vérifie que la syntaxe du fichier. Une modification de modèle sans
- * `migrate dev` passe donc au vert : le client généré au build connaît la colonne, la base
- * servie par `migrate deploy` en production ne l'a pas, et la panne se découvre à la
- * première requête. Ce contrôle rejoue les migrations sur une base fantôme et compare le
- * schéma obtenu au modèle.
+ * `prisma validate` only checks the file's syntax. A model change without `migrate dev` therefore
+ * passes green: the client generated at build time knows the column, the database served by
+ * `migrate deploy` in production does not, and the breakage is only discovered on the first request.
+ * This check replays the migrations on a shadow database and compares the resulting schema with the
+ * model.
  *
- * **Divergences admises.** Certaines choses ne s'écrivent pas dans `schema.prisma` : un
- * index GIN trigramme, par exemple, ne vit que dans le SQL d'une migration. Prisma les
- * signalerait à chaque exécution. Elles sont donc listées, une par une, dans
- * `scripts/prisma-drift-allowed.json` — et la liste est stricte dans les deux sens : une
- * instruction inattendue échoue, une instruction listée qui n'apparaît plus échoue aussi
- * (l'entrée est devenue mensongère, il faut la retirer).
+ * **Accepted divergences.** Some things cannot be written in `schema.prisma`: a trigram GIN index,
+ * for example, only lives in the SQL of a migration. Prisma would flag them on every run. They are
+ * therefore listed, one by one, in `scripts/prisma-drift-allowed.json` — and the list is strict in both
+ * directions: an unexpected statement fails, and a listed statement that no longer appears also fails
+ * (the entry has become misleading and must be removed).
  *
- * Usage :
- *   node scripts/check-prisma-drift.mjs           # saute proprement sans base joignable
- *   REVIEW_REQUIRE_DRIFT_CHECK=1 node …           # exige la base (CI)
+ * Usage:
+ *   node scripts/check-prisma-drift.mjs           # skips cleanly without a reachable database
+ *   REVIEW_REQUIRE_DRIFT_CHECK=1 node …           # requires the database (CI)
  */
 
 import { execFileSync } from 'node:child_process';
@@ -32,10 +31,10 @@ const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..'
 const BACKEND = path.join(repoRoot, 'backend');
 const ALLOWED_FILE = path.join(repoRoot, 'scripts/prisma-drift-allowed.json');
 
-/** Base fantôme : Prisma y rejoue les migrations puis la vide. Jamais une base de travail. */
+/** Shadow database: Prisma replays the migrations there, then empties it. Never a working database. */
 export const SHADOW_DATABASE_NAME = 'review_prisma_shadow';
 
-/** Découpe un script SQL en instructions comparables (commentaires et mise en page ôtés). */
+/** Splits an SQL script into comparable statements (comments and layout removed). */
 export function normalizeStatements(sql) {
   return sql
     .split('\n')
@@ -46,7 +45,7 @@ export function normalizeStatements(sql) {
     .filter(Boolean);
 }
 
-/** Compare l'observé à l'attendu. Rend les deux écarts, dans les deux sens. */
+/** Compares the observed with the expected. Returns both gaps, in both directions. */
 export function compareStatements(observed, allowed) {
   const allowedSet = new Set(allowed);
   const observedSet = new Set(observed);
@@ -56,7 +55,7 @@ export function compareStatements(observed, allowed) {
   };
 }
 
-/** Même URL, autre base — l'URL fantôme se dérive de celle de travail. */
+/** Same URL, different database — the shadow URL is derived from the working one. */
 export function shadowUrlFrom(databaseUrl, name = SHADOW_DATABASE_NAME) {
   const url = new URL(databaseUrl);
   url.pathname = `/${name}`;
@@ -73,7 +72,7 @@ function prisma(args, env = {}) {
   });
 }
 
-/** Crée la base fantôme si elle manque. Son absence est le seul cas qui nous intéresse. */
+/** Creates the shadow database if it is missing. Its absence is the only case we care about. */
 function ensureShadowDatabase(shadowUrl) {
   const admin = new URL(shadowUrl);
   const name = admin.pathname.replace(/^\//, '');
@@ -84,7 +83,7 @@ function ensureShadowDatabase(shadowUrl) {
     writeFileSync(file, `CREATE DATABASE "${name}";`, 'utf8');
     prisma(['db', 'execute', '--url', admin.toString(), '--file', file]);
   } catch {
-    // Existe déjà, ou l'utilisateur n'a pas le droit de créer : `migrate diff` tranchera.
+    // Already exists, or the user is not allowed to create it: `migrate diff` will settle it.
   } finally {
     rmSync(dir, { recursive: true, force: true });
   }
@@ -156,7 +155,7 @@ function main() {
   console.log(`\x1b[0;32m✓ schema.prisma et les migrations décrivent la même base${suffix}\x1b[0m`);
 }
 
-/** Repli hors CI : la variable vit dans `backend/.env`, pas dans l'environnement du shell. */
+/** Fallback outside CI: the variable lives in `backend/.env`, not in the shell environment. */
 function readDotenvDatabaseUrl() {
   const file = path.join(BACKEND, '.env');
   if (!existsSync(file)) return null;

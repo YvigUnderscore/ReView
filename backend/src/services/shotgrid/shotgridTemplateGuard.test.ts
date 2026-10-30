@@ -5,11 +5,10 @@ import { describe, it, expect } from 'vitest';
 import { assertNotTemplateProject, looksLikeTemplate, writeAllowedOn } from './shotgridTemplateGuard';
 
 /**
- * Un projet modèle sert de gabarit à tous les projets à venir : y écrire ne casse pas
- * un projet, il les casse tous, et personne ne fait le lien avant longtemps.
+ * A template project serves as the template for all future projects: writing into it does not break one project, it breaks them all, and nobody links the two for a long time.
  */
 describe('looksLikeTemplate', () => {
-  it('reconnaît les gabarits usuels d’un site', () => {
+  it('recognizes the usual templates of a site', () => {
     expect(looksLikeTemplate('Template Project')).toBe(true);
     expect(looksLikeTemplate('template')).toBe(true);
     expect(looksLikeTemplate('_TEMPLATE_2026')).toBe(true);
@@ -17,39 +16,39 @@ describe('looksLikeTemplate', () => {
     expect(looksLikeTemplate('zz_template')).toBe(true);
   });
 
-  it('laisse passer un projet de production, même si le mot apparaît ailleurs', () => {
+  it('lets a production project through, even if the word appears elsewhere', () => {
     expect(looksLikeTemplate('M4_2027_DO_I_END_TOO')).toBe(false);
     expect(looksLikeTemplate('Demo Project')).toBe(false);
-    // « templating » est un sujet de production, pas un gabarit.
+    // "templating" is a production subject, not a template.
     expect(looksLikeTemplate('Templating Research')).toBe(false);
     expect(looksLikeTemplate(null)).toBe(false);
   });
 });
 
 describe('assertNotTemplateProject', () => {
-  it('refuse de relier un gabarit', () => {
+  it('refuses to link a template', () => {
     expect(() => assertNotTemplateProject('Template Project', 63)).toThrow();
   });
 
-  it('laisse relier un projet de production', () => {
+  it('lets a production project be linked', () => {
     expect(() => assertNotTemplateProject('M4_2027_UMBRA', 2687)).not.toThrow();
   });
 });
 
 describe('writeAllowedOn', () => {
-  it('autorise une entité d’un projet de production', () => {
+  it('allows an entity of a production project', () => {
     expect(
       writeAllowedOn({ id: 1, type: 'Shot', project: { type: 'Project', id: 2680, name: 'M4_2027_UMBRA' } }),
     ).toBe(true);
   });
 
-  it('refuse une entité appartenant à un gabarit', () => {
+  it('refuses an entity belonging to a template', () => {
     expect(
       writeAllowedOn({ id: 1, type: 'Shot', project: { type: 'Project', id: 63, name: 'Template Project' } }),
     ).toBe(false);
   });
 
-  it('refuse le gabarit lui-même et l’absence d’information', () => {
+  it('refuses the template itself and the absence of information', () => {
     expect(writeAllowedOn({ id: 63, type: 'Project', name: 'Template Project' })).toBe(false);
     expect(writeAllowedOn(null)).toBe(false);
   });

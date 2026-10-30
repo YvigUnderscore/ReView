@@ -8,12 +8,12 @@ import { useSaveAction, useStudioSettings } from './useStudioSettings';
 import { useT } from '../../i18n';
 
 /**
- * Salle de review live (33.B) : à quelle cadence le pilote diffuse sa position aux
- * spectateurs, par type de média.
+ * Live review room (33.B): how often the driver broadcasts their position to
+ * viewers, per media type.
  *
- * Ces quatre cadences occupaient un quart de la section fourre-tout, entre le quota de
- * stockage et le webhook Slack. Elles n'ont de sens qu'ensemble et ne concernent qu'un
- * seul écran du produit : elles ont maintenant le leur, dans les contextes de review.
+ * These four cadences took a quarter of the catch-all section, between the storage
+ * quota and the Slack webhook. They only make sense together and concern only one
+ * screen of the product: they now have their own, in the review contexts.
  */
 export default function LiveRoomTab() {
   const t = useT();

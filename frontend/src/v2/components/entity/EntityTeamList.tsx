@@ -8,14 +8,14 @@ import type { AssigneeRef } from '../../types/entities';
 import { useT } from '../../i18n';
 
 /**
- * Qui travaille dans le périmètre — et à quel titre.
+ * Who works in the scope, and in what capacity.
  *
- * L'origine compte : sur une séquence, presque personne n'est assigné à la séquence
- * elle-même, tout le monde l'est à ses plans ou aux tâches de ses plans. La pastille
- * distingue donc ceux qui en répondent directement, et le survol dit le reste.
+ * The origin matters: on a sequence, almost nobody is assigned to the sequence itself; everyone is assigned to
+ * its shots or to those shots' tasks. The dot therefore distinguishes those who answer for it directly, and the
+ * hover explains the rest.
  */
 
-/** L'origine d'une personne dans le périmètre — sert à trier, et à l'expliquer au survol. */
+/** Where a person stands within the scope: used for sorting, and explained on hover. */
 export type Origin = 'direct' | 'child' | 'task';
 
 export interface ScopePerson extends AssigneeRef {

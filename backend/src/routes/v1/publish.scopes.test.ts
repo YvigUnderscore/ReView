@@ -5,12 +5,12 @@ import { describe, it, expect } from 'vitest';
 import publishRoutes from './publish.routes';
 
 /**
- * Scopes réellement posés sur la publication, lus sur le routeur servi en production.
+ * Scopes actually set on the publication, read from the router served in production.
  *
- * Publier crée une version ET dépose un média : n'exiger que `versions:write` laissait un
- * token écrire dans le stockage sans l'avoir demandé, alors que `media:write` existait au
- * catalogue sans garder la moindre route. Le contrôle se fait sur la pile Express plutôt
- * que sur une relecture du fichier : c'est la déclaration effective qui compte.
+ * Publishing creates a version AND uploads a media: requiring only `versions:write` let a token
+ * write to storage without having asked for it, while `media:write` existed in the catalogue without
+ * guarding any route. The check runs on the Express stack rather than on a re-read of the file: the
+ * effective declaration is what counts.
  */
 
 interface ScopedLayer {
@@ -27,12 +27,12 @@ const scopesOf = (path: string): readonly string[] => {
   return route!.stack.flatMap((s) => s.handle.scopes ?? []);
 };
 
-describe('scopes de la publication v1', () => {
-  it('exige la version et le média à l’ouverture de la publication', () => {
+describe('v1 publish scopes', () => {
+  it('requires the version and media scopes when opening the publication', () => {
     expect(scopesOf('/')).toEqual(['versions:write', 'media:write']);
   });
 
-  it('les exige aussi à la finalisation, qui attache le fichier envoyé', () => {
+  it('requires them too at finalization, which attaches the uploaded file', () => {
     expect(scopesOf('/:id/complete')).toEqual(['versions:write', 'media:write']);
   });
 });

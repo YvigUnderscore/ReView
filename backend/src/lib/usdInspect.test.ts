@@ -33,20 +33,20 @@ const stageJson = (over: Record<string, unknown> = {}) =>
   });
 
 describe('extractJsonLine', () => {
-  it('retient la dernière ligne JSON et ignore le bruit', () => {
+  it('keeps the last JSON line and ignores the noise', () => {
     const out = 'Warning: plugin obsolète\n{"layers": []}\n';
     expect(extractJsonLine(out)).toBe('{"layers": []}');
     expect(extractJsonLine('{"a":1}\n{"b":2}')).toBe('{"b":2}');
   });
 
-  it('échoue explicitement sans sortie JSON', () => {
+  it('fails explicitly without JSON output', () => {
     expect(() => extractJsonLine('rien du tout')).toThrow(/no usable JSON output/);
     expect(() => extractJsonLine('')).toThrow();
   });
 });
 
 describe('parseUsdScan', () => {
-  it('lit le graphe de couches et complète les dépendances absentes', () => {
+  it('reads the layer graph and fills in missing dependencies', () => {
     const layers = parseUsdScan('{"layers":[{"layer":"scene.usda","deps":["a.usdc"]},{"layer":"a.usdc"}]}');
     expect(layers).toEqual([
       { layer: 'scene.usda', deps: ['a.usdc'] },
@@ -54,26 +54,26 @@ describe('parseUsdScan', () => {
     ]);
   });
 
-  it('rejette une sortie mal formée', () => {
+  it('rejects malformed output', () => {
     expect(() => parseUsdScan('{"layers":[{"deps":[]}]}')).toThrow(/invalid layer graph/);
   });
 });
 
 describe('parseUsdStageInfo', () => {
-  it('lit une description complète', () => {
+  it('reads a complete description', () => {
     const info = parseUsdStageInfo(stageJson());
     expect(info.root).toBe('scene.usda');
     expect(info.metersPerUnit).toBe(0.01);
     expect(info.hasAnimation).toBe(true);
   });
 
-  it('normalise l’axe haut sur Y ou Z', () => {
+  it('normalizes the up axis to Y or Z', () => {
     expect(parseUsdStageInfo(stageJson({ upAxis: 'Z' })).upAxis).toBe('Z');
     expect(parseUsdStageInfo(stageJson({ upAxis: 'y' })).upAxis).toBe('Y');
     expect(parseUsdStageInfo(stageJson({ upAxis: 'inconnu' })).upAxis).toBe('Y');
   });
 
-  it('déduplique les variantSets et les assets manquants', () => {
+  it('deduplicates the variantSets and the missing assets', () => {
     const info = parseUsdStageInfo(
       stageJson({
         variantSets: [
@@ -88,16 +88,16 @@ describe('parseUsdStageInfo', () => {
     expect(info.missingAssets).toEqual(['tex/diffuse.exr', 'tex/rough.exr']);
   });
 
-  it('remonte les chemins de matériaux, vides par défaut', () => {
-    // Ils alimentent le masque d'import des variantes cuites (46.G) : sans eux, un matériau
-    // rangé hors du sous-arbre cuit est absent du stage et l'objet ressort sans liaison.
+  it('surfaces the material paths, empty by default', () => {
+    // They feed the import mask of the baked variants (46.G): without them, a material stored
+    // outside the baked subtree is missing from the stage and the object comes out unbound.
     expect(parseUsdStageInfo(stageJson({ materialPaths: ['/W/mtl/wood'] })).materialPaths).toEqual([
       '/W/mtl/wood',
     ]);
     expect(parseUsdStageInfo(stageJson()).materialPaths).toEqual([]);
   });
 
-  it('rejette une description sans couche racine', () => {
+  it('rejects a description without a root layer', () => {
     expect(() => parseUsdStageInfo('{"stagePath":"/tmp/x"}')).toThrow(/invalid scene description/);
   });
 });
@@ -108,7 +108,7 @@ describe('sanitizeVariantSelection', () => {
     { prim: '/W/Asset', name: 'lookVariant', options: ['clean', 'dirty'], selected: 'clean' },
   ];
 
-  it('conserve uniquement les sélections réellement offertes par la scène', () => {
+  it('keeps only the selections actually offered by the scene', () => {
     expect(
       sanitizeVariantSelection(
         {
@@ -120,7 +120,7 @@ describe('sanitizeVariantSelection', () => {
     ).toEqual({ '/W/Asset': { modelingVariant: 'lo' } });
   });
 
-  it('renvoie un objet vide quand rien ne correspond', () => {
+  it('returns an empty object when nothing matches', () => {
     expect(sanitizeVariantSelection({ '/X': { y: 'z' } }, known)).toEqual({});
     expect(sanitizeVariantSelection({}, known)).toEqual({});
   });

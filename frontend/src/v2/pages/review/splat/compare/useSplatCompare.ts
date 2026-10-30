@@ -5,32 +5,31 @@ import { useQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { toast } from 'sonner';
 import type { SplatMesh } from '@sparkjsdev/spark';
-import { api } from '../../../../../lib/apiClient';
-import { qk } from '../../../../lib/query';
-import type { Media, MediaSummary, VersionDetail } from '../../../../types/api';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
+import type { Media, MediaSummary, VersionDetail } from '@/v2/types/api';
 import type { MediaResp } from '../../reviewTypes';
 import { visibleLocalBox } from '../scene/visibleBounds';
 import type { SplatSceneHandle, SplatViewer } from '../useSplat';
 import { mergeCompareMedia, useCompareVersions } from '../../three/useCompareVersions';
 import { normalizationFor, type SiblingNormalization } from './normalize';
-import { useT } from '../../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
- * Comparaison de splats (10.G-V8) : les frères SPLAT de la version courante **et les splats
- * cochés dans d'autres versions** sont chargés dans la même scène (même caméra) — **switch
- * A/B** avec fondu, **« voir tous »** côte à côte avec glissement. Réutilise la query de
- * version du navigateur (`qk.version`). Sans rien à comparer : inactif (no-op). Les splats
- * comparés sont chargés bruts (sans leurs éditions non-destructives) — objectif comparatif.
- * Leur taille est **unifiée par bounding box** sur le splat de référence (11.H), toggle
- * « Taille réelle » pour revenir au brut.
+ * Splat comparison (10.G-V8): the SPLAT siblings of the current version **and the splats ticked in other
+ * versions** are loaded into the same scene (same camera): **A/B switch** with a crossfade, **"see all"**
+ * side by side with a slide. Reuses the browser's version query (`qk.version`). With nothing to compare:
+ * inactive (no-op). The compared splats are loaded raw (without their non-destructive edits): a comparative
+ * objective. Their size is **unified by bounding box** on the reference splat (11.H), with a "Real size"
+ * toggle to return to raw.
  */
 
-/** Décalages côte à côte centrés (pur) : n positions espacées de `spacing`. */
+/** Centred side-by-side offsets (pure): n positions spaced by `spacing`. */
 export function sideBySideOffsets(n: number, spacing: number): number[] {
   return Array.from({ length: n }, (_, i) => (i - (n - 1) / 2) * spacing);
 }
 
-/** Frères SPLAT visibles d'une liste de médias de version (pur). */
+/** Visible SPLAT siblings of a list of version media (pure). */
 export function splatSiblings(media: MediaSummary[]): MediaSummary[] {
   return media.filter((m) => m.kind === 'SPLAT' && m.status === 'READY');
 }
@@ -38,13 +37,13 @@ export function splatSiblings(media: MediaSummary[]): MediaSummary[] {
 const FADE_MS = 350;
 const SLIDE_MS = 450;
 
-/** Normalisation d'un frère vs le splat de référence (bbox visibles, espace pivot) — 11.H. */
+/** Normalisation of a sibling against the reference splat (visible bboxes, pivot space): 11.H. */
 function computeNormalization(handle: SplatSceneHandle, sibling: SplatMesh): SiblingNormalization | null {
   const { THREE, mesh } = handle;
   const refBox = visibleLocalBox(THREE, mesh);
   const sibBox = visibleLocalBox(THREE, sibling);
   if (!refBox || !sibBox) return null;
-  // Référence en espace pivot : bbox locale passée par la transform utilisateur du mesh.
+  // Reference in pivot space: local bbox passed through the mesh's user transform.
   mesh.updateMatrix();
   refBox.applyMatrix4(mesh.matrix);
   const refSphere = refBox.getBoundingSphere(new THREE.Sphere());
@@ -57,7 +56,7 @@ function computeNormalization(handle: SplatSceneHandle, sibling: SplatMesh): Sib
   );
 }
 
-/** Applique (ou retire) la normalisation au frère — échelle brute et origine sinon. */
+/** Applies (or removes) the normalisation to the sibling: raw scale and origin otherwise. */
 function applyNormalization(mesh: SplatMesh, norm: SiblingNormalization | null, on: boolean): void {
   if (on && norm) {
     mesh.scale.setScalar(norm.scale);
@@ -82,15 +81,15 @@ export function useSplatCompare(splat: SplatViewer, current: Media) {
   const [mode, setMode] = useState<'single' | 'all'>('single');
   const [activeId, setActiveId] = useState(current.id);
   const [busy, setBusy] = useState(false);
-  // Tailles unifiées par bbox (11.H) — actif par défaut, toggle « Taille réelle ».
+  // Sizes unified by bbox (11.H): active by default, "Real size" toggle.
   const [normalized, setNormalized] = useState(true);
   const siblingsRef = useRef(new Map<number, SplatMesh>());
-  // Normalisation calculée une fois par frère (échelle + recentrage vs la référence).
+  // Normalisation computed once per sibling (scale + recentring against the reference).
   const normRef = useRef(new Map<number, SiblingNormalization | null>());
-  // Position X d'origine de chaque mesh (le principal porte sa transform enregistrée).
+  // Original X position of each mesh (the main one carries its recorded transform).
   const baseXRef = useRef(new Map<number, number>());
 
-  /** Anime l'opacité d'un mesh (fondu A/B). */
+  /** Animates the opacity of a mesh (A/B crossfade). */
   const fade = useCallback(
     (mesh: { opacity: number }, to: number) => {
       const from = mesh.opacity;
@@ -106,7 +105,7 @@ export function useSplatCompare(splat: SplatViewer, current: Media) {
     [subscribeFrame],
   );
 
-  /** Anime la position X d'un mesh vers sa base + offset (glissement côte à côte). */
+  /** Animates the X position of a mesh towards its base + offset (side-by-side slide). */
   const slideX = useCallback(
     (id: number, mesh: { position: { x: number } }, offset: number) => {
       const base = baseXRef.current.get(id) ?? mesh.position.x;
@@ -126,7 +125,7 @@ export function useSplatCompare(splat: SplatViewer, current: Media) {
     [subscribeFrame],
   );
 
-  /** Charge (une fois) un frère dans la scène — brut, invisible au départ. */
+  /** Loads (once) a sibling into the scene: raw, invisible at first. */
   const ensureSibling = useCallback(
     async (id: number): Promise<SplatMesh | null> => {
       const handle = getSceneHandle();
@@ -137,10 +136,10 @@ export function useSplatCompare(splat: SplatViewer, current: Media) {
       const { SplatMesh } = await import('@sparkjsdev/spark');
       const mesh = new SplatMesh({ url: detail.url, fileName: detail.media.originalName });
       mesh.opacity = 0;
-      // Enfant du pivot (11.E) : hérite du flip d'orientation, comme le splat principal.
+      // Child of the pivot (11.E): inherits the orientation flip, like the main splat.
       handle.pivot.add(mesh);
       await (mesh as unknown as { initialized?: Promise<unknown> }).initialized;
-      // Taille unifiée sur la référence (11.H) — mémorisée pour le toggle « Taille réelle ».
+      // Size unified on the reference (11.H): remembered for the "Real size" toggle.
       const norm = computeNormalization(handle, mesh);
       normRef.current.set(id, norm);
       applyNormalization(mesh, norm, normalized);
@@ -151,21 +150,21 @@ export function useSplatCompare(splat: SplatViewer, current: Media) {
     [getSceneHandle, normalized],
   );
 
-  /** Tous les meshes en scène : le principal + les frères chargés. */
+  /** All the meshes in the scene: the main one plus the loaded siblings. */
   const allMeshes = useCallback((): [number, SplatMesh][] => {
     const handle = getSceneHandle();
     if (!handle) return [];
     return [[current.id, handle.mesh], ...siblingsRef.current.entries()];
   }, [getSceneHandle, current.id]);
 
-  /** Bascule A/B : fondu vers le splat choisi, les autres s'éteignent, positions restaurées. */
+  /** A/B switch: crossfade to the chosen splat, the others switch off, positions restored. */
   const switchTo = useCallback(
     async (id: number) => {
       setBusy(true);
       try {
         if (id !== current.id && !(await ensureSibling(id))) return;
         for (const [mid, mesh] of allMeshes()) {
-          slideX(mid, mesh, 0); // sortie du mode « voir tous »
+          slideX(mid, mesh, 0); // exit from "see all" mode
           fade(mesh, mid === id ? 1 : 0);
         }
         setActiveId(id);
@@ -179,15 +178,15 @@ export function useSplatCompare(splat: SplatViewer, current: Media) {
     [current.id, ensureSibling, allMeshes, fade, slideX, t],
   );
 
-  /** « Voir tous » : charge tous les frères et les écarte côte à côte. */
+  /** "See all": loads all the siblings and spreads them side by side. */
   const viewAll = useCallback(async () => {
     setBusy(true);
     try {
       const handle = getSceneHandle();
       if (!handle) return;
       for (const m of splats) if (m.id !== current.id) await ensureSibling(m.id);
-      // Espacement = plus grande largeur affichée (bbox visible × échelle appliquée, 11.H) —
-      // avec la normalisation active, toutes les largeurs sont proches de la référence.
+      // Spacing = largest displayed width (visible bbox × applied scale, 11.H): with normalisation active,
+      // all widths are close to the reference.
       let spacing = 2;
       let maxWidth = 0;
       for (const m of splats) {
@@ -212,7 +211,7 @@ export function useSplatCompare(splat: SplatViewer, current: Media) {
     }
   }, [getSceneHandle, splats, current.id, ensureSibling, fade, slideX, t]);
 
-  /** Toggle « Taille réelle » (11.H) : bascule normalisation ↔ échelles brutes de tous les frères. */
+  /** "Real size" toggle (11.H): switches between normalisation and raw scales for all the siblings. */
   const toggleNormalized = useCallback(() => {
     const next = !normalized;
     setNormalized(next);
@@ -220,11 +219,11 @@ export function useSplatCompare(splat: SplatViewer, current: Media) {
       applyNormalization(mesh, normRef.current.get(id) ?? null, next);
       baseXRef.current.set(id, mesh.position.x);
     }
-    // En mode « voir tous », ré-écarte avec le nouvel espacement (les largeurs ont changé).
+    // In "see all" mode, respread with the new spacing (the widths have changed).
     if (mode === 'all') void viewAll();
   }, [normalized, mode, viewAll]);
 
-  /** Coche une version : le splat est chargé et affiché tout de suite. */
+  /** Ticks a version: the splat is loaded and displayed at once. */
   const addVersion = useCallback(
     (id: number, media?: MediaSummary) => {
       versions.add(id, media);
@@ -233,7 +232,7 @@ export function useSplatCompare(splat: SplatViewer, current: Media) {
     [versions, switchTo],
   );
 
-  /** Décoche une version : retour au splat courant si c'était lui qui était affiché. */
+  /** Unticks a version: back to the current splat if it was the one displayed. */
   const removeVersion = useCallback(
     (id: number) => {
       versions.remove(id);
@@ -242,7 +241,7 @@ export function useSplatCompare(splat: SplatViewer, current: Media) {
     [versions, activeId, switchTo, current.id],
   );
 
-  // Décochage : le splat retiré de la liste quitte la scène (il resterait chargé sinon).
+  // Unticking: the splat removed from the list leaves the scene (it would otherwise remain loaded).
   const listedIds = splats.map((m) => m.id).join(',');
   useEffect(() => {
     const kept = new Set(listedIds.split(',').map(Number));
@@ -255,7 +254,7 @@ export function useSplatCompare(splat: SplatViewer, current: Media) {
     }
   }, [listedIds]);
 
-  // Démontage : retire et libère les frères chargés (le principal appartient au viewer).
+  // Unmount: removes and frees the loaded siblings (the main one belongs to the viewer).
   useEffect(() => {
     const map = siblingsRef.current;
     return () => {
@@ -274,12 +273,12 @@ export function useSplatCompare(splat: SplatViewer, current: Media) {
     toggleNormalized,
     switchTo,
     viewAll,
-    /** Sélection d'autres versions (alimente `CompareSelect`). */
+    /** Selection of other versions (feeds `CompareSelect`). */
     versions: { ids: versions.ids, add: addVersion, remove: removeVersion, set: versions.set },
   };
 }
 
-/** Libère un splat comparé et le retire de la scène. */
+/** Frees a compared splat and removes it from the scene. */
 function disposeMesh(mesh: SplatMesh): void {
   (mesh as unknown as { dispose?: () => void }).dispose?.();
   mesh.removeFromParent();

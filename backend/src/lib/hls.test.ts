@@ -16,7 +16,7 @@ describe('hls (Phase 23)', () => {
     expect(renditionName(720)).toBe('720p');
   });
 
-  it('hlsGopSize = une keyframe par segment, calée sur le fps (repli 25)', () => {
+  it('hlsGopSize = one keyframe per segment, set on the fps (fallback 25)', () => {
     expect(hlsGopSize(24)).toBe(24 * HLS_SEGMENT_SEC);
     expect(hlsGopSize(29.97)).toBe(Math.round(29.97 * HLS_SEGMENT_SEC));
     expect(hlsGopSize(undefined)).toBe(25 * HLS_SEGMENT_SEC);
@@ -29,7 +29,7 @@ describe('hls (Phase 23)', () => {
     expect(hlsContentType('720p_003.ts')).toBe('video/mp2t');
   });
 
-  it('buildMasterPlaylist émet une entrée par rendition (bande passante + résolution)', () => {
+  it('buildMasterPlaylist emits one entry per rendition (bandwidth + resolution)', () => {
     const renditions: HlsRendition[] = [
       { height: 360, width: 640, videoBitrateK: 800, audioBitrateK: 128, playlist: '360p.m3u8' },
       { height: 720, width: 1280, videoBitrateK: 2500, audioBitrateK: 128, playlist: '720p.m3u8' },

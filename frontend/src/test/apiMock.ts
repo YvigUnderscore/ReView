@@ -2,41 +2,41 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Bouchon d'API pour les tests de rendu.
+ * API double for rendering tests.
  *
- * L'application ne connaît qu'une porte de sortie — `fetch` — puisque `lib/apiClient`,
- * `clientApi` et `uploadClient` passent tous par lui. On la remplace donc par un petit
- * routeur, plutôt que de bouchonner module par module : un test décrit ce que le serveur
- * répond, et le composant traverse pour de vrai sa propre couche de données (jetons,
- * renouvellement 401, TanStack Query). Bouchonner `api.get` sauterait tout cela.
+ * The application only knows one exit, `fetch`, since `lib/apiClient`,
+ * `clientApi` and `uploadClient` all go through it. We therefore replace it with a small
+ * router, rather than mocking module by module: a test describes what the server
+ * answers, and the component really goes through its own data layer (tokens,
+ * 401 renewal, TanStack Query). Mocking `api.get` would skip all of that.
  *
- * Une requête qu'aucune route ne couvre répond **501 avec son propre chemin en clair** et
- * s'inscrit dans `unhandled` : un écran muet devient un message lisible à l'écran et une
- * assertion possible, au lieu d'une attente qui expire.
+ * A request that no route covers answers **501 with its own path in plain text** and
+ * is recorded in `unhandled`: a silent screen becomes a readable message on screen and a
+ * possible assertion, instead of a wait that times out.
  */
 
-/** Requête reçue, telle que la voit une route. */
+/** Request received, as a route sees it. */
 export interface MockRequest {
   method: string;
-  /** Chemin sans query-string. */
+  /** Path without query string. */
   path: string;
   url: URL;
-  /** Segments nommés du motif (`/api/media/:id` → `{ id: '12' }`). */
+  /** Named segments of the pattern (`/api/media/:id` → `{ id: '12' }`). */
   params: Record<string, string>;
-  /** Corps JSON envoyé, quand il y en a un. */
+  /** JSON body sent, when there is one. */
   body: unknown;
 }
 
 /**
- * Réponse d'une route : une valeur JSON, une `Response`, ou de quoi la calculer.
+ * A route's response: a JSON value, a `Response`, or what is needed to compute it.
  *
- * Le type énumère les formes acceptées au lieu de dire `unknown` : une union avec `unknown`
- * s'effondre sur `unknown`, et le paramètre d'une route écrite en flèche
- * (`({ url }) => …`) cesse alors d'être typé par le contexte.
+ * The type enumerates the accepted forms instead of saying `unknown`: a union with `unknown`
+ * collapses to `unknown`, and the parameter of a route written as an arrow function
+ * (`({ url }) => …`) would then stop being typed by the context.
  */
 export type MockResolver = ((req: MockRequest) => unknown) | object | string | number | boolean | null;
 
-/** Réponse d'erreur explicite — `httpError(403, 'Forbidden')`. */
+/** Explicit error response: `httpError(403, 'Forbidden')`. */
 class HttpError {
   constructor(
     readonly status: number,
@@ -44,12 +44,12 @@ class HttpError {
   ) {}
 }
 
-/** Fait répondre la route avec ce statut et ce message (forme d'erreur du backend). */
+/** Makes the route respond with this status and this message (backend error shape). */
 export function httpError(status: number, error: string): MockResolver {
   return new HttpError(status, error);
 }
 
-/** Réponse 204 sans corps — DELETE et consorts. */
+/** 204 response without a body: DELETE and the like. */
 export function noContent(): MockResolver {
   return new Response(null, { status: 204 });
 }
@@ -57,28 +57,28 @@ export function noContent(): MockResolver {
 interface Route {
   method: string;
   segments: string[];
-  /** Query-string exacte exigée par la clé, si elle en portait une. */
+  /** Exact query string required by the key, if it carries one. */
   search: string | null;
   resolver: MockResolver;
 }
 
 export interface ApiMock {
-  /** Ajoute ou remplace une route (`'GET /api/projects'`). La dernière posée gagne. */
+  /** Adds or replaces a route (`'GET /api/projects'`). The last one set wins. */
   on(route: string, resolver: MockResolver): ApiMock;
-  /** Toutes les requêtes reçues, dans l'ordre. */
+  /** All requests received, in order. */
   readonly calls: MockRequest[];
-  /** Les requêtes reçues sur une route (`'PATCH /api/tasks/:id'`). */
+  /** The requests received on a route (`'PATCH /api/tasks/:id'`). */
   called(route: string): MockRequest[];
-  /** Les requêtes qu'aucune route ne couvrait — doit rester vide. */
+  /** Requests that no route covered: must stay empty. */
   readonly unhandled: string[];
-  /** Rend `fetch` à l'environnement. */
+  /** Gives `fetch` back to the environment. */
   restore(): void;
 }
 
 const parseKey = (key: string): { method: string; segments: string[]; search: string | null } => {
   const space = key.indexOf(' ');
-  // Concaténation plutôt que gabarit : le détecteur de texte en dur lit les gabarits
-  // d'un `new X(...)` comme de la prose d'interface, et ce message n'atteint qu'un test.
+  // Concatenation rather than a template: the hard-coded text detector reads the templates
+  // of a `new X(...)` as interface prose, and this message only reaches a test.
   if (space < 0) throw new Error('Mock route must be "METHOD /path": ' + key);
   const method = key.slice(0, space).toUpperCase();
   const rest = key.slice(space + 1);
@@ -87,7 +87,7 @@ const parseKey = (key: string): { method: string; segments: string[]; search: st
   return { method, segments: pathname.split('/'), search: q < 0 ? null : rest.slice(q + 1) };
 };
 
-/** Le motif couvre-t-il ce chemin ? Rend les segments nommés, ou `null`. */
+/** Does the pattern cover this path? Returns the named segments, or `null`. */
 function matchPath(pattern: string[], actual: string[]): Record<string, string> | null {
   const params: Record<string, string> = {};
   for (let i = 0; i < pattern.length; i += 1) {
@@ -103,7 +103,7 @@ function matchPath(pattern: string[], actual: string[]): Record<string, string> 
   return pattern.length === actual.length ? params : null;
 }
 
-/** Une route portant une query-string exacte l'emporte sur la même route sans query. */
+/** An exact-query-string route takes precedence over the same route without one. */
 function score(route: Route): number {
   return route.search === null ? 0 : 1;
 }
@@ -134,10 +134,10 @@ function readBody(init?: RequestInit): unknown {
 }
 
 /**
- * Installe le routeur sur `globalThis.fetch` et rend de quoi le piloter.
+ * Installs the router on `globalThis.fetch` and returns what is needed to drive it.
  *
- * `renderWithProviders` l'appelle pour chaque test et le restaure ensuite : on l'utilise
- * directement seulement pour un test qui n'a rien à rendre.
+ * `renderWithProviders` calls it for each test and then restores it: use it
+ * directly only for a test that has nothing to render.
  */
 export function mockApi(routes: Record<string, MockResolver> = {}): ApiMock {
   const table: Route[] = [];
@@ -147,8 +147,8 @@ export function mockApi(routes: Record<string, MockResolver> = {}): ApiMock {
 
   const add = (key: string, resolver: MockResolver) => {
     const { method, segments, search } = parseKey(key);
-    // Une redéfinition remplace la précédente : un test peut resserrer une route posée
-    // par les valeurs par défaut du harnais.
+    // A redefinition replaces the previous one: a test can tighten a route set
+    // by the harness's default values.
     const existing = table.findIndex(
       (r) => r.method === method && r.segments.join('/') === segments.join('/') && r.search === search,
     );
@@ -162,8 +162,8 @@ export function mockApi(routes: Record<string, MockResolver> = {}): ApiMock {
   globalThis.fetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
     const raw = typeof input === 'string' ? input : input instanceof URL ? input.href : input.url;
     const url = new URL(raw, 'http://localhost');
-    // Une ressource locale (`file:`, `data:`, `blob:`) n'est pas un appel d'API : le `.wasm`
-    // que Spark charge à l'import recevait sinon une erreur JSON, rejetée hors de tout test.
+    // A local resource (`file:`, `data:`, `blob:`) is not an API call: the `.wasm`
+    // that Spark loads on import would otherwise receive a JSON error, rejected outside any test.
     if (!url.protocol.startsWith('http')) return original(input, init);
     const method = (init?.method ?? 'GET').toUpperCase();
     const actual = url.pathname.split('/');
@@ -217,7 +217,7 @@ export function mockApi(routes: Record<string, MockResolver> = {}): ApiMock {
   };
 }
 
-/** Promesse résolue à la main — pour observer un état de chargement avant la réponse. */
+/** Promise resolved by hand: to observe a loading state before the response. */
 export function deferred<T>(): { promise: Promise<T>; resolve: (value: T) => void } {
   let resolve!: (value: T) => void;
   const promise = new Promise<T>((r) => {

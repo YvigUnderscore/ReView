@@ -3,7 +3,7 @@
 
 import type { RefObject } from 'react';
 import CommentsPanel from '../CommentsPanel';
-import type { ReviewComment } from '../../../types/api';
+import type { ReviewComment } from '@/v2/types/api';
 import type { MediaResp } from '../reviewTypes';
 import type { useAnnotations } from '../useAnnotations';
 import type { useTimelineMarkers } from '../useTimelineMarkers';
@@ -31,21 +31,21 @@ interface Props {
   loop: Loop;
   onSubmit: Parameters<typeof CommentsPanel>[0]['onSubmit'];
   onToggleAnnotate: () => void;
-  /** Retour caméra sur un point d'intérêt relu (numéro cliqué dans une carte du fil). */
+  /** Camera return to a point of interest being reviewed (number clicked in a thread card). */
   onPoiFocus: (point: PoiPoint, index: number) => void;
 }
 
 /**
- * Colonne de commentaires de la review.
+ * Review comments column.
  *
- * Extraite de `ReviewPage` pour deux raisons. La page tenait le budget de 300 lignes de
- * justesse, et surtout : les « indices » du composeur (ce qui sera joint au commentaire —
- * annotation, point 3D, caméra, références, plage) se déduisent tous de l'état de la
- * review. Les calculer ici plutôt que de les passer un par un garde la règle avec ce
- * qu'elle décrit, au lieu de l'étaler dans la liste de props de l'appelant.
+ * Extracted from `ReviewPage` for two reasons. The page was barely within its 300-line budget,
+ * and, more importantly, the composer's "hints" (what will be attached to the comment: annotation,
+ * 3D point, camera, references, range) are all derived from the review state. Computing them here
+ * rather than passing them one by one keeps the rule next to what it describes, instead of
+ * spreading it across the caller's prop list.
  *
- * Les points d'intérêt ne sont plus un indice booléen : ils ont leurs rangées dans le composeur
- * (`poi`), qui disent combien il y en a et ce que chacun porte.
+ * Points of interest are no longer a boolean hint: they have their rows in the composer (`poi`),
+ * which say how many there are and what each one carries.
  */
 export default function ReviewCommentsColumn({
   mediaObjectId,
@@ -83,13 +83,13 @@ export default function ReviewCommentsColumn({
       composerRef={composerRef}
       hints={{
         annotation: ann.annot.length > 0,
-        // La vue caméra est capturée pour TOUT commentaire spatial (`useSubmitComment`), splat
-        // compris, et sans attendre le mode annotation : l'indice disait donc faux deux fois.
+        // The camera view is captured for EVERY spatial comment (`useSubmitComment`), splat
+        // included, without waiting for annotation mode: the hint was therefore wrong twice over.
         camera: kind === 'MODEL_3D' || kind === 'SPLAT',
-        // Animation caméra jointe (bouton du transport) : dite ici, là où l'on relit ce qui part.
+        // Camera animation attached (transport button): stated here, where what is sent is reviewed.
         cameraAnim: ann.cameraAnim != null,
         references: ann.stagedRefs.length,
-        // Une plage n'est un indice que si elle est complète et orientée : `out > in`.
+        // A range is a hint only if it is complete and oriented: `out > in`.
         range: kind === 'VIDEO' && loop.in != null && loop.out != null && loop.out > loop.in,
       }}
       onSubmit={onSubmit}

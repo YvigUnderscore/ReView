@@ -4,35 +4,35 @@
 import { describe, it, expect } from 'vitest';
 import { mailLayout, mailButton, MAIL_ACCENT, MAIL_BORDER, MAIL_MUTED } from './mailTemplate';
 
-describe('mailTemplate — enveloppe de marque (Phase 22)', () => {
-  it('emballe le titre et le contenu', () => {
+describe('mailTemplate — brand wrapper (Phase 22)', () => {
+  it('wraps the title and the content', () => {
     const html = mailLayout('en', 'Mon titre', '<p>Corps</p>');
     expect(html).toContain('Mon titre');
     expect(html).toContain('<p>Corps</p>');
-    expect(html).toContain('ReView'); // en-tête de marque
+    expect(html).toContain('ReView'); // brand header
   });
 
-  it('traduit le pied et annonce la langue du message', () => {
+  it('translates the footer and announces the message language', () => {
     expect(mailLayout('en', 'T', '')).toContain('collaborative review platform');
     const fr = mailLayout('fr', 'T', '');
     expect(fr).toContain('plateforme de review collaborative');
     expect(fr).toContain('lang="fr"');
   });
 
-  it('expose les couleurs du thème sombre de l’app, pas des approximations', () => {
-    // Miroir de `frontend/src/index.css` (.dark) : un mail qui ne porte pas les couleurs de
-    // l'interface ressemble à un mail d'un autre produit.
+  it("exposes the colours of the app's dark theme, not approximations", () => {
+    // Mirror of `frontend/src/index.css` (.dark): a mail that does not carry the interface colours
+    // looks like a mail from another product.
     expect(MAIL_ACCENT).toBe('#00F0FF');
     expect(MAIL_BORDER).toBe('#1E2433');
     expect(MAIL_MUTED).toBe('#9BA3B2');
     expect(mailLayout('en', 'T', '')).toContain('#0B0E14');
   });
 
-  it('n’affiche plus de bandeau en dégradé', () => {
+  it('no longer shows a gradient banner', () => {
     expect(mailLayout('en', 'T', '')).not.toContain('linear-gradient');
   });
 
-  it('rend un bouton cliquable en styles inline (aucune feuille de style en mail)', () => {
+  it('renders a clickable button with inline styles (no stylesheet in mail)', () => {
     const html = mailButton('https://example.com/x', 'Go');
     expect(html).toContain('href="https://example.com/x"');
     expect(html).toContain('Go');
@@ -42,27 +42,26 @@ describe('mailTemplate — enveloppe de marque (Phase 22)', () => {
 });
 
 /**
- * Le seul paramètre de `mailLayout` qui soit du HTML s'appelle `contentHtml`. Le titre,
- * lui, est une donnée : `ShareMailService` y met le nom d'un projet, qu'un superviseur
- * renomme à sa guise. Un lien dans le titre en gras d'un message envoyé par le relais
- * SMTP du studio est un hameçonnage prêt à l'emploi.
+ * The only parameter of `mailLayout` that is HTML is called `contentHtml`. The title, however, is data:
+ * `ShareMailService` puts a project name in it, which a supervisor renames at will. A link in the bold title of a
+ * message sent through the studio's SMTP relay is ready-made phishing.
  */
-describe('mailTemplate — le titre est une donnée, pas du balisage', () => {
-  it('échappe le titre', () => {
+describe('mailTemplate — the title is data, not markup', () => {
+  it('escapes the title', () => {
     const html = mailLayout('en', 'Réf. <a href="https://faux.example">Ouvrir</a>', '<p>x</p>');
     expect(html).not.toContain('<a href="https://faux.example">');
     expect(html).toContain('&lt;a href=&quot;https://faux.example&quot;&gt;');
-    expect(html).toContain('<p>x</p>'); // le corps, lui, reste du HTML
+    expect(html).toContain('<p>x</p>'); // the body, however, stays HTML
   });
 
-  it('échappe le libellé et l’adresse du bouton', () => {
+  it('escapes the label and the address of the button', () => {
     const html = mailButton('https://example.com/x"><script>alert(1)</script>', '<b>Go</b>');
     expect(html).not.toContain('<script>');
     expect(html).not.toContain('<b>Go</b>');
     expect(html).toContain('&lt;b&gt;Go&lt;/b&gt;');
   });
 
-  it('laisse une URL ordinaire intacte dans le bouton', () => {
+  it('leaves an ordinary URL intact in the button', () => {
     expect(mailButton('https://example.com/x', 'Go')).toContain('href="https://example.com/x"');
   });
 });

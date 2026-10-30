@@ -5,11 +5,11 @@ import type { MessageKey } from '../i18n';
 import type { MenuRadioItem } from './menuSpec';
 
 /**
- * Construction du sous-menu « Assigner » — logique pure, sans React ni réseau.
+ * Builds the "Assign" submenu — pure logic, no React and no network.
  *
- * Le geste s'énonce « assigner Alice à cet asset », mais ce qui s'écrit est l'assignation
- * d'une **tâche** : un asset n'a pas de responsable, chacune de ses étapes en a un. Le menu
- * reflète donc le pipeline — un niveau par département, puis les personnes.
+ * The gesture reads as "assign Alice to this asset", but what is written is the assignment of a
+ * **task**: an asset has no owner, each of its steps does. The menu therefore mirrors the pipeline
+ * — one level per department, then the people.
  */
 
 export const UNASSIGNED = 'none';
@@ -17,9 +17,9 @@ export const UNASSIGNED = 'none';
 export interface AssignDepartment {
   id: number;
   name: string;
-  /** Vrai si l'entité porte déjà une tâche pour ce département. */
+  /** True if the entity already carries a task for this department. */
   hasTask: boolean;
-  /** Personne actuellement sur cette tâche, s'il y en a une. */
+  /** Person currently on this task, if there is one. */
   assigneeId: number | null;
 }
 
@@ -31,18 +31,18 @@ export interface AssignMember {
 export interface AssignGroup {
   departmentId: number;
   label: string;
-  /** Vrai quand le geste est impossible : projet piloté depuis ShotGrid, tâche absente. */
+  /** True when the gesture is impossible: project driven from ShotGrid, task missing. */
   disabled: boolean;
   items: MenuRadioItem[];
   value: string;
 }
 
 /**
- * Un groupe par département assignable.
+ * One group per assignable department.
  *
- * Sur un projet piloté depuis ShotGrid, les départements sans tâche sont montrés mais
- * désactivés : la tâche doit naître là-bas, et masquer l'entrée laisserait croire que
- * l'étape n'existe pas — alors que le pipe la prévoit.
+ * On a project driven from ShotGrid, departments without a task are shown but disabled: the task
+ * must be born there, and hiding the entry would suggest the step does not exist — whereas the
+ * pipeline plans it.
  */
 export function assignGroups(
   departments: AssignDepartment[],
@@ -69,7 +69,7 @@ export function assignGroups(
   }));
 }
 
-/** Le corps envoyé au serveur pour un choix donné. */
+/** The body sent to the server for a given choice. */
 export function assignBody(
   departmentId: number,
   value: string,
@@ -81,10 +81,10 @@ export function assignBody(
 }
 
 /**
- * Les départements d'une entité, vus depuis ses tâches.
+ * An entity's departments, seen from its tasks.
  *
- * Une entité peut porter une tâche dans un département qu'elle ne « déclare » pas : le
- * pipe évolue, les tâches restent. Les deux sources sont donc réunies, sans doublon.
+ * An entity may carry a task in a department it does not "declare": the pipeline evolves, the tasks
+ * remain. Both sources are therefore merged, without duplicates.
  */
 export function departmentsOf(
   declared: { id: number; name: string }[],
@@ -101,9 +101,8 @@ export function departmentsOf(
   for (const task of tasks) {
     if (task.departmentId == null) continue;
     let existing = byId.get(task.departmentId);
-    // Une tâche peut vivre dans une étape que l'entité ne déclare pas : le pipe évolue,
-    // les tâches restent. L'omettre priverait le menu de la seule étape réellement en
-    // cours sur l'entité.
+    // A task may live in a step the entity does not declare: the pipeline evolves, the tasks
+    // remain. Omitting it would deprive the menu of the only step actually in progress on the entity.
     if (!existing && task.departmentRef) {
       existing = {
         id: task.departmentRef.id,
@@ -115,8 +114,8 @@ export function departmentsOf(
     }
     if (existing) {
       existing.hasTask = true;
-      // Plusieurs tâches dans le même département : la première assignée fait foi pour
-      // la coche — le menu montre un état, il ne prétend pas résumer toutes les tâches.
+      // Several tasks in the same department: the first assigned one counts for the tick — the menu
+      // shows a state, it does not pretend to summarise all the tasks.
       existing.assigneeId ??= task.assignee?.id ?? null;
     }
   }

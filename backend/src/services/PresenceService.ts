@@ -6,22 +6,21 @@ import { logger } from '../lib/logger';
 import { getRedis, onHeartbeat, parseJson, publishRedis, redisStrings, subscribeRedis } from '../lib/redis';
 
 /**
- * Présence en ligne — état **partagé** (Redis) + persistance de la dernière activité.
+ * Presence online — **shared** state (Redis) + persistence of the last activity.
  *
- * L'état vivait dans deux `Map` de process : une seconde réplique voyait la moitié du
- * studio en ligne, et un redémarrage effaçait la présence de tout le monde. Il vit
- * désormais dans Redis, une entrée **par connexion** (et non par utilisateur), porteuse
- * d'une échéance : une réplique tuée voit ses entrées disparaître d'elles-mêmes au bout
- * d'un bail, là où un compteur par utilisateur serait resté bloqué à un pour toujours.
+ * The state used to live in two process `Map`s: a second replica saw half the studio online, and a restart
+ * erased everyone's presence. It now lives in Redis, with one entry **per
+ * connection** (and not per user), carrying an expiry: a killed replica sees its entries disappear by
+ * themselves after a lease, whereas a per-user counter would have remained stuck forever.
  *
- * `getOnlineUserIds()` reste **synchrone** — c'est le contrat de ses appelants (admin,
- * annuaire, messagerie) : il lit un miroir local, rafraîchi à chaque changement local,
- * à chaque notification d'une autre réplique, et au battement de cœur.
+ * `getOnlineUserIds()` remains **synchronous** — it is the contract of its callers (admin, directory,
+ * messaging): it reads a local mirror, refreshed at each local change, at each
+ * notification from another replica, and at the heartbeat.
  */
 
-/** Bail d'une entrée de présence : trois battements de cœur manqués et elle disparaît. */
+/** Lease of a presence entry: three missed heartbeats and it disappears. */
 export const PRESENCE_TTL_MS = 60_000;
-/** Bail de la salle entière : une review désertée ne laisse pas sa clé derrière elle. */
+/** Lease of the whole room: an abandoned review does not leave its key behind. */
 const ROOM_TTL_MS = PRESENCE_TTL_MS * 3;
 const WRITE_THROTTLE_MS = 30_000;
 
@@ -29,11 +28,11 @@ const ONLINE_KEY = 'review:presence:online';
 const ONLINE_CHANNEL = 'review:presence:online';
 const reviewKey = (mediaId: number): string => `review:presence:review:${mediaId}`;
 
-/** Une entrée = une connexion socket : `<userId>|<idDeConnexion>`. */
+/** One entry = one socket connection: `<userId>|<connectionId>`. */
 const entryId = (userId: number, connectionId: string): string => `${userId}|${connectionId}`;
 const userIdOf = (entry: string): number => Number(entry.slice(0, entry.indexOf('|')));
 
-/** Enregistrement d'un spectateur dans Redis : identité, arrivée, échéance. */
+/** Record of a viewer in Redis: identity, arrival, expiry. */
 interface StoredViewer {
   v: ReviewViewer;
   j: number;
@@ -51,7 +50,7 @@ function warnRedis(err: unknown): void {
   const now = Date.now();
   if (now - lastFailureLog < 30_000) return;
   lastFailureLog = now;
-  logger.warn({ err }, '[presence] Redis indisponible : présence dégradée');
+  logger.warn({ err }, '[presence] Redis unavailable: presence degraded');
 }
 
 type Broadcast = (onlineUserIds: number[]) => void;
@@ -65,7 +64,7 @@ export function getOnlineUserIds(): number[] {
   return [...onlineMirror];
 }
 
-/** Souscription et battement de cœur posés à la première utilisation réelle du service. */
+/** Subscription and heartbeat set up at the service's first real use. */
 function ensureWiring(): void {
   if (wired) return;
   wired = true;
@@ -74,11 +73,10 @@ function ensureWiring(): void {
 }
 
 /**
- * Amorce la synchronisation au démarrage du serveur.
+ * Seeds the synchronisation at server start-up.
  *
- * Sans elle, une réplique sans socket local n'aurait jamais rempli son miroir : la page
- * d'administration servie par cette réplique-là annoncerait « personne en ligne » alors
- * que tout le studio travaille sur l'autre.
+ * Without it, a replica with no local socket would never have filled its mirror: the administration page
+ * served by that replica would announce "nobody online" while the whole studio works on the other one.
  */
 export function startPresenceSync(): void {
   ensureWiring();
@@ -88,8 +86,8 @@ export function startPresenceSync(): void {
 const sameIds = (a: number[], b: number[]): boolean => a.length === b.length && a.every((v, i) => v === b[i]);
 
 /**
- * Relit la liste des connectés et diffuse si elle a changé. La diffusion suit désormais
- * les changements venus des autres répliques, pas seulement les nôtres.
+ * Re-reads the list of connected users and broadcasts it if it has changed. The broadcast now follows the
+ * changes coming from the other replicas, not only our own.
  */
 async function refreshOnline(): Promise<void> {
   const now = Date.now();
@@ -149,11 +147,11 @@ async function persistLastSeen(userId: number, force = false): Promise<void> {
   try {
     await prisma.user.update({ where: { id: userId }, data: { lastSeenAt: new Date() } });
   } catch {
-    /* utilisateur supprimé entre-temps : on ignore */
+    /* user deleted in the meantime: ignored */
   }
 }
 
-/** Connexion d'un socket. `connectionId` identifie l'onglet, pas l'utilisateur. */
+/** Connection of a socket. `connectionId` identifies the tab, not the user. */
 export async function markOnline(userId: number, connectionId: string): Promise<void> {
   ensureWiring();
   localConnections.set(connectionId, userId);
@@ -168,7 +166,7 @@ export async function markOnline(userId: number, connectionId: string): Promise<
   publishRedis(ONLINE_CHANNEL, 'online');
 }
 
-/** Déconnexion d'un socket : l'utilisateur ne passe hors ligne qu'au dernier onglet. */
+/** Disconnection of a socket: the user only goes offline with the last tab. */
 export async function markOffline(userId: number, connectionId: string): Promise<void> {
   localConnections.delete(connectionId);
   try {
@@ -181,15 +179,15 @@ export async function markOffline(userId: number, connectionId: string): Promise
   publishRedis(ONLINE_CHANNEL, 'online');
 }
 
-/** Activité utilisateur (event socket) : rafraîchit lastSeenAt sans spammer la base. */
+/** User activity (socket event): refreshes lastSeenAt without spamming the database. */
 export async function touch(userId: number): Promise<void> {
   await persistLastSeen(userId);
 }
 
-// ── Présence par review (backlog P2 10.G) ────────────────────────────────────
-// Spectateurs d'un média en cours de review : une entrée Redis par connexion, sous une
-// clé de hachage par média. La diffusion (event `review:presence`) est faite par
-// SocketService sur la room `review_{mediaId}` — qui traverse les répliques via l'adapter.
+// ── Presence per review (backlog P2 10.G) ────────────────────────────────────
+// Viewers of a media under review: one Redis entry per connection, under a hash key per media. The broadcast
+// (event `review:presence`) is done by SocketService on the room `review_{mediaId}` — which crosses the
+// replicas via the adapter.
 
 export interface ReviewViewer {
   id: number;
@@ -213,7 +211,7 @@ async function writeReviewEntries(
   await redis.call('PEXPIRE', reviewKey(mediaId), ROOM_TTL_MS);
 }
 
-/** Vue locale (repli quand Redis ne répond pas) : mieux qu'une salle affichée vide. */
+/** Local view (fallback when Redis does not answer): better than a displayed empty room. */
 function localViewers(mediaId: number): ReviewViewer[] {
   return [...(localReview.get(mediaId)?.values() ?? [])]
     .sort((a, b) => a.joinedAt - b.joinedAt || a.viewer.id - b.viewer.id)
@@ -232,8 +230,8 @@ export async function getReviewViewers(mediaId: number): Promise<ReviewViewer[]>
   }
 
   const stale: string[] = [];
-  // Un utilisateur peut avoir plusieurs onglets : on garde l'identité la plus fraîche
-  // (dernier join, avatar présigné le plus récent) et le rang de sa première arrivée.
+  // A user may have several tabs: we keep the freshest identity (last join, most recent presigned avatar) and
+  // the rank of their first arrival.
   const best = new Map<number, { viewer: ReviewViewer; newest: number; first: number }>();
   for (let i = 0; i + 1 < flat.length; i += 2) {
     const field = flat[i]!;
@@ -265,7 +263,7 @@ export async function getReviewViewers(mediaId: number): Promise<ReviewViewer[]>
     .map((e) => e.viewer);
 }
 
-/** Entrée d'un spectateur (une entrée par onglet) → liste à jour. */
+/** A viewer's entry (one entry per tab) → list up to date. */
 export async function joinReview(
   mediaId: number,
   viewer: ReviewViewer,
@@ -288,7 +286,7 @@ export async function joinReview(
   return getReviewViewers(mediaId);
 }
 
-/** Sortie d'un spectateur (dernier onglet → retiré de la liste) → liste à jour. */
+/** A viewer's exit (last tab → removed from the list) → list up to date. */
 export async function leaveReview(
   mediaId: number,
   userId: number,
@@ -306,7 +304,7 @@ export async function leaveReview(
   return getReviewViewers(mediaId);
 }
 
-/** Réinitialisation de l'état local (tests) — Redis n'est pas touché. */
+/** Reset of the local state (tests) — Redis is not touched. */
 export function __resetPresence(): void {
   localConnections.clear();
   localReview.clear();

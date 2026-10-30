@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { env } from '../config/env';
@@ -16,13 +16,13 @@ import { logger } from '../lib/logger';
 import type { Request } from 'express';
 
 /**
- * Configuration ShotGrid : sites du studio (ADMIN) et connexion d'un projet
- * (ADMIN ou superviseur du projet). Aucune clé ni mot de passe ne ressort de l'API.
+ * ShotGrid configuration: the studio's sites (ADMIN) and the connection of a project (ADMIN or the
+ * project's supervisor). No key or password ever leaves the API.
  */
 const router = Router();
 router.use(authenticate);
 
-/** Adresse publique de l'instance : réglage explicite, sinon origine de la requête. */
+/** The instance's public address: explicit setting, otherwise the origin of the request. */
 const publicUrl = (req: Request): string =>
   env.APP_URL ?? `${req.protocol}://${req.get('host') ?? 'localhost'}`;
 
@@ -61,21 +61,20 @@ router.delete('/sites/:id', requireRole(Role.ADMIN), validate({ params: idParam 
   res.status(204).end();
 });
 
-/** Test d'authentification réel contre le site. */
+/** Real authentication test against the site. */
 router.post('/sites/:id/test', requireRole(Role.ADMIN), validate({ params: idParam }), async (req, res) => {
   res.json(await Config.testSite(Number(req.params.id)));
 });
 
 /**
- * Projets du site. C'est cette liste qui permet à l'utilisateur de désigner sa cible
- * par son nom : l'identifiant seul serait indéchiffrable, et se tromper de projet est
- * l'erreur qu'on cherche à rendre impossible.
+ * The site's projects. This list lets the user designate their target by name: the identifier alone
+ * would be unreadable, and picking the wrong project is the error one is trying to make impossible.
  */
 router.get(
   '/sites/:id/projects',
   validate({ params: idParam, query: z.object({ query: z.string().max(120).optional() }) }),
   async (req, res) => {
-    if (req.user!.role !== Role.ADMIN && req.user!.role !== Role.SUPERVISOR)
+    if (requireUser(req).role !== Role.ADMIN && requireUser(req).role !== Role.SUPERVISOR)
       return res.status(403).json({ error: 'Supervisors and administrators only' });
     res.json({
       projects: await Config.listRemoteProjects(Number(req.params.id), req.query.query as string | undefined),
@@ -83,13 +82,13 @@ router.get(
   },
 );
 
-// ───────────────────────────── Connexion d'un projet ─────────────────────────────
+// ───────────────────────────── Connecting a project ─────────────────────────────
 
 const connectionBody = z.object({
   siteId: z.number().int().positive(),
   sgProjectId: z.number().int().positive(),
-  // Nom affiché à l'utilisateur au moment du choix : confronté au nom réel avant
-  // d'enregistrer quoi que ce soit.
+  // Display name shown to the user when choosing: checked against the real name before
+  // anything is recorded.
   sgProjectName: z.string().min(1).max(200),
 });
 
@@ -98,7 +97,7 @@ router.post(
   validate({ params: projectParam, body: connectionBody }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId);
+    await assertProjectManager(requireUser(req), projectId);
     const conn = await Config.createConnection(projectId, req.body);
     res.status(201).json({ connection: Config.connectionView(conn, publicUrl(req)) });
   },
@@ -106,7 +105,7 @@ router.post(
 
 router.get('/projects/:projectId/connection', validate({ params: projectParam }), async (req, res) => {
   const projectId = Number(req.params.projectId);
-  await assertProjectManager(req.user!, projectId, { allowMembers: true });
+  await assertProjectManager(requireUser(req), projectId, { allowMembers: true });
   const conn = await Config.getConnection(projectId);
   res.json({ connection: conn ? Config.connectionView(conn, publicUrl(req)) : null });
 });
@@ -123,30 +122,28 @@ router.patch(
   }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId);
+    await assertProjectManager(requireUser(req), projectId);
     const current = await Config.getConnectionOrThrow(projectId);
-    // Fusion : l'UI n'envoie que la section modifiée, le reste doit survivre.
-    // En profondeur d'un cran, et à partir des réglages **normalisés** : la fusion plate
-    // laissait `shotgridSettingsSchema.partial()` reparser chaque section reçue avec ses
-    // défauts, si bien qu'envoyer un seul domaine remettait les six autres à
-    // « lecture + écriture ». Un client qui n'envoie qu'un champ rouvrait des écritures.
+    // Merge: the UI only sends the section that changed, the rest must survive. It is done one level deep,
+    // and from the **normalized** settings: a flat merge let `shotgridSettingsSchema.partial()` re-parse
+    // each section received with its defaults, so sending a single domain reset the six others to
+    // "read and write". A client sending only one field reopened writes.
     const merged = req.body.settings
       ? Config.mergeSettings(parseSettings(current.settings), req.body.settings)
       : undefined;
-    // Rouvrir un domaine en écriture efface son alerte : la bannière signale un problème
-    // en cours, pas une trace historique.
+    // Reopening a domain for writing clears its alert: the banner signals a problem in progress,
+    // not a historical trace.
     const cleared = merged ? Config.clearedBlocks(current.pushBlocked, merged) : undefined;
     const conn = await Config.updateConnection(projectId, {
       ...req.body,
       settings: merged,
       ...(cleared ? { pushBlocked: cleared } : {}),
     });
-    // Le rythme (mode d'événements, intervalle de relevé, heure de réconciliation) vit
-    // dans des travaux répétables Redis, posés une seule fois au démarrage. Sans cette
-    // repose, basculer une connexion en « relevé » ne relevait rien jusqu'au prochain
-    // redémarrage — le réglage semblait pris en compte et ne l'était pas.
+    // The rhythm (event mode, polling interval, reconciliation time) lives in repeatable Redis jobs, set
+    // once at startup. Without this re-scheduling, switching a connection to polling recorded nothing
+    // until the next restart: the setting seemed taken into account and was not.
     void scheduleShotgridJobs().catch((err: unknown) => {
-      logger.error({ err, projectId }, 'Repose des travaux périodiques ShotGrid impossible');
+      logger.error({ err, projectId }, 'Could not reschedule the ShotGrid periodic jobs');
     });
     res.json({ connection: Config.connectionView(conn, publicUrl(req)) });
   },
@@ -154,42 +151,42 @@ router.patch(
 
 router.delete('/projects/:projectId/connection', validate({ params: projectParam }), async (req, res) => {
   const projectId = Number(req.params.projectId);
-  await assertProjectManager(req.user!, projectId, { adminOnly: true });
+  await assertProjectManager(requireUser(req), projectId, { adminOnly: true });
   await Config.deleteConnection(projectId);
   res.status(204).end();
 });
 
-/** Secret de signature, en clair et jamais mis en cache — voir `revealWebhookSecret`. */
+/** Signing secret, in clear and never cached: see `revealWebhookSecret`. */
 router.get(
   '/projects/:projectId/connection/webhook-secret',
   validate({ params: projectParam }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId);
+    await assertProjectManager(requireUser(req), projectId);
     res.setHeader('Cache-Control', 'no-store');
     res.json({ secret: await Config.revealWebhookSecret(projectId) });
   },
 );
 
-/** Nouveau secret, à reporter dans le webhook du site — voir `rotateWebhookSecret`. */
+/** New secret, to be reported in the site's webhook: see `rotateWebhookSecret`. */
 router.post(
   '/projects/:projectId/connection/rotate-secret',
   validate({ params: projectParam }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId);
+    await assertProjectManager(requireUser(req), projectId);
     res.setHeader('Cache-Control', 'no-store');
     res.json({ secret: await Config.rotateWebhookSecret(projectId) });
   },
 );
 
-/** Rotation du jeton d'URL du webhook (l'ancienne adresse cesse aussitôt de répondre). */
+/** Rotation of the webhook's URL token (the old address immediately stops answering). */
 router.post(
   '/projects/:projectId/connection/rotate-token',
   validate({ params: projectParam }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId);
+    await assertProjectManager(requireUser(req), projectId);
     const conn = await Config.rotateWebhookToken(projectId);
     res.json({ connection: Config.connectionView(conn, publicUrl(req)) });
   },

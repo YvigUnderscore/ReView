@@ -3,7 +3,7 @@
 
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
-import { renderWithProviders } from '../../../test/renderWithProviders';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import { useProjectContext } from '../../stores/useProjectContext';
 import type { ReviewComment } from '../../types/api';
 import CommentEditForm from './CommentEditForm';
@@ -31,7 +31,7 @@ const comment = (patch: Partial<ReviewComment> = {}): ReviewComment => ({
   ...patch,
 });
 
-/** Routes minimales de l'édition : présignature, dépôt MinIO, PATCH du commentaire. */
+/** Minimal edit routes: presign, MinIO upload, comment PATCH. */
 const routes = {
   'POST /api/comments/attachments/presign': { url: 'https://minio/put', key: UPLOADED },
   'PUT /put': {},
@@ -46,7 +46,7 @@ const mount = (patch: Partial<ReviewComment> = {}) =>
     { api: routes },
   );
 
-/** Clés envoyées par le dernier PATCH, dans l'ordre. */
+/** Keys sent by the last PATCH, in order. */
 const patchedKeys = (api: ReturnType<typeof mount>['api']) => {
   const body = api.called('PATCH /api/comments/:id').at(-1)?.body as
     { attachments?: { key: string }[] } | undefined;
@@ -58,9 +58,9 @@ afterEach(() => {
 });
 
 /**
- * D5 — le `PATCH` d'édition ne connaissait pas `attachments` : on ne pouvait ni ajouter ni
- * retirer une image en corrigeant un commentaire. On vérifie donc la liste effectivement
- * envoyée, puisque c'est elle qui décide de ce qui reste dans le fil et dans le stockage.
+ * D5: the edit `PATCH` did not know about `attachments`, so an image could be neither added
+ * nor removed when correcting a comment. So we check the list actually sent, since it decides
+ * what remains in the thread and in storage.
  */
 describe('CommentEditForm — pièces jointes éditables', () => {
   it('montre les images déjà jointes, en vignettes', () => {
@@ -86,10 +86,10 @@ describe('CommentEditForm — pièces jointes éditables', () => {
   it('ajoute une image : elle est téléversée puis jointe à la liste', async () => {
     const { api, user, container } = mount();
     const file = new File(['x'], 'nouvelle.png', { type: 'image/png' });
-    // Le champ de fichier est masqué derrière son bouton : on le pilote directement, comme
-    // le navigateur le fait après le sélecteur de fichiers.
+    // The file input is hidden behind its button: drive it directly, as the browser does
+    // after the file picker.
     fireEvent.change(container.querySelector('input[type="file"]')!, { target: { files: [file] } });
-    // Vignette locale immédiate : on voit ce qu'on ajoute avant même le téléversement.
+    // Immediate local thumbnail: you see what you add before the upload even starts.
     expect(await screen.findByRole('img', { name: 'nouvelle.png' })).toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: t('common.save') }));
     await waitFor(() => expect(patchedKeys(api)).toEqual([MINE, FROM_SHOTGRID, UPLOADED]));
@@ -115,7 +115,7 @@ describe('CommentEditForm — pièces jointes éditables', () => {
     await waitFor(() => expect(patchedKeys(api)).toEqual([]));
   });
 
-  /** Le serveur exige un contenu : une note réduite à ses images ne doit pas repartir en 400. */
+  /** The server requires content: a note reduced to its images must not be sent back as a 400. */
   it('garde un contenu minimal quand on efface le texte mais garde les images', async () => {
     const { api, user } = mount();
     await user.clear(screen.getByLabelText(t('comments.editField')));
@@ -132,8 +132,8 @@ describe('CommentEditForm — pièces jointes éditables', () => {
 });
 
 /**
- * Le bloc d'édition perdait l'autocomplétion `@mention` offerte à la saisie et à la réponse :
- * citer quelqu'un en corrigeant sa note supposait de taper le pseudo exact de mémoire.
+ * The edit block lost the `@mention` autocomplete offered when writing and replying: quoting
+ * someone while correcting a note meant typing the exact username from memory.
  */
 describe('CommentEditForm — mentions', () => {
   it("propose les membres du projet dès qu'on tape un @", async () => {

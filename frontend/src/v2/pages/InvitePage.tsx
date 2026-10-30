@@ -14,9 +14,9 @@ import { Label } from '../components/ui/label';
 import { AuthLayout } from './auth/AuthLayout';
 
 /**
- * Activation d'un compte créé par invitation (Phase 47) : le lien reçu par email amène ici,
- * la personne choisit son mot de passe et se retrouve connectée. Page publique — le jeton
- * de l'URL est la seule preuve d'identité, il n'y a pas encore de session.
+ * Activating an account created by invitation (Phase 47): the link received by email leads here,
+ * the person chooses their password and finds themselves signed in. Public page — the token
+ * in the URL is the only proof of identity, there is no session yet.
  */
 export default function InvitePage() {
   const t = useT();
@@ -49,8 +49,8 @@ export default function InvitePage() {
       const r = await api.post<{ token: string; refreshToken?: string }>(`/api/auth/invitation/${token}`, {
         password,
       });
-      // Le serveur ouvre la session en même temps qu'il pose le mot de passe : on entre
-      // directement dans l'application plutôt que de renvoyer sur l'écran de connexion.
+      // The server opens the session at the same time as it sets the password: we go in
+      // directly to the application rather than sending back to the sign-in screen.
       await ssoLogin(r.token, r.refreshToken);
       void navigate('/');
     } catch (err) {

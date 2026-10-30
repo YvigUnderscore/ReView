@@ -12,7 +12,7 @@ import {
 } from './blenderUsd';
 
 describe('isUsdPurpose', () => {
-  it('n’accepte que les purposes USD connus', () => {
+  it('accepts only known USD purposes', () => {
     expect(isUsdPurpose('render')).toBe(true);
     expect(isUsdPurpose('proxy')).toBe(true);
     expect(isUsdPurpose('default')).toBe(false);
@@ -23,24 +23,24 @@ describe('isUsdPurpose', () => {
 describe('buildBlenderArgs', () => {
   const base = { input: '/tmp/scene.usda', output: '/tmp/model.glb' };
 
-  it('lance Blender en headless sans préférences utilisateur', () => {
+  it('launches Blender headless without user preferences', () => {
     const args = buildBlenderArgs('/srv/usd_to_glb.py', base);
     expect(args.slice(0, 5)).toEqual(['-b', '--factory-startup', '--python-exit-code', '1', '--python']);
-    // Les arguments du script arrivent après le séparateur `--`.
+    // Script arguments come after the `--` separator.
     expect(args.indexOf('--input')).toBeGreaterThan(args.indexOf('--'));
     expect(args).toContain('/tmp/scene.usda');
     expect(args).toContain('--purpose');
     expect(args).toContain('render');
   });
 
-  it('transmet la plage de frames et le fps quand ils sont exploitables', () => {
+  it('passes the frame range and fps when they are usable', () => {
     const args = buildBlenderArgs('/s.py', { ...base, frameStart: 1, frameEnd: 96, fps: 24 });
     expect(args).toContain('--frame-start');
     expect(args[args.indexOf('--frame-end') + 1]).toBe('96');
     expect(args[args.indexOf('--fps') + 1]).toBe('24');
   });
 
-  it('ignore une plage incohérente ou incomplète', () => {
+  it('ignores an inconsistent or incomplete range', () => {
     expect(buildBlenderArgs('/s.py', { ...base, frameStart: 10, frameEnd: 2 })).not.toContain(
       '--frame-start',
     );
@@ -48,11 +48,11 @@ describe('buildBlenderArgs', () => {
     expect(buildBlenderArgs('/s.py', { ...base, fps: 0 })).not.toContain('--fps');
   });
 
-  it('permet de forcer une sortie statique', () => {
+  it('allows forcing a static output', () => {
     expect(buildBlenderArgs('/s.py', { ...base, noAnimation: true })).toContain('--no-animation');
   });
 
-  it('transmet les budgets de cuisson des variantes quand ils sont positifs (46.P)', () => {
+  it('passes the variant baking budgets when they are positive (46.P)', () => {
     const args = buildBlenderArgs('/s.py', {
       ...base,
       variantLayers: '/tmp/manifest.json',
@@ -62,7 +62,7 @@ describe('buildBlenderArgs', () => {
     expect(args[args.indexOf('--variant-layers') + 1]).toBe('/tmp/manifest.json');
     expect(args[args.indexOf('--variant-vertex-budget') + 1]).toBe('8000000');
     expect(args[args.indexOf('--variant-time-budget') + 1]).toBe('450');
-    // Sans budget de temps, la cuisson n'est pas bornée artificiellement.
+    // Without a time budget, baking is not artificially bounded.
     expect(buildBlenderArgs('/s.py', { ...base, variantTimeBudget: 0 })).not.toContain(
       '--variant-time-budget',
     );
@@ -70,9 +70,9 @@ describe('buildBlenderArgs', () => {
 });
 
 describe('buildVariantMask', () => {
-  it('ajoute les matériaux rangés hors du sous-arbre cuit (46.G)', () => {
-    // Sans eux, le masque de peuplement les retire du stage : l'objet cuit perd sa liaison
-    // et le viewer lui applique le matériau glTF par défaut (métal blanc miroir).
+  it('adds the materials stored outside the baked subtree (46.G)', () => {
+    // Without them, the population mask removes them from the stage: the baked object loses its
+    // binding and the viewer applies the default glTF material (mirror white metal).
     const mask = buildVariantMask('/characters/crag', [
       '/characters/crag/mtl/crag_body',
       '/characters/DietDefaultPreview',
@@ -80,18 +80,18 @@ describe('buildVariantMask', () => {
     expect(mask.split(',')).toEqual(['/characters/crag', '/characters/DietDefaultPreview']);
   });
 
-  it('n’ajoute rien quand la scène range ses matériaux sous le prim porteur', () => {
+  it('adds nothing when the scene stores its materials under the carrying prim', () => {
     expect(buildVariantMask('/W/A', ['/W/A/mtl/wood', '/W/A'])).toBe('/W/A');
     expect(buildVariantMask('/W/A')).toBe('/W/A');
   });
 
-  it('ne se laisse pas confondre par un prim frère de même préfixe', () => {
-    // `/W/Asset2` n'est pas dans le sous-arbre de `/W/Asset` : il doit rester au masque.
+  it('is not fooled by a sibling prim with the same prefix', () => {
+    // `/W/Asset2` is not in the subtree of `/W/Asset`: it must stay masked.
     expect(buildVariantMask('/W/Asset', ['/W/Asset2/mtl/wood'])).toBe('/W/Asset,/W/Asset2/mtl/wood');
   });
 
-  it('déduplique et écarte les chemins qui casseraient la liste', () => {
-    // La liste est délimitée par `,`/`;` et Blender n'accepte que des chemins absolus.
+  it('deduplicates and drops paths that would break the list', () => {
+    // The list is delimited by `,`/`;` and Blender only accepts absolute paths.
     const mask = buildVariantMask('/W/A', [
       '/W/mtl/a',
       '/W/mtl/a',
@@ -104,7 +104,7 @@ describe('buildVariantMask', () => {
 });
 
 describe('parseBlenderSummary', () => {
-  it('retrouve le résumé au milieu du bruit de Blender', () => {
+  it('finds the summary in the middle of Blender noise', () => {
     const stdout = [
       'Blender 4.5.0 (hash abc)',
       'Read prefs: /root/.config/blender',
@@ -116,19 +116,19 @@ describe('parseBlenderSummary', () => {
     expect(summary!.frameEnd).toBe(96);
   });
 
-  it('renvoie null sans marqueur ou avec un JSON cassé', () => {
+  it('returns null without a marker or with broken JSON', () => {
     expect(parseBlenderSummary('Blender quit')).toBeNull();
     expect(parseBlenderSummary(`${BLENDER_SUMMARY_MARKER} {pas du json}`)).toBeNull();
   });
 
-  it('retient le dernier résumé si le script est appelé plusieurs fois', () => {
+  it('keeps the last summary if the script is called several times', () => {
     const stdout = `${BLENDER_SUMMARY_MARKER} {"objects":1}\n${BLENDER_SUMMARY_MARKER} {"objects":7}`;
     expect(parseBlenderSummary(stdout)!.objects).toBe(7);
   });
 });
 
 describe('summarizeBlenderError', () => {
-  it('écarte le bruit et garde les dernières lignes utiles', () => {
+  it('discards noise and keeps the last useful lines', () => {
     const stderr = [
       'Read prefs: /root/.config',
       'Warning: unsupported schema',
@@ -137,11 +137,11 @@ describe('summarizeBlenderError', () => {
     expect(summarizeBlenderError(stderr)).toBe('RuntimeError: scene USD vide apres import');
   });
 
-  it('retombe sur le message par défaut quand tout est du bruit', () => {
+  it('falls back to the default message when everything is noise', () => {
     expect(summarizeBlenderError('Warning: rien\nInfo: rien', 'échec Blender')).toBe('échec Blender');
   });
 
-  it('borne la longueur du message remonté', () => {
+  it('bounds the length of the reported message', () => {
     expect(summarizeBlenderError('E'.repeat(2000)).length).toBeLessThanOrEqual(500);
   });
 });

@@ -15,13 +15,13 @@ const sample = (over: Record<string, unknown> = {}) =>
   });
 
 describe('parseFrameRate', () => {
-  it('rationnel ffprobe arrondi au centième (valeur historique de metadata.fps)', () => {
+  it('ffprobe rational rounded to the hundredth (historical value of metadata.fps)', () => {
     expect(parseFrameRate('24000/1001')).toBe(23.98);
     expect(parseFrameRate('25/1')).toBe(25);
     expect(parseFrameRate('30000/1001')).toBe(29.97);
   });
 
-  it('valeurs inexploitables : undefined', () => {
+  it('unusable values: undefined', () => {
     expect(parseFrameRate('0/0')).toBeUndefined();
     expect(parseFrameRate('25')).toBeUndefined();
     expect(parseFrameRate(undefined)).toBeUndefined();
@@ -31,24 +31,24 @@ describe('parseFrameRate', () => {
 });
 
 describe('parseFrameRateFraction', () => {
-  it('garde la cadence exacte plutôt que son arrondi', () => {
+  it('keeps the exact frame rate rather than its rounding', () => {
     expect(parseFrameRateFraction('24000/1001')).toEqual({ num: 24000, den: 1001 });
     expect(parseFrameRateFraction('30000/1001')).toEqual({ num: 30000, den: 1001 });
-    // L'arrondi historique, lui, perd 0,004 frame par seconde.
+    // The historical rounding, for its part, loses 0.004 frame per second.
     expect(parseFrameRate('24000/1001')).toBe(23.98);
     expect(24000 / 1001).not.toBe(23.98);
   });
 
-  it('réduit la fraction : 50/2 et 25/1 décrivent la même cadence', () => {
+  it('reduces the fraction: 50/2 and 25/1 describe the same rate', () => {
     expect(parseFrameRateFraction('50/2')).toEqual({ num: 25, den: 1 });
     expect(parseFrameRateFraction('25/1')).toEqual({ num: 25, den: 1 });
   });
 
-  it('laisse intacte une fraction non entière (rien à réduire)', () => {
+  it('leaves a non-integer fraction intact (nothing to reduce)', () => {
     expect(parseFrameRateFraction('29.97/1')).toEqual({ num: 29.97, den: 1 });
   });
 
-  it('rejette ce qui n’est pas une cadence', () => {
+  it('rejects anything that is not a frame rate', () => {
     expect(parseFrameRateFraction('0/0')).toBeUndefined();
     expect(parseFrameRateFraction('25')).toBeUndefined();
     expect(parseFrameRateFraction('a/b')).toBeUndefined();
@@ -58,20 +58,20 @@ describe('parseFrameRateFraction', () => {
 });
 
 describe('parseProbeOutput', () => {
-  it('extrait durée, dimensions, cadence et présence d’audio', () => {
+  it('extracts duration, dimensions, frame rate and audio presence', () => {
     expect(parseProbeOutput(sample())).toEqual({
       duration: 12.35,
       width: 1920,
       height: 1080,
       fps: 23.98,
-      // La cadence exacte accompagne désormais l'arrondi historique.
+      // The exact frame rate now accompanies the historical rounding.
       fpsNum: 24000,
       fpsDen: 1001,
       hasAudio: true,
     });
   });
 
-  it('les nombres arrivent en chaînes dans le JSON brut', () => {
+  it('numbers arrive as strings in the raw JSON', () => {
     const raw = JSON.stringify({
       format: { duration: '3' },
       streams: [{ codec_type: 'video', width: '640', height: '480' }],
@@ -79,7 +79,7 @@ describe('parseProbeOutput', () => {
     expect(parseProbeOutput(raw)).toMatchObject({ duration: 3, width: 640, height: 480 });
   });
 
-  it('média sans piste audio', () => {
+  it('media without an audio track', () => {
     const raw = JSON.stringify({
       format: { duration: '5' },
       streams: [{ codec_type: 'video', width: 10, height: 10 }],
@@ -87,7 +87,7 @@ describe('parseProbeOutput', () => {
     expect(parseProbeOutput(raw).hasAudio).toBe(false);
   });
 
-  it('image fixe : pas de durée', () => {
+  it('still image: no duration', () => {
     const raw = JSON.stringify({
       format: {},
       streams: [{ codec_type: 'video', width: 800, height: 600 }],
@@ -97,7 +97,7 @@ describe('parseProbeOutput', () => {
     expect(p.width).toBe(800);
   });
 
-  it('sortie illisible ou vide : résultat vide, jamais d’exception', () => {
+  it('unreadable or empty output: empty result, never an exception', () => {
     expect(parseProbeOutput('')).toEqual({});
     expect(parseProbeOutput('not json')).toEqual({});
     expect(parseProbeOutput('{}')).toEqual({
@@ -109,18 +109,17 @@ describe('parseProbeOutput', () => {
     });
   });
 
-  it('durée « N/A » : ignorée plutôt que NaN', () => {
+  it('duration "N/A": ignored rather than NaN', () => {
     const raw = JSON.stringify({ format: { duration: 'N/A' }, streams: [] });
     expect(parseProbeOutput(raw).duration).toBeUndefined();
   });
 
   /**
-   * Masters de post-production : un MOV ProRes ou un MXF portent régulièrement une image
-   * attachée (pochette, vignette de NLE) déclarée comme piste vidéo. Prise pour la piste
-   * principale, elle imposait sa définition à tout le traitement — proxy encodé en 120 px,
-   * échelle HLS calculée dessus, cadre de review faux.
+   * Post-production masters: a ProRes MOV or an MXF regularly carries an attached picture (cover art, NLE
+   * thumbnail) declared as a video stream. Taken as the main track, it imposed its definition on the whole
+   * pipeline — proxy encoded at 120 px, HLS ladder computed from it, wrong review frame.
    */
-  it('écarte lʼimage attachée dʼun master au profit de la vraie piste', () => {
+  it('discards the attached picture of a master in favour of the real track', () => {
     const raw = JSON.stringify({
       format: { duration: '10' },
       streams: [
@@ -131,7 +130,7 @@ describe('parseProbeOutput', () => {
     expect(parseProbeOutput(raw)).toMatchObject({ width: 1920, height: 1080, videoCodec: 'prores' });
   });
 
-  it('à défaut dʼimage attachée déclarée, retient la piste de plus grande surface', () => {
+  it('without a declared attached picture, keeps the track with the largest area', () => {
     const raw = JSON.stringify({
       format: {},
       streams: [
@@ -142,16 +141,16 @@ describe('parseProbeOutput', () => {
     expect(parseProbeOutput(raw)).toMatchObject({ width: 4096, height: 2160 });
   });
 
-  it('ne renvoie rien plutôt que rien de bon si toutes les pistes sont attachées', () => {
+  it('returns nothing rather than something wrong when all tracks are attached', () => {
     const raw = JSON.stringify({
       format: {},
       streams: [{ codec_type: 'video', width: 96, height: 96, disposition: { attached_pic: 1 } }],
     });
-    // Aucune piste « normale » : mieux vaut la pochette que rien du tout.
+    // No "normal" track: better the cover art than nothing at all.
     expect(parseProbeOutput(raw).width).toBe(96);
   });
 
-  it('relève lʼordre de trame et le nombre de canaux de la piste la plus riche', () => {
+  it('reads the field order and channel count of the richest track', () => {
     const raw = JSON.stringify({
       format: { duration: '4' },
       streams: [
@@ -165,11 +164,11 @@ describe('parseProbeOutput', () => {
 });
 
 describe('isInterlaced', () => {
-  it('reconnaît les quatre ordres de trame entrelacés', () => {
+  it('recognises the four interlaced field orders', () => {
     for (const order of ['tt', 'bb', 'tb', 'bt']) expect(isInterlaced(order), order).toBe(true);
   });
 
-  it('ne désentrelace jamais sur un doute', () => {
+  it('never deinterlaces on doubt', () => {
     expect(isInterlaced('progressive')).toBe(false);
     expect(isInterlaced('unknown')).toBe(false);
     expect(isInterlaced(undefined)).toBe(false);
@@ -177,12 +176,12 @@ describe('isInterlaced', () => {
 });
 
 describe('probeArgs', () => {
-  it('demande le JSON complet du fichier visé', () => {
+  it('requests the full JSON of the targeted file', () => {
     const args = probeArgs('/tmp/a b.mp4');
     expect(args).toContain('-print_format');
     expect(args).toContain('json');
     expect(args).toContain('-show_streams');
-    // Le chemin est un argument distinct : jamais de shell, donc pas d'échappement à faire.
+    // The path is a separate argument: never a shell, so nothing to escape.
     expect(args[args.length - 1]).toBe('/tmp/a b.mp4');
   });
 });

@@ -17,12 +17,11 @@ import { myOpenTasksWhere, myRetakesWhere, taskOfProject } from '../lib/homeScop
 import type { PaginationParams } from '../lib/pagination';
 
 /**
- * Les deux vues transverses qui déplient les compteurs de l'Accueil.
+ * The two cross-cutting views that unfold the Home page counters.
  *
- * Ce qu'on vérifie ici n'est pas qu'elles rendent des lignes, mais qu'elles rendent les
- * lignes DU compteur : elles doivent poser exactement le `where` de la carte qui les ouvre.
- * Un périmètre recopié à la main dériverait, et la page montrerait autre chose que le
- * chiffre cliqué — le défaut qu'on est en train de corriger, sous une autre forme.
+ * What is checked here is not that they return rows, but that they return the rows OF THE COUNTER: they must
+ * apply exactly the `where` of the card that opens them. A scope copied by hand would drift, and the page
+ * would show something other than the clicked figure — the defect being corrected here, in another form.
  */
 
 const artist = { id: 3, role: Role.ARTIST };
@@ -41,18 +40,18 @@ beforeEach(() => {
 });
 
 describe('listMyTasks', () => {
-  it('pose le périmètre du compteur cliqué : « mes retakes » pour scope=blocked', async () => {
+  it('applies the scope of the clicked counter: "my retakes" for scope=blocked', async () => {
     await listMyTasks(artist, 'blocked', p);
     expect(tasks.mock.calls[0]![0]!.where).toEqual(myRetakesWhere(artist));
     expect(vi.mocked(prisma.task.count).mock.calls[0]![0]!.where).toEqual(myRetakesWhere(artist));
   });
 
-  it('sans scope, toutes mes tâches vivantes — même bornes, autre famille', async () => {
+  it('without a scope, all my live tasks — same bounds, another family', async () => {
     await listMyTasks(artist, 'all', p);
     expect(tasks.mock.calls[0]![0]!.where).toEqual(myOpenTasksWhere(artist));
   });
 
-  it('nomme le projet et le lieu : la page est transverse, le projet fait partie du lieu', async () => {
+  it('names the project and the location: the page is cross-cutting, the project is part of the location', async () => {
     tasks.mockResolvedValue([
       {
         id: 4,
@@ -80,9 +79,9 @@ describe('listMyTasks', () => {
     expect(items[1]).toMatchObject({ location: 'Robot', projectId: 9, projectName: 'Pilot' });
   });
 
-  it('trie par échéance, les tâches sans date à la fin, `id` en départage', async () => {
-    // Sans départage, deux tâches sans échéance peuvent changer de page d'une requête à
-    // l'autre : la pagination réafficherait des lignes et en sauterait d'autres.
+  it('sorts by deadline, tasks without a date at the end, `id` as tie-break', async () => {
+    // Without a tie-break, two tasks without a deadline could change page from one request to the next:
+    // pagination would redisplay rows and skip others.
     await listMyTasks(artist, 'all', p);
     expect(tasks.mock.calls[0]![0]!.orderBy).toEqual([
       { dueDate: { sort: 'asc', nulls: 'last' } },
@@ -90,10 +89,9 @@ describe('listMyTasks', () => {
     ]);
   });
 
-  it('ajoute le projet en RESTRICTION, sans toucher au périmètre du compteur', async () => {
-    // Le bloc « mes tâches » d'une vue d'ensemble montre la même liste, vue par le trou
-    // d'un projet. Composer en `AND` est ce qui garantit qu'un filtre ne peut jamais
-    // ouvrir ce que le périmètre ferme.
+  it("adds the project as a RESTRICTION, without touching the counter's scope", async () => {
+    // The "my tasks" block of an overview shows the same list, seen through the hole of a project. Composing
+    // with `AND` is what guarantees that a filter can never open what the scope closes.
     await listMyTasks(artist, 'all', p, 12);
     expect(tasks.mock.calls[0]![0]!.where).toEqual({
       AND: [myOpenTasksWhere(artist), taskOfProject(12)],
@@ -102,13 +100,13 @@ describe('listMyTasks', () => {
 });
 
 describe('listMyComments', () => {
-  it('borne un CLIENT aux notes qui lui sont destinées', async () => {
+  it('bounds a CLIENT to the notes meant for them', async () => {
     await listMyComments(client, p);
     const where = JSON.stringify(notes.mock.calls[0]![0]!.where);
     expect(where).toContain('"isVisibleToClient":true');
   });
 
-  it('rend une ligne par note, avec son lieu et son auteur (invité compris)', async () => {
+  it('returns one row per note, with its location and its author (guest included)', async () => {
     notes.mockResolvedValue([
       {
         id: 51,
@@ -141,7 +139,7 @@ describe('listMyComments', () => {
     });
   });
 
-  it('ne rapatrie pas les colonnes lourdes (tracé, viewpoint 3D, pièces jointes)', async () => {
+  it('does not fetch the heavy columns (trace, 3D viewpoint, attachments)', async () => {
     await listMyComments(artist, p);
     const columns = JSON.stringify(notes.mock.calls[0]![0]!.select);
     expect(columns).not.toContain('annotation');

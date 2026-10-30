@@ -16,7 +16,7 @@ x-logging: &default-logging
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: postgres:16.15-alpine@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-review}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-review_dev}
@@ -51,10 +51,10 @@ services:
     image: pgsty/minio:${MINIO_VERSION:-RELEASE.2026-08-04T00-00-00Z}
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required (set it in .env, see .env.example)}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required (set it in .env, see .env.example)}
     # Bound to loopback by default. These ports are for development, and the MinIO console is
-    # full storage administration, protected in dev only by minioadmin/minioadmin: published
+    # full storage administration, protected only by the credentials from .env: published
     # on 0.0.0.0 it hands the whole bucket to anyone on the network.
     # Set MINIO_BIND=0.0.0.0 to expose them deliberately. docker-compose.prod.yml removes every
     # host port: in production MinIO is only reachable through nginx.
@@ -76,7 +76,15 @@ services:
     restart: always
 
   redis:
-    image: redis:7-alpine
+    image: redis:7.4.12-alpine@sha256:8da19c7399dca900c6822a1cf30f9d2285585e2c4b457ff4095b0f4500054d3f
+    # Password required (BullMQ queues carry job payloads). `exec` keeps redis-server as PID 1;
+    # the healthcheck authenticates through REDISCLI_AUTH, so no password appears in its
+    # command line. Dev falls back to a well-known value (loopback only); docker-compose.prod.yml
+    # makes REDIS_PASSWORD mandatory. Use URL-safe characters (hex): it is embedded in REDIS_URL.
+    command: ["sh", "-c", 'exec redis-server --requirepass "$$REDIS_PASSWORD"']
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:-review_dev_redis}
+      REDISCLI_AUTH: ${REDIS_PASSWORD:-review_dev_redis}
     # No host port in the base file; development publishes it through the override.
     volumes:
       - redisdata:/data
@@ -119,11 +127,11 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       S3_ENDPOINT: http://minio:9000
       S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9000}
-      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
-      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required (set it in .env, see .env.example)}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required (set it in .env, see .env.example)}
       S3_BUCKET: ${S3_BUCKET:-review}
       S3_FORCE_PATH_STYLE: "true"
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD:-review_dev_redis}@redis:6379
       CORS_ORIGIN: ${CORS_ORIGIN:-*}
       # One proxy hop sits in front of the API in this stack: the frontend container (and, in
       # production, the TLS nginx), which APPENDS the real client address to
@@ -215,11 +223,11 @@ services:
       JWT_SECRET: ${JWT_SECRET}
       S3_ENDPOINT: http://minio:9000
       S3_PUBLIC_ENDPOINT: ${S3_PUBLIC_ENDPOINT:-http://localhost:9000}
-      S3_ACCESS_KEY: ${MINIO_ROOT_USER:-minioadmin}
-      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:-minioadmin}
+      S3_ACCESS_KEY: ${MINIO_ROOT_USER:?MINIO_ROOT_USER is required (set it in .env, see .env.example)}
+      S3_SECRET_KEY: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD is required (set it in .env, see .env.example)}
       S3_BUCKET: ${S3_BUCKET:-review}
       S3_FORCE_PATH_STYLE: "true"
-      REDIS_URL: redis://redis:6379
+      REDIS_URL: redis://:${REDIS_PASSWORD:-review_dev_redis}@redis:6379
       # The worker serves no HTTP, but it shares the backend's environment schema, which
       # rejects CORS_ORIGIN='*' in production (config/env.ts). Without this line the worker
       # falls back to '*' and refuses to start, so it gets the same value as the backend.
@@ -314,7 +322,7 @@ services:
 
   # Opt-in antivirus: `docker compose --profile antivirus up -d`, plus CLAMAV_HOST=clamav.
   clamav:
-    image: clamav/clamav:stable
+    image: clamav/clamav:1.5.4@sha256:bda39705e291105049c3936e2803ac90b955172af8030f94f05dce1252df6c6d
     profiles: ["antivirus"]
     volumes:
       - clamav_db:/var/lib/clamav

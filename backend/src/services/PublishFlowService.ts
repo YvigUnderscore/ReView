@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { ignoreFailure } from '../lib/ignoreFailure';
 import { MediaKind, Role, VersionStatus } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { badRequest, notFound } from '../lib/errors';
@@ -24,34 +25,31 @@ import { setReviewers, type ReviewerInput } from './ReviewAssignmentService';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
 
 /**
- * Publication depuis un DCC en deux appels (API v1).
+ * Publishing from a DCC in two calls (API v1).
  *
- * Publier un playblast demandait jusqu'ici de connaître les identifiants du shot, de la
- * tâche et de la version, puis d'enchaîner création de version, demande d'URL, envoi et
- * finalisation : cinq allers-retours et autant d'occasions de rester à mi-chemin. Ici :
+ * Publishing a playblast used to require knowing the identifiers of the shot, the task and the version, then
+ * chaining version creation, URL request, upload and finalization: five round trips and as many opportunities
+ * to stop halfway. Here:
  *
- *   1. `start` — un chemin (`PROJ/SQ010/SH0100/anim`) et un nom de fichier suffisent.
- *      Ce qui manque dans la hiérarchie est créé, la version est ouverte, une URL d'envoi
- *      présignée est renvoyée.
- *   2. `complete` — après le PUT du fichier : validation du contenu, traitement, et
- *      publication si demandée.
+ * 1. `start` — a path (`PROJ/SQ010/SH0100/anim`) and a file name suffice. What is missing from the hierarchy
+ * is created, the version is opened, and a presigned
+ *      upload URL is returned.
+ *   2. `complete` — after the file's PUT: content validation, processing, and publication if requested.
  *
- * Le découpage en deux est imposé par l'envoi direct vers le stockage objet : le fichier
- * ne transite jamais par l'API, ce qui est précisément ce qui rend viable l'envoi d'un
- * rendu de plusieurs gigaoctets.
+ * The split into two is imposed by the direct upload to object storage: the file never transits through the
+ * API, which is precisely what makes uploading a multi-gigabyte render viable.
  */
 
 type Actor = { id: number; role: Role; email: string };
 
 /**
- * Type de média déduit de l'extension. Explicite l'échec plutôt que de deviner au hasard.
+ * Media type deduced from the extension. Makes the failure explicit rather than guessing at random.
  *
- * La table vit dans `lib/fileSignatures` (`SUPPORTED_EXTENSIONS`), à côté des signatures
- * qui la font tenir. Elle était auparavant recopiée ici, et la copie avait dérivé : sept
- * extensions image (`.exr .dpx .tif .tiff .tga .bmp .gif`) et trois vidéo (`.avi .mxf
- * .m4v`) étaient annoncées — jusque dans la documentation de l'API v1 — alors qu'aucune
- * n'était reconnue à la finalisation. Un rendu de plusieurs gigaoctets montait
- * intégralement avant d'être refusé. Une seule liste, donc, et le refus au plus tôt.
+ * The table lives in `lib/fileSignatures` (`SUPPORTED_EXTENSIONS`), next to the signatures that make it hold.
+ * It used to be copied here, and the copy had drifted: seven image extensions (`.exr .dpx .tif .tiff .tga
+ * .bmp .gif`) and three video ones (`.avi .mxf .m4v`) were announced — even in the API v1 documentation —
+ * whereas none was recognised at finalization. A multi-gigabyte render was uploaded in full before being
+ * refused. A single list, then, and the refusal as early as possible.
  */
 export function inferMediaKind(filename: string): MediaKind {
   const kind = inferKindFromExtension(getExtension(filename));
@@ -62,11 +60,11 @@ export function inferMediaKind(filename: string): MediaKind {
 }
 
 /**
- * Refus **avant** l'envoi du fichier.
+ * Refusal **before** the file is sent.
  *
- * C'est tout l'intérêt de la publication en deux temps : le client ne transfère rien tant
- * que `start` n'a pas répondu. Un format non lisible refusé ici coûte un aller-retour ;
- * refusé à la finalisation, il coûte le transfert complet du master.
+ * This is the whole point of two-step publication: the client transfers nothing until `start` has answered.
+ * An unreadable format refused here costs one round trip; refused at finalization, it costs the full transfer
+ * of the master.
  */
 function assertExtensionSupported(kind: MediaKind, filename: string): void {
   const ext = getExtension(filename);
@@ -78,16 +76,16 @@ function assertExtensionSupported(kind: MediaKind, filename: string): void {
 }
 
 /**
- * Une séquence d'images ne se publie pas par ce chemin — et il faut le dire.
+ * An image sequence is not published through this path — and it must be said.
  *
- * `SH0100_comp_v003.%04d.exr` passerait tous les contrôles ci-dessus : l'extension est
- * `.exr`, donc IMAGE, donc acceptée. Le DCC obtiendrait une URL présignée, y déposerait
- * une frame — ou rien — et créerait un média nommé d'après un motif, muet et inutilisable.
- * Un envoi de séquence demande N URLs, une reprise et un assemblage : c'est
- * `POST /api/media/sequence/init` (vague 5), pas la publication en deux temps.
+ * `SH0100_comp_v003.%04d.exr` would pass all the format checks above: the extension is `.exr`, hence IMAGE,
+ * hence accepted. The DCC would obtain a presigned URL, upload a frame — or nothing — there, and create a
+ * media named after a pattern: silent, unusable, and discovered days later. Uploading a sequence requires N
+ * URLs, a resume and an assembly: that is `POST /api/media/sequence/init` (wave 5), not the two-step
+ * publication.
  *
- * Refus explicite plutôt que chemin qui échoue en silence : c'est exactement la faute que
- * la vague précédente a corrigée sur les extensions annoncées et non reconnues.
+ * Explicit refusal rather than a path that fails silently: exactly the fault that the previous wave corrected
+ * on extensions announced but not recognised.
  */
 function assertNotSequencePattern(filename: string): void {
   if (!looksLikeSequencePattern(filename)) return;
@@ -98,29 +96,29 @@ function assertNotSequencePattern(filename: string): void {
 }
 
 export interface StartPublishInput {
-  /** Chemin cible, jusqu'à la tâche ou l'asset (`PROJ/SQ010/SH0100/anim`). */
+  /** Target path, down to the task or the asset (`PROJ/SQ010/SH0100/anim`). */
   path: string;
   filename: string;
   contentType?: string;
   kind?: MediaKind;
   size?: number;
   contentHash?: string;
-  /** Nom de version imposé. Absent : la suivante est calculée (V01, V02…). */
+  /** Imposed version name. Absent: the next one is computed (V01, V02…). */
   versionName?: string;
-  /** Réutiliser la version si elle existe déjà, au lieu d'échouer. */
+  /** Reuse the version if it already exists, instead of failing. */
   reuseVersion?: boolean;
-  /** Créer les maillons manquants du chemin (séquence, shot, tâche). */
+  /** Create the missing links of the path (sequence, shot, task). */
   createMissing?: boolean;
-  /** Cadrage du shot, posé à la création seulement. */
+  /** Framing of the shot, set at creation only. */
   shot?: { name?: string; startFrame?: number; endFrame?: number };
   /**
-   * Scène USD : variantes et purpose à convertir. Réservé à `MODEL_3D`.
-   * Sans lui, la conversion part sur les valeurs par défaut et il faut ensuite recomposer.
+   * USD scene: variants and purpose to convert. Reserved to `MODEL_3D`.
+   * Without it, the conversion goes out on default values and a recomposition is then needed.
    */
   usd?: UsdRequest;
 }
 
-/** Devine un type MIME raisonnable quand le client n'en fournit pas. */
+/** Guesses a reasonable MIME type when the client does not supply one. */
 const CONTENT_TYPE_FALLBACK: Record<MediaKind, string> = {
   [MediaKind.VIDEO]: 'video/mp4',
   [MediaKind.IMAGE]: 'image/png',
@@ -129,9 +127,8 @@ const CONTENT_TYPE_FALLBACK: Record<MediaKind, string> = {
 };
 
 /**
- * Ouvre une publication : hiérarchie, version, et URL d'envoi.
- * `projectId` est résolu ici et renvoyé pour que la route valide l'accès AVANT toute
- * écriture — c'est l'appelant qui garde la main sur le contrôle d'accès.
+ * Opens a publication: hierarchy, version, and upload URL. `projectId` is resolved here and returned so that
+ * the route validates access BEFORE any write — it is the caller who keeps control of the access check.
  */
 export async function start(actor: Actor, input: StartPublishInput) {
   const parsed = parsePipelinePath(input.path);
@@ -139,26 +136,23 @@ export async function start(actor: Actor, input: StartPublishInput) {
     throw badRequest('The path must point to at least one shot or asset', 'PATH_TOO_SHALLOW');
   }
   if (parsed.version) {
-    throw badRequest(
-      'Le chemin ne doit pas inclure la version — utiliser « versionName »',
-      'PATH_INCLUDES_VERSION',
-    );
+    throw badRequest('The path must not include the version — use "versionName"', 'PATH_INCLUDES_VERSION');
   }
 
   assertNotSequencePattern(input.filename);
 
   const project = await Resolve.resolveProject(parsed.project);
   const kind = input.kind ?? inferMediaKind(input.filename);
-  // Un `kind` imposé par le client ne dispense pas du contrôle : c'est justement le cas où
-  // l'extension et le type annoncé peuvent diverger.
+  // A `kind` imposed by the client does not exempt from the check: this is precisely the case where the
+  // extension and the announced type may diverge.
   assertExtensionSupported(kind, input.filename);
   if (input.usd && kind !== MediaKind.MODEL_3D) {
-    // Refus explicite plutôt qu'oubli silencieux : un client qui croit piloter la conversion
-    // d'un .mov doit l'apprendre tout de suite, pas en relisant les métadonnées.
-    throw badRequest("« usd » ne s'applique qu'aux médias 3D", 'USD_NOT_3D');
+    // Explicit refusal rather than silent omission: a client who believes it is driving the conversion of a
+    // .mov must learn it right away, not by re-reading the metadata.
+    throw badRequest('"usd" only applies to 3D media', 'USD_NOT_3D');
   }
 
-  // Cible : la tâche si le chemin en nomme une, sinon l'asset lui-même.
+  // Target: the task if the path names one, otherwise the asset itself.
   const target = input.createMissing
     ? await Ensure.ensurePath({ id: actor.id, role: actor.role }, project.id, input.path, {
         shot: input.shot,
@@ -182,10 +176,10 @@ export async function start(actor: Actor, input: StartPublishInput) {
     kind,
     size: input.size,
     contentHash: input.contentHash,
-    // La sélection n'est pas filtrée ici : à la publication, les variantSets de la scène ne
-    // sont pas encore connus (l'analyse USD n'a pas eu lieu). Ce n'est pas un trou —
-    // `ModelConvertService.convertUsd` la passe à `sanitizeVariantSelection` contre les
-    // variantSets réellement lus, donc une valeur inventée n'atteint jamais le pipeline.
+    // The selection is not filtered here: at publication, the scene's variantSets are not yet known (the USD
+    // analysis has not taken place). This is not a hole — `ModelConvertService.convertUsd` passes it to
+    // `sanitizeVariantSelection` against the variantSets actually read, so an invented value never reaches
+    // the pipeline.
     usdRequest: input.usd,
   });
 
@@ -206,14 +200,14 @@ export async function start(actor: Actor, input: StartPublishInput) {
     created: 'created' in target ? target.created : [],
     mediaId: upload.mediaObjectId,
     uploadUrl: upload.uploadUrl,
-    // L'envoi se fait en PUT direct sur cette URL, avec ce type de contenu.
+    // The upload is done by direct PUT on this URL, with this content type.
     uploadMethod: 'PUT' as const,
     contentType: input.contentType ?? CONTENT_TYPE_FALLBACK[kind],
     namingWarning: upload.namingWarning,
   };
 }
 
-/** Résout une cible existante sans rien créer (mode strict). */
+/** Resolves an existing target without creating anything (strict mode). */
 async function resolveExistingTarget(projectId: number, path: string) {
   const resolved = await Resolve.resolvePath(path);
   if (resolved.projectId !== projectId) throw notFound('Path lies outside the resolved project');
@@ -224,36 +218,35 @@ async function resolveExistingTarget(projectId: number, path: string) {
 }
 
 export interface CompletePublishInput {
-  /** Publier le média et la version dans la foulée (défaut : oui). */
+  /** Publish the media and the version right away (default: yes). */
   publish?: boolean;
-  /** Passer la version en REVIEW — la soumettre sans la publier. */
+  /** Move the version to REVIEW — submit it without publishing it. */
   submitForReview?: boolean;
   /**
-   * À qui confier la review de cette version, et ce que chacun doit y regarder.
+   * Who to entrust the review of this version to, and what each must look at.
    *
-   * Le geste du DCC est le même que celui de l'écran : on livre EN DISANT à qui c'est
-   * destiné. Écrit avant la publication, ce qui donne son sens au réglage projet
-   * « consigne obligatoire » — une consigne manquante refuse la publication au lieu de
-   * laisser partir une livraison que personne ne sait comment regarder.
+   * The DCC's gesture is the same as the screen's: one delivers BY SAYING for whom it is intended. Written
+   * before publication, which gives meaning to the project setting "mandatory brief" — a missing brief
+   * refuses publication instead of letting a delivery go out that nobody knows how to look at.
    */
   reviewers?: ReviewerInput[];
   /**
-   * Consigne d'upload — ce que l'auteur dit de ce qu'il livre.
+   * Upload brief — what the author says about what they deliver.
    *
-   * Le projet peut l'exiger (`settings.reviewRequest.requireNote`) : la finalisation est
-   * alors refusée sans elle, avant toute écriture. Elle porte sur la LIVRAISON, là où les
-   * consignes de `reviewers` portent chacune sur une personne ; un DCC qui ne confie la
-   * review à personne doit tout de même pouvoir satisfaire la règle du studio.
+   * The project may require it (`settings.reviewRequest.requireNote`): finalization is then refused without
+   * it, before any write. It bears on the DELIVERY, whereas the briefs
+   * of `reviewers` each bear on a person; a DCC that entrusts the review to no one must still be able to
+   * satisfy the studio's rule.
    */
   note?: string | null;
 }
 
 /**
- * Clôt une publication : valide le fichier déposé, déclenche le traitement, publie.
+ * Closes a publication: validates the deposited file, triggers processing, publishes.
  *
- * La publication de la *version* n'est tentée que si l'acteur en a le droit (superviseur+) :
- * un artiste publie son média — c'est le geste attendu — sans que l'appel échoue au motif
- * qu'il ne peut pas valider sa propre version.
+ * The publication of the *version* is only attempted if the actor is entitled to it (supervisor+): an artist
+ * publishes their media — which is the expected gesture — without the call
+ * failing on the grounds that they cannot validate their own version.
  */
 export async function complete(actor: Actor, mediaId: number, input: CompletePublishInput = {}) {
   const media = await prisma.mediaObject.findUnique({
@@ -265,9 +258,8 @@ export async function complete(actor: Actor, mediaId: number, input: CompletePub
   const finalized = await MediaService.finalize(actor, mediaId, input.note);
   const shouldPublish = input.publish !== false;
   if (shouldPublish) await MediaService.publish(actor, mediaId, input.reviewers);
-  // Livraison non publiée (`publish: false`) : la review est tout de même confiée. Perdre
-  // la consigne parce que l'artiste garde son brouillon une nuit de plus l'obligerait à la
-  // réécrire le lendemain.
+  // Unpublished delivery (`publish: false`): the review is nonetheless entrusted. Losing the brief because
+  // the artist keeps their draft one night longer would force them to rewrite it the next day.
   else if (input.reviewers !== undefined) {
     const projectId = await resolveProjectIdForVersion(media.versionId);
     if (projectId) await setReviewers(actor, projectId, media.versionId, input.reviewers);
@@ -278,14 +270,15 @@ export async function complete(actor: Actor, mediaId: number, input: CompletePub
   if (shouldPublish || input.submitForReview) {
     const projectId = await resolveProjectIdForVersion(media.versionId);
     if (projectId) {
+      // Publication lock or rights: the media stays published, the version does not.
       await VersionService.update(actor, projectId, media.versionId, { status: nextStatus }).catch(
-        () => undefined, // verrou de publication ou droits : le média reste publié, la version non
+        ignoreFailure('version status follow-up refused', { versionId: media.versionId }, 'debug'),
       );
     }
   }
 
-  // 48 : une publication ReView crée sa Version côté ShotGrid (lien ou fichier selon
-  // le réglage du projet). Mise en file — l'artiste n'attend pas le site distant.
+  // 48: a ReView publication creates its Version on the ShotGrid side (link or file depending on the project
+  // setting). Queued — the artist does not wait for the remote site.
   if (shouldPublish) {
     const projectId = await resolveProjectIdForVersion(media.versionId);
     if (projectId)

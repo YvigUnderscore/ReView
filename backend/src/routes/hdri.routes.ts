@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import * as HdriService from '../services/HdriService';
@@ -12,20 +12,20 @@ import { HDRI_FORMATS } from '../services/HdriService';
 import { logAudit } from '../services/AuditService';
 
 /**
- * Bibliothèque HDRI (Phase 15 V4). Lecture pour tout utilisateur authentifié (le viewer 3D
- * en a besoin) ; écriture réservée ADMIN. Monté sur `/api/studio/hdris`.
+ * HDRI library (Phase 15 V4). Read access for any authenticated user (the 3D viewer needs it); writes
+ * reserved to ADMIN. Mounted on `/api/studio/hdris`.
  */
 const router = Router();
 router.use(authenticate);
 
 const formatSchema = z.enum(HDRI_FORMATS);
 
-// GET /api/studio/hdris — liste + URLs présignées
+// GET /api/studio/hdris — list and presigned URLs
 router.get('/', async (_req, res) => {
   res.json({ hdris: await HdriService.listWithUrls() });
 });
 
-// POST /api/studio/hdris/presign — URL d'upload (admin)
+// POST /api/studio/hdris/presign — upload URL (admin)
 router.post(
   '/presign',
   requireRole(Role.ADMIN),
@@ -36,7 +36,7 @@ router.post(
   },
 );
 
-// POST /api/studio/hdris — finalise l'ajout (admin)
+// POST /api/studio/hdris — finalizes the addition (admin)
 router.post(
   '/',
   requireRole(Role.ADMIN),
@@ -54,12 +54,17 @@ router.post(
       format: HdriService.HdriFormat;
     };
     const entry = await HdriService.add(name, storageKey, format);
-    logAudit({ userId: req.user!.id, action: 'HDRI_ADD', entityType: 'Setting', metadata: { id: entry.id } });
+    logAudit({
+      userId: requireUser(req).id,
+      action: 'HDRI_ADD',
+      entityType: 'Setting',
+      metadata: { id: entry.id },
+    });
     res.status(201).json({ hdri: entry });
   },
 );
 
-// DELETE /api/studio/hdris/:id — supprime (admin)
+// DELETE /api/studio/hdris/:id — deletes (admin)
 router.delete(
   '/:id',
   requireRole(Role.ADMIN),
@@ -67,7 +72,7 @@ router.delete(
   async (req, res) => {
     const id = req.params.id as string;
     await HdriService.remove(id);
-    logAudit({ userId: req.user!.id, action: 'HDRI_DELETE', entityType: 'Setting', metadata: { id } });
+    logAudit({ userId: requireUser(req).id, action: 'HDRI_DELETE', entityType: 'Setting', metadata: { id } });
     res.status(204).end();
   },
 );

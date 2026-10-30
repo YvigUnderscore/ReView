@@ -89,7 +89,7 @@ def add_knobs(node):
 
 
 def _after_render():
-    """afterRender hook — silent unless the artist asked for the publish."""
+    """Run as Nuke's ``afterRender`` hook — silent unless the artist asked for the publish."""
     node = nuke.thisNode()
     knob = node.knob(AUTO_KNOB)
     if knob and knob.value():
@@ -100,7 +100,7 @@ def _say(message, notify):
     if notify and hasattr(nuke, "message"):
         nuke.message(message)
     else:
-        # En rendu de ferme, une boîte de dialogue bloquerait le nœud : on écrit au log.
+        # On a render farm, a dialog box would block the node, so we write to the log instead.
         nuke.tprint(message)
 
 

@@ -4,13 +4,12 @@
 import { useEffect, useMemo } from 'react';
 
 /**
- * Une URL `blob:` par fichier en attente, dans le même ordre — de quoi montrer une vignette
- * de ce qu'on est en train de joindre.
+ * One `blob:` URL per pending file, in the same order, so that a thumbnail of what is being
+ * attached can be shown.
  *
- * Les URL naissent dans le `useMemo` et meurent dans le nettoyage de l'effet qui en dépend :
- * si React jette le mémo et le recalcule, l'effet se rejoue et révoque exactement le lot
- * qu'il avait reçu. Un blob non révoqué retiendrait son fichier en mémoire pour toute la
- * durée de l'onglet.
+ * URLs are born in the `useMemo` and die in the cleanup of the effect that depends on it: if React
+ * discards the memo and recomputes it, the effect replays and revokes exactly the batch it had
+ * received. An unrevoked blob would keep its file in memory for the whole life of the tab.
  */
 export function useObjectUrls(files: readonly File[]): string[] {
   const urls = useMemo(() => files.map((file) => URL.createObjectURL(file)), [files]);

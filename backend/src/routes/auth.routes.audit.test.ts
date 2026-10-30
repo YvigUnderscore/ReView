@@ -16,7 +16,8 @@ vi.mock('../lib/sessions', () => ({
 }));
 vi.mock('../lib/oidcConfig', () => ({ isPasswordLoginBlocked: vi.fn().mockResolvedValue(false) }));
 vi.mock('../lib/userView', () => ({ toSessionUser: vi.fn(async (u: { id: number }) => ({ id: u.id })) }));
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: Request, _res: Response, next: NextFunction) => {
     req.user = { id: 7, role: 'ARTIST' } as Request['user'];
     next();
@@ -31,7 +32,7 @@ import { errorHandler } from '../middleware/error';
 
 const app = express().use(express.json()).use('/api/auth', authRoutes).use(errorHandler);
 
-// Coût 4 : ces tests mesurent le comportement, pas la résistance du hash.
+// Cost 4: these tests measure behavior, not the resistance of the hash.
 const HASH = bcrypt.hashSync('Motdepasse1', 4);
 const user = {
   id: 7,
@@ -45,28 +46,28 @@ const user = {
 beforeEach(() => {
   vi.clearAllMocks();
   db.user.findUnique.mockResolvedValue(user);
-  // `logAudit` détache l'écriture (`void create(...).catch(...)`) : le double doit rendre
-  // une promesse, sinon c'est le `.catch` qui explose au milieu de la route.
+  // `logAudit` detaches the write (`void create(...).catch(...)`): the double must return a promise,
+  // otherwise it is the `.catch` that explodes in the middle of the route.
   db.auditLog.create.mockResolvedValue({});
 });
 
-/** Données de la dernière ligne d'audit écrite par la route. */
+/** Data of the last audit line written by the route. */
 const lastAudit = (): Record<string, unknown> =>
   (db.auditLog.create.mock.calls.at(-1)?.[0] as { data: Record<string, unknown> }).data;
 
 /**
- * A5-03 : ni la connexion réussie ni la connexion refusée ne laissaient de trace, alors que
- * `TWOFA_FAIL` et `OIDC_LOGIN` en laissent une. C'est pourtant la première ligne que l'on
- * cherche le jour où l'on soupçonne un compte volé ou un départ mal soldé.
+ * A5-03: neither a successful login nor a refused one left a trace, whereas `TWOFA_FAIL` and
+ * `OIDC_LOGIN` leave one. Yet it is the first line one looks for on the day a stolen account or a
+ * badly settled departure is suspected.
  *
- * La trace ne doit rien apprendre à l'attaquant : même appel, même travail, adresse connue
- * ou non — et jamais le mot de passe présenté.
+ * The trace must teach the attacker nothing: same call, same work, address known or not, and never
+ * the password presented.
  *
- * Une adresse distincte par test : le frein par compte visé (10 tentatives / 15 min) est
- * partagé par tout le fichier, et sa mémoire ne se réinitialise pas entre deux `it`.
+ * A distinct address per test: the per-target-account brake (10 attempts / 15 min) is shared by the
+ * whole file, and its memory does not reset between two `it`.
  */
-describe('POST /api/auth/login — trace d’audit (A5-03)', () => {
-  it('consigne LOGIN avec l’identifiant du compte quand la connexion aboutit', async () => {
+describe('POST /api/auth/login — audit trail (A5-03)', () => {
+  it('records LOGIN with the account identifier when the login succeeds', async () => {
     await request(app)
       .post('/api/auth/login')
       .send({ email: 'trace-ok@studio.com', password: 'Motdepasse1' });
@@ -76,23 +77,23 @@ describe('POST /api/auth/login — trace d’audit (A5-03)', () => {
     expect(lastAudit().metadata).toMatchObject({ email: 'trace-ok@studio.com' });
   });
 
-  it('consigne LOGIN_FAIL sans auteur quand l’adresse est inconnue', async () => {
+  it('records LOGIN_FAIL without an author when the address is unknown', async () => {
     db.user.findUnique.mockResolvedValue(null);
 
     await request(app).post('/api/auth/login').send({ email: 'fantome@studio.com', password: 'Motdepasse1' });
 
     expect(lastAudit()).toMatchObject({ userId: null, action: 'LOGIN_FAIL', entityId: null });
-    // L'adresse visée reste dans la trace : c'est elle qui montre une énumération en cours.
+    // The targeted address stays in the trace: it is what shows an enumeration in progress.
     expect(lastAudit().metadata).toMatchObject({ email: 'fantome@studio.com' });
   });
 
-  it('consigne LOGIN_FAIL sur un mot de passe faux comme sur un compte désactivé', async () => {
+  it('records LOGIN_FAIL for a wrong password as well as for a deactivated account', async () => {
     await request(app)
       .post('/api/auth/login')
       .send({ email: 'trace-mdp@studio.com', password: 'MauvaisMdp1' });
     expect(lastAudit()).toMatchObject({ userId: 7, action: 'LOGIN_FAIL' });
 
-    // A1-01 : le partant qui retape son mot de passe laisse désormais une trace nommée.
+    // A1-01: the leaver who retypes their password now leaves a named trace.
     db.user.findUnique.mockResolvedValue({ ...user, disabledAt: new Date() });
     await request(app)
       .post('/api/auth/login')
@@ -100,7 +101,7 @@ describe('POST /api/auth/login — trace d’audit (A5-03)', () => {
     expect(lastAudit()).toMatchObject({ action: 'LOGIN_FAIL' });
   });
 
-  it('n’écrit jamais le mot de passe présenté, ni son empreinte', async () => {
+  it('never writes the password presented, nor its hash', async () => {
     await request(app)
       .post('/api/auth/login')
       .send({ email: 'trace-mdp2@studio.com', password: 'Motdepasse1' });
@@ -110,9 +111,9 @@ describe('POST /api/auth/login — trace d’audit (A5-03)', () => {
     expect(written).not.toContain(HASH);
   });
 
-  it('ne fait pas attendre la réponse à l’écriture du journal', async () => {
-    // Écriture qui ne se résout jamais : la connexion doit répondre malgré tout, sans quoi
-    // une base lente introduirait un écart de temps mesurable sur le chemin d'authentification.
+  it('does not make the response wait for the log write', async () => {
+    // A write that never resolves: the login must still respond, otherwise a slow database would
+    // introduce a measurable timing gap on the authentication path.
     db.auditLog.create.mockReturnValue(new Promise(() => {}));
 
     const res = await request(app)

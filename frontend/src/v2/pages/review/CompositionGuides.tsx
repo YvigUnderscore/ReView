@@ -9,13 +9,13 @@ import { guideDashArray } from './guides/guideStyle';
 import { useGuideBox } from './guides/useGuideBox';
 
 /**
- * Repères de composition (34.G) : tiers, croix centrale, safe areas action (90 %) et titre
- * (80 %) — SVG en surimpression du cadre du média (`pointer-events-none`), activés par le
- * menu clic droit de la review.
+ * Composition guides (34.G): thirds, central cross, action (90 %) and title (80 %) safe
+ * areas — SVG overlaid on the media frame (`pointer-events-none`), toggled from the review's
+ * right-click menu.
  *
- * Tout le style vient de `guides/guideStyle` (mêmes traits que le liseré du cadre de
- * livraison), la géométrie de `guides/guideGeometry` (croix carrée quel que soit l'aspect),
- * et l'épaisseur est compensée du zoom du lecteur : 1 px à l'écran, à toutes les échelles.
+ * All styling comes from `guides/guideStyle` (same strokes as the delivery frame border),
+ * the geometry from `guides/guideGeometry` (square cross whatever the aspect ratio), and
+ * the stroke width is compensated for the player zoom: 1 px on screen, at every scale.
  */
 export default function CompositionGuides() {
   const guides = useGuides((s) => s.guides);
@@ -37,7 +37,7 @@ export default function CompositionGuides() {
           </>
         )}
         {guides.actionSafe && <rect {...actionSafeRect(w, h)} data-guide="actionSafe" />}
-        {/* Le repère titre se distingue par ses tirets, jamais par son épaisseur. */}
+        {/* The title guide is distinguished by its dashes, never by its thickness. */}
         {guides.titleSafe && (
           <rect {...titleSafeRect(w, h)} strokeDasharray={guideDashArray(scale)} data-guide="titleSafe" />
         )}

@@ -4,24 +4,24 @@
 import type { RgbaArray } from '@sparkjsdev/spark';
 import type { SplatSceneHandle } from '../../useSplat';
 
-/** Teinte de sélection (orange DCC classique), appliquée à la gaussienne elle-même. */
+/** Selection tint (classic DCC orange), applied to the gaussian itself. */
 export const HIGHLIGHT_RGB: readonly [number, number, number] = [255, 170, 51]; // #ffaa33
 
 export interface SelectionHighlight {
-  /** Applique la teinte à l'ensemble sélectionné (remplace la sélection précédente). */
+  /** Applies the tint to the selected set (replaces the previous selection). */
   apply(selected: ReadonlySet<number>): void;
-  /** Signale des indices dont l'opacité a changé (masquage/restauration) — resynchronisés au prochain apply. */
+  /** Signals indices whose opacity changed (masking/restoring), resynced at the next apply. */
   markDirty(indices: Iterable<number>): void;
   dispose(): void;
 }
 
 /**
- * Surbrillance par teinte (10.G-V2) : injection RGBA **par index** via `RgbaArray`
- * (`SplatMesh.splatRgba`) — la teinte franche remplace la couleur de la gaussienne (fini
- * l'overlay `THREE.Points` qui se noyait dans le rendu). L'override Spark couvrant tous les
- * splats, on capture une base RGBA complète (une seule passe `forEachSplat`, mise en cache)
- * puis on ne réécrit que les indices qui changent. L'alpha d'origine est conservé : les splats
- * masqués (suppression non-destructive) restent invisibles même sous l'override.
+ * Tint-based highlight (10.G-V2): RGBA injection **per index** via `RgbaArray`
+ * (`SplatMesh.splatRgba`). The solid tint replaces the gaussian's colour, instead of the
+ * `THREE.Points` overlay that got lost in the rendering. As the Spark override covers all
+ * splats, a full RGBA base is captured (a single `forEachSplat` pass, cached) and then only
+ * the indices that change are rewritten. The original alpha is kept: hidden splats
+ * (non-destructive deletion) remain invisible even under the override.
  */
 export function createSelectionHighlight(
   handle: SplatSceneHandle,
@@ -29,8 +29,8 @@ export function createSelectionHighlight(
 ): SelectionHighlight {
   const mesh = handle.mesh;
   let rgba: RgbaArray | null = null;
-  let work: Uint8Array | null = null; // tampon envoyé au GPU (base + teintes)
-  let base: Uint8Array | null = null; // RGBA d'origine (alpha = opacité)
+  let work: Uint8Array | null = null; // buffer sent to the GPU (base + tints)
+  let base: Uint8Array | null = null; // original RGBA (alpha = opacity)
   let tinted: ReadonlySet<number> = new Set<number>();
   const dirty = new Set<number>();
   let attached = false;
@@ -58,7 +58,7 @@ export function createSelectionHighlight(
     return true;
   };
 
-  /** Resynchronise l'alpha des indices touchés par un (dé)masquage depuis les données paquées. */
+  /** Resyncs the alpha of the indices touched by a (un)mask from the packed data. */
   const syncDirty = () => {
     const packed = mesh.packedSplats;
     if (!packed || !base || !work || dirty.size === 0) return;
@@ -88,13 +88,13 @@ export function createSelectionHighlight(
       }
       if (!buildBase() || !base || !work || !rgba) return;
       syncDirty();
-      // Dé-teinte des indices sortis de la sélection, teinte des entrants.
+      // Un-tint the indices leaving the selection, tint the incoming ones.
       for (const i of tinted) {
         if (!selected.has(i)) work.set(base.subarray(i * 4, i * 4 + 4), i * 4);
       }
       const [tr, tg, tb] = HIGHLIGHT_RGB;
       for (const i of selected) {
-        if (tinted.has(i)) continue; // déjà teinté (brush incrémental : n'écrit que les entrants)
+        if (tinted.has(i)) continue; // already tinted (incremental brush: writes only the incoming ones)
         const o = i * 4;
         work[o] = tr;
         work[o + 1] = tg;
@@ -118,7 +118,7 @@ export function createSelectionHighlight(
       try {
         detach();
       } catch {
-        // scène déjà démontée : rien à détacher
+        // scene already torn down: nothing to detach
       }
       rgba?.dispose();
       rgba = null;

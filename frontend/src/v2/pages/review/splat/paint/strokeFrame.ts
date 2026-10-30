@@ -7,36 +7,37 @@ import type { PaintSceneHandle } from './surfaceRay';
 import type { Vec3 } from './surfaceTrace';
 
 /**
- * Entretien d'un trait **par image rendue**, accroché à `onBeforeRender` : Three l'appelle pour
- * chaque objet qu'il dessine, donc rien ne tourne quand le viewer ne rend pas. C'est ce qui
- * permet de tenir deux choses sans abonné de frame — un abonné rendrait le viewer « occupé » en
- * permanence et ferait perdre le rendu à la demande (cf. `viewer/renderScheduler`).
+ * Upkeep of a stroke **per rendered frame**, hooked on `onBeforeRender`: Three calls it for each
+ * object it draws, so nothing runs when the viewer does not render. This is what keeps two things
+ * without a frame subscriber: a subscriber would keep the viewer "busy" permanently and defeat
+ * on-demand rendering (cf. `viewer/renderScheduler`).
  *
- *  1. **Résolution de la vue** donnée au matériau : sans elle, l'épaisseur en pixels est fausse
- *     (et change au redimensionnement). `LineSegments2` a bien son propre `onBeforeRender` qui
- *     s'en charge, mais il y met le viewport en pixels **physiques** : sur un écran à densité 2,
- *     une épaisseur de 3 donnait un trait d'un pixel et demi. On la remplace donc par la taille
- *     en pixels **CSS**, la même unité que l'anneau de curseur de l'overlay — ce que l'artiste
- *     règle dans la barre d'options est alors ce qu'il voit sous le pointeur.
- *  2. **Occlusion approchée par normale.** Le nuage n'écrit pas la profondeur : un trait peint
- *     sur la face arrière restait aussi net que ceux de devant. On compare la normale du trait
- *     (la direction depuis laquelle il a été peint) à la direction de la caméra du moment, et on
- *     l'estompe quand on est passé derrière. C'est une *approximation* : elle ne sait rien des
- *     surfaces intermédiaires — un trait caché par un mur du nuage reste visible tant qu'on le
- *     regarde du même côté. Une vraie occlusion demanderait une pré-passe de profondeur du
- *     nuage, qui coûte une passe de rendu par image sur des millions de splats.
+ *  1. **View resolution** given to the material: without it, the thickness in pixels is wrong
+ *     (and changes on resize). `LineSegments2` has its own `onBeforeRender` that takes care of it,
+ *     but it sets the viewport in **physical** pixels: on a density-2 screen, a thickness of 3 gave
+ *     a stroke of one and a half pixels. So it is replaced by the size in **CSS** pixels, the same
+ *     unit as the overlay's cursor ring: what the artist sets in the options bar is then what they
+ *     see under the pointer.
+ *  2. **Approximate occlusion by normal.** The cloud does not write depth: a stroke painted on the
+ *     back face stayed as sharp as those on the front. The stroke's normal (the direction from
+ *     which it was painted) is compared to the current camera direction, and it is faded when we
+ *     have moved behind. This is an *approximation*: it knows nothing of intermediate surfaces, so
+ *     a stroke hidden by a wall of the cloud remains visible as long as it is viewed from the same
+ *     side. A true occlusion would require a depth pre-pass of the cloud, which costs one render
+ *     pass per frame over millions of splats.
  *
- * Estomper plutôt que masquer est volontaire : le trait reste repérable en tournant autour du
- * nuage, et un objet invisible ne recevrait plus `onBeforeRender` — il ne pourrait plus revenir.
+ * Fading rather than hiding is deliberate: the stroke stays findable when orbiting around the
+ * cloud, and an invisible object would no longer receive `onBeforeRender`, so it could never come
+ * back.
  */
 
-/** Opacité d'un trait vu depuis l'autre face. */
+/** Opacity of a stroke seen from the other side. */
 export const GHOST_OPACITY = 0.16;
-/** Au-dessus : pleinement visible. En dessous de `FACING_OUT` : pleinement estompé. */
+/** Above this: fully visible. Below `FACING_OUT`: fully faded. */
 const FACING_IN = 0.1;
 const FACING_OUT = -0.2;
 
-/** Opacité d'un trait selon l'orientation de sa normale face à la caméra (pure). */
+/** Opacity of a stroke according to its normal's orientation relative to the camera (pure). */
 export function ghostOpacity(facing: number): number {
   if (facing >= FACING_IN) return 1;
   if (facing <= FACING_OUT) return GHOST_OPACITY;
@@ -45,8 +46,8 @@ export function ghostOpacity(facing: number): number {
 }
 
 /**
- * Accroche l'entretien par image au trait. `normal` absente (traits d'avant l'occlusion) :
- * seule la résolution est tenue à jour, le trait reste pleinement visible.
+ * Hooks the per-frame upkeep to the stroke. `normal` absent (strokes from before occlusion):
+ * only the resolution is kept up to date, the stroke remains fully visible.
  */
 export function attachStrokeFrame(
   line: Line2,
@@ -60,15 +61,15 @@ export function attachStrokeFrame(
   const inverse = new THREE.Matrix4();
   const axis = normal ? new THREE.Vector3(normal[0], normal[1], normal[2]).normalize() : null;
   const origin = new THREE.Vector3(center[0], center[1], center[2]);
-  // `LineSegments2` restreint la signature de `onBeforeRender` à son seul `renderer` : on passe
-  // par le contrat d'`Object3D`, qui est celui que Three appelle réellement.
+  // `LineSegments2` narrows the signature of `onBeforeRender` to its sole `renderer`: we go
+  // through the `Object3D` contract, which is the one Three actually calls.
   const object: THREE.Object3D = line;
 
   object.onBeforeRender = (renderer, _scene, camera) => {
     renderer.getSize(size);
     line.material.resolution.set(size.x, size.y);
     if (!axis) return;
-    // Position de la caméra ramenée en espace objet : le trait y vit, la normale aussi.
+    // Camera position brought back into object space: the stroke lives there, and so does its normal.
     cameraObject
       .setFromMatrixPosition(camera.matrixWorld)
       .applyMatrix4(inverse.copy(mesh.matrixWorld).invert())

@@ -12,14 +12,14 @@ vi.mock('./prisma', () => ({
     mediaObject: { findMany: vi.fn(), update: vi.fn() },
   },
 }));
-vi.mock('../services/StorageService', () => ({
+vi.mock('./storage', () => ({
   storage: { deletePrefix: vi.fn(), deleteObject: vi.fn() },
 }));
 vi.mock('./logger', () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 
 import { purgeObsoleteDerived, selectObsoleteVersionIds, __testing } from './derivedPurge';
 import { prisma } from './prisma';
-import { storage } from '../services/StorageService';
+import { storage } from './storage';
 
 const setting = vi.mocked(prisma.setting.findUnique);
 const taskFindMany = vi.mocked(prisma.task.findMany);
@@ -33,9 +33,9 @@ const deleteObject = vi.mocked(storage.deleteObject);
 type Version = { id: number; taskId: number | null; assetId: number | null };
 
 /**
- * Base de sonde en mémoire : `nbTasks` tâches, `perTask` versions chacune, plus un asset
- * garni. Elle sert à prouver que le balayage par lots rend EXACTEMENT le même ensemble
- * que l'ancien `findMany` global — le point qui ferait de cette optimisation un bogue.
+ * In-memory probe database: `nbTasks` tasks, `perTask` versions each, plus a stocked asset. It proves
+ * that the batched sweep returns EXACTLY the same set as the former global `findMany` — the point that
+ * would make this optimisation a bug.
  */
 function seed(nbTasks: number, perTask: number, nbAssets = 3, perAsset = 5) {
   const versions: Version[] = [];
@@ -47,7 +47,7 @@ function seed(nbTasks: number, perTask: number, nbAssets = 3, perAsset = 5) {
   return versions;
 }
 
-/** Branche les mocks Prisma sur la base de sonde, en respectant curseur/`take`/`in`. */
+/** Wires the Prisma mocks to the probe database, honouring cursor / `take` / `in`. */
 function wire(versions: Version[], mediaFor: (versionId: number) => number[] = () => []) {
   const taskIds = [...new Set(versions.filter((v) => v.taskId != null).map((v) => v.taskId!))].sort(
     (a, b) => a - b,
@@ -59,8 +59,8 @@ function wire(versions: Version[], mediaFor: (versionId: number) => number[] = (
     const from = args.cursor ? ids.findIndex((i) => i === args.cursor!.id) + 1 : 0;
     return ids.slice(from, from + args.take).map((id) => ({ id }));
   };
-  // `mockImplementation` attend la signature exacte de Prisma : on la contourne par un cast
-  // de l'implémentation entière plutôt que d'annoter le paramètre en `never`, qui ne s'assigne pas.
+  // `mockImplementation` expects Prisma's exact signature: the whole implementation is cast rather than
+  // annotating the parameter as `never`, which does not assign.
   taskFindMany.mockImplementation(((args: { take: number; cursor?: { id: number } }) =>
     page(taskIds, args)) as never);
   assetFindMany.mockImplementation(((args: { take: number; cursor?: { id: number } }) =>
@@ -69,8 +69,8 @@ function wire(versions: Version[], mediaFor: (versionId: number) => number[] = (
     const w = (args as { where: { taskId?: { in?: number[] } | null; assetId?: { in?: number[] } } }).where;
     const byTask = w.taskId && typeof w.taskId === 'object' ? w.taskId.in : undefined;
     const byAsset = w.assetId?.in;
-    // Sans filtre de parent (l'ancienne implémentation), on rend TOUTE la table : c'est
-    // exactement ce que le test veut pouvoir constater.
+    // Without a parent filter (the former implementation), the WHOLE table is returned: exactly what the
+    // test must be able to observe.
     const rows = byTask
       ? versions.filter((v) => v.taskId != null && byTask.includes(v.taskId))
       : byAsset
@@ -96,44 +96,44 @@ beforeEach(() => {
   mediaUpdate.mockResolvedValue({} as never);
 });
 
-describe('purgeObsoleteDerived — équivalence stricte avec le chargement global (PERF-07)', () => {
-  it('purge exactement les mêmes médias que l’ancien « toute la table en mémoire »', async () => {
-    // 450 tâches > PURGE_PARENT_BATCH (200) : le balayage fait donc plusieurs pages.
+describe('purgeObsoleteDerived — strict equivalence with the global load (PERF-07)', () => {
+  it('purges exactly the same media as the former "whole table in memory"', async () => {
+    // 450 tasks > PURGE_PARENT_BATCH (200): the sweep therefore takes several pages.
     const versions = seed(450, 6, 4, 7);
-    // Un média vidéo par version, d'id = id de version (bijection commode pour comparer).
+    // One video media per version, id = version id (a convenient bijection for comparison).
     wire(versions, (vid) => [vid]);
 
     const { purged } = await purgeObsoleteDerived();
 
-    // La référence : ce que l'ancienne implémentation aurait calculé d'un bloc.
+    // The reference: what the former implementation would have computed in one block.
     const expected = selectObsoleteVersionIds(versions, 3).sort((a, b) => a - b);
     const touched = mediaUpdate.mock.calls
       .map((c) => (c[0] as { where: { id: number } }).where.id)
       .sort((a, b) => a - b);
     expect(touched).toEqual(expected);
     expect(purged).toBe(expected.length);
-    expect(expected.length).toBeGreaterThan(1000); // la sonde est bien à l'échelle
+    expect(expected.length).toBeGreaterThan(1000); // the probe is indeed at scale
   });
 
-  it('ne charge jamais toute la table : chaque requête Version est bornée par un lot de parents', async () => {
+  it('never loads the whole table: each Version query is bounded by a batch of parents', async () => {
     const versions = seed(450, 6, 4, 7);
     wire(versions, () => []);
 
     await purgeObsoleteDerived();
 
-    // C'est la mesure du correctif : le nombre de LIGNES rapatriées par requête.
+    // This is the measure of the fix: the number of ROWS fetched per query.
     const biggest = Math.max(...versionFindMany.mock.results.map((r) => (r.value as Version[]).length));
     expect(biggest).toBeLessThanOrEqual(__testing.PURGE_PARENT_BATCH * 6);
-    expect(biggest).toBeLessThan(versions.length); // 2 728 lignes d'un bloc auparavant
-    // Aucune requête sans filtre de parent : `where` porte toujours un `in`.
+    expect(biggest).toBeLessThan(versions.length); // 2,728 rows in one block before
+    // No query without a parent filter: `where` always carries an `in`.
     for (const call of versionFindMany.mock.calls) {
       const w = (call[0] as { where: Record<string, unknown> }).where;
       expect('taskId' in w || 'assetId' in w).toBe(true);
     }
   });
 
-  it('une version portant une tâche n’est comptée qu’une fois (priorité tâche sur asset)', async () => {
-    // Cas limite : `selectObsoleteVersionIds` groupe par tâche quand les deux sont posés.
+  it('a version carrying a task is counted only once (task priority over asset)', async () => {
+    // Edge case: `selectObsoleteVersionIds` groups by task when both are set.
     const versions: Version[] = [
       { id: 1, taskId: 5, assetId: 9 },
       { id: 2, taskId: 5, assetId: 9 },
@@ -146,30 +146,30 @@ describe('purgeObsoleteDerived — équivalence stricte avec le chargement globa
     await purgeObsoleteDerived();
 
     const touched = mediaUpdate.mock.calls.map((c) => (c[0] as { where: { id: number } }).where.id).sort();
-    // Groupe tâche 5 = {1,2,3} → purge 1 et 2 ; groupe asset 9 = {4} seul → rien.
+    // Task group 5 = {1,2,3} → purge 1 and 2; asset group 9 = {4} alone → nothing.
     expect(touched).toEqual(selectObsoleteVersionIds(versions, 1).sort());
     expect(touched).toEqual([1, 2]);
   });
 
-  it('le budget d’une passe borne le travail, et la passe suivante reprend', async () => {
+  it('one pass budget bounds the work, and the next pass resumes', async () => {
     const versions = seed(50, 10, 0, 0);
     wire(versions, (vid) => [vid]);
 
     const { purged } = await purgeObsoleteDerived(20);
     expect(purged).toBe(20);
     expect(mediaUpdate).toHaveBeenCalledTimes(20);
-    // Deux appels MinIO par média, lancés ensemble et non l'un après l'autre.
+    // Two MinIO calls per media, launched together rather than one after the other.
     expect(deletePrefix).toHaveBeenCalledTimes(20);
   });
 
-  it('purge désactivée : aucune requête, pas même la liste des parents', async () => {
+  it('purge disabled: no query, not even the list of parents', async () => {
     setting.mockResolvedValue({ value: '{"enabled":false}' } as never);
     expect(await purgeObsoleteDerived()).toEqual({ purged: 0 });
     expect(taskFindMany).not.toHaveBeenCalled();
     expect(versionFindMany).not.toHaveBeenCalled();
   });
 
-  it('un média déjà allégé n’est ni retouché ni compté', async () => {
+  it('a media already slimmed is neither touched nor counted', async () => {
     const versions = seed(1, 5, 0, 0);
     wire(versions, () => []);
     mediaFindMany.mockImplementation(

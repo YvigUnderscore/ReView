@@ -8,14 +8,14 @@ import { planHide, useSceneEditShortcuts } from './useSceneEditShortcuts';
 import { clonePath, emptyOverride, setPrimEdit, type PrimEdit, type SceneOverride } from './sceneOverride';
 import type { UsdSceneState } from './useUsdScene';
 import { useEditHistory } from '../splat/editor/operations/history';
-import { UNDO_PRIORITY, useUndoScope } from '../../../lib/undoScope';
+import { UNDO_PRIORITY, useUndoScope } from '@/v2/lib/undoScope';
 
 /**
- * Réagencer une scène USD au clavier (lot 13). Trois promesses sont vérifiées ici :
- *  - `Suppr` **masque** le prim désigné — un override, jamais une suppression de fichier ;
- *  - `Ctrl+Z` le rend, `Ctrl+Y` / `Ctrl+Maj+Z` le remasquent ;
- *  - la frappe ne va qu'à **un** historique : celui du viewer cède au composer d'annotation,
- *    qui est plus prioritaire (registre du lot 9).
+ * Rearranging a USD scene from the keyboard (batch 13). Three promises are checked here:
+ *  - `Delete` **hides** the targeted prim — an override, never a file deletion;
+ *  - `Ctrl+Z` restores it, `Ctrl+Y` / `Ctrl+Shift+Z` hide it again;
+ *  - the keystroke only goes to **one** history: the viewer's yields to the annotation composer,
+ *    which has higher priority (batch 9 registry).
  */
 
 afterEach(cleanup);
@@ -25,9 +25,9 @@ const SEAT = `${CHAIR}/Geom/seat`;
 const TABLE = '/World/Table';
 
 /**
- * Une scène USD réduite à ce que le raccourci lit et écrit (sélection, override, écriture d'un
- * prim). Le reste de `UsdSceneState` — index Three, gizmo, clones, variantes — n'a pas de sens
- * hors d'un viewer monté, et la double assertion dit exactement ce que le hook touche.
+ * A USD scene reduced to what the shortcut reads and writes (selection, override, writing a prim).
+ * The rest of `UsdSceneState` — Three index, gizmo, clones, variants — makes no sense outside a
+ * mounted viewer, and the double assertion says exactly what the hook touches.
  */
 function Harness({
   selected,
@@ -61,7 +61,7 @@ function Harness({
   );
 }
 
-/** Un composer d'annotation en cours, plus prioritaire — le concurrent réel de la frappe. */
+/** An ongoing annotation composer, higher priority — the real competitor of the keystroke. */
 function ComposerScope({ undo }: { undo: () => void }) {
   useUndoScope({
     enabled: true,
@@ -80,44 +80,44 @@ const undo = () => fireEvent.keyDown(document, { key: 'z', ctrlKey: true });
 const redoY = () => fireEvent.keyDown(document, { key: 'y', ctrlKey: true });
 const redoZ = () => fireEvent.keyDown(document, { key: 'z', ctrlKey: true, shiftKey: true });
 
-describe('planHide — ce que Suppr écrit, et sur quel chemin', () => {
-  it('masque exactement les chemins que la sélection porte, sans les promouvoir', () => {
-    // Le clic dans le viewer désigne le component (lot 6), Alt+clic la feuille : les deux
-    // arrivent ici tels quels. Rien n'est remonté ni descendu à l'écriture.
+describe('planHide — what Delete writes, and on which path', () => {
+  it('hides exactly the paths the selection carries, without promoting them', () => {
+    // A click in the viewer designates the component (batch 6), Alt+click the leaf: both arrive
+    // here as they are. Nothing is climbed or descended on write.
     const steps = planHide([CHAIR, SEAT], emptyOverride(), emptyOverride());
     expect(steps.map((s) => s.path)).toEqual([CHAIR, SEAT]);
     expect(steps.every((s) => s.before === undefined)).toBe(true);
   });
 
-  it('retient la consigne de visibilité d’avant — c’est elle que l’annulation rend', () => {
+  it('keeps the previous visibility instruction — that is what undo restores', () => {
     const local = setPrimEdit(emptyOverride(), CHAIR, { visible: true });
     expect(planHide([CHAIR], local, local)).toEqual([{ path: CHAIR, before: true }]);
   });
 
-  it('ne donne pas de cran pour un prim déjà invisible, même par un ancêtre', () => {
+  it('gives no step for a prim already invisible, even via an ancestor', () => {
     const local = setPrimEdit(emptyOverride(), CHAIR, { visible: false });
     expect(planHide([CHAIR], local, local)).toEqual([]);
     expect(planHide([SEAT], local, local)).toEqual([]);
   });
 
-  it('laisse les clones de mise en scène à leur menu : un clone ne se masque pas', () => {
-    // Masquer `/World/Chair_1#c1` écrirait sur le prim SOURCE : la copie et l'original
-    // disparaîtraient ensemble. Le clone se retire par son menu contextuel.
+  it('leaves staging clones to their menu: a clone is not hidden', () => {
+    // Hiding `/World/Chair_1#c1` would write to the SOURCE prim: the copy and the original
+    // would disappear together. The clone is removed through its context menu.
     expect(planHide([clonePath(CHAIR, 'c1')], emptyOverride(), emptyOverride())).toEqual([]);
   });
 });
 
-describe('Suppr, Ctrl+Z, Ctrl+Y sur la scène USD', () => {
-  it('masque la sélection, et l’annulation la rend', () => {
+describe('Delete, Ctrl+Z, Ctrl+Y on the USD scene', () => {
+  it('hides the selection, and undo restores it', () => {
     render(<Harness selected={[CHAIR]} />);
     suppr();
     expect(delta()).toBe(`${CHAIR}=false`);
     undo();
-    // L'override est redevenu vide : rien n'est forcé, ni masqué ni montré.
+    // The override is empty again: nothing is forced, neither hidden nor shown.
     expect(delta()).toBe('');
   });
 
-  it('rejoue le masquage sur Ctrl+Y comme sur Ctrl+Maj+Z', () => {
+  it('replays the hide on Ctrl+Y as on Ctrl+Shift+Z', () => {
     render(<Harness selected={[CHAIR]} />);
     suppr();
     undo();
@@ -128,18 +128,18 @@ describe('Suppr, Ctrl+Z, Ctrl+Y sur la scène USD', () => {
     expect(delta()).toBe(`${CHAIR}=false`);
   });
 
-  it('masque toute la multi-sélection en un seul cran', () => {
+  it('hides the whole multi-selection in a single step', () => {
     render(<Harness selected={[CHAIR, TABLE]} />);
     suppr();
     expect(delta()).toBe(`${CHAIR}=false ${TABLE}=false`);
-    // Un geste, un cran : une seule annulation rend les deux prims.
+    // One gesture, one step: a single undo restores both prims.
     undo();
     expect(delta()).toBe('');
   });
 
-  it('rend au prim la consigne qu’il portait, et non « visible » par défaut', () => {
-    // Un prim explicitement forcé visible (isolement levé) doit le redevenir, pas retomber
-    // dans l'absence de consigne : c'est la différence que `before` conserve.
+  it('gives the prim back the instruction it carried, not "visible" by default', () => {
+    // A prim explicitly forced visible (isolation lifted) must become so again, not fall back
+    // to no instruction: that is the difference `before` preserves.
     render(<Harness selected={[CHAIR]} initial={setPrimEdit(emptyOverride(), CHAIR, { visible: true })} />);
     suppr();
     expect(delta()).toBe(`${CHAIR}=false`);
@@ -147,13 +147,13 @@ describe('Suppr, Ctrl+Z, Ctrl+Y sur la scène USD', () => {
     expect(delta()).toBe(`${CHAIR}=true`);
   });
 
-  it('laisse Suppr à l’éditeur de courbes quand il est ouvert', () => {
+  it('leaves Delete to the curve editor when it is open', () => {
     render(<Harness selected={[CHAIR]} deleteEnabled={false} />);
     suppr();
     expect(delta()).toBe('');
   });
 
-  it('ne fait rien sans sélection — la touche reste disponible pour les autres', () => {
+  it('does nothing without a selection — the key remains available for the others', () => {
     render(<Harness selected={[]} />);
     const event = new KeyboardEvent('keydown', { key: 'Delete', bubbles: true, cancelable: true });
     document.dispatchEvent(event);
@@ -161,8 +161,8 @@ describe('Suppr, Ctrl+Z, Ctrl+Y sur la scène USD', () => {
   });
 });
 
-describe('préséance des historiques — une frappe, un seul', () => {
-  it('le composer d’annotation passe devant l’historique du viewer', () => {
+describe('history precedence — one keystroke, one only', () => {
+  it('the annotation composer goes ahead of the viewer history', () => {
     const composerUndo = vi.fn();
     render(
       <>
@@ -173,12 +173,12 @@ describe('préséance des historiques — une frappe, un seul', () => {
     suppr();
     expect(delta()).toBe(`${CHAIR}=false`);
     undo();
-    // Le composer a pris la frappe ; le masquage n'a PAS été défait en même temps.
+    // The composer took the keystroke; the hide was NOT undone at the same time.
     expect(composerUndo).toHaveBeenCalledTimes(1);
     expect(delta()).toBe(`${CHAIR}=false`);
   });
 
-  it('sans concurrent, la frappe revient à l’historique du viewer', () => {
+  it('without a competitor, the keystroke goes back to the viewer history', () => {
     render(<Harness selected={[CHAIR]} />);
     suppr();
     undo();

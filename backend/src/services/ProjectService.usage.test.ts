@@ -30,12 +30,12 @@ beforeEach(() => {
 });
 
 describe('ProjectService.listUsage (38.D)', () => {
-  it('n’agrège qu’UNE fois pour tous les projets (plus une somme par projet)', async () => {
+  it('aggregates ONLY ONCE for all the projects (not a sum per project)', async () => {
     await listUsage();
     expect(queryRaw).toHaveBeenCalledTimes(1);
   });
 
-  it('rend à chaque projet SA consommation, et zéro à celui qui n’a rien', async () => {
+  it('gives each project ITS consumption, and zero to the one with nothing', async () => {
     queryRaw.mockResolvedValue([{ projectId: 1, bytes: 4096n }] as never);
     expect(await listUsage()).toEqual([
       { id: 1, name: 'A', slug: 'a', usage: 4096, quota: 10 },
@@ -43,7 +43,7 @@ describe('ProjectService.listUsage (38.D)', () => {
     ]);
   });
 
-  it('ignore les médias qu’aucun projet ne réclame (projectId nul)', async () => {
+  it('ignores media that no project claims (null projectId)', async () => {
     queryRaw.mockResolvedValue([
       { projectId: null, bytes: 999n },
       { projectId: 2, bytes: 8n },

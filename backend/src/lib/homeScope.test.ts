@@ -14,23 +14,22 @@ import {
 } from './homeScope';
 
 /**
- * Les quatre compteurs de l'Accueil, sur leur périmètre.
+ * The four Home counters, on their scope.
  *
- * Chacun mentait à sa façon, et aucun de ces mensonges ne se voyait dans un chiffre : il
- * fallait connaître la base pour savoir que « mes retakes » comptait un projet à la
- * corbeille, ou que « awaiting review » — posé parmi mes chiffres — comptait le studio
- * entier. Ce sont donc les `where` eux-mêmes qu'on vérifie, pas la valeur rendue : c'est là
- * que la vérité se joue, et un test de valeur passerait sur une base vide.
+ * Each lied in its own way, and none of these lies showed in a figure: one had to know the database to realise
+ * that "my retakes" counted a project in the trash, or that "awaiting review" — placed among my figures — counted
+ * the whole studio. So it is the `where` clauses themselves that are checked, not the returned value: that is
+ * where the truth lies, and a value test would pass on an empty database.
  */
 
 const artist = { id: 3, role: Role.ARTIST };
 const admin = { id: 1, role: Role.ADMIN };
 const client = { id: 8, role: Role.CLIENT };
 
-/** Le projet accessible d'un ARTIST : vivant et dont il est membre. */
+/** An ARTIST's accessible project: alive and one they are a member of. */
 const mine = { deletedAt: null, memberships: { some: { userId: 3 } } };
 
-/** Les trois chemins de rattachement d'une version, parents masqués exclus. */
+/** The three attachment paths of a version, hidden parents excluded. */
 const versionPaths = [
   { task: { shot: { deletedAt: null, hiddenAt: null, project: mine } } },
   { task: { asset: { deletedAt: null, hiddenAt: null, project: mine } } },
@@ -38,17 +37,16 @@ const versionPaths = [
 ];
 
 describe('accessibleProjects', () => {
-  it('borne un ARTIST à ses projets vivants, et laisse tout le studio à un ADMIN', () => {
+  it('bounds an ARTIST to their live projects, and leaves the whole studio to an ADMIN', () => {
     expect(accessibleProjects(artist)).toEqual(mine);
     expect(accessibleProjects(admin)).toEqual({ deletedAt: null });
   });
 });
 
-describe('myRetakesWhere — « mes retakes »', () => {
-  it('borne à mes tâches, à mes projets, hors corbeille et hors éléments masqués', () => {
-    // Le compteur d'origine ne portait que `assigneeId` : une tâche d'un projet mis à la
-    // corbeille, d'un plan masqué ou d'un projet dont je ne suis plus membre continuait de
-    // réclamer une action qu'aucun écran ne pouvait plus montrer.
+describe('myRetakesWhere — "my retakes"', () => {
+  it('bounds to my tasks, my projects, excluding the trash and hidden items', () => {
+    // The original counter only carried `assigneeId`: a task of a project put in the trash, of a hidden shot or
+    // of a project I am no longer a member of kept claiming an action no screen could show.
     const where = myRetakesWhere(artist);
     expect(where.assigneeId).toBe(3);
     const [scope, family] = where.AND as Prisma.TaskWhereInput[];
@@ -58,14 +56,13 @@ describe('myRetakesWhere — « mes retakes »', () => {
         { asset: { deletedAt: null, hiddenAt: null, project: mine } },
       ],
     });
-    // La famille « bloqué » est celle du reste du serveur, pas une copie locale : c'est elle
-    // qui lit le référentiel du studio (`PipelineStatus`) et non l'enum figé.
+    // The "blocked" family is the rest of the server's, not a local copy: it is what reads the studio's
+    // reference data (`PipelineStatus`), not the frozen enum.
     expect(family).toBe(TASK_BLOCKED_FILTER);
   });
 
-  it('partage son périmètre avec la liste de mes tâches vivantes', () => {
-    // La page « mes tâches » et le compteur doivent compter la même chose : seule la
-    // famille de statut les distingue.
+  it('shares its scope with the list of my live tasks', () => {
+    // The "my tasks" page and the counter must count the same thing: only the status family tells them apart.
     const [scope] = myOpenTasksWhere(artist).AND as Prisma.TaskWhereInput[];
     const [retakeScope, family] = myRetakesWhere(artist).AND as Prisma.TaskWhereInput[];
     expect(scope).toEqual(retakeScope);
@@ -74,40 +71,40 @@ describe('myRetakesWhere — « mes retakes »', () => {
   });
 });
 
-describe('awaitingMyReviewWhere — « ce qu’on attend de moi »', () => {
-  it('ne compte que les reviews qui m’ont été confiées, sans décision rendue', () => {
-    // La carte est posée parmi mes chiffres et libellée à la première personne ; elle
-    // comptait pourtant les verdicts attendus de tout le studio.
+describe('awaitingMyReviewWhere — "what is expected of me"', () => {
+  it('counts only the reviews entrusted to me, with no decision made', () => {
+    // The card sits among my figures and is labelled in the first person; yet it counted verdicts expected from
+    // the whole studio.
     const where = awaitingMyReviewWhere(artist);
     expect(where.deletedAt).toBeNull();
     expect(where.published).toBe(true);
     expect(where.status).toBe(MediaStatus.READY);
     const version = where.version as Prisma.VersionWhereInput;
     expect(version.reviewers).toEqual({ some: { reviewerId: 3 } });
-    // Décision déjà rendue = plus rien à attendre de moi.
+    // A decision already made = nothing left to expect from me.
     expect(version.reviewStatusId).toBeNull();
     expect(version.deletedAt).toBeNull();
     expect(version.OR).toEqual(versionPaths);
   });
 });
 
-describe('mediaInReviewWhere — « media in review »', () => {
-  it('exclut les versions déjà tranchées, et borne au périmètre accessible', () => {
-    // Le compteur prenait TOUS les médias publiés et prêts : un projet livré depuis deux
-    // ans y figurait encore, décisions rendues comprises.
+describe('mediaInReviewWhere — "media in review"', () => {
+  it('excludes versions already decided, and bounds to the accessible scope', () => {
+    // The counter took ALL published, ready media: a project delivered two years ago was still among them,
+    // decisions included.
     const where = mediaInReviewWhere(artist);
     expect(where.published).toBe(true);
     expect(where.status).toBe(MediaStatus.READY);
     const version = where.version as Prisma.VersionWhereInput;
     expect(version.reviewStatusId).toBeNull();
     expect(version.OR).toEqual(versionPaths);
-    // Et rien de personnel ici : c'est le volume du périmètre, pas ma file.
+    // And nothing personal here: it is the volume of the scope, not my queue.
     expect(version.reviewers).toBeUndefined();
   });
 });
 
-describe('commentFeedWhere — le fil des commentaires', () => {
-  it('borne un CLIENT aux notes qui lui sont destinées, et personne d’autre', () => {
+describe('commentFeedWhere — the comment feed', () => {
+  it('bounds a CLIENT to the notes intended for them, and no one else', () => {
     expect(commentFeedWhere(client).isVisibleToClient).toBe(true);
     expect(commentFeedWhere(artist).isVisibleToClient).toBeUndefined();
     const media = commentFeedWhere(artist).media as Prisma.MediaObjectWhereInput;

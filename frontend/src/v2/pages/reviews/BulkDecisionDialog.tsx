@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { useReviewStatusesQuery } from '../../lib/queries';
 import { useTheme } from '../../stores/useTheme';
 import { reviewStatusStyle } from '../../components/reviewDecision.helpers';
@@ -22,15 +22,15 @@ import type { ReviewStatus } from '../../types/api';
 import { useT } from '../../i18n';
 
 /**
- * Même décision de review sur une sélection de médias.
+ * Applies the same review decision to a selection of media.
  *
- * Une session de dailies se solde par trente « retake » et douze « approved » : les poser
- * un par un demandait trente ouvertures de fenêtre. La décision porte sur la **version**,
- * pas sur le média — deux médias d'une même version reçoivent donc la même, une fois.
+ * A dailies session ends with thirty "retake" and twelve "approved": setting them one by one
+ * would have required thirty dialog openings. The decision applies to the **version**, not the
+ * media — two media of the same version therefore receive it once.
  *
- * Le serveur revérifie projet par projet (supervision effective, vocabulaire offert) et
- * répond ce qu'il a fait : une sélection qui traverse un projet où l'on n'est pas
- * superviseur aboutit en partie, et le dit.
+ * The server re-checks project by project (effective supervision, offered vocabulary) and reports
+ * what it did: a selection spanning a project where we are not a supervisor succeeds partially,
+ * and says so.
  */
 export default function BulkDecisionDialog({
   versionIds,
@@ -40,7 +40,7 @@ export default function BulkDecisionDialog({
   onDone,
 }: {
   versionIds: number[];
-  /** Projet commun de la sélection, s'il est unique : restreint le vocabulaire proposé. */
+  /** Common project of the selection, if unique: restricts the offered vocabulary. */
   projectId: number | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -88,8 +88,8 @@ export default function BulkDecisionDialog({
       <DialogContent className="max-w-md">
         <DialogHeader>
           <DialogTitle>{t('bulk.decision.title', { count: versionIds.length })}</DialogTitle>
-          {/* Sans projet commun, la liste est celle du studio : le serveur refusera un
-              statut qu'un des projets ne connaît pas, et le comptera dans les refus. */}
+          {/* Without a common project, the list is the studio's: the server will refuse a
+              status that one of the projects does not know, and count it among the refusals. */}
           <DialogDescription>
             {projectId === null ? t('bulk.decision.mixed') : t('bulk.decision.hint')}
           </DialogDescription>

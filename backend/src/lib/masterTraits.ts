@@ -2,17 +2,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Particularités d'un master de post-production qui changent la façon de l'encoder.
+ * Peculiarities of a post-production master that change the way it is encoded.
  *
- * Un livrable de studio ne ressemble pas au MP4 pour lequel la chaîne a été écrite : un
- * MXF de diffusion est fréquemment entrelacé, un master ProRes porte souvent plus de deux
- * canaux audio. Encodés sans précaution, le premier sort peigné et le second en 5.1 — deux
- * défauts qu'on ne découvre qu'à la review, l'encodage déjà payé.
+ * A studio deliverable does not look like the MP4 the chain was written for: a broadcast MXF is often interlaced, and
+ * a ProRes master often carries more than two audio channels. Encoded carelessly, the first comes out combed and the
+ * second in 5.1 — two defects discovered only at review, after the encoding has been paid for.
  *
- * Les décisions vivent ici, séparées de leur exécution, pour être vérifiables sans lancer
- * FFmpeg. Elles sont prises **une fois** après la sonde et appliquées à l'identique au
- * proxy et à toute l'échelle HLS : sans quoi une rendition désentrelacée côtoierait une
- * rendition peignée, et le changement de qualité se verrait à l'image.
+ * The decisions live here, separated from their execution, so they can be verified without launching FFmpeg. They are
+ * taken **once** after the probe and applied identically to the proxy and to the whole HLS ladder: otherwise a
+ * de-interlaced rendition would sit beside a combed one, and the change of quality would show in the picture.
  */
 
 import { isInterlaced } from './ffprobe';
@@ -25,10 +23,10 @@ export interface SourceTraits {
 export const NO_TRAITS: SourceTraits = { deinterlace: false, downmixStereo: false };
 
 /**
- * Déduit les traits du master de ce que la sonde a relevé.
+ * Derives the master's traits from what the probe found.
  *
- * Prend le bloc de métadonnées tel qu'il est assemblé par le worker (valeurs de type
- * incertain) : une sonde muette — ffprobe qui n'a rien su lire — ne doit rien déclencher.
+ * Takes the metadata block as the worker assembles it (values of uncertain type): a silent probe — ffprobe that could
+ * read nothing — must trigger nothing.
  */
 export function sourceTraits(meta: Record<string, unknown>): SourceTraits {
   const fieldOrder = typeof meta.fieldOrder === 'string' ? meta.fieldOrder : undefined;
@@ -37,13 +35,12 @@ export function sourceTraits(meta: Record<string, unknown>): SourceTraits {
 }
 
 /**
- * Filtres à insérer **en tête** de la chaîne vidéo.
+ * Filters to insert **at the head** of the video chain.
  *
- * `yadif` coûte un champ sur deux, mais l'image cesse de peigner. Il précède le
- * redimensionnement : mis après, il désentrelacerait des champs déjà mélangés par le
- * rééchantillonnage, ce qui ne se rattrape pas.
+ * `yadif` costs one field in two, but the picture stops combing. It precedes the resize: placed after it, it would
+ * de-interlace fields already mixed by the resampling, which cannot be recovered.
  */
 export const preFiltersFor = (traits: SourceTraits): string[] => (traits.deinterlace ? ['yadif'] : []);
 
-/** Downmix stéréo des masters multicanal (5.1 et au-delà). Jamais d'upmix. */
+/** Stereo downmix of multichannel masters (5.1 and beyond). Never an upmix. */
 export const audioOptionsFor = (traits: SourceTraits): string[] => (traits.downmixStereo ? ['-ac', '2'] : []);

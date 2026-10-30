@@ -5,20 +5,19 @@ import { prisma } from './prisma';
 import { avatarUrl } from './userView';
 
 /**
- * Ce qu'une carte de plan, de séquence ou d'asset affiche en plus de son nom.
+ * What a shot, sequence or asset card shows beyond its name.
  *
- * Une carte ne disait que « douze tâches ». Elle ne répondait à aucune des questions qu'on
- * se pose en balayant une grille de deux cents plans : de quoi s'agit-il, qui s'en occupe,
- * y a-t-il quelque chose à regarder, et depuis quand ça n'a pas bougé. Les trois premières
- * viennent des relations ; la quatrième d'un décompte qu'aucun `_count` de Prisma ne sait
- * exprimer — d'où cette requête groupée.
+ * A card used to say only "twelve tasks", which answered none of the questions one asks while scanning a
+ * grid of two hundred shots: what is it, who is on it, is there something to look at, and since when has
+ * it not moved. The first three come from relations; the fourth from a count no Prisma `_count` can
+ * express — hence this grouped query.
  */
 
 /**
- * Sélection commune des personnes assignées.
+ * Common selection of assigned people.
  *
- * `avatarKey` plutôt qu'une URL : la signature MinIO se calcule au moment de servir, et
- * une page de deux cents cartes n'a pas à en demander deux cents.
+ * `avatarKey` rather than a URL: the MinIO signature is computed when serving, and a page of two hundred
+ * cards should not ask for two hundred signatures.
  */
 export const CARD_ASSIGNEE_SELECT = {
   id: true,
@@ -29,7 +28,7 @@ export const CARD_ASSIGNEE_SELECT = {
   avatarKey: true,
 } as const;
 
-/** Une personne telle qu'elle est lue en base pour une carte. */
+/** A person as read from the database for a card. */
 export interface RawCardAssignee {
   id: number;
   name: string | null;
@@ -39,15 +38,15 @@ export interface RawCardAssignee {
   avatarKey: string | null;
 }
 
-/** La même, prête à afficher : la clé objet est devenue une URL signée. */
+/** The same, ready to display: the object key has become a signed URL. */
 export type CardAssignee = Omit<RawCardAssignee, 'avatarKey'> & { avatarUrl: string | null };
 
 /**
- * Signe les avatars d'une page entière, **une fois par personne**.
+ * Signs the avatars of a whole page, **once per person**.
  *
- * Une grille de deux cents plans porte deux cents fois les mêmes dix visages. Signer carte
- * par carte demandait donc deux cents signatures pour dix objets distincts ; la carte de
- * clés dédoublonne avant de signer, et le cache de `StorageService` fait le reste.
+ * A grid of two hundred shots carries two hundred times the same ten faces. Signing card by card would
+ * request two hundred signatures for ten distinct objects; the key map deduplicates before signing, and
+ * the `StorageService` cache does the rest.
  */
 export async function signAssignees<T extends { assignees: RawCardAssignee[] }>(
   rows: T[],
@@ -67,14 +66,14 @@ export async function signAssignees<T extends { assignees: RawCardAssignee[] }>(
 }
 
 /**
- * Combien de livraisons attendent une décision de review, par entité.
+ * How many deliveries await a review decision, per entity.
  *
- * « En attente » se définit strictement : une version **publiée** (donc visible d'un
- * superviseur) qui ne porte **aucune décision** (`reviewStatusId` nul). Une version encore
- * en brouillon n'attend personne, et une version déjà validée ou refusée non plus.
+ * "Awaiting" is defined strictly: a **published** version (hence visible to a supervisor) that carries **no
+ * decision** (`reviewStatusId` null). A version still in draft awaits nobody, and neither does one already
+ * approved or rejected.
  *
- * Une seule requête pour la page entière : la variante par carte demandait deux cents
- * agrégats pour afficher deux cents pastilles.
+ * A single query for the whole page: the per-card variant would ask for two hundred aggregates to display
+ * two hundred badges.
  */
 export async function awaitingReviewByShot(shotIds: number[]): Promise<Map<number, number>> {
   if (shotIds.length === 0) return new Map();
@@ -92,11 +91,10 @@ export async function awaitingReviewByShot(shotIds: number[]): Promise<Map<numbe
 }
 
 /**
- * Même décompte pour les assets — deux chemins de rattachement.
+ * Same count for assets — two attachment paths.
  *
- * Une version peut pendre d'une tâche de l'asset **ou** de l'asset lui-même (`Version`
- * porte un XOR de parent). N'en compter qu'un laissait la moitié des livraisons hors du
- * décompte selon la façon dont le studio publie.
+ * A version may hang from a task of the asset **or** from the asset itself (`Version` carries a parent XOR).
+ * Counting only one left half of the deliveries out of the count, depending on how the studio publishes.
  */
 export async function awaitingReviewByAsset(assetIds: number[]): Promise<Map<number, number>> {
   if (assetIds.length === 0) return new Map();
@@ -114,10 +112,10 @@ export async function awaitingReviewByAsset(assetIds: number[]): Promise<Map<num
 }
 
 /**
- * Même décompte agrégé au niveau d'une séquence : ses plans cumulés.
+ * Same count aggregated at sequence level: its shots combined.
  *
- * Une séquence n'a pas de livraison propre ; ce qui l'attend, c'est ce qui attend ses
- * plans. Un superviseur de séquence lit cette pastille pour savoir s'il a des dailies.
+ * A sequence has no delivery of its own; what awaits it is what awaits its shots. A sequence supervisor reads
+ * this badge to know whether there are dailies to review.
  */
 export async function awaitingReviewBySequence(sequenceIds: number[]): Promise<Map<number, number>> {
   if (sequenceIds.length === 0) return new Map();

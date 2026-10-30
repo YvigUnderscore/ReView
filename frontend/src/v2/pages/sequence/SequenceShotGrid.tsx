@@ -17,17 +17,17 @@ import type { AddShotsMode } from './SequenceAddShotsDialog';
 import { useT } from '../../i18n';
 
 /**
- * Les plans d'une séquence (C3).
+ * The shots of a sequence (C3).
  *
- * Ils étaient rendus par une grille maison, sans menu contextuel : le clic droit sur un
- * plan remontait au conteneur de la page et ouvrait **les réglages de la séquence** — on
- * croyait modifier le plan qu'on visait. Passer par `EntityCard`, comme l'onglet Plans,
- * corrige le geste et rend au passage tout ce qui manquait ici : statut au clic droit,
- * omission du montage, description, responsables, bascule cartes/compact.
+ * They used to be rendered by a home-made grid with no context menu: a right click on a shot
+ * bubbled up to the page container and opened **the sequence's settings** — the user believed
+ * they were editing the shot they had targeted. Going through `EntityCard`, as the Shots tab
+ * does, fixes the gesture and, along the way, brings everything that was missing here: status on
+ * right click, omit on mount, description, assignees, cards/compact toggle.
  *
- * Une séquence vide ne disait que « aucun plan ». C'est pourtant là qu'on a le plus besoin
- * du geste : l'état vide porte donc l'action, et l'en-tête garde un unique « + » — le
- * choix entre créer et rattacher se fait dans la boîte, pas par deux boutons voisins.
+ * An empty sequence used to say only "no shots". Yet that is exactly where the gesture is most
+ * needed: the empty state therefore carries the action, and the header keeps a single "+" — the
+ * choice between creating and attaching is made in the dialog, not by two neighbouring buttons.
  */
 export default function SequenceShotGrid({
   shots,
@@ -40,7 +40,7 @@ export default function SequenceShotGrid({
   projectId: number;
   canManage: boolean;
   onChanged: () => void;
-  /** Ouvre l'ajout de plans ; absent quand la page n'en propose pas. */
+  /** Opens adding shots; absent when the page does not offer it. */
   onAdd?: (mode: AddShotsMode) => void;
 }) {
   const t = useT();
@@ -99,8 +99,7 @@ export default function SequenceShotGrid({
               }}
               badge={
                 <span className="flex items-center gap-1">
-                  {/* Un plan coupé au montage reste consultable : il se signale, il ne
-                    disparaît pas. */}
+                  {/* A shot omitted on mount stays viewable: it is flagged, not hidden. */}
                   {shot.omitted && (
                     <span title={t('shots.omitted')} className="text-muted-foreground">
                       <EyeOff size={12} />

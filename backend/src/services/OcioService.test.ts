@@ -4,7 +4,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { Readable } from 'node:stream';
 
-// La garde SSRF résout les noms : sans doublure, ces tests dépendraient du DNS de la machine.
+// The SSRF guard resolves names: without a double, these tests would depend on the machine's DNS.
 vi.mock('node:dns/promises', () => ({ lookup: vi.fn() }));
 
 import { lookup } from 'node:dns/promises';
@@ -35,8 +35,8 @@ const library = [
   },
 ];
 
-// `vi.hoisted` : les fabriques de `vi.mock` sont remontées en tête de fichier et s'exécutent
-// avant les `const` ordinaires — sans cela, les doublures seraient en zone morte temporelle.
+// `vi.hoisted`: the factories of `vi.mock` are hoisted to the top of the file and run before the ordinary
+// `const` declarations — without this, the doubles would sit in a temporal dead zone.
 const { storageMock, enqueueMock, findUniqueMock, upsertMock } = vi.hoisted(() => ({
   storageMock: {
     getObjectStream: vi.fn(),
@@ -54,7 +54,7 @@ const { storageMock, enqueueMock, findUniqueMock, upsertMock } = vi.hoisted(() =
 vi.mock('../lib/prisma', () => ({
   prisma: { setting: { findUnique: findUniqueMock, upsert: upsertMock } },
 }));
-vi.mock('./StorageService', () => ({ storage: storageMock }));
+vi.mock('../lib/storage', () => ({ storage: storageMock }));
 vi.mock('../workers/ocio/queue', () => ({ enqueueOcioBake: enqueueMock }));
 
 const release = (tag: string, assetNames: string[]) => ({
@@ -68,8 +68,8 @@ const release = (tag: string, assetNames: string[]) => ({
   })),
 });
 
-describe('OcioService — buildReleaseCatalog (39.B)', () => {
-  it('ne garde que les releases avec un asset .ocio reconnu', () => {
+describe('OcioService: buildReleaseCatalog (39.B)', () => {
+  it('keeps only releases with a recognised .ocio asset', () => {
     const catalog = buildReleaseCatalog(
       [
         release('v2.1.0', [
@@ -77,16 +77,16 @@ describe('OcioService — buildReleaseCatalog (39.B)', () => {
           'cg-config-v2.1.0_aces-v1.3_ocio-v2.3.ocio',
           'README.md',
         ]),
-        release('v0.0.1', ['notes.txt']), // aucun asset reconnu → exclue
+        release('v0.0.1', ['notes.txt']), // no recognised asset → excluded
       ],
       new Set(),
     );
     expect(catalog).toHaveLength(1);
     expect(catalog[0]!.tag).toBe('v2.1.0');
-    expect(catalog[0]!.assets).toHaveLength(2); // le .md est ignoré
+    expect(catalog[0]!.assets).toHaveLength(2); // the .md is ignored
   });
 
-  it('marque le défaut recommandé (studio ACES 1.3) et l’état installé', () => {
+  it('marks the recommended default (ACES 1.3 studio) and the installed state', () => {
     const catalog = buildReleaseCatalog(
       [
         release('v2.1.0', [
@@ -106,7 +106,7 @@ describe('OcioService — buildReleaseCatalog (39.B)', () => {
     expect(studio.label).toContain('Studio config');
   });
 
-  it('isAllowedAssetHost n’autorise que les hôtes GitHub connus', () => {
+  it('isAllowedAssetHost only allows known GitHub hosts', () => {
     expect(isAllowedAssetHost('https://github.com/x/y/releases/download/v1/a.ocio')).toBe(true);
     expect(isAllowedAssetHost('https://objects.githubusercontent.com/z')).toBe(true);
     expect(isAllowedAssetHost('https://evil.example.com/a.ocio')).toBe(false);
@@ -115,7 +115,7 @@ describe('OcioService — buildReleaseCatalog (39.B)', () => {
   });
 });
 
-describe('OcioService — LUT d’affichage', () => {
+describe('OcioService: display LUT', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     findUniqueMock.mockResolvedValue({ value: JSON.stringify(library) });
@@ -125,7 +125,7 @@ describe('OcioService — LUT d’affichage', () => {
     storageMock.statObject.mockRejectedValue(new Error('not found'));
   });
 
-  it('refuse un couple display/view absent de la config (aucune clé arbitraire écrite)', async () => {
+  it('refuses a display/view pair absent from the config (no arbitrary key written)', async () => {
     await expect(getLut(CONFIG_ID, 'Made up - Display', 'Raw')).rejects.toMatchObject({
       code: 'OCIO_BAD_DISPLAY_VIEW',
     });
@@ -135,7 +135,7 @@ describe('OcioService — LUT d’affichage', () => {
     expect(storageMock.putObject).not.toHaveBeenCalled();
   });
 
-  it('cuit à la demande la vue colorimétrique et la range à côté du .ocio', async () => {
+  it('bakes the colorimetric view on demand and stores it next to the .ocio', async () => {
     const info = await getLut(CONFIG_ID, 'sRGB - Display', 'Raw');
     const key = lutStorageKey(CONFIG_ID, 'sRGB - Display', 'Raw');
     expect(storageMock.putObject).toHaveBeenCalledWith(
@@ -148,14 +148,14 @@ describe('OcioService — LUT d’affichage', () => {
     expect(enqueueMock).not.toHaveBeenCalled();
   });
 
-  it('sert la LUT déjà cuite sans la recuire', async () => {
+  it('serves the already baked LUT without re-baking it', async () => {
     storageMock.statObject.mockResolvedValue({ size: 10, contentType: 'text/plain' });
     const info = await getLut(CONFIG_ID, 'sRGB - Display', 'ACES 1.0 - SDR Video');
     expect(storageMock.putObject).not.toHaveBeenCalled();
     expect(info.url).toContain(lutStorageKey(CONFIG_ID, 'sRGB - Display', 'ACES 1.0 - SDR Video'));
   });
 
-  it('une vue tone-mappée non cuite demande le worker plutôt qu’une approximation', async () => {
+  it('a non-baked tone-mapped view asks the worker rather than an approximation', async () => {
     const info = await getLut(CONFIG_ID, 'sRGB - Display', 'ACES 1.0 - SDR Video');
     expect(info.url).toBeNull();
     expect(info.reason).toBe('OCIO_TOOLING_REQUIRED');
@@ -169,19 +169,19 @@ describe('OcioService — LUT d’affichage', () => {
 });
 
 /**
- * A2-03 — L'installation télécharge depuis GitHub, qui sert ses assets par une redirection.
- * L'allow-list n'était contrôlée que sur l'URL de DÉPART : `fetch` suivait ensuite le 302
- * en aveugle, jusque vers une adresse interne. Ces tests exercent la vraie garde de sortie
- * (`fetchAllowlisted`), avec le seul `fetch` global en doublure.
+ * A2-03 — The installation downloads from GitHub, which serves its assets through a redirect. The allow-list
+ * was only checked on the STARTING URL: `fetch` then followed the 302 blindly,
+ * all the way to an internal address. These tests exercise the real exit guard (`fetchAllowlisted`), with
+ * only the global `fetch` as a double.
  */
-describe('OcioService — install : sortie durcie (A2-03)', () => {
+describe('OcioService: install: hardened exit (A2-03)', () => {
   const TAG = 'v2.1.0';
   const ASSET = 'studio-config-v2.1.0_aces-v1.3_ocio-v2.3.ocio';
   const PUBLIC_ADDRESS = [{ address: '93.184.216.34', family: 4 }];
 
   let fetchMock: Mock<typeof fetch>;
 
-  /** Premier appel : le JSON des releases. Les suivants : ce que le scénario demande. */
+  /** First call: the releases JSON. The following ones: whatever the scenario requires. */
   const withDownload = (...responses: Response[]) => {
     fetchMock.mockResolvedValueOnce(new Response(JSON.stringify([release(TAG, [ASSET])]), { status: 200 }));
     for (const res of responses) fetchMock.mockResolvedValueOnce(res);
@@ -193,14 +193,14 @@ describe('OcioService — install : sortie durcie (A2-03)', () => {
     vi.clearAllMocks();
     __resetReleasesCache();
     vi.mocked(lookup).mockResolvedValue(PUBLIC_ADDRESS as never);
-    findUniqueMock.mockResolvedValue(null); // bibliothèque vide
+    findUniqueMock.mockResolvedValue(null); // empty library
     fetchMock = vi.fn<typeof fetch>();
     vi.stubGlobal('fetch', fetchMock);
   });
 
   afterEach(() => vi.unstubAllGlobals());
 
-  it('installe l’asset en suivant la redirection vers l’hôte de contenu GitHub', async () => {
+  it('installs the asset by following the redirect to the GitHub content host', async () => {
     withDownload(
       redirectTo('https://objects.githubusercontent.com/a'),
       new Response('ocio_profile_version: 2', { status: 200 }),
@@ -208,37 +208,37 @@ describe('OcioService — install : sortie durcie (A2-03)', () => {
     const entry = await install(TAG, ASSET);
     expect(entry.assetName).toBe(ASSET);
     expect(storageMock.putObject).toHaveBeenCalledOnce();
-    expect(fetchMock).toHaveBeenCalledTimes(3); // releases + départ + saut
+    expect(fetchMock).toHaveBeenCalledTimes(3); // releases + start + hop
   });
 
-  it('refuse une redirection vers les métadonnées cloud, et n’écrit rien dans MinIO', async () => {
+  it('refuses a redirect to cloud metadata, and writes nothing into MinIO', async () => {
     withDownload(redirectTo('http://169.254.169.254/latest/meta-data/iam/'));
     await expect(install(TAG, ASSET)).rejects.toMatchObject({ code: 'OUTBOUND_BLOCKED' });
     expect(storageMock.putObject).not.toHaveBeenCalled();
     expect(upsertMock).not.toHaveBeenCalled();
-    // Le saut interne n'a jamais été émis : releases + départ, rien de plus.
+    // The internal hop was never emitted: releases + start, nothing more.
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
-  it('refuse une redirection vers MinIO sur le réseau applicatif', async () => {
+  it('refuses a redirect to MinIO on the application network', async () => {
     withDownload(redirectTo('http://10.0.0.9:9000/review/'));
     await expect(install(TAG, ASSET)).rejects.toMatchObject({ code: 'OUTBOUND_BLOCKED' });
     expect(storageMock.putObject).not.toHaveBeenCalled();
   });
 
-  it('refuse une redirection vers un hôte public hors allow-list', async () => {
+  it('refuses a redirect to a public host outside the allow-list', async () => {
     withDownload(redirectTo('https://evil.test/collect'));
     await expect(install(TAG, ASSET)).rejects.toMatchObject({ code: 'OUTBOUND_BLOCKED' });
     expect(storageMock.putObject).not.toHaveBeenCalled();
   });
 
-  it('refuse un corps qui dépasse le plafond avant de le charger en mémoire', async () => {
+  it('refuses a body exceeding the ceiling before loading it into memory', async () => {
     withDownload(new Response('x', { status: 200, headers: { 'content-length': String(64 * 1024 * 1024) } }));
     await expect(install(TAG, ASSET)).rejects.toMatchObject({ code: 'OUTBOUND_TOO_LARGE' });
     expect(storageMock.putObject).not.toHaveBeenCalled();
   });
 
-  it('pose un signal d’abandon sur chaque requête sortante', async () => {
+  it('sets an abort signal on each outgoing request', async () => {
     withDownload(new Response('ocio_profile_version: 2', { status: 200 }));
     await install(TAG, ASSET);
     for (const call of fetchMock.mock.calls) {

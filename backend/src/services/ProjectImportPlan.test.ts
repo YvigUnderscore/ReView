@@ -3,8 +3,8 @@
 
 import { describe, it, expect, vi } from 'vitest';
 
-// Le plan est une fonction pure ; seule la déduction du type de tâche vient d'un service
-// qui, lui, parle à la base — on coupe la plomberie, pas le comportement testé.
+// The plan is a pure function; only the deduction of the task type comes from a service that does talk to the
+// database — we cut the plumbing, not the behaviour under test.
 vi.mock('../lib/prisma', () => ({ prisma: {} }));
 vi.mock('./SocketService', () => ({ emitToProject: vi.fn() }));
 
@@ -69,8 +69,8 @@ const context = (over: Partial<ImportContext> = {}): ImportContext => ({
 
 const plan = (csv: string, ctx: ImportContext = context()) => buildPlan(parseProjectCsv(csv), ctx);
 
-describe('buildPlan — premier import', () => {
-  it('crée séquences, plans et tâches, et compte ce qu’il va écrire', () => {
+describe('buildPlan: first import', () => {
+  it('creates sequences, shots and tasks, and counts what it is going to write', () => {
     const result = plan('sequence,shot,name,tasks\nSQ010,SH0010,Rooftop,Anim|Comp\nSQ010,SH0020,,Anim');
     expect(result.counts).toMatchObject({
       sequencesToCreate: 1,
@@ -80,12 +80,12 @@ describe('buildPlan — premier import', () => {
     });
     expect(result.sequencesToCreate).toEqual([{ code: 'SQ010', episodeCode: null }]);
     expect(result.shotsToCreate[0]).toMatchObject({ sequenceCode: 'SQ010', code: 'SH0010', name: 'Rooftop' });
-    // Le nom manquant retombe sur le code du plan, jamais sur une chaîne vide.
+    // A missing name falls back on the shot's code, never on an empty string.
     expect(result.shotsToCreate[1]!.name).toBe('SH0020');
     expect(result.rows.map((r) => r.action)).toEqual(['create', 'create']);
   });
 
-  it('devine l’étape du nom de la tâche, si le projet la connaît déjà', () => {
+  it('guesses the step from the task name, if the project already knows it', () => {
     const result = plan('shot,tasks\nSH0010,Anim|Peinture');
     expect(result.tasksToCreate.map((t) => [t.name, t.departmentId])).toEqual([
       ['Anim', 30],
@@ -93,7 +93,7 @@ describe('buildPlan — premier import', () => {
     ]);
   });
 
-  it('résout statut, étape et personne par code ou par nom', () => {
+  it('resolves status, step and person by code or by name', () => {
     const result = plan(
       'shot,shot_status,tasks,department,task_status,assignee\nSH0010,In Progress,Comp,Compositing,wtg,Mia Okafor',
     );
@@ -106,7 +106,7 @@ describe('buildPlan — premier import', () => {
     });
   });
 
-  it('signale ce qu’il ne reconnaît pas sans perdre le reste de la ligne', () => {
+  it('flags what it does not recognise without losing the rest of the line', () => {
     const result = plan(
       'shot,shot_status,tasks,department,assignee\nSH0010,livré,Comp,Nettoyage,inconnu@x.tld',
     );
@@ -120,7 +120,7 @@ describe('buildPlan — premier import', () => {
   });
 });
 
-describe('buildPlan — idempotence', () => {
+describe('buildPlan: idempotence', () => {
   const ctx = context({
     sequences: [sequence(1, 'SQ010')],
     shots: [
@@ -129,7 +129,7 @@ describe('buildPlan — idempotence', () => {
     tasks: [task({ id: 7, shotId: 5, name: 'Anim', department: 'ANIMATION', departmentId: 30 })],
   });
 
-  it('rejouer le même fichier ne crée ni ne modifie rien', () => {
+  it('replaying the same file creates and modifies nothing', () => {
     const csv = 'sequence,shot,name,start_frame,end_frame,tasks\nSQ010,SH0010,Rooftop,1001,1096,Anim';
     expect(plan(csv, ctx).counts).toMatchObject({
       sequencesToCreate: 0,
@@ -142,7 +142,7 @@ describe('buildPlan — idempotence', () => {
     });
   });
 
-  it('ignore la casse du code de plan et de séquence', () => {
+  it('ignores the case of the shot and sequence code', () => {
     expect(plan('sequence,shot\nsq010,sh0010', ctx).counts).toMatchObject({
       sequencesToCreate: 0,
       shotsToCreate: 0,
@@ -150,39 +150,39 @@ describe('buildPlan — idempotence', () => {
     });
   });
 
-  it('ne met à jour que les champs réellement changés', () => {
+  it('only updates the fields that actually changed', () => {
     const result = plan('sequence,shot,name,end_frame\nSQ010,SH0010,Terrace,1120', ctx);
     expect(result.shotUpdates).toEqual([{ id: 5, data: { name: 'Terrace', endFrame: 1120 } }]);
     expect(result.rows[0]!.action).toBe('update');
   });
 
-  it('une colonne absente n’efface jamais une valeur existante', () => {
+  it('an absent column never erases an existing value', () => {
     expect(plan('sequence,shot\nSQ010,SH0010', ctx).shotUpdates).toEqual([]);
   });
 
-  it('retouche une tâche existante plutôt que d’en créer une jumelle', () => {
+  it('retouches an existing task rather than creating a twin', () => {
     const result = plan('sequence,shot,tasks,assignee,due_date\nSQ010,SH0010,anim,mia,2026-09-15', ctx);
     expect(result.tasksToCreate).toEqual([]);
     expect(result.taskUpdates).toEqual([{ id: 7, data: { assigneeId: 40, dueDate: '2026-09-15' } }]);
   });
 });
 
-describe('buildPlan — épisodes', () => {
-  it('ignore la colonne épisode avec un avertissement quand le projet ne les a pas activés', () => {
+describe('buildPlan: episodes', () => {
+  it('ignores the episode column with a warning when the project has not enabled them', () => {
     const result = plan('episode,sequence,shot\nEP01,SQ010,SH0010');
     expect(result.episodesToCreate).toEqual([]);
     expect(result.issues.map((i) => i.code)).toContain('EPISODES_DISABLED');
-    // L'import se poursuit : c'est un avertissement, pas un échec.
+    // The import carries on: it is a warning, not a failure.
     expect(result.counts.shotsToCreate).toBe(1);
   });
 
-  it('crée l’épisode et y rattache la séquence quand le projet les a activés', () => {
+  it('creates the episode and attaches the sequence to it when the project has enabled them', () => {
     const result = plan('episode,sequence,shot\nEP01,SQ010,SH0010', context({ episodesEnabled: true }));
     expect(result.episodesToCreate).toEqual(['EP01']);
     expect(result.sequencesToCreate).toEqual([{ code: 'SQ010', episodeCode: 'EP01' }]);
   });
 
-  it('recolle une séquence déjà là qui change d’épisode', () => {
+  it('re-glues an already existing sequence that changes episode', () => {
     const ctx = context({
       episodesEnabled: true,
       episodes: [episode(2, 'EP01'), episode(3, 'EP02')],
@@ -195,8 +195,8 @@ describe('buildPlan — épisodes', () => {
   });
 });
 
-describe('buildPlan — corbeille', () => {
-  it('refuse la ligne dont le plan est en corbeille, sans faire tomber les autres', () => {
+describe('buildPlan: trash', () => {
+  it('refuses the row whose shot is in the trash, without bringing down the others', () => {
     const ctx = context({
       shots: [shot({ id: 5, code: 'SH0010', trashed: true }), shot({ id: 6, code: 'SH0020' })],
     });
@@ -208,25 +208,25 @@ describe('buildPlan — corbeille', () => {
     expect(result.shotUpdates).toEqual([{ id: 6, data: { name: 'Terrace' } }]);
   });
 
-  it('refuse les plans d’une séquence en corbeille plutôt que de la recréer', () => {
+  it('refuses the shots of a sequence in the trash rather than recreating it', () => {
     const ctx = context({ sequences: [sequence(1, 'SQ010', { trashed: true })] });
     const result = plan('sequence,shot\nSQ010,SH0010', ctx);
     expect(result.sequencesToCreate).toEqual([]);
     expect(result.rows[0]!.action).toBe('blocked');
   });
 
-  it('laisse la séquence hors épisode quand l’épisode visé est en corbeille', () => {
+  it('leaves the sequence outside any episode when the targeted episode is in the trash', () => {
     const ctx = context({ episodesEnabled: true, episodes: [episode(2, 'EP01', true)] });
     const result = plan('episode,sequence,shot\nEP01,SQ010,SH0010', ctx);
     expect(result.episodesToCreate).toEqual([]);
     expect(result.sequencesToCreate).toEqual([{ code: 'SQ010', episodeCode: null }]);
     expect(result.issues.map((i) => i.code)).toContain('IN_TRASH');
-    // Le niveau épisode est facultatif : le plan est créé quand même.
+    // The episode level is optional: the shot is created all the same.
     expect(result.counts.shotsToCreate).toBe(1);
   });
 });
 
-describe('buildPlan — identité d’une tâche', () => {
+describe('buildPlan: identity of a task', () => {
   const ctx = context({
     shots: [shot({ id: 5, code: 'SH0010' })],
     tasks: [
@@ -235,12 +235,12 @@ describe('buildPlan — identité d’une tâche', () => {
     ],
   });
 
-  it('vise la tâche de l’étape déclarée, pas la première homonyme', () => {
+  it('targets the task of the declared step, not the first homonym', () => {
     const result = plan('shot,tasks,department,assignee\nSH0010,Anim,Compositing,mia', ctx);
     expect(result.taskUpdates).toEqual([{ id: 8, data: { assigneeId: 40 } }]);
   });
 
-  it('crée une homonyme d’une autre étape au lieu de déplacer l’existante', () => {
+  it('creates a homonym of another step instead of moving the existing one', () => {
     const single = context({
       shots: [shot({ id: 5, code: 'SH0010' })],
       tasks: [task({ id: 7, shotId: 5, name: 'Anim', department: 'ANIMATION', departmentId: 30 })],
@@ -251,7 +251,7 @@ describe('buildPlan — identité d’une tâche', () => {
     expect(result.tasksToCreate[0]).toMatchObject({ name: 'Anim', departmentId: 31 });
   });
 
-  it('rattache au passage une tâche homonyme encore sans étape', () => {
+  it('attaches in passing a homonym task that still has no step', () => {
     const orphan = context({
       shots: [shot({ id: 5, code: 'SH0010' })],
       tasks: [task({ id: 7, shotId: 5, name: 'Anim' })],
@@ -261,15 +261,15 @@ describe('buildPlan — identité d’une tâche', () => {
   });
 });
 
-describe('buildPlan — rapport', () => {
-  it('compte les lignes rejetées et les avertissements', () => {
+describe('buildPlan: report', () => {
+  it('counts the rejected rows and the warnings', () => {
     const result = plan('shot,tags,start_frame\nSH0010,hero|day,1001\n,x,2');
     expect(result.counts.rowsRejected).toBe(1);
     expect(result.issues.map((i) => i.code)).toContain('TAGS_UNSUPPORTED');
     expect(result.counts.warnings).toBeGreaterThan(0);
   });
 
-  it('rend une ligne de rapport par plan, avec ses lignes de fichier', () => {
+  it('returns one report row per shot, with its file rows', () => {
     const result = plan('shot,tasks\nSH0010,Anim\nSH0010,Comp');
     expect(result.rows).toHaveLength(1);
     expect(result.rows[0]).toMatchObject({ line: 2, lines: [2, 3], tasks: { create: 2 } });

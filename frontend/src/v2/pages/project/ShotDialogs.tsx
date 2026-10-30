@@ -7,12 +7,12 @@ import type { Shot } from './projectTypes';
 import { useT } from '../../i18n';
 
 /**
- * Les trois boîtes de dialogue de l'onglet Plans : réglages, mise à la corbeille d'un plan,
- * mise à la corbeille d'une sélection.
+ * The three dialogs of the Shots tab: settings, moving one shot to the trash, and moving a
+ * selection to the trash.
  *
- * Extraites pour la même raison que `entityCardMenu` avant elles — l'onglet a dépassé son
- * budget de lignes en accueillant les cartes enrichies, et ces trois dialogues sont ce
- * qu'il contenait de plus mécanique : aucune logique, seulement du branchement.
+ * Extracted for the same reason as `entityCardMenu` before them: the tab had exceeded its line
+ * budget when the enriched cards were added, and these three dialogs are the most mechanical part
+ * of it. No logic, only wiring.
  */
 export default function ShotDialogs({
   projectId,

@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Géométrie pure du canvas d'annotation (coordonnées normalisées 0..1, corrections
- * d'aspect en espace écran). Extraite d'AnnotationCanvas (budget 10.F4) — testée.
+ * Pure geometry of the annotation canvas (normalized coordinates 0..1, aspect corrections
+ * in screen space). Extracted from AnnotationCanvas (10.F4 budget), tested.
  */
 
 /**
- * Outils du canvas. `ref` n'en dessine aucun : il rend le canvas transparent au pointeur pour
- * que le calque des références collées reçoive le geste (pose et placement d'une référence).
+ * Canvas tools. `ref` draws none: it makes the canvas transparent to the pointer so that
+ * the layer of pasted references receives the gesture (placing and positioning a reference).
  */
 export type Tool = 'draw' | 'rect' | 'ellipse' | 'arrow' | 'polygon' | 'text' | 'move' | 'erase' | 'ref';
 
@@ -34,24 +34,24 @@ export interface Shape {
   text?: string; // texte (10.G backlog : annotations avancées)
 }
 
-/** Hauteur de police normalisée (fraction de la hauteur du média) selon l'épaisseur choisie. */
+/** Normalized font height (fraction of the media height) according to the chosen thickness. */
 export const textFontSize = (width: number): number => 0.02 + width * 0.005;
 
 export interface ArrowHead {
-  /** Pointe (= point d'arrivée). */
+  /** Tip (= endpoint). */
   tip: [number, number];
-  /** Ailes gauche/droite du triangle. */
+  /** Left and right wings of the triangle. */
   left: [number, number];
   right: [number, number];
-  /** Fin du fût : légèrement DANS la tête (aucun jour entre trait et triangle). */
+  /** End of the shaft: slightly INSIDE the head (no gap between line and triangle). */
   shaftEnd: [number, number];
 }
 
 /**
- * Tête de flèche calculée en **espace écran** (px) puis renvoyée en coordonnées
- * normalisées : la tête n'est jamais déformée par le viewBox étiré (aspect ≠ 1),
- * et sa taille suit l'épaisseur du trait. Triangle net (rendu fill+stroke à joints
- * ronds côté ShapeEl → coins adoucis). `size` = dimensions px du canvas.
+ * Arrow head computed in **screen space** (px), then returned in normalized coordinates:
+ * the head is never distorted by the stretched viewBox (aspect ≠ 1),
+ * and its size follows the stroke thickness. Crisp triangle (rendered fill+stroke with round joins
+ * on the ShapeEl side, so softened corners). `size` = canvas px dimensions.
  */
 export function arrowHead(
   x1: number,
@@ -75,7 +75,7 @@ export function arrowHead(
   // Perpendiculaire unitaire.
   const px = -uy,
     py = ux;
-  // Tête proportionnelle à l'épaisseur (angle ~40°), bornée par la longueur du trait.
+  // Head proportional to the thickness (angle ~40°), bounded by the length of the stroke.
   const headLen = Math.min(Math.max(10, strokeWidth * 3.5), len * 0.45);
   const headW = headLen * 0.75;
   const baseX = bx - ux * headLen,
@@ -90,9 +90,9 @@ export function arrowHead(
 }
 
 /**
- * Forme sous le point `p` (coordonnées normalisées) — test de proximité simple,
- * la dernière dessinée en premier. Utilisé par la gomme, l'outil déplacement et
- * leur prévisualisation au survol.
+ * Shape under point `p` (normalized coordinates): simple proximity test,
+ * the last drawn first. Used by the eraser, the move tool and
+ * their hover preview.
  */
 export function hitShape(shapes: Shape[], p: [number, number]): Shape | undefined {
   const near = (a: number, b: number) => Math.abs(a - b) < 0.03;
@@ -114,7 +114,7 @@ export function hitShape(shapes: Shape[], p: [number, number]): Shape | undefine
         ) <= 1
       );
     if (s.type === 'arrow') {
-      // Distance au segment (et non plus à la seule pointe) : gomme/déplacement plus naturels.
+      // Distance to the segment (and no longer to the tip alone): more natural erase and move.
       const x1 = s.x1 ?? 0,
         y1 = s.y1 ?? 0,
         x2 = s.x2 ?? 0,
@@ -125,13 +125,13 @@ export function hitShape(shapes: Shape[], p: [number, number]): Shape | undefine
       return Math.hypot(p[0] - (x1 + t * (x2 - x1)), p[1] - (y1 + t * (y2 - y1))) < 0.03;
     }
     if (s.type === 'text')
-      // Zone approximative : de l'ancre vers la droite (le texte s'étend depuis son point).
+      // Approximate zone: from the anchor to the right (the text extends from its point).
       return p[0] >= (s.x ?? 0) - 0.02 && p[0] <= (s.x ?? 0) + 0.25 && Math.abs(p[1] - (s.y ?? 0)) <= 0.04;
     return false;
   });
 }
 
-/** Translation d'une forme (outil déplacement). */
+/** Translation of a shape (move tool). */
 export function translateShape(s: Shape, dx: number, dy: number): Shape {
   if (s.type === 'path' || s.type === 'polygon')
     return { ...s, pts: s.pts?.map(([x, y]) => [x + dx, y + dy]) };
@@ -140,7 +140,7 @@ export function translateShape(s: Shape, dx: number, dy: number): Shape {
   return { ...s, x1: (s.x1 ?? 0) + dx, y1: (s.y1 ?? 0) + dy, x2: (s.x2 ?? 0) + dx, y2: (s.y2 ?? 0) + dy };
 }
 
-/** Ellipse inscrite dans le rectangle défini par deux coins (tracé coin-à-coin, comme le rect). */
+/** Ellipse inscribed in the rectangle defined by two corners (drawn corner to corner, like the rect). */
 export function ellipseFromCorners(
   start: [number, number],
   p: [number, number],
@@ -153,7 +153,7 @@ export function ellipseFromCorners(
   };
 }
 
-/** Normalise un rect dessiné dans n'importe quel sens (w/h positifs). */
+/** Normalizes a rect drawn in any direction (positive w and h). */
 export function normalizeRect(s: Shape): Shape {
   if (s.type === 'rect') {
     const x = Math.min(s.x ?? 0, (s.x ?? 0) + (s.w ?? 0));

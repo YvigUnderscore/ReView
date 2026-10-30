@@ -6,11 +6,10 @@ import { useT } from '../../i18n';
 import type { CalloutLabels } from './docsRender';
 
 /**
- * Libellés des encarts `> [!NOTE]` du markdown, dans la langue du lecteur.
+ * Labels of the `> [!NOTE]` callouts in markdown, in the reader's language.
  *
- * Le contenu de la documentation reste en anglais ; l'habillage, lui, suit l'interface —
- * et il est le même partout où l'on rend du markdown du dépôt (page /docs, panneau des
- * nouveautés).
+ * The documentation content stays in English; the chrome, however, follows the interface. It is
+ * the same wherever repo markdown is rendered (the /docs page, the what's-new panel).
  */
 export function useCalloutLabels(): CalloutLabels {
   const t = useT();

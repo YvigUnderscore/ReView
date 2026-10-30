@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { VisitTargetType } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import {
@@ -19,26 +19,25 @@ import { notFound } from '../lib/errors';
 import * as EntityVisitService from '../services/EntityVisitService';
 
 /**
- * Acquittement de visite (Phase 50, lot 9) : « je l'ai ouvert, éteins la lueur ».
+ * Visit acknowledgement (Phase 50, batch 9): "I opened it, turn off the glow".
  *
- * La visite est une donnée strictement personnelle — elle ne dit rien de l'entité, tout de
- * son lecteur. L'autorisation n'en est pas moins vérifiée : marquer visité ce qu'on n'a pas
- * le droit de lire n'aurait aucun sens, et la réponse confirmerait au passage l'existence
- * de l'entité.
+ * A visit is strictly personal: it says nothing about the entity, everything about its reader. Access
+ * is still checked all the same: marking as visited something one may not read would be meaningless,
+ * and the response would confirm the entity's existence along the way.
  *
- * Ce routeur est monté sur `/api/visits` — pas sur `/api` : `router.use(authenticate)` y
- * est donc sans danger.
+ * This router is mounted on `/api/visits`, not on `/api`: `router.use(authenticate)` is therefore safe
+ * here.
  */
 
 const router = Router();
 router.use(authenticate);
 
 /**
- * Types qu'on sait autoriser : ceux dont le projet propriétaire se résout.
+ * Types it knows how to authorize: those whose owning project can be resolved.
  *
- * L'énumération Prisma en compte huit (la forme du mécanisme est connue), la route n'en
- * accepte que six : playlist et board n'ont pas de résolveur de projet. Mieux vaut un 400
- * franc qu'un acquittement écrit sans contrôle d'accès.
+ * The Prisma enum has eight members (the mechanism's shape is known), but the route only accepts six:
+ * playlist and board have no project resolver. A plain 400 is better than a write made without an
+ * access check.
  */
 const PROJECT_OF: Partial<Record<VisitTargetType, (id: number) => Promise<number | null>>> = {
   [VisitTargetType.PROJECT]: resolveProjectIdForProject,
@@ -51,10 +50,10 @@ const PROJECT_OF: Partial<Record<VisitTargetType, (id: number) => Promise<number
 
 const targetTypeSchema = z.enum(['PROJECT', 'SEQUENCE', 'SHOT', 'ASSET', 'TASK', 'MEDIA']);
 
-/** Types dont une liste porte un bouton « tout marquer comme lu ». */
+/** Types whose list carries a "mark all as read" button. */
 const listTypeSchema = z.enum(['SEQUENCE', 'SHOT', 'ASSET']);
 
-// POST /api/visits — j'ouvre cette entité : la lueur s'éteint pour moi seul.
+// POST /api/visits: I open this entity: the glow goes out for me alone.
 router.post(
   '/',
   validate({
@@ -72,12 +71,12 @@ router.post(
     const projectId = resolve ? await resolve(targetId) : null;
     if (!projectId) throw notFound('Target not found');
     await assertProjectAccess(req, projectId);
-    const visitedAt = await EntityVisitService.markVisited(req.user!.id, targetType, targetId);
+    const visitedAt = await EntityVisitService.markVisited(requireUser(req).id, targetType, targetId);
     res.json({ visitedAt: visitedAt.toISOString() });
   },
 );
 
-// POST /api/visits/mark-all — « tout marquer comme lu » pour une liste d'un projet.
+// POST /api/visits/mark-all: "mark everything as read" for a list of a project.
 router.post(
   '/mark-all',
   validate({
@@ -92,9 +91,9 @@ router.post(
       projectId: number;
     };
     await assertProjectAccess(req, projectId);
-    // Les ids viennent de la base, jamais du corps de la requête (cf. le service).
+    // The ids come from the database, never from the request body (see the service).
     const ids = await EntityVisitService.visitableIdsOfProject(projectId, targetType);
-    res.json({ marked: await EntityVisitService.markManyVisited(req.user!.id, targetType, ids) });
+    res.json({ marked: await EntityVisitService.markManyVisited(requireUser(req).id, targetType, ids) });
   },
 );
 

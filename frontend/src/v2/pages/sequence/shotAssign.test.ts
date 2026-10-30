@@ -11,7 +11,7 @@ const shot = (id: number, code: string, sequenceId: number | null, name = code):
   sequenceId,
 });
 
-/** Un projet ordinaire : deux plans dans la séquence ouverte, deux ailleurs, deux libres. */
+/** An ordinary project: two shots in the open sequence, two elsewhere, two free. */
 const PROJECT: AttachableShot[] = [
   shot(1, 'SH010', 7),
   shot(2, 'SH020', 7),
@@ -22,7 +22,7 @@ const PROJECT: AttachableShot[] = [
 ];
 
 describe('attachableShots', () => {
-  it('écarte les plans déjà dans la séquence', () => {
+  it('excludes the shots already in the sequence', () => {
     const { free, elsewhere } = attachableShots(PROJECT, 7);
     const proposed = [...free, ...elsewhere].map((s) => s.id);
     expect(proposed).not.toContain(1);
@@ -30,54 +30,54 @@ describe('attachableShots', () => {
     expect(proposed).toHaveLength(4);
   });
 
-  it('sépare les plans libres de ceux pris à une autre séquence', () => {
+  it('separates free shots from those taken from another sequence', () => {
     const { free, elsewhere } = attachableShots(PROJECT, 7);
     expect(free.map((s) => s.code)).toEqual(['SH200', 'SH210']);
     expect(elsewhere.map((s) => s.code)).toEqual(['SH100', 'SH110']);
   });
 
-  it('trie les codes numériquement, pas alphabétiquement', () => {
+  it('sorts codes numerically, not alphabetically', () => {
     const messy = [shot(1, 'SH100', null), shot(2, 'SH20', null), shot(3, 'SH3', null)];
     expect(attachableShots(messy, 7).free.map((s) => s.code)).toEqual(['SH3', 'SH20', 'SH100']);
   });
 
-  it('filtre sur le code et sur le nom, sans tenir compte de la casse', () => {
+  it('filters on code and name, ignoring case', () => {
     expect(attachableShots(PROJECT, 7, 'sh1').elsewhere.map((s) => s.id)).toEqual([3, 4]);
     expect(attachableShots(PROJECT, 7, 'ESTABLISHING').free.map((s) => s.id)).toEqual([6]);
     expect(attachableShots(PROJECT, 7, '  sh210  ').free.map((s) => s.id)).toEqual([6]);
   });
 
-  it('ne propose rien quand tout le projet est déjà dans la séquence', () => {
+  it('proposes nothing when the whole project is already in the sequence', () => {
     const all = [shot(1, 'SH010', 7), shot(2, 'SH020', 7)];
     expect(attachableShots(all, 7)).toEqual({ free: [], elsewhere: [] });
   });
 });
 
 describe('movedFromOtherSequence', () => {
-  it('ne compte que les plans retenus qui quittent une séquence', () => {
+  it('only counts the selected shots that leave a sequence', () => {
     expect(movedFromOtherSequence(PROJECT, new Set([3, 5, 6]))).toBe(1);
   });
 
-  it('vaut zéro quand la sélection n’est faite que de plans libres', () => {
+  it('is zero when the selection only contains free shots', () => {
     expect(movedFromOtherSequence(PROJECT, new Set([5, 6]))).toBe(0);
   });
 
-  it('ignore les identifiants qui ne sont pas dans la liste', () => {
+  it('ignores identifiers that are not in the list', () => {
     expect(movedFromOtherSequence(PROJECT, new Set([999]))).toBe(0);
   });
 });
 
 describe('attachRefusal', () => {
-  it('refuse un non-gestionnaire, sélection remplie ou non', () => {
+  it('refuses a non-manager, whether the selection is filled or not', () => {
     expect(attachRefusal(false, 3)).toBe('forbidden');
     expect(attachRefusal(false, 0)).toBe('forbidden');
   });
 
-  it('refuse une sélection vide', () => {
+  it('refuses an empty selection', () => {
     expect(attachRefusal(true, 0)).toBe('empty');
   });
 
-  it('laisse passer un gestionnaire qui a choisi', () => {
+  it('lets through a manager who has made a choice', () => {
     expect(attachRefusal(true, 1)).toBeNull();
   });
 });

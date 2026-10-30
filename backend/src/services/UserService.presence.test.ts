@@ -19,18 +19,18 @@ beforeEach(() => {
   db.user.findMany.mockResolvedValue([{ id: 1, email: 'a@b.c' }]);
 });
 
-/** Le `where` réellement envoyé à Prisma. */
+/** The `where` actually sent to Prisma. */
 const whereOf = () => (db.user.findMany.mock.calls[0]![0] as { where: Record<string, unknown> }).where;
 
-describe('listPresence — cloisonnement (C1)', () => {
-  it('sert le studio entier à un compte interne', async () => {
+describe('listPresence: segregation (C1)', () => {
+  it('serves the whole studio to an internal account', async () => {
     await listPresence({ id: 2, role: Role.ARTIST });
     expect(whereOf()).toEqual({ isService: false, disabledAt: null });
   });
 
-  it('restreint un CLIENT aux personnes de ses projets', async () => {
-    // Un intervenant extérieur n'a pas à connaître l'équipe entière ni à pouvoir écrire
-    // à n'importe qui.
+  it('restricts a CLIENT to the people of their projects', async () => {
+    // An external contributor need not know the whole team, nor be able to write
+    // to anyone.
     await listPresence({ id: 9, role: Role.CLIENT });
     expect(whereOf()).toMatchObject({
       isService: false,
@@ -38,33 +38,33 @@ describe('listPresence — cloisonnement (C1)', () => {
     });
   });
 
-  it('exclut toujours les comptes de service', async () => {
+  it('always excludes service accounts', async () => {
     await listPresence({ id: 2, role: Role.ADMIN });
     expect(whereOf().isService).toBe(false);
   });
 
-  it('ne renvoie jamais l’adresse e-mail', async () => {
+  it('never returns the e-mail address', async () => {
     const users = await listPresence({ id: 2, role: Role.SUPERVISOR });
     expect(users[0]).not.toHaveProperty('email');
   });
 
-  it('marque l’état en ligne', async () => {
+  it('marks the online state', async () => {
     const users = await listPresence({ id: 2, role: Role.ARTIST });
     expect(users[0]?.online).toBe(true);
   });
 
-  it('reste sûr sans demandeur connu', async () => {
+  it('stays safe without a known requester', async () => {
     await listPresence();
     expect(whereOf()).toEqual({ isService: false, disabledAt: null });
   });
 
   /**
-   * A5-07 : le nom, le prénom et la fonction d'un ancien salarié restaient publiés dans
-   * l'annuaire du studio — visibles des comptes CLIENT extérieurs — et la personne restait
-   * proposée aux mentions et à l'assignation. La recherche globale, elle, les excluait déjà :
-   * les deux annuaires du produit ne suivaient pas la même règle.
+   * A5-07: the name, first name and job title of a former employee remained published in
+   * the studio directory — visible to external CLIENT accounts — and the person remained
+   * offered for mentions and assignment. The global search, for its part, already excluded them:
+   * the product's two directories did not follow the same rule.
    */
-  it('exclut les comptes désactivés, pour tous les rôles', async () => {
+  it('excludes deactivated accounts, for all roles', async () => {
     for (const role of [Role.ADMIN, Role.SUPERVISOR, Role.ARTIST, Role.CLIENT]) {
       db.user.findMany.mockClear();
       await listPresence({ id: 2, role });

@@ -7,7 +7,7 @@ import { api } from '../../lib/apiClient';
 import { qk } from './query';
 import { useT } from '../i18n';
 
-/** Cible d'un suivi de notifications (32.G). */
+/** Target of a notification subscription (32.G). */
 export type WatchTargetType = 'SHOT' | 'ASSET' | 'VERSION';
 
 interface WatchRef {
@@ -16,8 +16,8 @@ interface WatchRef {
 }
 
 /**
- * Suivis de l'utilisateur (32.G) : état groupé (une seule requête pour tous les
- * menus clic droit) + bascule suivre/ne plus suivre avec toast.
+ * The user's watches (32.G): grouped state (a single request for all the
+ * right-click menus) + follow/unfollow toggle with toast.
  */
 export function useWatch() {
   const t = useT();

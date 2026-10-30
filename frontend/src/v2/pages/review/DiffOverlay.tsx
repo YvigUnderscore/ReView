@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Columns2, Flame, SplitSquareHorizontal, X } from 'lucide-react';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { VIEWER_ZONE, type MediaResp } from './reviewTypes';
 import { useVideoSync } from './useVideoSync';
@@ -12,10 +12,10 @@ import { HEATMAP_CSS_FILTER, nextGain, useDiffDraw } from './diffRender';
 import { useT } from '../../i18n';
 
 /**
- * LUT fausses couleurs (noir → bleu → vert → jaune → rouge) : luminance du diff passée
- * dans des tables par canal. Montée une fois par overlay diff (id global unique),
- * référencée en filtre **CSS** sur l'élément canvas (HEATMAP_CSS_FILTER) — Chrome
- * ignore les filtres SVG référencés dans `ctx.filter`.
+ * False-color LUT (black → blue → green → yellow → red): the diff luminance is passed
+ * through per-channel tables. Mounted once per diff overlay (globally unique id), and
+ * referenced as a **CSS** filter on the canvas element (HEATMAP_CSS_FILTER) — Chrome
+ * ignores SVG filters referenced from `ctx.filter`.
  */
 function HeatmapLut() {
   return (
@@ -36,9 +36,9 @@ function HeatmapLut() {
 }
 
 /**
- * Mode différence A/B (34.E) : |A − B| amplifié (gain cliquable ×1→×16) + option
- * heatmap, rendu canvas côté client. Variante vidéo (overlay sur le lecteur maître,
- * B synchronisée cachée) et variante image (remplace la visionneuse).
+ * A/B difference mode (34.E): |A − B| amplified (clickable gain ×1→×16) plus an optional
+ * heatmap, rendered client-side on a canvas. Video variant (overlay on the master player,
+ * B kept in sync and hidden) and image variant (replaces the viewer).
  */
 
 function DiffHud({
@@ -100,7 +100,7 @@ function DiffHud({
   );
 }
 
-/** Overlay diff **vidéo** : à placer dans le conteneur `relative` de la vidéo A. */
+/** Video diff overlay: place it inside the `relative` container of video A. */
 export function VideoDiffOverlay({
   compareId,
   masterRef,
@@ -167,7 +167,7 @@ export function VideoDiffOverlay({
   );
 }
 
-/** Diff **image** : remplace la visionneuse pendant la comparaison (comme le wipe). */
+/** Image diff: replaces the viewer during comparison (like the wipe). */
 export function ImageDiffOverlay({
   aUrl,
   compareId,
@@ -194,7 +194,7 @@ export function ImageDiffOverlay({
   });
   const bUrl = mediaQ.data?.url;
 
-  // Chargement des deux sources hors DOM (crossOrigin : le canvas reste exportable).
+  // Load both sources off-DOM (crossOrigin keeps the canvas exportable).
   useEffect(() => loadImage(aUrl, setImgA), [aUrl]);
   useEffect(() => (bUrl ? loadImage(bUrl, setImgB) : undefined), [bUrl]);
 
@@ -228,7 +228,7 @@ export function ImageDiffOverlay({
   );
 }
 
-/** Charge une image détachée (annulable) pour le rendu canvas. */
+/** Loads a detached (cancellable) image for canvas rendering. */
 function loadImage(url: string, set: (img: HTMLImageElement | null) => void) {
   const img = new Image();
   img.crossOrigin = 'anonymous';

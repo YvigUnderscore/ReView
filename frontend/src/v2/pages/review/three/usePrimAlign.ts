@@ -20,9 +20,9 @@ import {
 } from './alignPrims';
 
 /**
- * Alignement / répartition de la sélection de prims (C2) : boîtes englobantes monde → offsets
- * purs (`alignPrims.ts`) → deltas de translation convertis dans l'espace parent de chaque prim.
- * Extrait de `useUsdScene` (budget lignes) — l'écriture repasse par `editLocal`/`writeTransform`.
+ * Alignment / distribution of the prim selection (C2): world bounding boxes → pure offsets
+ * (`alignPrims.ts`) → translation deltas converted into each prim's parent space.
+ * Extracted from `useUsdScene` (line budget) — writes go back through `editLocal`/`writeTransform`.
  */
 export function usePrimAlign(opts: {
   getSceneHandle: () => ViewerSceneHandle | null;
@@ -37,7 +37,7 @@ export function usePrimAlign(opts: {
 } {
   const { getSceneHandle, selected, objectsOf, override, editLocal, writeTransform } = opts;
 
-  /** Delta effectif courant d'un prim ou d'un clone (base de l'ajustement d'axe). */
+  /** Current effective delta of a prim or a clone (basis of the axis adjustment). */
   const currentDelta = useCallback(
     (path: string): PrimTransform => {
       const clone = parseClonePath(path);
@@ -68,7 +68,7 @@ export function usePrimAlign(opts: {
     return items;
   }, [getSceneHandle, selected, objectsOf]);
 
-  /** Applique des offsets d'axe monde en deltas de translation (espace parent de chaque prim). */
+  /** Applies world-axis offsets as translation deltas (in each prim's parent space). */
   const nudgeAxis = useCallback(
     (offsets: Array<{ path: string; offset: number }>, axis: AlignAxis) => {
       const handle = getSceneHandle();

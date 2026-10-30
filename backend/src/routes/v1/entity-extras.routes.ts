@@ -18,20 +18,19 @@ import {
 } from './helpers';
 
 /**
- * Ce qu'une entité de pipeline porte en plus de sa fiche technique : qui en répond, et son
- * brief.
+ * What a pipeline entity carries beyond its technical sheet: who is responsible for it, and
+ * its brief.
  *
- * Les deux existaient sur `/api` sans jamais atteindre l'API d'intégration, alors que ce
- * sont précisément les deux champs qu'un pipeline veut lire avant d'ouvrir un plan : à qui
- * il est confié, et ce que la production en attend. Un outil devait ouvrir le navigateur
- * pour les consulter.
+ * Both already existed on `/api` but never reached the integration API, although they are
+ * exactly the two fields a pipeline wants to read before opening a shot: who it is assigned
+ * to, and what production expects of it. A tool had to open the browser to look them up.
  *
- * Les quatre niveaux se traitent de la même façon — d'où les fabriques ci-dessous, qui ne
- * diffèrent que par la garde d'accès et le scope exigé.
+ * The four levels are handled the same way, hence the factories below, which only differ in
+ * the access guard and the required scope.
  */
 const router = Router();
 
-/** Niveau adressable, sa garde de projet et le scope qui le protège. */
+/** Addressable level, its project guard and the scope protecting it. */
 const LEVELS = {
   episodes: { kind: 'episode', guard: requireEpisodeProject, domain: 'episodes' },
   sequences: { kind: 'sequence', guard: requireSequenceProject, domain: 'sequences' },
@@ -43,9 +42,9 @@ type Level = (typeof LEVELS)[keyof typeof LEVELS];
 type Guard = (req: Request, id: number) => Promise<number>;
 
 /**
- * Un épisode n'a pas de domaine d'écriture : le niveau se lit depuis l'API
- * d'intégration, il se compose depuis l'interface. Écrire son brief ou ses responsables
- * passe donc par le scope de la séquence, le cran qu'il regroupe.
+ * An episode has no write domain: the level is read from the integration API and composed
+ * from the UI. Writing its brief or its owners therefore goes through the sequence scope,
+ * the tier it groups.
  */
 const writeScope = (domain: Level['domain']): Scope =>
   domain === 'episodes' ? 'sequences:write' : (`${domain}:write` as Scope);

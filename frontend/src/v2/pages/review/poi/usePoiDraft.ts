@@ -3,14 +3,14 @@
 
 import { useCallback, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { MAX_COMMENT_ATTACHMENTS } from '../../../../lib/commentAttachments';
+import { MAX_COMMENT_ATTACHMENTS } from '@/v2/lib/commentAttachments';
 import type { Hotspot3D } from '../reviewTypes';
 import { MAX_POI_POINTS } from './poiPoints';
-import { t } from '../../../i18n';
+import { t } from '@/v2/i18n';
 
-/** Point d'intérêt en cours de rédaction : les images sont encore des fichiers locaux. */
+/** Point of interest being drafted: its images are still local files. */
 export interface PoiDraft {
-  /** Identité stable d'une rangée du composeur (les numéros, eux, bougent à chaque retrait). */
+  /** Stable identity of a composer row (the numbers, for their part, move at each removal). */
   key: string;
   position: string;
   normal: string;
@@ -21,12 +21,12 @@ export interface PoiDraft {
 
 export interface PoiDraftState {
   points: PoiDraft[];
-  /** Point mis en avant : rangée du composeur et pastille de la scène le signalent ensemble. */
+  /** Point put forward: the composer row and the scene hotspot signal it together. */
   activeKey: string | null;
   setActiveKey: (key: string | null) => void;
-  /** Pose un point de plus, à la suite — c'est le rang qui donne son numéro. */
+  /** Places one more point, at the end: the rank gives its number. */
   add: (hotspot: Hotspot3D) => void;
-  /** Repose le point de rang `index` ailleurs (pastille déplacée dans la scène). */
+  /** Moves the point of rank `index` elsewhere (hotspot dragged in the scene). */
   move: (index: number, hotspot: Hotspot3D) => void;
   remove: (key: string) => void;
   setText: (key: string, text: string) => void;
@@ -38,19 +38,19 @@ export interface PoiDraftState {
 const newKey = () => Math.random().toString(36).slice(2, 9);
 
 /**
- * Points d'intérêt du composeur : posés, numérotés, déplaçables et supprimables **tant que le
- * commentaire n'est pas envoyé**. L'envoi les emporte tous dans un seul commentaire (cf.
- * `useSubmitComment`) et `clear` remet la liste à zéro.
+ * Points of interest of the composer: placed, numbered, movable and removable **as long as the comment
+ * is not sent**. Sending carries them all in a single comment (see `useSubmitComment`), and `clear` resets
+ * the list.
  *
- * Il n'y a pas d'historique séparé : un point se retire d'une croix, et le composeur reste le
- * seul endroit où on lit ce qui partira.
+ * There is no separate history: a point is removed with a cross, and the composer remains the single place
+ * where one reads what is about to leave.
  */
 export function usePoiDraft(): PoiDraftState {
   const [points, setPoints] = useState<PoiDraft[]>([]);
   const [activeKey, setActiveKey] = useState<string | null>(null);
 
-  // Le plafond se lit sur la liste courante, hors de la fonction de mise à jour : celle-ci
-  // peut être rejouée (mode strict), et un avertissement n'a pas à l'être.
+  // The ceiling is read from the current list, outside the update function: the latter may be replayed
+  // (strict mode), and a warning must not be.
   const count = points.length;
   const add = useCallback(
     (hotspot: Hotspot3D) => {
@@ -80,8 +80,8 @@ export function usePoiDraft(): PoiDraftState {
 
   const setText = useCallback((key: string, text: string) => patch(key, (p) => ({ ...p, text })), [patch]);
 
-  // Le plafond est celui des pièces jointes d'un commentaire : les images des points partent
-  // dans la MÊME liste que celles du composeur (un seul téléversement, celui du lot 5).
+  // The ceiling is that of a comment's attachments: the point images leave in the SAME list as those of
+  // the composer (a single upload, that of batch 5).
   const addFiles = useCallback(
     (key: string, files: File[]) =>
       patch(key, (p) => ({ ...p, files: [...p.files, ...files].slice(0, MAX_COMMENT_ATTACHMENTS) })),

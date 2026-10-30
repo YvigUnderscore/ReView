@@ -5,8 +5,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 
 /**
- * Contrat HTTP de la sortie des notes : ce que le navigateur reçoit (type, nom de fichier,
- * avertissement de troncature), et ce qu'un compte sans accès au projet n'obtient pas.
+ * HTTP contract of the notes export: what the browser receives (type, file name, truncation warning),
+ * and what an account without access to the project does not get.
  */
 
 const { exports_, rbac } = vi.hoisted(() => ({
@@ -14,7 +14,8 @@ const { exports_, rbac } = vi.hoisted(() => ({
   rbac: { assertProjectAccess: vi.fn() },
 }));
 
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: Request, _res: Response, next: NextFunction) => {
     req.user = { id: 1, role: 'ADMIN' } as Request['user'];
     next();
@@ -59,7 +60,7 @@ beforeEach(() => {
 });
 
 describe('GET /api/comments/export', () => {
-  it('sert le fichier en pièce jointe, avec son type', async () => {
+  it('serves the file as an attachment, with its type', async () => {
     const res = await request(app).get('/api/comments/export?scope=media&id=7&format=csv');
     expect(res.status).toBe(200);
     expect(res.headers['content-type']).toContain('text/csv');
@@ -68,33 +69,33 @@ describe('GET /api/comments/export', () => {
     expect(res.text).toContain('note_id');
   });
 
-  it('prévient quand le fichier est incomplet', async () => {
+  it('warns when the file is incomplete', async () => {
     exports_.exportNotes.mockResolvedValue({ ...csv, truncated: true });
     const res = await request(app).get('/api/comments/export?scope=media&id=7&format=csv');
     expect(res.headers['x-notes-truncated']).toBe('1');
   });
 
-  it('assert l’accès au projet de la portée avant de produire quoi que ce soit', async () => {
+  it("asserts access to the scope's project before producing anything", async () => {
     rbac.assertProjectAccess.mockRejectedValue(forbidden('No access to this project'));
     const res = await request(app).get('/api/comments/export?scope=playlist&id=3&format=edl');
     expect(res.status).toBe(403);
     expect(exports_.exportNotes).not.toHaveBeenCalled();
   });
 
-  it('répond 404 quand la portée n’existe pas', async () => {
+  it('responds 404 when the scope does not exist', async () => {
     exports_.resolveScopeProject.mockResolvedValue(null);
     const res = await request(app).get('/api/comments/export?scope=timeline&id=9&format=otio');
     expect(res.status).toBe(404);
     expect(rbac.assertProjectAccess).not.toHaveBeenCalled();
   });
 
-  it('refuse une portée ou un format inconnus', async () => {
+  it('rejects an unknown scope or format', async () => {
     expect((await request(app).get('/api/comments/export?scope=studio&id=1&format=csv')).status).toBe(400);
     expect((await request(app).get('/api/comments/export?scope=media&id=1&format=xlsx')).status).toBe(400);
     expect((await request(app).get('/api/comments/export?scope=media&id=0&format=csv')).status).toBe(400);
   });
 
-  it('transmet la portée demandée et le demandeur au service', async () => {
+  it('passes the requested scope and the requester on to the service', async () => {
     await request(app).get('/api/comments/export?scope=shot&id=42&format=sheet');
     expect(exports_.exportNotes).toHaveBeenCalledWith({
       scope: 'shot',

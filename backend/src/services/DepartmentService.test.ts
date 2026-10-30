@@ -44,7 +44,7 @@ import {
 import { prisma } from '../lib/prisma';
 import { logAudit } from './AuditService';
 
-/** Acteur des gestes consignés — l'appelant le connaît toujours (`req.user`). */
+/** Actor of the logged gestures — the caller always knows it (`req.user`). */
 const ACTOR = { id: 42 };
 const audited = vi.mocked(logAudit);
 
@@ -63,49 +63,49 @@ const dept = (over: Record<string, unknown> = {}) => ({
 beforeEach(() => vi.clearAllMocks());
 
 describe('normaliseKey', () => {
-  it('met en capitales et remplace la ponctuation', () => {
+  it('uppercases and replaces punctuation', () => {
     expect(normaliseKey('Look Dev')).toBe('LOOK_DEV');
     expect(normaliseKey('  fx  ')).toBe('FX');
     expect(normaliseKey('Matte-Painting')).toBe('MATTE_PAINTING');
   });
 
-  it('ne laisse ni tiret bas en tête ni en queue', () => {
+  it('strips leading and trailing underscores', () => {
     expect(normaliseKey('  --anim--  ')).toBe('ANIM');
   });
 
-  it('rend une chaîne vide pour une saisie sans caractère utile', () => {
+  it('returns an empty string for input with no usable character', () => {
     expect(normaliseKey('   ')).toBe('');
     expect(normaliseKey('---')).toBe('');
   });
 
-  it('borne la longueur', () => {
+  it('bounds the length', () => {
     expect(normaliseKey('a'.repeat(80))).toHaveLength(40);
   });
 });
 
 describe('listForProject', () => {
-  it('rend les départements du projet quand il en a', async () => {
+  it("returns the project's departments when it has any", async () => {
     vi.mocked(prisma.department.findMany).mockResolvedValueOnce([dept({ projectId: 7 })] as never);
     const list = await listForProject(7);
     expect(list).toHaveLength(1);
-    // Le studio n'est même pas consulté : la liste du projet remplace la sienne.
+    // The studio is not even consulted: the project's list replaces its own.
     expect(prisma.project.findUnique).not.toHaveBeenCalled();
   });
 
-  it('retombe sur le référentiel du studio quand le projet n’en redéfinit pas', async () => {
+  it('falls back on the studio reference when the project does not redefine it', async () => {
     vi.mocked(prisma.department.findMany).mockResolvedValueOnce([] as never);
     vi.mocked(prisma.project.findUnique).mockResolvedValueOnce({ studioId: 3 } as never);
     vi.mocked(prisma.department.findMany).mockResolvedValueOnce([dept()] as never);
     const list = await listForProject(7);
-    // `imageUrl` accompagne désormais chaque département : la liste est signée une fois
-    // pour toutes plutôt qu'une requête par pastille affichée.
+    // `imageUrl` now accompanies each department: the list is signed once for all, rather than one request
+    // per displayed badge.
     expect(list).toEqual([{ ...dept(), imageUrl: null }]);
     expect(prisma.department.findMany).toHaveBeenLastCalledWith(
       expect.objectContaining({ where: { studioId: 3, projectId: null, deletedAt: null } }),
     );
   });
 
-  it('rend une liste vide pour un projet inexistant', async () => {
+  it('returns an empty list for a nonexistent project', async () => {
     vi.mocked(prisma.department.findMany).mockResolvedValueOnce([] as never);
     vi.mocked(prisma.project.findUnique).mockResolvedValueOnce(null);
     expect(await listForProject(999)).toEqual([]);
@@ -113,7 +113,7 @@ describe('listForProject', () => {
 });
 
 describe('create', () => {
-  it('dérive la clé du nom et la range en fin de liste', async () => {
+  it('derives the key from the name and places it at the end of the list', async () => {
     vi.mocked(prisma.department.findFirst).mockResolvedValueOnce(null);
     vi.mocked(prisma.department.findFirst).mockResolvedValueOnce({ order: 4 } as never);
     vi.mocked(prisma.department.create).mockResolvedValueOnce(dept() as never);
@@ -125,17 +125,17 @@ describe('create', () => {
     );
   });
 
-  it('refuse un nom vide', async () => {
+  it('refuses an empty name', async () => {
     await expect(create(1, null, { name: '   ' })).rejects.toThrow();
   });
 
-  it('refuse une clé déjà prise', async () => {
+  it('refuses a key already taken', async () => {
     vi.mocked(prisma.department.findFirst).mockResolvedValueOnce(dept() as never);
     await expect(create(1, null, { name: 'Animation' })).rejects.toThrow();
   });
 
-  it('ressuscite un département retiré plutôt que d’en créer un doublon', async () => {
-    // La clé doit rester la même, sinon les tâches d'avant ne se retrouvent pas.
+  it('revives a removed department rather than creating a duplicate', async () => {
+    // The key must stay the same, otherwise earlier tasks would not be found again.
     vi.mocked(prisma.department.findFirst).mockResolvedValueOnce(
       dept({ id: 12, deletedAt: new Date() }) as never,
     );
@@ -149,7 +149,7 @@ describe('create', () => {
 });
 
 describe('update', () => {
-  it('ne touche jamais à la clé', async () => {
+  it('never touches the key', async () => {
     vi.mocked(prisma.department.findUnique).mockResolvedValueOnce(dept() as never);
     vi.mocked(prisma.department.update).mockResolvedValueOnce(dept() as never);
     await update(ACTOR, 1, { name: 'Anim', key: 'AUTRE_CHOSE' });
@@ -158,14 +158,14 @@ describe('update', () => {
     expect(data.name).toBe('Anim');
   });
 
-  it('refuse un département inexistant', async () => {
+  it('refuses a nonexistent department', async () => {
     vi.mocked(prisma.department.findUnique).mockResolvedValueOnce(null);
     await expect(update(ACTOR, 404, { name: 'x' })).rejects.toThrow();
   });
 });
 
 describe('remove', () => {
-  it('retire logiquement, sans effacer le travail rattaché', async () => {
+  it('removes logically, without erasing the work attached to it', async () => {
     vi.mocked(prisma.department.findUnique).mockResolvedValueOnce(dept() as never);
     vi.mocked(prisma.department.update).mockResolvedValueOnce(dept() as never);
     await remove(ACTOR, 1);
@@ -175,21 +175,21 @@ describe('remove', () => {
 });
 
 describe('findByKey', () => {
-  it('trouve sans tenir compte de la casse', async () => {
+  it('finds regardless of case', async () => {
     vi.mocked(prisma.project.findUnique).mockResolvedValueOnce({ studioId: 1 } as never);
     vi.mocked(prisma.department.findMany).mockResolvedValueOnce([dept()] as never);
     expect((await findByKey(7, 'animation'))?.id).toBe(1);
   });
 
-  it('trouve malgré la ponctuation : le site distant écrit « Look Dev », la base LOOK_DEV', async () => {
+  it('finds despite punctuation: the remote site writes "Look Dev", the database LOOK_DEV', async () => {
     vi.mocked(prisma.project.findUnique).mockResolvedValueOnce({ studioId: 1 } as never);
     vi.mocked(prisma.department.findMany).mockResolvedValueOnce([dept({ key: 'LOOK_DEV' })] as never);
     expect((await findByKey(7, 'Look Dev'))?.key).toBe('LOOK_DEV');
   });
 
-  it('préfère la portée projet à celle du studio', async () => {
-    // Les deux portées sont fouillées — `listForProject` masquerait le studio dès que le
-    // projet a sa liste, et une tâche portant une étape du studio deviendrait introuvable.
+  it('prefers the project scope over the studio scope', async () => {
+    // Both scopes are searched — `listForProject` would mask the studio as soon as the project has its own
+    // list, and a task carrying a studio step would become unfindable.
     vi.mocked(prisma.project.findUnique).mockResolvedValueOnce({ studioId: 1 } as never);
     vi.mocked(prisma.department.findMany).mockResolvedValueOnce([
       dept({ id: 1, projectId: null }),
@@ -198,14 +198,14 @@ describe('findByKey', () => {
     expect((await findByKey(7, 'ANIMATION'))?.id).toBe(2);
   });
 
-  it('rend null quand aucune portée ne porte la clé, sans rien créer', async () => {
+  it('returns null when no scope carries the key, without creating anything', async () => {
     vi.mocked(prisma.project.findUnique).mockResolvedValueOnce({ studioId: 1 } as never);
     vi.mocked(prisma.department.findMany).mockResolvedValueOnce([dept()] as never);
     expect(await findByKey(7, 'Groom')).toBeNull();
     expect(prisma.department.create).not.toHaveBeenCalled();
   });
 
-  it('rend null pour un projet inexistant ou une clé vide', async () => {
+  it('returns null for a nonexistent project or an empty key', async () => {
     vi.mocked(prisma.project.findUnique).mockResolvedValueOnce(null);
     expect(await findByKey(999, 'ANIMATION')).toBeNull();
     expect(await findByKey(7, '   ')).toBeNull();
@@ -213,7 +213,7 @@ describe('findByKey', () => {
 });
 
 describe('resolveByKey', () => {
-  it('trouve un département existant sans tenir compte de la casse', async () => {
+  it('finds an existing department regardless of case', async () => {
     vi.mocked(prisma.project.findUnique).mockResolvedValueOnce({ studioId: 1 } as never);
     vi.mocked(prisma.department.findMany).mockResolvedValueOnce([dept()] as never);
     const found = await resolveByKey(7, 'animation');
@@ -221,11 +221,11 @@ describe('resolveByKey', () => {
     expect(prisma.department.create).not.toHaveBeenCalled();
   });
 
-  it('crée l’étape inconnue plutôt que de la perdre — cas d’un step ShotGrid', async () => {
+  it('creates the unknown step rather than losing it — the case of a ShotGrid step', async () => {
     vi.mocked(prisma.project.findUnique)
       .mockResolvedValueOnce({ studioId: 1 } as never)
       .mockResolvedValueOnce({ studioId: 1 } as never);
-    // Vocabulaire connu, puis liste propre du projet (l'héritage est déjà figé).
+    // Known vocabulary, then the project's own list (the inheritance is already frozen).
     vi.mocked(prisma.department.findMany)
       .mockResolvedValueOnce([dept({ projectId: 7 })] as never)
       .mockResolvedValueOnce([dept({ projectId: 7 })] as never);
@@ -239,17 +239,17 @@ describe('resolveByKey', () => {
     expect(prisma.department.createMany).not.toHaveBeenCalled();
   });
 
-  it('recopie l’héritage du studio avant d’ajouter une étape à un projet qui en hérite', async () => {
-    // Sans cette copie, l'étape importée REMPLACERAIT la liste héritée : le projet
-    // perdrait ses huit départements pour n'en garder qu'un.
+  it('copies the studio inheritance before adding a step to a project that inherits it', async () => {
+    // Without this copy, the imported step would REPLACE the inherited list: the project would lose its eight
+    // departments to keep only one.
     vi.mocked(prisma.project.findUnique)
       .mockResolvedValueOnce({ studioId: 1 } as never)
       .mockResolvedValueOnce({ studioId: 1 } as never);
     const studio = [dept({ id: 1, key: 'ANIMATION' }), dept({ id: 2, key: 'FX', name: 'FX' })];
     vi.mocked(prisma.department.findMany)
-      .mockResolvedValueOnce(studio as never) // vocabulaire fouillé par findByKey
-      .mockResolvedValueOnce([] as never) // le projet n'a aucune étape propre
-      .mockResolvedValueOnce(studio as never); // liste du studio, à recopier
+      .mockResolvedValueOnce(studio as never) // vocabulary searched by findByKey
+      .mockResolvedValueOnce([] as never) // the project has no step of its own
+      .mockResolvedValueOnce(studio as never); // studio list, to be copied
     vi.mocked(prisma.department.findFirst).mockResolvedValueOnce(null);
     vi.mocked(prisma.department.create).mockResolvedValueOnce(
       dept({ id: 9, key: 'GROOM', projectId: 7 }) as never,
@@ -266,15 +266,15 @@ describe('resolveByKey', () => {
     );
   });
 
-  it('relit l’étape qu’une publication concurrente vient de créer', async () => {
+  it('re-reads the step that a concurrent publication has just created', async () => {
     vi.mocked(prisma.project.findUnique)
       .mockResolvedValueOnce({ studioId: 1 } as never)
       .mockResolvedValueOnce({ studioId: 1 } as never)
       .mockResolvedValueOnce({ studioId: 1 } as never);
     vi.mocked(prisma.department.findMany)
-      .mockResolvedValueOnce([] as never) // findByKey : rien
-      .mockResolvedValueOnce([dept({ projectId: 7 })] as never) // liste propre : pas de recopie
-      .mockResolvedValueOnce([dept({ id: 9, key: 'GROOM', projectId: 7 })] as never); // relecture
+      .mockResolvedValueOnce([] as never) // findByKey: nothing
+      .mockResolvedValueOnce([dept({ projectId: 7 })] as never) // project's own list: no copy
+      .mockResolvedValueOnce([dept({ id: 9, key: 'GROOM', projectId: 7 })] as never); // re-read
     vi.mocked(prisma.department.findFirst).mockResolvedValueOnce(null);
     vi.mocked(prisma.department.create).mockRejectedValueOnce(
       new Prisma.PrismaClientKnownRequestError('Unique constraint failed', {
@@ -285,21 +285,21 @@ describe('resolveByKey', () => {
     expect((await resolveByKey(7, 'Groom'))?.id).toBe(9);
   });
 
-  it('ignore une clé vide', async () => {
+  it('ignores an empty key', async () => {
     expect(await resolveByKey(7, '   ')).toBeNull();
     expect(prisma.department.findMany).not.toHaveBeenCalled();
   });
 });
 
 describe('resolveForTask', () => {
-  it('rend la clé ET la relation : c’est la relation que lit l’assignation', async () => {
+  it('returns the key AND the relation: it is the relation that assignment reads', async () => {
     vi.mocked(prisma.project.findUnique).mockResolvedValueOnce({ studioId: 1 } as never);
     vi.mocked(prisma.department.findMany).mockResolvedValueOnce([dept({ id: 4 })] as never);
     expect(await resolveForTask(7, 'animation')).toEqual({ department: 'ANIMATION', departmentId: 4 });
   });
 
-  it('garde la clé sans rien créer quand la création est refusée', async () => {
-    // Politique appliquée aux clés devinées : une heuristique n'enrichit pas le pipe.
+  it('keeps the key without creating anything when creation is refused', async () => {
+    // Policy applied to guessed keys: a heuristic does not enrich the pipe.
     vi.mocked(prisma.project.findUnique).mockResolvedValueOnce({ studioId: 1 } as never);
     vi.mocked(prisma.department.findMany).mockResolvedValueOnce([] as never);
     expect(await resolveForTask(7, 'Groom', { create: false })).toEqual({
@@ -309,15 +309,15 @@ describe('resolveForTask', () => {
     expect(prisma.department.create).not.toHaveBeenCalled();
   });
 
-  it('rend un couple vide pour une clé absente', async () => {
+  it('returns an empty pair for an absent key', async () => {
     expect(await resolveForTask(7, null)).toEqual({ department: null, departmentId: null });
     expect(await resolveForTask(7, '  ')).toEqual({ department: null, departmentId: null });
   });
 });
 
 describe('syncFromSettings', () => {
-  it('n’écrit rien quand la liste est identique à celle héritée du studio', async () => {
-    // Sinon le projet cesserait d'hériter et ne suivrait plus les évolutions du studio.
+  it('writes nothing when the list is identical to the one inherited from the studio', async () => {
+    // Otherwise the project would cease to inherit and would no longer follow the studio's changes.
     vi.mocked(prisma.project.findUnique).mockResolvedValueOnce({ studioId: 1 } as never);
     vi.mocked(prisma.department.findMany).mockResolvedValueOnce([dept()] as never);
     await syncFromSettings(7, [{ key: 'ANIMATION', name: 'Animation' }]);
@@ -325,10 +325,10 @@ describe('syncFromSettings', () => {
     expect(prisma.department.update).not.toHaveBeenCalled();
   });
 
-  it('crée les étapes manquantes dans l’ordre de la liste', async () => {
+  it('creates the missing steps in list order', async () => {
     vi.mocked(prisma.project.findUnique).mockResolvedValueOnce({ studioId: 1 } as never);
-    vi.mocked(prisma.department.findMany).mockResolvedValueOnce([dept()] as never); // hérité
-    vi.mocked(prisma.department.findMany).mockResolvedValueOnce([] as never); // propres
+    vi.mocked(prisma.department.findMany).mockResolvedValueOnce([dept()] as never); // inherited
+    vi.mocked(prisma.department.findMany).mockResolvedValueOnce([] as never); // own
     vi.mocked(prisma.department.create).mockResolvedValue(dept({ id: 30 }) as never);
     await syncFromSettings(7, [
       { key: 'Layout', name: 'Layout' },
@@ -339,7 +339,7 @@ describe('syncFromSettings', () => {
     expect(first).toMatchObject({ key: 'LAYOUT', order: 0, projectId: 7 });
   });
 
-  it('renomme et réordonne sans toucher à la clé', async () => {
+  it('renames and reorders without touching the key', async () => {
     vi.mocked(prisma.project.findUnique).mockResolvedValueOnce({ studioId: 1 } as never);
     vi.mocked(prisma.department.findMany).mockResolvedValueOnce([] as never);
     vi.mocked(prisma.department.findMany).mockResolvedValueOnce([
@@ -355,7 +355,7 @@ describe('syncFromSettings', () => {
     expect(prisma.department.create).not.toHaveBeenCalled();
   });
 
-  it('retire logiquement ce qui a disparu de la liste', async () => {
+  it('logically removes what has disappeared from the list', async () => {
     vi.mocked(prisma.project.findUnique).mockResolvedValueOnce({ studioId: 1 } as never);
     vi.mocked(prisma.department.findMany).mockResolvedValueOnce([] as never);
     vi.mocked(prisma.department.findMany).mockResolvedValueOnce([
@@ -368,7 +368,7 @@ describe('syncFromSettings', () => {
     );
   });
 
-  it('ignore une entrée sans clé exploitable', async () => {
+  it('ignores an entry without a usable key', async () => {
     vi.mocked(prisma.project.findUnique).mockResolvedValueOnce({ studioId: 1 } as never);
     vi.mocked(prisma.department.findMany).mockResolvedValueOnce([] as never);
     vi.mocked(prisma.department.findMany).mockResolvedValueOnce([] as never);
@@ -376,29 +376,29 @@ describe('syncFromSettings', () => {
     expect(prisma.department.create).not.toHaveBeenCalled();
   });
 
-  it('ne fait rien pour un projet inexistant', async () => {
+  it('does nothing for a nonexistent project', async () => {
     vi.mocked(prisma.project.findUnique).mockResolvedValueOnce(null);
     await syncFromSettings(999, [{ key: 'FX', name: 'FX' }]);
     expect(prisma.department.findMany).not.toHaveBeenCalled();
   });
 });
 
-describe('rattachements', () => {
+describe('attachments', () => {
   /**
-   * Le rattachement contrôle désormais que chaque département appartient bien au projet
-   * de l'entité : rien ne l'empêchait auparavant de poser l'étape d'un projet voisin.
+   * Attachment now checks that each department belongs to the project of the entity: nothing previously
+   * prevented placing a neighbouring project's step.
    */
   const inProject = (ids: number[]) => {
     vi.mocked(prisma.asset.findUnique).mockResolvedValue({ projectId: 7 } as never);
     vi.mocked(prisma.shot.findUnique).mockResolvedValue({ projectId: 7 } as never);
     vi.mocked(prisma.sequence.findUnique).mockResolvedValue({ projectId: 7 } as never);
     vi.mocked(prisma.project.findUnique).mockResolvedValue({ studioId: 1 } as never);
-    // Le contrôle accepte les étapes du projet ET celles du studio : une tâche vit
-    // souvent dans une étape studio, la refuser interdirait de l'assigner.
+    // The check accepts the project's steps AND the studio's: a task often lives in a studio step, refusing
+    // it would forbid assigning it.
     vi.mocked(prisma.department.findMany).mockResolvedValue(ids.map((id) => ({ id })) as never);
   };
 
-  it('remplace la liste d’une entité, sans delta', async () => {
+  it("replaces an entity's list, without delta", async () => {
     inProject([1, 2]);
     await setHolderDepartments('asset', 5, [1, 2]);
     expect(prisma.asset.update).toHaveBeenCalledWith({
@@ -407,7 +407,7 @@ describe('rattachements', () => {
     });
   });
 
-  it('vide la liste quand on n’envoie rien', async () => {
+  it('empties the list when nothing is sent', async () => {
     inProject([]);
     await setHolderDepartments('shot', 5, []);
     expect(prisma.shot.update).toHaveBeenCalledWith({
@@ -416,14 +416,14 @@ describe('rattachements', () => {
     });
   });
 
-  it('sait viser une séquence', async () => {
+  it('can target a sequence', async () => {
     inProject([3]);
     await setHolderDepartments('sequence', 8, [3]);
     expect(prisma.sequence.update).toHaveBeenCalled();
   });
 
-  it('refuse le département d’un autre projet', async () => {
-    // Le contrôle qui manquait : un identifiant pris ailleurs se posait sans broncher.
+  it('refuses the department of another project', async () => {
+    // The missing check: an identifier taken elsewhere was placed without a murmur.
     inProject([1]);
     await expect(setHolderDepartments('asset', 5, [99])).rejects.toMatchObject({
       code: 'BAD_DEPARTMENT',
@@ -431,7 +431,7 @@ describe('rattachements', () => {
     expect(prisma.asset.update).not.toHaveBeenCalled();
   });
 
-  it('ajoute et retire sans réécrire toute la liste', async () => {
+  it('adds and removes without rewriting the whole list', async () => {
     inProject([1, 2]);
     await attachHolderDepartments('asset', 5, [2]);
     expect(prisma.asset.update).toHaveBeenCalledWith({
@@ -445,7 +445,7 @@ describe('rattachements', () => {
     });
   });
 
-  it('règle les départements d’une personne', async () => {
+  it('sets the departments of a person', async () => {
     await setUserDepartments(4, [1]);
     expect(prisma.user.update).toHaveBeenCalledWith({
       where: { id: 4 },
@@ -455,13 +455,13 @@ describe('rattachements', () => {
 });
 
 /**
- * A5-06 — renumérote un pipe, et un seul.
+ * A5-06: renumbers a pipe, and only one.
  *
- * `order` désigne la dernière version d'un plan (`lib/pipelineOrder`) : réécrire celui
- * d'un projet voisin ou du référentiel studio change le fichier présenté comme livrable
- * sur des plans qu'on n'a pas touchés. Le lot doit donc être complet et homogène.
+ * `order` designates the latest version of a shot (`lib/pipelineOrder`): rewriting that of a neighbouring
+ * project or of the studio reference changes the file presented as deliverable on shots we have not touched.
+ * The batch must therefore be complete and homogeneous.
  */
-describe('reorder — portée du lot', () => {
+describe('reorder: batch scope', () => {
   const rows = (...items: { id: number; studioId?: number; projectId?: number | null }[]) =>
     vi.mocked(prisma.department.findMany).mockResolvedValue(
       items.map((i) => ({
@@ -471,25 +471,25 @@ describe('reorder — portée du lot', () => {
       })) as never,
     );
 
-  it('refuse un lot qui mélange deux projets', async () => {
+  it('refuses a batch that mixes two projects', async () => {
     rows({ id: 1, projectId: 7 }, { id: 2, projectId: 8 });
     await expect(reorder(ACTOR, [1, 2])).rejects.toMatchObject({ code: 'DEPARTMENT_SCOPE_MIX' });
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
-  it('refuse un lot qui mêle le référentiel studio à un projet', async () => {
+  it('refuses a batch that mixes the studio reference with a project', async () => {
     rows({ id: 1, projectId: null }, { id: 2, projectId: 7 });
     await expect(reorder(ACTOR, [1, 2])).rejects.toMatchObject({ code: 'DEPARTMENT_SCOPE_MIX' });
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
-  it('refuse un identifiant qui n’existe pas', async () => {
+  it('refuses an identifier that does not exist', async () => {
     rows({ id: 1 });
     await expect(reorder(ACTOR, [1, 404])).rejects.toMatchObject({ statusCode: 404 });
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
-  it('accepte un lot homogène et écrit la position de chacun', async () => {
+  it('accepts a homogeneous batch and writes the position of each one', async () => {
     rows({ id: 3 }, { id: 1 }, { id: 2 });
     await reorder(ACTOR, [3, 1, 2]);
     expect(prisma.$transaction).toHaveBeenCalledTimes(1);
@@ -499,15 +499,15 @@ describe('reorder — portée du lot', () => {
 });
 
 /**
- * A5-03 — les trois écritures structurantes du pipe laissent une trace nominative.
+ * A5-03: the three structuring writes of the pipe leave a named trace.
  *
- * `order` n'est pas décoratif : c'est lui qui désigne « la dernière version » d'un plan
- * (`lib/pipelineOrder`). Renommer, retirer ou renuméroter un département changeait le
- * fichier présenté comme livrable sans que le journal d'audit n'en dise rien — ni quoi,
- * ni par qui. La signature prend donc l'acteur, que l'appelant connaît (`req.user`).
+ * `order` is not decorative: it is what designates "the latest version" of a shot (`lib/pipelineOrder`).
+ * Renaming, removing or renumbering a department changed the file presented as deliverable without the audit
+ * log saying anything — neither what, nor by whom. The signature therefore takes the actor, which the caller
+ * knows (`req.user`).
  */
-describe('audit des gestes de pipe', () => {
-  it('consigne une mise à jour, avec son ordre précédent', async () => {
+describe('audit of pipe gestures', () => {
+  it('logs an update, with its previous order', async () => {
     vi.mocked(prisma.department.findUnique).mockResolvedValueOnce(dept({ order: 3 }) as never);
     vi.mocked(prisma.department.update).mockResolvedValueOnce(dept({ order: 0 }) as never);
     await update(ACTOR, 1, { order: 0 });
@@ -520,7 +520,7 @@ describe('audit des gestes de pipe', () => {
     });
   });
 
-  it('consigne un retrait', async () => {
+  it('logs a removal', async () => {
     vi.mocked(prisma.department.findUnique).mockResolvedValueOnce(dept({ projectId: 7 }) as never);
     vi.mocked(prisma.department.update).mockResolvedValueOnce(dept() as never);
     await remove(ACTOR, 9);
@@ -529,7 +529,7 @@ describe('audit des gestes de pipe', () => {
     );
   });
 
-  it('consigne une renumérotation avec le lot entier et sa portée', async () => {
+  it('logs a renumbering with the whole batch and its scope', async () => {
     vi.mocked(prisma.department.findMany).mockResolvedValue([
       { id: 3, studioId: 1, projectId: 7 },
       { id: 1, studioId: 1, projectId: 7 },
@@ -544,7 +544,7 @@ describe('audit des gestes de pipe', () => {
     });
   });
 
-  it('ne consigne rien quand le lot est vide ou refusé', async () => {
+  it('logs nothing when the batch is empty or refused', async () => {
     await reorder(ACTOR, []);
     vi.mocked(prisma.department.findMany).mockResolvedValue([
       { id: 1, studioId: 1, projectId: 7 },

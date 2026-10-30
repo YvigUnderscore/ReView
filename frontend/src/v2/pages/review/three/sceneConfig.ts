@@ -5,17 +5,17 @@ import type * as THREE from 'three';
 import { frameViewOffset } from '../frameRect';
 
 /**
- * Helpers purs du socle Three commun (Phase 15, V0) — testables sans contexte WebGL.
- * `createModelScene` (impur, instancie le renderer) s'appuie dessus.
+ * Pure helpers of the common Three base (Phase 15, V0) — testable without a WebGL context.
+ * `createModelScene` (impure, instantiates the renderer) builds on them.
  */
 
-/** Marge de sécurité du cadrage (l'objet occupe ~1/margin du champ le plus contraint). */
+/** Framing safety margin (the object fills ~1/margin of the most constrained field). */
 export const FRAME_MARGIN = 1.25;
 
 /**
- * Gestion de couleur du renderer (V0/V4) : ColorManagement activé, sortie sRGB, tone mapping
- * ACES Filmic (rendu proche d'un moteur 3D ; ACEScg → sRGB géré à l'affichage). Séparé de
- * `createModelScene` pour être vérifié unitairement (fake renderer + constantes THREE).
+ * Color management of the renderer (V0/V4): ColorManagement enabled, sRGB output, ACES Filmic tone
+ * mapping (rendering close to a 3D engine; ACEScg → sRGB handled at display). Kept separate from
+ * `createModelScene` so it can be unit-tested (fake renderer + THREE constants).
  */
 export function configureRenderer(three: typeof import('three'), renderer: THREE.WebGLRenderer): void {
   three.ColorManagement.enabled = true;
@@ -25,12 +25,12 @@ export function configureRenderer(three: typeof import('three'), renderer: THREE
 }
 
 /**
- * Redimensionne renderer + caméra sur (w, h). No-op si une dimension est nulle (conteneur non
- * encore mesuré). Renvoie `true` si appliqué.
+ * Resizes renderer + camera to (w, h). No-op if a dimension is zero (container not yet measured).
+ * Returns `true` if applied.
  *
- * Avec `frameAspect` (Phase 25 — viewer plein espace) : la caméra garde l'aspect du **cadre de
- * livraison** (framing/fov identiques pour tous) et la vue est étendue au conteneur entier via
- * `setViewOffset` — le guide letterbox (ReviewFrame) matérialise le cadre à l'écran.
+ * With `frameAspect` (Phase 25 — full-space viewer): the camera keeps the aspect of the **delivery
+ * frame** (identical framing/fov for everyone) and the view is extended to the whole container via
+ * `setViewOffset` — the letterbox guide (ReviewFrame) materializes the frame on screen.
  */
 export function resizeRendererCamera(
   renderer: Pick<THREE.WebGLRenderer, 'setSize'>,
@@ -54,9 +54,9 @@ export function resizeRendererCamera(
 }
 
 /**
- * Distance caméra pour cadrer une sphère de rayon `radius` dans le plus contraint des deux
- * champs (vertical/horizontal) — cohérent avec l'auto-cadrage splat (`frameCamera`). Renvoie 0
- * si les entrées sont dégénérées.
+ * Camera distance to frame a sphere of radius `radius` in the most constrained of the two fields
+ * (vertical/horizontal) — consistent with the splat auto-framing (`frameCamera`). Returns 0 if the
+ * inputs are degenerate.
  */
 export function fitDistance(radius: number, vFovDeg: number, aspect: number): number {
   if (!Number.isFinite(radius) || radius <= 0 || vFovDeg <= 0) return 0;

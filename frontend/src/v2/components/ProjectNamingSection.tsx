@@ -17,8 +17,8 @@ const MODE_KEY: Record<NamingMode, MessageKey> = {
 };
 
 /**
- * Convention de nommage des fichiers à l'upload (38.C) : motif regex + politique
- * (off/warn/reject) + test en direct. Édite `draft.naming` ; enregistré avec les réglages.
+ * File naming convention at upload (38.C): regex pattern + policy
+ * (off/warn/reject) + live test. Edits `draft.naming`; saved with the settings.
  */
 export default function ProjectNamingSection({
   value,

@@ -29,3 +29,44 @@ review = "review.cli:main"
 
 [tool.setuptools]
 packages = ["review"]
+
+[tool.ruff]
+line-length = 110
+target-version = "py310"
+src = ["."]
+
+[tool.ruff.lint]
+select = [
+  "E", "W",   # pycodestyle (PEP 8)
+  "F",        # pyflakes
+  "I",        # isort
+  "N",        # pep8-naming
+  "B",        # bugbear
+  "UP",       # pyupgrade, bounded by target-version
+  "C4",       # comprehensions
+  "SIM",      # simplifications
+  "PIE",
+  "T20",      # no stray print(): the CLI writes through cli._say
+  "D",        # pydocstyle (PEP 257), Google convention below
+  "RUF",
+]
+ignore = [
+  "D1",       # missing docstrings: tracked in DOCUMENTATION/reports/python-client.md, not gated yet
+]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"review/cli.py" = ["T201"]   # _say is the single, deliberate print of the CLI
+
+[tool.ruff.lint.isort]
+known-first-party = ["review", "tests"]
+
+[tool.ruff.format]
+exclude = ["*.md"]
+
+[tool.pytest.ini_options]
+# The suite is plain unittest (it must run inside a DCC interpreter); pytest collects it as is.
+testpaths = ["tests"]
+pythonpath = ["."]

@@ -5,28 +5,28 @@ import { describe, it, expect } from 'vitest';
 import { syncOutcome } from './syncOutcome';
 
 describe('syncOutcome', () => {
-  it("n'annonce pas une passe terminée quand elle est seulement en file", () => {
-    // Le défaut d'origine : « Synchronisation terminée » en vert pour une demande qui
-    // attendait derrière une passe en cours. Ni le ton ni le message ne doivent le dire.
+  it('does not announce a finished pass when it is only queued', () => {
+    // The original bug: "Sync complete" in green for a request that was waiting behind
+    // a running pass. Neither the tone nor the message may say that.
     const outcome = syncOutcome('deferred');
     expect(outcome.tone).toBe('info');
     expect(outcome.key).toBe('shotgrid.sync.queued');
   });
 
-  it('parle de la synchronisation entière, pas de la relecture d’une entité', () => {
-    // La pastille a sa propre phrase (« cette relecture ») : la reprendre ici ferait
-    // parler le bouton d'un geste que l'utilisateur n'a pas fait.
+  it('talks about the whole sync, not the re-read of one entity', () => {
+    // The dot has its own phrase ("this re-read"): reusing it here would make the button
+    // describe an action the user did not take.
     expect(syncOutcome('deferred').key).not.toBe('shotgrid.sync.dot.queued');
   });
 
-  it('garde le rouge pour un échec et le vert pour une passe faite', () => {
+  it('keeps red for a failure and green for a completed pass', () => {
     expect(syncOutcome('error')).toEqual({ tone: 'error', key: 'shotgrid.sync.failed' });
     expect(syncOutcome('ok')).toEqual({ tone: 'success', key: 'shotgrid.sync.done' });
   });
 
-  it('retombe sur « terminé » pour un statut absent ou inconnu', () => {
-    // La passe a eu lieu : seul son détail nous échappe. L'inverse — un rouge par défaut —
-    // ferait relancer une synchronisation qui s'est bien déroulée.
+  it('falls back to "done" for a missing or unknown status', () => {
+    // The pass did happen: only its detail escapes us. The opposite, a red by default,
+    // would make a successful sync get run again.
     expect(syncOutcome(undefined).tone).toBe('success');
     expect(syncOutcome('partial').tone).toBe('success');
   });

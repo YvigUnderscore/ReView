@@ -5,7 +5,7 @@ import { act, renderHook } from '@testing-library/react';
 import { afterEach, describe, expect, it } from 'vitest';
 import { useViewportZoom } from './useViewportZoom';
 
-/** Conteneur de 400×200 centré en (200, 100) — repère de tous les calculs du hook. */
+/** 400×200 container centred at (200, 100) — the reference of all the hook's computations. */
 const makeContainer = () => {
   const el = document.createElement('div');
   el.getBoundingClientRect = () => ({ left: 0, top: 0, width: 400, height: 200 }) as DOMRect;
@@ -13,7 +13,7 @@ const makeContainer = () => {
   return el;
 };
 
-/** Événement de pointeur minimal : le hook n'en lit que la cible, le bouton et la position. */
+/** Minimal pointer event: the hook only reads its target, button and position. */
 const pointer = (over: 'VIDEO' | 'DIV', init: { button?: number; x: number; y: number }) =>
   ({
     button: init.button ?? 0,
@@ -35,15 +35,15 @@ const setup = (oneToOneScale?: () => number | null) => {
 };
 
 describe('useViewportZoom', () => {
-  it('démarre ajusté, sans transformation', () => {
+  it('starts fitted, without transform', () => {
     const { result } = setup();
     expect(result.current.fit).toBe(true);
     expect(result.current.style).toEqual({});
   });
 
-  it('la molette zoome sous le curseur', () => {
+  it('the wheel zooms under the cursor', () => {
     const { el, result } = setup();
-    // happy-dom ne porte pas `clientX` dans l'init d'un WheelEvent : on le pose à la main.
+    // happy-dom does not carry `clientX` in a WheelEvent init: set it by hand.
     const wheel = new WheelEvent('wheel', { deltaY: -100, bubbles: true });
     Object.defineProperty(wheel, 'clientX', { value: 300 });
     Object.defineProperty(wheel, 'clientY', { value: 100 });
@@ -51,18 +51,18 @@ describe('useViewportZoom', () => {
       el.dispatchEvent(wheel);
     });
     expect(result.current.state.scale).toBeCloseTo(1.15, 5);
-    // Curseur à 100 px à droite du centre : la vue se décale pour l'y maintenir.
+    // Cursor 100 px right of the centre: the view shifts to keep it there.
     expect(result.current.state.x).toBeCloseTo(100 - 100 * 1.15, 5);
     expect(result.current.fit).toBe(false);
   });
 
   /**
-   * Ce test attendait `1` pour le 100 % et `0` pour l'ajustement. Les deux touches ont été
-   * RETIRÉES en Phase 50 : les chiffres nus appartiennent à la bascule de mode du chrome, et
-   * `1` faisait les deux à la fois — premier mode *et* 100 %. Le rôle passe à `H` et `F`, les
-   * lettres que le rail annonce (`action.resetMedia`, `action.fitMedia`).
+   * This test used to expect `1` for 100% and `0` for fit. Both keys were REMOVED in Phase 50:
+   * bare digits belong to the chrome's mode toggle, and `1` did both at once — first mode *and*
+   * 100%. The role moves to `H` and `F`, the letters the rail announces (`action.resetMedia`,
+   * `action.fitMedia`).
    */
-  it('le clavier zoome par crans, et les chiffres ne lui appartiennent plus', () => {
+  it('the keyboard zooms in steps, and digits no longer belong to it', () => {
     const { result } = setup(() => 4);
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: '+' }));
@@ -79,7 +79,7 @@ describe('useViewportZoom', () => {
     expect(result.current.state.scale).toBeCloseTo(1, 5);
   });
 
-  it('H affiche à 100 %, F ramène à l’ajustement', () => {
+  it('H shows 100%, F returns to fit', () => {
     const { result } = setup(() => 4);
     act(() => {
       window.dispatchEvent(new KeyboardEvent('keydown', { key: 'h' }));
@@ -91,7 +91,7 @@ describe('useViewportZoom', () => {
     expect(result.current.fit).toBe(true);
   });
 
-  it('ignore le clavier dans un champ de saisie', () => {
+  it('ignores the keyboard in an input field', () => {
     const { result } = setup();
     const input = document.createElement('input');
     document.body.append(input);
@@ -102,14 +102,14 @@ describe('useViewportZoom', () => {
     expect(result.current.fit).toBe(true);
   });
 
-  it('le bouton du milieu déplace la vue, même ajustée', () => {
+  it('the middle button pans the view, even when fitted', () => {
     const { result } = setup();
     act(() => result.current.handlers.onPointerDown(pointer('DIV', { button: 1, x: 10, y: 10 })));
     act(() => result.current.handlers.onPointerMove(pointer('DIV', { button: 1, x: 40, y: 30 })));
     expect(result.current.state).toMatchObject({ x: 30, y: 20, scale: 1 });
   });
 
-  it('le bouton gauche ne déplace que sur l’image et une fois zoomé', () => {
+  it('the left button only pans on the image and once zoomed', () => {
     const { result } = setup();
     act(() => result.current.handlers.onPointerDown(pointer('VIDEO', { x: 10, y: 10 })));
     act(() => result.current.handlers.onPointerMove(pointer('VIDEO', { x: 60, y: 10 })));
@@ -122,13 +122,13 @@ describe('useViewportZoom', () => {
     expect(result.current.state.x).toBe(50);
   });
 
-  it('le clic qui termine un déplacement est consommé, un clic simple ne l’est pas', () => {
+  it('the click that ends a pan is consumed, a simple click is not', () => {
     const { result } = setup();
     act(() => result.current.handlers.onPointerDown(pointer('DIV', { button: 1, x: 10, y: 10 })));
     act(() => result.current.handlers.onPointerMove(pointer('DIV', { button: 1, x: 40, y: 10 })));
     act(() => result.current.handlers.onPointerUp(pointer('DIV', { button: 1, x: 40, y: 10 })));
     expect(result.current.consumeClick()).toBe(true);
-    // Consommé une seule fois : le clic suivant est bien une commande de lecture.
+    // Consumed only once: the next click is indeed a playback command.
     expect(result.current.consumeClick()).toBe(false);
     act(() => result.current.handlers.onPointerDown(pointer('DIV', { button: 1, x: 10, y: 10 })));
     act(() => result.current.handlers.onPointerUp(pointer('DIV', { button: 1, x: 11, y: 10 })));

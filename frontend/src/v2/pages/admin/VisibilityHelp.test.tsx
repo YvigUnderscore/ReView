@@ -8,36 +8,36 @@ import { MATCH_EFFECT, MATCH_EXAMPLE, MATCH_LABEL } from './visibilityLabels';
 import { t } from '../../i18n';
 
 /**
- * L'aide aux motifs est le seul endroit où un admin apprend à écrire une expression
- * régulière pour ce studio. Deux invariants : elle est repliée au départ (elle ne doit pas
- * encombrer ceux qui savent), et ses quatre exemples existent réellement dans les
- * catalogues — une clé manquante s'y verrait comme un libellé vide, pas comme une erreur.
+ * The pattern help is the only place where an admin learns to write a regular
+ * expression for this studio. Two invariants: it is collapsed at start (it must not clutter
+ * those who know), and its four examples really exist in the
+ * catalogues — a missing key would show up there as an empty label, not as an error.
  */
 describe('VisibilityHelp', () => {
-  it('est repliée au premier rendu', () => {
+  it('is collapsed on first render', () => {
     const html = renderToStaticMarkup(<VisibilityHelp />);
     expect(html).toContain('aria-expanded="false"');
-    // Le contenu n'est pas seulement caché : il n'est pas rendu du tout.
+    // The content is not merely hidden: it is not rendered at all.
     expect(html).not.toContain(t(MATCH_EXAMPLE.regex));
   });
 
-  it('annonce ce qu’elle contient, même repliée', () => {
+  it('announces what it contains, even when collapsed', () => {
     expect(renderToStaticMarkup(<VisibilityHelp />)).toContain(t('visibility.help.title'));
   });
 });
 
-describe('visibilityLabels — les clés existent toutes', () => {
-  it('nomme les quatre formes de motif et leur exemple', () => {
+describe('visibilityLabels — all keys exist', () => {
+  it('names the four pattern forms and their example', () => {
     for (const kind of ['exact', 'prefix', 'contains', 'regex'] as const) {
-      // `t()` rend la clé elle-même quand elle manque : comparer à la clé le détecte.
+      // `t()` returns the key itself when it is missing: comparing against the key detects it.
       expect(t(MATCH_LABEL[kind])).not.toBe(MATCH_LABEL[kind]);
       expect(t(MATCH_EXAMPLE[kind])).not.toBe(MATCH_EXAMPLE[kind]);
       expect(t(MATCH_EFFECT[kind])).not.toBe(MATCH_EFFECT[kind]);
     }
   });
 
-  it('explique bien la syntaxe des expressions régulières, pas seulement leur nom', () => {
-    // C'est la promesse faite à l'utilisateur : « en expliquant brièvement comment faire ».
+  it('explains regular-expression syntax, not just its name', () => {
+    // This is the promise made to the user: "briefly explaining how to do it".
     const effect = t(MATCH_EFFECT.regex);
     expect(effect).toContain('$');
     expect(effect).toContain('|');

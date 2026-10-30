@@ -22,8 +22,8 @@ import type { HlsLevel } from './useHlsPlayer';
 import { useT } from '../../i18n';
 
 /**
- * Barre de transport custom du lecteur vidéo (14.B) — remplace `<video controls>`.
- * Play/pause, ±1 frame, frame + timecode, boucle I/O, fps, volume/mute, plein écran.
+ * Custom transport bar of the video player (14.B) — replaces `<video controls>`.
+ * Play/pause, ±1 frame, frame + timecode, I/O loop, fps, volume/mute, fullscreen.
  */
 export default function VideoTransport({
   playing,
@@ -55,7 +55,7 @@ export default function VideoTransport({
   onStep: (delta: number) => void;
   startFrame: number;
   currentFrame: number;
-  /** Durée totale (s) — pour afficher la frame de fin. */
+  /** Total duration (s) — to display the last frame. */
   duration: number;
   fps: number;
   fpsDetected: boolean;
@@ -64,28 +64,28 @@ export default function VideoTransport({
   muted: boolean;
   onVolume: (v: number) => void;
   onToggleMute: () => void;
-  /** Plein écran unifié (viewer + playbar + espace commentaires). */
+  /** Unified fullscreen (viewer + playbar + comments area). */
   onFullscreen: () => void;
-  /** Plein écran vidéo seule (image + playbar, sans commentaires). */
+  /** Video-only fullscreen (image + playbar, without comments). */
   onFullscreenVideo: () => void;
-  /** Vrai quand le plein écran vidéo seule est actif (icône réduire). */
+  /** True when video-only fullscreen is active (collapse icon). */
   videoOnlyFs: boolean;
   loopActive: boolean;
-  /** Boucle I/O activée : rebouclage à la lecture. Désactiver conserve les points (retours 34). */
+  /** I/O loop enabled: loops during playback. Disabling keeps the points (feedback 34). */
   loopEnabled: boolean;
   onToggleLoopEnabled: () => void;
   onClearLoop: () => void;
-  /** Lecture en boucle de toute la vidéo (indépendante de la boucle I/O). */
+  /** Loops the whole video playback (independent of the I/O loop). */
   loopAll: boolean;
   onToggleLoopAll: () => void;
-  /** Qualité de lecture HLS (Phase 23) — `active` faux si le média n'a pas de renditions. */
+  /** HLS playback quality (Phase 23) — `active` is false if the media has no renditions. */
   quality?: {
     active: boolean;
     levels: HlsLevel[];
-    /** Index de la rendition servie (verrouillée, pas d'ABR). */
+    /** Index of the rendition served (locked, no ABR). */
     level: number;
     setLevel: (i: number) => void;
-    /** Changement de qualité en cours (spinner à côté du sélecteur). */
+    /** Quality change in progress (spinner next to the selector). */
     switching?: boolean;
   };
 }) {
@@ -93,7 +93,7 @@ export default function VideoTransport({
   const btn =
     'flex h-7 w-7 items-center justify-center rounded text-muted-foreground hover:bg-secondary hover:text-foreground';
   return (
-    // Ligne de transport du chrome : mêmes styles que les viewers spatiaux.
+    // Chrome transport row: same styles as the spatial viewers.
     <div className="rv-transport">
       <button
         onClick={onPlayPause}
@@ -165,8 +165,8 @@ export default function VideoTransport({
       </label>
 
       <div className="ml-auto flex items-center gap-2">
-        {/* Qualité de lecture (Phase 23) : Auto + paliers HLS ; « Originale » seule si le
-            média n'a pas de renditions (transcodé avant le HLS adaptatif). */}
+        {/* Playback quality (Phase 23): Auto + HLS steps; "Original" alone if the
+            media has no renditions (transcoded before adaptive HLS). */}
         <label
           className="flex items-center gap-1 text-muted-foreground"
           title={quality?.active ? t('video.quality') : t('video.noHls')}

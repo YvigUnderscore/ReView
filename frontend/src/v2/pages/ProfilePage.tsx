@@ -21,12 +21,12 @@ import TwoFaSection from './profile/TwoFaSection';
 import { useT } from '../i18n';
 
 /**
- * Les réglages du compte.
+ * Account settings.
  *
- * Même composition que les réglages d'un studio et ceux d'un projet : un titre, une barre
- * de recherche, puis une colonne de cartes de même facture. La page empilait jusqu'ici huit
- * cartes sans moyen de chercher — « où change-t-on la langue » se résolvait en descendant
- * la colonne, alors que l'administration savait répondre à la question depuis sa barre.
+ * Same composition as the studio's and the project's settings: a title, a search
+ * bar, then a column of cards of the same make. Until now the page stacked eight
+ * cards with no way to search — "where do I change the language" was answered by scrolling
+ * the column, whereas administration could answer the question from its bar.
  */
 export default function ProfilePage() {
   const t = useT();
@@ -51,12 +51,12 @@ export default function ProfilePage() {
             <DigestToggle />
             <WeeklyReportToggle />
             <PushToggle />
-            {/* Réglages par type d'événement (lot 9) : le reste de cette carte ne couvrait
-                que les envois récurrents et l'abonnement du navigateur. */}
+            {/* Settings per event type (batch 9): the rest of this card only covered
+                recurring sends and the browser subscription. */}
             <NotificationSettings />
           </SettingsCard>
 
-          {/* Sécurité du compte (36.A/36.B/36.C) : 2FA + sessions actives + tokens d'API. */}
+          {/* Account security (36.A/36.B/36.C): 2FA + active sessions + API tokens. */}
           <TwoFaSection />
           <SessionsSection />
           <ApiTokensSection />

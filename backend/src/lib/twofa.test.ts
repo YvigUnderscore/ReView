@@ -30,97 +30,96 @@ afterAll(() => {
   __redisTesting.reset();
 });
 
-describe('anti-rejeu partagé entre répliques (A3-09)', () => {
-  /** Ce que voit une SECONDE réplique : sa mémoire de process est vierge. */
+describe('shared replay protection across replicas (A3-09)', () => {
+  /** What a SECOND replica sees: its process memory is blank. */
   const autreReplique = () => __testing.usedTotp.clear();
 
-  it('refuse sur une réplique le code déjà consommé sur l’autre', async () => {
+  it('rejects on one replica a code already consumed on the other', async () => {
     await expect(consumeTotpOnceShared(7, '123456')).resolves.toBe(true);
     autreReplique();
     await expect(consumeTotpOnceShared(7, '123456')).resolves.toBe(false);
   });
 
-  it('constate que la garde locale seule laisse passer ce rejeu', () => {
-    // Le défaut, isolé : deux répliques derrière le même frontal multiplient les chances
-    // d'un code intercepté, puisque chacune ne connaît que ses propres tentatives.
+  it('shows that the local guard alone lets this replay through', () => {
+    // The defect, isolated: two replicas behind the same front end multiply the chances of an
+    // intercepted code, since each only knows its own attempts.
     expect(consumeTotpOnce(7, '123456')).toBe(true);
     autreReplique();
     expect(consumeTotpOnce(7, '123456')).toBe(true);
   });
 
-  it('pose un marqueur borné dans le temps', async () => {
+  it('sets a time-bounded marker', async () => {
     await consumeTotpOnceShared(7, '123456');
     expect(redis.peek('totp:used:7:123456')).toBe('1');
     expect(Number(await redis.call('PTTL', 'totp:used:7:123456'))).toBeGreaterThan(0);
   });
 
-  it('ignore les séparateurs de saisie, comme la garde locale', async () => {
+  it('ignores input separators, like the local guard', async () => {
     await expect(consumeTotpOnceShared(7, '123456')).resolves.toBe(true);
     autreReplique();
     await expect(consumeTotpOnceShared(7, ' 123 456 ')).resolves.toBe(false);
   });
 
-  it('refuse le code quand le marqueur partagé est injoignable (échec fermé)', async () => {
-    // Un anti-rejeu qui a perdu la mémoire de ce qui a été présenté ne peut pas répondre
-    // « jamais vu » : laisser passer ferait de la panne du marqueur le moyen de le
-    // contourner. Aucune disponibilité n'est perdue au passage — les deux limiteurs de
-    // `/verify`, eux aussi adossés à Redis, refusent déjà la requête en amont.
+  it('rejects the code when the shared marker is unreachable (fail closed)', async () => {
+    // An anti-replay store that lost the memory of what was presented cannot answer "never seen":
+    // letting it through would make the marker's outage the way to bypass it. No availability is
+    // lost in the process: the two limiters of `/verify`, also backed by Redis, already refuse the
+    // request upstream.
     redis.failing = true;
     await expect(consumeTotpOnceShared(7, '123456')).resolves.toBe(false);
   });
 });
 
 describe('twofa', () => {
-  it('un code généré depuis le secret est accepté, un mauvais refusé', async () => {
+  it('a code generated from the secret is accepted, a wrong one is rejected', async () => {
     const secret = generateTotpSecret();
     const code = await currentTotp(secret);
     await expect(verifyTotp(secret, code)).resolves.toBe(true);
-    await expect(verifyTotp(secret, ` ${code} `)).resolves.toBe(true); // espaces tolérés
+    await expect(verifyTotp(secret, ` ${code} `)).resolves.toBe(true); // spaces tolerated
     await expect(verifyTotp(secret, '000000')).resolves.toBe(false);
     await expect(verifyTotp(secret, 'abc')).resolves.toBe(false);
   });
 
-  it("l'URI otpauth contient l'émetteur et le compte", () => {
+  it('the otpauth URI contains the issuer and the account', () => {
     const uri = otpauthUri('a@b.c', 'ReView Studio', generateTotpSecret());
     expect(uri.startsWith('otpauth://totp/')).toBe(true);
     expect(uri).toContain('ReView%20Studio');
     expect(uri).toContain('a%40b.c');
   });
 
-  it('codes de secours : 10 uniques, consommés un par un, insensibles à la casse', () => {
+  it('backup codes: 10 unique, consumed one by one, case-insensitive', () => {
     const { plain, hashes } = generateBackupCodes();
     expect(new Set(plain).size).toBe(10);
     expect(hashes).toHaveLength(10);
     const rest = consumeBackupCode(hashes, plain[3]!.toUpperCase());
     expect(rest).toHaveLength(9);
-    // Un code consommé ne repasse pas.
+    // A consumed code does not come back.
     expect(consumeBackupCode(rest!, plain[3]!)).toBeNull();
     expect(consumeBackupCode(hashes, 'inconnu')).toBeNull();
   });
 });
 
 /**
- * Les hashs sont stockés sans sel ni étirement : la seule chose qui les met hors de portée
- * d'une recherche exhaustive est la longueur du code. 40 bits (l'ancien `randomBytes(5)`)
- * ne suffisaient pas.
+ * Hashes are stored without salt or stretching: the only thing that puts them out of reach of an
+ * exhaustive search is the length of the code. 40 bits (the old `randomBytes(5)`) were not enough.
  */
-describe('codes de secours — entropie et recopie', () => {
-  it('porte 128 bits de hasard', () => {
+describe('backup codes: entropy and transcription', () => {
+  it('carries 128 bits of randomness', () => {
     for (const code of generateBackupCodes().plain) {
       expect(code.replace(/-/g, '')).toMatch(/^[0-9a-f]{32}$/);
     }
   });
 
-  it('les séparateurs de lisibilité ne changent pas le hash', () => {
+  it('readability separators do not change the hash', () => {
     const { plain, hashes } = generateBackupCodes();
     const bare = plain[0]!.replace(/-/g, '');
     expect(hashBackupCode(bare)).toBe(hashes[0]);
     expect(consumeBackupCode(hashes, ` ${bare.toUpperCase()} `)).toHaveLength(9);
   });
 
-  // Les codes émis avant l'allongement n'ont ni séparateur ni majuscule : leur hash doit
-  // rester celui déjà stocké en base, sinon l'allongement déconnecte les comptes existants.
-  it('les codes déjà en base (10 hex) gardent leur hash', () => {
+  // Codes issued before the lengthening have neither separator nor uppercase: their hash must
+  // remain the one already stored in the database, otherwise the lengthening would log out existing accounts.
+  it('codes already in the database (10 hex) keep their hash', () => {
     expect(hashBackupCode('a1b2c3d4e5')).toBe(
       'e32ac31e84e954c4ef30f7a6799948cdf08f30e85de505e237155c9b27265aa5',
     );
@@ -128,33 +127,33 @@ describe('codes de secours — entropie et recopie', () => {
 });
 
 /**
- * Un code TOTP vaut pour tout son pas de temps. Intercepté, il se rejouait tant que la
- * fenêtre durait : le second facteur ne prouvait alors plus la possession du téléphone.
+ * A TOTP code is valid for its whole time step. Once intercepted, it could be replayed for as
+ * long as the window lasted: the second factor then no longer proved possession of the phone.
  */
-describe('anti-rejeu TOTP', () => {
-  it('accepte un code une fois, le refuse ensuite', () => {
+describe('TOTP replay protection', () => {
+  it('accepts a code once, rejects it afterwards', () => {
     expect(consumeTotpOnce(7, '123456')).toBe(true);
     expect(consumeTotpOnce(7, '123456')).toBe(false);
   });
 
-  it('la consommation est propre à chaque compte', () => {
+  it('consumption is specific to each account', () => {
     expect(consumeTotpOnce(7, '123456')).toBe(true);
     expect(consumeTotpOnce(8, '123456')).toBe(true);
   });
 
-  it('un autre code du même compte reste accepté', () => {
+  it('another code from the same account stays accepted', () => {
     expect(consumeTotpOnce(7, '111111')).toBe(true);
     expect(consumeTotpOnce(7, '222222')).toBe(true);
   });
 
-  it('oublie le code une fois sa fenêtre passée', () => {
+  it('forgets the code once its window has passed', () => {
     expect(consumeTotpOnce(7, '123456')).toBe(true);
-    // Expiration forcée : on ne dépend pas d'une horloge simulée pour un TTL de 2 minutes.
+    // Forced expiry: we do not depend on a simulated clock for a 2-minute TTL.
     __testing.usedTotp.set('7:123456', Date.now() - 1);
     expect(consumeTotpOnce(7, '123456')).toBe(true);
   });
 
-  it('les espaces de saisie ne créent pas une seconde chance', () => {
+  it('input spaces do not create a second chance', () => {
     expect(consumeTotpOnce(7, '123456')).toBe(true);
     expect(consumeTotpOnce(7, ' 123 456 ')).toBe(false);
   });

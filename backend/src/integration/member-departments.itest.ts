@@ -7,13 +7,13 @@ import { createApp } from '../app';
 import { prisma } from '../lib/prisma';
 
 /**
- * Départements d'un membre, contre une vraie base (lot 10).
+ * A member's departments, against a real database (batch 10).
  *
- * Les tests unitaires figent la forme de l'écriture ; celui-ci vérifie ce qui ne se
- * bouchonne pas : que Postgres applique bien un `connect`/`disconnect` sur la relation
- * multiple, et surtout que l'édition faite depuis UN projet ne touche pas aux départements
- * que la personne tient ailleurs. C'est la perte qu'on ne rattrape pas — elle ne se verrait
- * qu'une semaine plus tard, quand le travail de quelqu'un disparaît des filtres.
+ * Unit tests pin down the shape of the write; this one checks what cannot be mocked: that Postgres
+ * really applies a `connect`/`disconnect` on the many-to-many relation, and above all that an edit
+ * made from ONE project does not touch the departments the person holds elsewhere. That is the loss
+ * that cannot be recovered: it would only show a week later, when someone's work disappears from the
+ * filters.
  */
 const app = createApp({ rateLimit: false });
 
@@ -22,11 +22,11 @@ let artistToken = '';
 let artistId = 0;
 let projectA = 0;
 let projectB = 0;
-/** Étape propre au projet A. */
+/** Step specific to project A. */
 let deptA = 0;
-/** Étape propre au projet B — étrangère au projet A. */
+/** Step specific to project B, unrelated to project A. */
 let deptB = 0;
-/** Étape du référentiel studio, héritée par les deux projets. */
+/** Studio-wide step, inherited by both projects. */
 let deptStudio = 0;
 
 const auth = (t: string) => ({ Authorization: `Bearer ${t}` });
@@ -99,7 +99,7 @@ afterAll(async () => {
   if (deptStudio) await prisma.department.deleteMany({ where: { id: deptStudio } });
 });
 
-/** Les départements de l'artiste, tous projets confondus — la vérité en base. */
+/** The artist's departments across all projects: the truth in the database. */
 const heldByArtist = async (): Promise<number[]> => {
   const user = await prisma.user.findUnique({
     where: { id: artistId },
@@ -109,7 +109,7 @@ const heldByArtist = async (): Promise<number[]> => {
 };
 
 describe('PATCH /api/projects/:id/members/:userId/departments', () => {
-  it('ajoute une étape du projet et la rend sur la fiche du projet', async () => {
+  it('adds a project step and shows it on the project sheet', async () => {
     const r = await request(app)
       .patch(`/api/projects/${projectA}/members/${artistId}/departments`)
       .set(auth(token))
@@ -124,7 +124,7 @@ describe('PATCH /api/projects/:id/members/:userId/departments', () => {
     expect(membership.user.departments.map((d: { id: number }) => d.id)).toContain(deptA);
   });
 
-  it('accepte une étape du référentiel studio, héritée par le projet', async () => {
+  it('accepts a studio reference step, inherited by the project', async () => {
     const r = await request(app)
       .patch(`/api/projects/${projectA}/members/${artistId}/departments`)
       .set(auth(token))
@@ -133,7 +133,7 @@ describe('PATCH /api/projects/:id/members/:userId/departments', () => {
     expect(await heldByArtist()).toEqual([deptA, deptStudio].sort((x, y) => x - y));
   });
 
-  it('refuse l’étape d’un AUTRE projet, à l’ajout comme au retrait', async () => {
+  it('refuses the step of ANOTHER project, on addition as on removal', async () => {
     const add = await request(app)
       .patch(`/api/projects/${projectA}/members/${artistId}/departments`)
       .set(auth(token))
@@ -147,9 +147,9 @@ describe('PATCH /api/projects/:id/members/:userId/departments', () => {
     expect(remove.status).toBe(400);
   });
 
-  it('ne touche pas aux étapes que la personne tient sur un autre projet', async () => {
-    // Le scénario qui justifie tout le reste : l'artiste porte une étape du projet B ;
-    // une édition faite depuis le projet A ne doit pas l'emporter.
+  it('does not touch the steps the person holds on another project', async () => {
+    // The scenario that justifies everything else: the artist holds a step of project B;
+    // an edit made from project A must not drop it.
     await request(app)
       .patch(`/api/projects/${projectB}/members/${artistId}/departments`)
       .set(auth(token))
@@ -167,8 +167,8 @@ describe('PATCH /api/projects/:id/members/:userId/departments', () => {
     expect(held).not.toContain(deptA);
   });
 
-  it('borne la fiche du projet à son propre vocabulaire', async () => {
-    // L'artiste porte l'étape du projet B : elle ne doit pas apparaître sur le projet A.
+  it('bounds the project sheet to its own vocabulary', async () => {
+    // The artist holds the project B step: it must not appear on project A.
     const project = await request(app).get(`/api/projects/${projectA}`).set(auth(token));
     const membership = project.body.project.memberships.find(
       (m: { user: { id: number } }) => m.user.id === artistId,
@@ -178,7 +178,7 @@ describe('PATCH /api/projects/:id/members/:userId/departments', () => {
     expect(ids).toContain(deptStudio);
   });
 
-  it('refuse un membre qui n’appartient pas au projet', async () => {
+  it('refuses a member who does not belong to the project', async () => {
     const stranger = await prisma.user.findFirst({
       where: { memberships: { none: { projectId: projectA } }, isService: false },
       select: { id: true },
@@ -191,7 +191,7 @@ describe('PATCH /api/projects/:id/members/:userId/departments', () => {
     expect(r.status).toBe(404);
   });
 
-  it('refuse un membre ordinaire : régler les départements, c’est gérer le projet', async () => {
+  it('refuses an ordinary member: setting departments means managing the project', async () => {
     const r = await request(app)
       .patch(`/api/projects/${projectA}/members/${artistId}/departments`)
       .set(auth(artistToken))

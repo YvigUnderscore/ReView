@@ -3,56 +3,50 @@
 
 import { AppError } from './errors';
 import { assertPublicHttpTarget } from './ssrfGuard';
+import { ignoreFailure } from './ignoreFailure';
 
 /**
- * RÈGLE DU PROJET — aucun `fetch` nu dans `backend/src`.
+ * PROJECT RULE — no bare `fetch` in `backend/src`.
  *
- * Toute requête sortante part d'un processus (API ou worker) situé DANS le réseau
- * applicatif, où MinIO, Redis, Postgres, Grafana et — chez un hébergeur cloud — le service
- * de métadonnées sur 169.254.169.254 répondent sans authentification réseau. Une URL qui
- * vient d'ailleurs (saisie d'admin, abonnement d'un navigateur, réponse d'un site distant)
- * ne doit donc jamais être passée telle quelle à `fetch` : elle vaudrait capacité d'émettre
- * des requêtes arbitraires depuis ce réseau.
+ * Every outgoing request leaves a process (API or worker) located INSIDE the application network, where MinIO, Redis, Postgres, Grafana and — on a
+ * cloud host — the metadata service on 169.254.169.254 answer without network authentication. A URL that comes from elsewhere (admin input, a
+ * browser subscription, the response of a remote site) must therefore never be passed as-is to `fetch`: it would amount to the ability to send
+ * arbitrary requests from this network.
  *
- * `safeFetch` réunit les quatre protections qui doivent aller ensemble :
+ * `safeFetch` brings together the four protections that must go together:
  *
- * 1. **Garde SSRF sur l'adresse résolue** (`assertPublicHttpTarget`) : schéma http(s)
- *    seulement, et refus de tout nom dont UNE des adresses tombe dans un espace interne.
- * 2. **Redirections jamais suivies en aveugle** : `redirect: 'manual'`. Une redirection est
- *    une seconde requête vers une cible que personne n'a contrôlée — c'est le contournement
- *    classique d'une vérification faite avant l'appel. Quand `maxRedirects > 0`, chaque saut
- *    est re-soumis à la garde, et seules les méthodes sûres (GET/HEAD) sont rejouées.
- * 3. **Délai d'attente** sur l'arrivée des EN-TÊTES. Il est volontairement levé une fois la
- *    réponse ouverte : un master de dailies met plus de trente secondes à descendre, et le
- *    couper à mi-flux casserait la synchronisation ShotGrid.
- * 4. **Taille de réponse bornée** (`maxBytes`) : `Content-Length` annoncé ET octets réellement
- *    lus, pour qu'un serveur distant ne puisse pas faire enfler la mémoire d'un worker.
+ * 1. **SSRF guard on the resolved address** (`assertPublicHttpTarget`): http(s) scheme only, and refusal of any name of which ONE of the addresses
+ *    falls into an internal range.
+ * 2. **Redirects never blindly followed**: `redirect: 'manual'`. A redirect is a second request to a target nobody has checked — it is the classic
+ *    bypass of a check made before the call. When `maxRedirects > 0`, each hop is re-submitted to the guard, and only safe methods (GET/HEAD) are replayed.
+ * 3. **Timeout** on the arrival of the HEADERS. It is deliberately lifted once the response is open: a dailies master takes more than thirty seconds to
+ *    come down, and cutting it mid-stream would break the ShotGrid synchronisation.
+ * 4. **Bounded response size** (`maxBytes`): announced `Content-Length` AND bytes actually read, so that a remote server cannot inflate the memory of a worker.
  *
- * `allowHosts` est l'unique échappatoire — elle existe pour le simulateur ShotGrid de
- * développement (`SHOTGRID_INSECURE_HOSTS`), qui vit précisément sur une adresse privée.
+ * `allowHosts` is the only escape hatch — it exists for the development ShotGrid simulator (`SHOTGRID_INSECURE_HOSTS`), which lives precisely on a private address.
  */
 
-/** Délai d'attente par défaut des en-têtes de réponse. */
+/** Default timeout for response headers. */
 const DEFAULT_TIMEOUT_MS = 15_000;
 
-/** Codes qui décrivent une redirection ; `fetch` ne les suit pas en mode `manual`. */
+/** Codes describing a redirect; `fetch` does not follow them in `manual` mode. */
 const REDIRECT_STATUS = new Set([301, 302, 303, 307, 308]);
 
-/** Statuts dont le corps est nécessairement vide : `new Response` les refuse avec un corps. */
+/** Statuses whose body is necessarily empty: `new Response` refuses them with a body. */
 const NULL_BODY_STATUS = new Set([101, 103, 204, 205, 304]);
 
 export interface SafeFetchOptions {
-  /** Délai d'attente des en-têtes, en millisecondes (défaut : 15 s). */
+  /** Header timeout, in milliseconds (default: 15 s). */
   timeoutMs?: number;
-  /** Redirections suivies, chacune revérifiée par la garde (défaut : 0 = aucune). */
+  /** Redirects followed, each rechecked by the guard (default: 0 = none). */
   maxRedirects?: number;
-  /** Plafond d'octets du corps de réponse ; absent = pas de plafond (flux média). */
+  /** Byte ceiling of the response body; absent = no ceiling (media stream). */
   maxBytes?: number;
-  /** Hôtes (`hostname:port`) dispensés de la garde — simulateur de développement seulement. */
+  /** Hosts (`hostname:port`) exempted from the guard — development simulator only. */
   allowHosts?: Iterable<string>;
 }
 
-/** Cible refusée avant même d'émettre : adresse interne, schéma interdit, redirection non suivie. */
+/** Target refused before even sending: internal address, forbidden scheme, redirect not followed. */
 export class OutboundBlockedError extends AppError {
   constructor(
     readonly target: string,
@@ -63,7 +57,7 @@ export class OutboundBlockedError extends AppError {
   }
 }
 
-/** Les en-têtes de réponse ne sont pas arrivés dans le délai imparti. */
+/** The response headers did not arrive within the allotted time. */
 export class OutboundTimeoutError extends AppError {
   constructor(
     readonly target: string,
@@ -74,7 +68,7 @@ export class OutboundTimeoutError extends AppError {
   }
 }
 
-/** La réponse dépasse le plafond d'octets accepté. */
+/** The response exceeds the accepted byte ceiling. */
 export class OutboundTooLargeError extends AppError {
   constructor(
     readonly target: string,
@@ -103,8 +97,7 @@ function toUrl(input: string | URL): URL {
 }
 
 /**
- * Cible acceptable ? Le schéma est contrôlé même pour un hôte dispensé : `file://` ou
- * `redis://` n'ont jamais de raison d'être ici.
+ * Acceptable target? The scheme is checked even for an exempted host: `file://` or `redis://` never have any reason to be here.
  */
 export async function assertOutboundTarget(url: URL, allowHosts?: Iterable<string>): Promise<void> {
   if (url.protocol !== 'http:' && url.protocol !== 'https:')
@@ -115,8 +108,7 @@ export async function assertOutboundTarget(url: URL, allowHosts?: Iterable<strin
 }
 
 /**
- * Une requête, un délai d'attente sur les en-têtes. Le minuteur est désarmé dès que la
- * réponse s'ouvre : le corps peut ensuite se lire aussi longtemps qu'il faut.
+ * One request, a timeout on the headers. The timer is disarmed as soon as the response opens: the body can then be read for as long as it takes.
  */
 async function fetchOnce(url: string, init: RequestInit, timeoutMs: number): Promise<Response> {
   const controller = new AbortController();
@@ -136,14 +128,13 @@ async function fetchOnce(url: string, init: RequestInit, timeoutMs: number): Pro
 }
 
 /**
- * Réponse re-emballée derrière un compteur d'octets. On contrôle d'abord la taille
- * annoncée (refus immédiat, sans rien télécharger), puis la taille réelle — un serveur
- * hostile n'est pas tenu de dire la vérité dans `Content-Length`.
+ * Response repackaged behind a byte counter. The announced size is checked first (immediate refusal, without downloading anything), then the real size —
+ * a hostile server is not bound to tell the truth in its `Content-Length`.
  */
 function limitResponseBody(res: Response, maxBytes: number, target: string): Response {
   const declared = Number(res.headers.get('content-length'));
   if (Number.isFinite(declared) && declared > maxBytes) {
-    void res.body?.cancel().catch(() => undefined);
+    void res.body?.cancel().catch(ignoreFailure('response body cancel failed'));
     throw new OutboundTooLargeError(target, maxBytes);
   }
   if (!res.body || NULL_BODY_STATUS.has(res.status)) return res;
@@ -169,8 +160,7 @@ function limitResponseBody(res: Response, maxBytes: number, target: string): Res
 }
 
 /**
- * `fetch` durci : garde SSRF à chaque saut, redirections maîtrisées, délai d'attente et
- * taille de réponse bornée. Voir l'en-tête de fichier pour la règle et ses raisons.
+ * Hardened `fetch`: SSRF guard at each hop, controlled redirects, timeout and bounded response size. See the file header for the rule and its reasons.
  */
 export async function safeFetch(
   input: string | URL,
@@ -187,12 +177,11 @@ export async function safeFetch(
     if (!REDIRECT_STATUS.has(res.status))
       return maxBytes === undefined ? res : limitResponseBody(res, maxBytes, current.href);
 
-    // Redirection : le corps ne nous intéresse pas, et le laisser ouvert retiendrait le socket.
-    await res.body?.cancel().catch(() => undefined);
+    // Redirect: the body is of no interest to us, and leaving it open would hold the socket.
+    await res.body?.cancel().catch(ignoreFailure('response body cancel failed'));
     if (hop >= maxRedirects)
       throw new OutboundBlockedError(current.href, `redirect not followed (HTTP ${res.status})`);
-    // Rejouer un POST/PUT vers une adresse choisie par le serveur, c'est lui prêter la
-    // charge utile : seules les méthodes sûres sont suivies.
+    // Replaying a POST/PUT towards an address chosen by the server amounts to handing it the payload: only safe methods are followed.
     if (method !== 'GET' && method !== 'HEAD')
       throw new OutboundBlockedError(current.href, `redirect on a ${method} request is not followed`);
     const location = res.headers.get('location');

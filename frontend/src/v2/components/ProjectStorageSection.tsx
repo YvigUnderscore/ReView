@@ -18,7 +18,7 @@ interface Usage {
   quota: number | null;
 }
 
-/** Formate un nombre d'octets en Ko/Mo/Go/To (base 1024). */
+/** Formats a byte count as KB, MB, GB or TB (base 1024). */
 function formatBytes(n: number): string {
   if (n <= 0) return '0 o';
   const units = ['o', 'Ko', 'Mo', 'Go', 'To'];
@@ -29,8 +29,8 @@ function formatBytes(n: number): string {
 const GB = 1024 ** 3;
 
 /**
- * Quota & usage de stockage du projet (38.D) : jauge de consommation + réglage du quota en
- * Go (vide = illimité). Réservé aux gestionnaires (l'onglet Réglages ne s'ouvre qu'à eux).
+ * Project storage quota and usage (38.D): consumption gauge + quota setting in
+ * GB (empty = unlimited). Reserved for managers (the Settings tab only opens for them).
  */
 export default function ProjectStorageSection({ projectId }: { projectId: number }) {
   const t = useT();
@@ -44,7 +44,7 @@ export default function ProjectStorageSection({ projectId }: { projectId: number
   const [msg, setMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  // Valeur d'édition : initialisée depuis le quota courant à la première donnée reçue.
+  // Edit value: initialized from the current quota at the first datum received.
   const gbValue = quotaGb ?? (data ? (data.quota != null ? String(+(data.quota / GB).toFixed(2)) : '') : '');
 
   const save = async () => {

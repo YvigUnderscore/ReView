@@ -5,9 +5,9 @@ import { prisma } from './prisma';
 import { slugify } from './slug';
 
 /**
- * Résolveurs du projet propriétaire pour chaque entité du pipeline.
- * Servent au contrôle d'accès (toute autorisation est rattachée à un projet).
- * Retournent `null` si l'entité est introuvable.
+ * Resolvers of the owning project for each pipeline entity.
+ * Used for access control (every authorisation is attached to a project).
+ * Return `null` if the entity cannot be found.
  */
 
 export const resolveProjectIdForProject = async (id: number): Promise<number | null> => {
@@ -74,12 +74,12 @@ export const resolveProjectIdForComment = async (id: number): Promise<number | n
 };
 
 /**
- * Contexte lisible pour construire une clé MinIO explicite à partir d'une Version.
- * Résout la chaîne Version → (Asset | Task → Shot/Asset) → Project et renvoie :
- *  - projectSlug : slug du projet propriétaire
- *  - parentSegment : `{sequence?}/{shot}` pour un shot, `assets/{asset}` pour un asset
- *  - versionName : nom de version slugifié (ex. v01)
- * Retourne `null` si la version est introuvable ou non rattachée à un projet.
+ * Readable context to build an explicit MinIO key from a Version.
+ * Resolves the chain Version → (Asset | Task → Shot/Asset) → Project and returns:
+ *  - projectSlug: slug of the owning project
+ *  - parentSegment: `{sequence?}/{shot}` for a shot, `assets/{asset}` for an asset
+ *  - versionName: slugified version name (e.g. v01)
+ * Returns `null` if the version cannot be found or is not attached to a project.
  */
 export interface StorageContext {
   projectId: number;
@@ -112,7 +112,7 @@ export const resolveStorageContextForVersion = async (versionId: number): Promis
 
   const versionName = slugify(version.name) || 'version';
 
-  // Version directement rattachée à un asset réutilisable
+  // Version attached directly to a reusable asset
   if (version.asset) {
     return {
       projectId: version.asset.project.id,
@@ -121,7 +121,7 @@ export const resolveStorageContextForVersion = async (versionId: number): Promis
       versionName,
     };
   }
-  // Version d'une task sur un shot
+  // Version of a task on a shot
   const shot = version.task?.shot;
   if (shot) {
     const seqSeg = shot.sequence?.code ? `${slugify(shot.sequence.code)}/` : '';
@@ -132,7 +132,7 @@ export const resolveStorageContextForVersion = async (versionId: number): Promis
       versionName,
     };
   }
-  // Version d'une task sur un asset
+  // Version of a task on an asset
   const taskAsset = version.task?.asset;
   if (taskAsset) {
     return {

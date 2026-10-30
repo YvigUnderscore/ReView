@@ -4,9 +4,9 @@
 import { describe, expect, it } from 'vitest';
 import { reviewFrame, frameViewOffset, shapesOutsideFrame, DEFAULT_REVIEW_ASPECT } from './frameRect';
 
-describe('reviewFrame — letterbox à aspect fixe (V6)', () => {
-  it('conteneur plus haut que le cadre : largeur pleine, bandes horizontales, centré', () => {
-    // container 1920×1280 (aspect 1.5) < 16/9 (1.78) → largeur pleine, letterbox haut/bas.
+describe('reviewFrame — fixed-aspect letterbox (V6)', () => {
+  it('container taller than the frame: full width, horizontal bands, centered', () => {
+    // container 1920×1280 (aspect 1.5) < 16/9 (1.78) → full width, letterbox top/bottom.
     const r = reviewFrame(16 / 9, 1920, 1280);
     expect(r.width).toBe(1920);
     expect(r.height).toBeCloseTo(1080);
@@ -14,32 +14,32 @@ describe('reviewFrame — letterbox à aspect fixe (V6)', () => {
     expect(r.left).toBe(0);
   });
 
-  it('conteneur plus large que le cadre : hauteur pleine, bandes latérales', () => {
-    const r = reviewFrame(16 / 9, 2000, 900); // aspect 2.22 > 1.78 → hauteur pleine
+  it('container wider than the frame: full height, side bands', () => {
+    const r = reviewFrame(16 / 9, 2000, 900); // aspect 2.22 > 1.78 → full height
     expect(r.height).toBe(900);
     expect(r.width).toBeCloseTo(1600);
     expect(r.left).toBeCloseTo(200);
     expect(r.top).toBe(0);
   });
 
-  it('aspect égal au conteneur : remplit sans bande', () => {
+  it('aspect equal to the container: fills without bands', () => {
     const r = reviewFrame(2, 800, 400);
     expect(r).toEqual({ left: 0, top: 0, width: 800, height: 400 });
   });
 
-  it('dimensions/aspect invalides : remplit le conteneur (repli neutre)', () => {
+  it('invalid dimensions/aspect: fills the container (neutral fallback)', () => {
     expect(reviewFrame(0, 800, 400)).toEqual({ left: 0, top: 0, width: 800, height: 400 });
     expect(reviewFrame(NaN, 800, 400)).toEqual({ left: 0, top: 0, width: 800, height: 400 });
     expect(reviewFrame(1.5, 0, 400)).toEqual({ left: 0, top: 0, width: 0, height: 400 });
   });
 
-  it('expose un aspect par défaut 16:9', () => {
+  it('exposes a default 16:9 aspect', () => {
     expect(DEFAULT_REVIEW_ASPECT).toBeCloseTo(16 / 9);
   });
 });
 
-describe('frameViewOffset — vue caméra étendue au conteneur (Phase 25)', () => {
-  it('conteneur plus large : pleine vue = guide, sous-vue élargie centrée (offset x négatif)', () => {
+describe('frameViewOffset — camera view extended to the container (Phase 25)', () => {
+  it('wider container: full view = guide, enlarged centered sub-view (negative x offset)', () => {
     const v = frameViewOffset(16 / 9, 2000, 900);
     expect(v.fullWidth).toBeCloseTo(1600);
     expect(v.fullHeight).toBe(900);
@@ -49,7 +49,7 @@ describe('frameViewOffset — vue caméra étendue au conteneur (Phase 25)', () 
     expect(v.height).toBe(900);
   });
 
-  it('conteneur plus haut : offset y négatif, largeur pleine', () => {
+  it('taller container: negative y offset, full width', () => {
     const v = frameViewOffset(16 / 9, 1920, 1280);
     expect(v.fullWidth).toBe(1920);
     expect(v.fullHeight).toBeCloseTo(1080);
@@ -57,14 +57,14 @@ describe('frameViewOffset — vue caméra étendue au conteneur (Phase 25)', () 
     expect(v.y).toBeCloseTo(-100);
   });
 
-  it('aspect égal : sous-vue = pleine vue (offsets nuls)', () => {
+  it('equal aspect: sub-view = full view (zero offsets)', () => {
     const v = frameViewOffset(2, 800, 400);
     expect(v).toEqual({ fullWidth: 800, fullHeight: 400, x: 0, y: 0, width: 800, height: 400 });
   });
 });
 
-describe('shapesOutsideFrame — dessin hors cadre de livraison (Phase 25)', () => {
-  it('détecte un tracé, un rectangle ou une flèche qui déborde', () => {
+describe('shapesOutsideFrame — drawing outside the delivery frame (Phase 25)', () => {
+  it('detects a stroke, rectangle or arrow that overflows', () => {
     expect(
       shapesOutsideFrame([
         {
@@ -81,7 +81,7 @@ describe('shapesOutsideFrame — dessin hors cadre de livraison (Phase 25)', () 
     expect(shapesOutsideFrame([{ type: 'ellipse', cx: 0.05, cy: 0.5, rx: 0.2, ry: 0.1 }])).toBe(true);
   });
 
-  it('ne signale rien pour des formes entièrement dans le cadre', () => {
+  it('reports nothing for shapes entirely within the frame', () => {
     expect(
       shapesOutsideFrame([
         {

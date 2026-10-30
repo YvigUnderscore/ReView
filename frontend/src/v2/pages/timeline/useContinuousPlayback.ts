@@ -3,26 +3,25 @@
 
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 import Hls from 'hls.js';
-import { getToken } from '../../../lib/apiClient';
+import { getToken } from '@/lib/apiClient';
 import { playbackSource } from './mediaSource';
 import { usePlayingFromElements } from './usePlayingFromElements';
 import { clipIndexAt, globalTimeOf, holdsOnClock, localTimeAt, nextPlayableIndex } from './timelinePlayback';
 import type { TimelineClip } from '../../types/api';
 
 /**
- * Lecture continue d'un montage, sans coupure (Phase 46).
+ * Continuous playback of a montage, without cuts (Phase 46).
  *
- * Le principe est celui d'un projectionniste à deux bobines : pendant qu'un plan joue, le
- * suivant est déjà chargé et prêt dans un second lecteur, hors écran. À la fin du plan, on
- * échange les deux — la bascule est un changement de visibilité, pas un chargement, donc
- * l'œil ne voit rien passer. Charger la source au moment de la bascule, comme le ferait
- * une navigation, laisserait à chaque plan le temps noir du téléchargement.
+ * The principle is that of a two-reel projectionist: while one shot plays, the next one is already
+ * loaded and ready in a second player, off-screen. At the end of the shot the two are swapped — the
+ * switch is a visibility change, not a load, so the eye sees nothing pass. Loading the source at the
+ * moment of switching, as a navigation would, would leave a black gap for each shot while it downloads.
  *
- * Les cartons (plans sans média publié) tiennent leur durée sur une horloge, sans vidéo :
- * ils font partie du montage et ne doivent pas être escamotés.
+ * Placeholders (shots without a published media) hold their duration on a clock, without video: they
+ * are part of the montage and must not be skipped.
  */
 
-/** Un tampon de lecture : l'élément vidéo, le plan qu'il tient prêt, et son flux HLS. */
+/** A playback buffer: the video element, the shot it holds ready, and its HLS stream. */
 interface Buffer {
   clipIndex: number | null;
   url: string | null;
@@ -32,10 +31,10 @@ interface Buffer {
 const EMPTY: Buffer = { clipIndex: null, url: null, hls: null };
 
 /**
- * Attache un flux HLS à un tampon — jeton injecté comme dans le lecteur de review.
+ * Attaches an HLS stream to a buffer — token injected as in the review player.
  *
- * `onFatal` est le filet : un montage dont un plan refuse de se charger doit retomber sur
- * le MP4 plutôt que d'afficher un rectangle noir sans explication.
+ * `onFatal` is the safety net: a montage whose shot refuses to load must fall back to the MP4
+ * rather than display an unexplained black rectangle.
  */
 function attachHls(el: HTMLVideoElement, url: string, onFatal: () => void): Hls {
   const hls = new Hls({
@@ -46,7 +45,7 @@ function attachHls(el: HTMLVideoElement, url: string, onFatal: () => void): Hls 
   });
   hls.attachMedia(el);
   hls.loadSource(url);
-  // Pas d'ABR, comme en review : la lecture est verrouillée sur la meilleure rendition.
+  // No ABR, as in review: playback is locked on the best rendition.
   hls.on(Hls.Events.MANIFEST_PARSED, () => {
     let best = 0;
     hls.levels.forEach((l, i) => {
@@ -64,29 +63,29 @@ function attachHls(el: HTMLVideoElement, url: string, onFatal: () => void): Hls 
 }
 
 export interface ContinuousPlayback {
-  /** Tampon actuellement à l'écran. */
+  /** Buffer currently on screen. */
   active: 'A' | 'B';
-  /** Plan à l'écran, et sa position dans la liste. */
+  /** Shot on screen, and its position in the list. */
   index: number;
   clip: TimelineClip | null;
-  /** Position dans le montage entier, en secondes. */
+  /** Position in the whole montage, in seconds. */
   time: number;
   playing: boolean;
   toggle: () => void;
-  /** Arrêt franc — commenter ou annoter une image suppose qu'elle ne bouge plus. */
+  /** Hard stop — commenting on or annotating an image requires that it no longer moves. */
   pause: () => void;
   seek: (globalTime: number) => void;
-  /** Se placer sur un plan précis (clic dans la bande de vignettes). */
+  /** Jump to a specific shot (click in the thumbnail band). */
   goToClip: (index: number) => void;
 }
 
 /**
- * Les deux éléments vidéo appartiennent au composant, qui les pose sur son JSX : un hook
- * qui renverrait ses propres refs obligerait l'appelant à les lire pendant le rendu.
+ * The two video elements belong to the component, which places them in its JSX: a hook returning
+ * its own refs would force the caller to read them during render.
  *
- * `startAt` est la position du montage à laquelle on entre. La lecture démarre seule :
- * ce hook n'est monté qu'après un geste explicite (bouton de lecture, clic sur la bande),
- * et redemander « lire » à ce moment-là ferait un aller-retour de plus pour rien.
+ * `startAt` is the montage position at which we enter. Playback starts on its own: this hook is only
+ * mounted after an explicit gesture (play button, click on the band), and asking "play" again at that
+ * point would be a pointless extra round trip.
  */
 export function useContinuousPlayback(
   items: TimelineClip[],
@@ -95,51 +94,50 @@ export function useContinuousPlayback(
   startAt = 0,
 ): ContinuousPlayback {
   const [active, setActive] = useState<'A' | 'B'>('A');
-  // Ce que tiennent les deux lecteurs relève de l'état du LECTEUR, pas de celui de
-  // l'interface : rien à l'écran n'en dépend directement. Le garder hors du rendu évite
-  // autant de rendus inutiles qu'il y a de préchargements.
+  // What the two players hold is part of the PLAYER's state, not the interface's: nothing on
+  // screen depends on it directly. Keeping it out of render avoids as many useless renders as
+  // there are preloads.
   const buffers = useRef<{ A: Buffer; B: Buffer }>({ A: EMPTY, B: EMPTY });
   const [index, setIndex] = useState(0);
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
-  // La durée écoulée d'un carton est comptée ici : il n'a pas d'élément vidéo pour le faire.
+  // The elapsed time of a placeholder is counted here: it has no video element to do it.
   const placeholderStart = useRef<number | null>(null);
-  // …doublée d'un minuteur, pour la même raison que l'écouteur `timeupdate` des vidéos :
-  // hors de l'onglet actif, l'horloge d'animation est gelée et le montage resterait
-  // indéfiniment sur un trou.
+  // …backed by a timer, for the same reason as the `timeupdate` listener of the videos: outside
+  // the active tab the animation clock is frozen and the montage would stay on a gap indefinitely.
   const placeholderTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const clip = items[index] ?? null;
   const other = (slot: 'A' | 'B'): 'A' | 'B' => (slot === 'A' ? 'B' : 'A');
-  // L'élément d'un tampon n'est lu que dans les callbacks et les effets, jamais pendant le
-  // rendu : c'est la condition pour que React garantisse ce qu'on y voit.
+  // A buffer's element is only read in callbacks and effects, never during render: that is the
+  // condition for React to guarantee what is seen there.
   const elementOf = useCallback(
     (slot: 'A' | 'B') => (slot === 'A' ? videoA.current : videoB.current),
     [videoA, videoB],
   );
 
-  /** Charge un plan dans un tampon et renvoie l'élément prêt à jouer. */
+  /** Loads a shot into a buffer and returns the element ready to play. */
   const load = useCallback(
     async (slot: 'A' | 'B', clipIndex: number, startAt = 0) => {
       const target = items[clipIndex];
-      // Un carton n'a pas de source à résoudre, et **une image non plus** : la confier à
-      // l'élément vidéo la faisait échouer au démultiplexage, ce qui bloquait la lecture de
-      // tout le montage. La préparation d'un tampon reste asynchrone dans tous les cas :
-      // sans cela, l'amorçage déclencherait un rendu en cascade depuis son effet.
+      // A placeholder has no source to resolve, and **neither does an image**: handing it to the
+      // video element made it fail demuxing, which blocked playback of the whole montage. Preparing a
+      // buffer stays asynchronous in every case: without this, the bootstrap would trigger a cascading
+      // render from its effect.
       const source = await (!holdsOnClock(target) && target?.mediaId != null
         ? playbackSource(target.mediaId)
         : Promise.resolve(null));
       const el = elementOf(slot);
-      // Le flux précédent de ce tampon est détruit avant d'en attacher un autre : deux
-      // instances sur le même élément se disputeraient sa source.
+      // The previous stream of this buffer is destroyed before attaching another: two instances on
+      // the same element would fight over its source.
       buffers.current[slot].hls?.destroy();
       let hls: Hls | null = null;
-      /** Lecture directe du MP4 — voie de repli, et voie normale sans renditions. */
+      /** Direct MP4 playback — fallback path, and the normal path when there are no renditions. */
       const playFile = (url: string) => {
         if (!el) return;
         el.src = url;
-        // `auto` : on veut la vidéo entière en tampon, pas seulement ses métadonnées —
-        // c'est ce préchargement qui rend la bascule invisible.
+        // `auto`: we want the whole video buffered, not just its metadata — this preload is what
+        // makes the switch invisible.
         el.preload = 'auto';
         el.load();
         el.currentTime = startAt;
@@ -157,18 +155,18 @@ export function useContinuousPlayback(
     [items, elementOf],
   );
 
-  // Un montage quitté ne doit pas laisser deux flux HLS ouverts derrière lui.
+  // A montage left behind must not leave two HLS streams open.
   useEffect(
     () => () => {
-      // Lus au démontage : `load` remplace l'objet des tampons, une capture à l'attachement
-      // ne détruirait que des flux déjà oubliés.
+      // Read on unmount: `load` replaces the buffers object, so a capture at attach time would only
+      // destroy streams already forgotten.
       buffers.current.A.hls?.destroy();
       buffers.current.B.hls?.destroy();
     },
     [],
   );
 
-  /** Prépare le plan lisible suivant dans le tampon inactif. */
+  /** Prepares the next playable shot in the inactive buffer. */
   const preloadNext = useCallback(
     (fromIndex: number, activeSlot: 'A' | 'B') => {
       const next = nextPlayableIndex(items, fromIndex);
@@ -183,11 +181,11 @@ export function useContinuousPlayback(
     placeholderTimer.current = null;
   }, []);
 
-  // `swap` s'arme lui-même à travers cette référence : la fonction et son minuteur
-  // s'appellent mutuellement, et seule une indirection casse le cycle de déclaration.
+  // `swap` arms itself through this reference: the function and its timer call each other, and
+  // only an indirection breaks the declaration cycle.
   const swapRef = useRef<() => void>(() => {});
 
-  /** Programme la sortie d'un carton au bout de sa durée. */
+  /** Schedules the exit of a placeholder once its duration has elapsed. */
   const armPlaceholderTimer = useCallback(
     (duration: number) => {
       clearPlaceholderTimer();
@@ -197,11 +195,11 @@ export function useContinuousPlayback(
   );
 
   /**
-   * Lance la lecture à une position donnée d'un plan, quelle que soit sa nature.
+   * Starts playback at a given position of a shot, whatever its nature.
    *
-   * Un carton n'a pas d'élément vidéo à démarrer : c'est son minuteur qui tient sa durée.
-   * Passer par ce seul point d'entrée évite que l'un des trois chemins qui démarrent la
-   * lecture (amorçage, pause/reprise, déplacement) n'oublie ce cas.
+   * A placeholder has no video element to start: its timer holds its duration. Going through this
+   * single entry point prevents any of the three paths that start playback (bootstrap, pause/resume,
+   * seek) from forgetting that case.
    */
   const begin = useCallback(
     (slot: 'A' | 'B', targetIndex: number, localStart: number) => {
@@ -223,12 +221,12 @@ export function useContinuousPlayback(
   );
 
   /**
-   * Passe au plan suivant du montage.
+   * Moves on to the next shot of the montage.
    *
-   * « Suivant » veut dire le plan d'après dans la liste, carton compris : un trou occupe sa
-   * place à l'écran pendant sa durée, sinon le film ne dure pas ce que la barre de temps
-   * annonce et l'on ne voit plus ce qui manque. Le préchargement, lui, vise le prochain
-   * plan FILMÉ — pendant qu'un carton s'affiche, la vidéo d'après finit de se charger.
+   * "Next" means the following shot in the list, placeholder included: a gap takes its place on
+   * screen for its duration, otherwise the film would not last what the time bar announces and what
+   * is missing would no longer be visible. The preload, for its part, targets the next FILMED shot —
+   * while a placeholder is shown, the next video finishes loading.
    */
   const swap = useCallback(() => {
     const nextIndex = index + 1;
@@ -252,10 +250,10 @@ export function useContinuousPlayback(
     const prepared = buffers.current[nextSlot];
     placeholderStart.current = null;
     clearPlaceholderTimer();
-    // Cas normal : le plan attendait déjà dans l'autre tampon, la bascule est instantanée.
+    // Normal case: the shot was already waiting in the other buffer, the switch is instant.
     if (prepared.clipIndex === nextIndex && prepared.url) {
-      // Le tampon sortant est arrêté : invisible, il continuerait sinon à jouer son
-      // audio et à consommer du décodage derrière le plan suivant.
+      // The outgoing buffer is stopped: invisible, it would otherwise keep playing its
+      // audio and consuming decoding behind the next shot.
       elementOf(active)?.pause();
       setActive(nextSlot);
       void elementOf(nextSlot)
@@ -264,7 +262,7 @@ export function useContinuousPlayback(
       preloadNext(nextIndex, nextSlot);
       return;
     }
-    // Cas de repli (déplacement manuel juste avant la fin d'un plan) : on charge sur place.
+    // Fallback case (manual seek just before the end of a shot): load in place.
     void load(active, nextIndex).then(() => {
       void elementOf(active)
         ?.play()
@@ -273,30 +271,29 @@ export function useContinuousPlayback(
     });
   }, [active, index, items, preloadNext, elementOf, load, armPlaceholderTimer, clearPlaceholderTimer]);
 
-  // Le minuteur des cartons appelle toujours la version courante de `swap`.
+  // The placeholder timer always calls the current version of `swap`.
   useEffect(() => {
     swapRef.current = swap;
   }, [swap]);
 
-  // Un montage quitté en cours de carton ne doit pas laisser de minuteur derrière lui.
+  // A montage left during a placeholder must not leave a timer behind.
   useEffect(() => clearPlaceholderTimer, [clearPlaceholderTimer]);
 
-  // Amorçage, en deux temps. La position de départ est un ajustement d'état PENDANT le
-  // rendu (motif React admis) : les plans arrivent d'une requête, l'état initial ne peut
-  // donc pas être calculé au premier rendu. Le chargement, lui, est un effet de bord et
-  // reste dans un effet.
+  // Bootstrap, in two steps. The start position is a state adjustment DURING render (an accepted
+  // React pattern): shots arrive from a request, so the initial state cannot be computed on the first
+  // render. Loading, on the other hand, is a side effect and stays in an effect.
   const [started, setStarted] = useState(false);
   if (!started && items.length > 0) {
-    // On entre là où l'on a cliqué, carton compris : escamoter un trou de départ ferait
-    // commencer le film ailleurs que là où la bande le montrait.
+    // We enter where the user clicked, placeholder included: skipping a starting gap would make the
+    // film start somewhere other than where the band showed it.
     const first = Math.max(0, clipIndexAt(items, startAt));
     setStarted(true);
     setIndex(first);
     setTime(globalTimeOf(items[first], startAt - items[first].startTime));
   }
 
-  // Le chargement du premier plan est asynchrone : sans ce verrou, un rendu survenu avant
-  // sa résolution relancerait l'amorçage et ferait jouer deux fois le même plan.
+  // Loading the first shot is asynchronous: without this lock, a render happening before it
+  // resolves would restart the bootstrap and play the same shot twice.
   const bootstrapped = useRef(false);
   useEffect(() => {
     if (!started || bootstrapped.current) return;
@@ -310,18 +307,18 @@ export function useContinuousPlayback(
     });
   }, [started, index, items, startAt, load, preloadNext, begin]);
 
-  // L'état « ça joue » se lit sur les éléments, pas sur la promesse de `play()`.
+  // The "playing" state is read from the elements, not from the `play()` promise.
   usePlayingFromElements(videoA, videoB, setPlaying);
 
-  // Horloge : la vidéo pour un plan filmé, `performance.now()` pour un carton.
+  // Clock: the video for a filmed shot, `performance.now()` for a placeholder.
   useEffect(() => {
     if (!playing) return;
     let raf = 0;
     const tick = () => {
       const current = items[index];
-      // C'est le PLAN courant qui dit quelle horloge suivre, jamais le tampon : le tampon
-      // sortant garde sa source pendant un carton, et s'y fier ferait comparer la position
-      // du plan précédent à la durée du trou — donc escamoter le trou aussitôt affiché.
+      // It is the CURRENT SHOT that says which clock to follow, never the buffer: the outgoing buffer
+      // keeps its source during a placeholder, and relying on it would compare the previous shot's
+      // position with the gap's duration — thus skipping the gap as soon as it is shown.
       if (current && holdsOnClock(current)) {
         if (placeholderStart.current !== null) {
           const elapsed = (performance.now() - placeholderStart.current) / 1000;
@@ -331,9 +328,9 @@ export function useContinuousPlayback(
       } else if (current) {
         const el = elementOf(active);
         if (buffers.current[active].url && el) {
-          // La durée qui fait foi est celle du MONTAGE, pas celle du fichier. Un média plus
-          // long que la place qu'on lui a donnée est coupé ici : sans cela la barre de temps
-          // mentirait, et un seul plan mal sondé décalerait tout le film.
+          // The reference duration is that of the MONTAGE, not the file's. A media longer than the
+          // slot it was given is cut here: without this the time bar would lie, and a single
+          // badly probed shot would shift the whole film.
           if (el.currentTime >= current.duration) swap();
           else setTime(globalTimeOf(current, el.currentTime));
         }
@@ -344,21 +341,20 @@ export function useContinuousPlayback(
     return () => cancelAnimationFrame(raf);
   }, [playing, index, active, items, swap, elementOf]);
 
-  // Fin d'un plan filmé : on enchaîne sur le tampon déjà prêt.
+  // End of a filmed shot: chain onto the buffer already ready.
   useEffect(() => {
     const el = elementOf(active);
     if (!el) return;
     const onEnded = () => swap();
     /*
-     * Filet de sécurité pour la coupe à la durée du montage. Le navigateur gèle
-     * `requestAnimationFrame` dès que l'onglet passe en arrière-plan, alors qu'il continue
-     * de jouer la vidéo : sans cet écouteur, un plan resté en fond déborderait sur toute la
-     * longueur de son fichier et décalerait le reste du film. `timeupdate` est émis dans
-     * tous les cas.
+     * Safety net for the cut at the montage duration. The browser freezes
+     * `requestAnimationFrame` as soon as the tab goes to the background, while it keeps playing the
+     * video: without this listener, a shot left in the background would run over the whole length of
+     * its file and shift the rest of the film. `timeupdate` is emitted in every case.
      */
     const onTimeUpdate = () => {
       const current = items[index];
-      // Même règle que l'horloge : pendant un carton, cet élément n'est plus le film.
+      // Same rule as the clock: during a placeholder, this element is no longer the film.
       if (current && !holdsOnClock(current) && el.currentTime >= current.duration) swap();
     };
     el.addEventListener('ended', onEnded);
@@ -381,7 +377,7 @@ export function useContinuousPlayback(
       pause();
       return;
     }
-    // Reprise là où l'on s'était arrêté, y compris au milieu d'un carton.
+    // Resume where we stopped, including in the middle of a placeholder.
     begin(active, index, time - (clip?.startTime ?? 0));
   }, [active, index, playing, time, clip, begin, pause]);
 
@@ -393,7 +389,7 @@ export function useContinuousPlayback(
       setTime(globalTimeOf(target, localStart));
       placeholderStart.current = null;
       clearPlaceholderTimer();
-      // Le plan visé prend le tampon actif : le tampon inactif reprendra le suivant.
+      // The targeted shot takes the active buffer: the inactive buffer will pick up the next one.
       void load(active, targetIndex, localStart).then(() => {
         if (playing) begin(active, targetIndex, localStart);
         preloadNext(targetIndex, active);
@@ -408,8 +404,7 @@ export function useContinuousPlayback(
       if (targetIndex < 0) return;
       const target = items[targetIndex];
       const local = localTimeAt(target, globalTime);
-      // Déplacement à l'intérieur du plan courant : un simple `currentTime` suffit, inutile
-      // de recharger la source.
+      // Seeking within the current shot: a simple `currentTime` is enough, no need to reload the source.
       if (targetIndex === index && buffers.current[active].url) {
         const el = elementOf(active);
         if (el) el.currentTime = local;

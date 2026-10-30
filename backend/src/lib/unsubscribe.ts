@@ -5,18 +5,18 @@ import { createHmac, timingSafeEqual } from 'node:crypto';
 import { env } from '../config/env';
 
 /**
- * Jeton de désabonnement des envois récurrents (digest, rapport hebdomadaire).
+ * Unsubscribe token for recurring mailings (digest, weekly report).
  *
- * Il voyage dans l'en-tête `List-Unsubscribe`, que les messageries transforment en bouton
- * natif. Ce bouton appelle l'adresse **sans session** : le jeton doit donc porter à lui
- * seul l'identité du destinataire et la nature de l'envoi, et prouver qu'il vient de nous.
+ * It travels in the `List-Unsubscribe` header, which mail clients turn into a native button.
+ * That button calls the address **without a session**: the token must therefore carry on its
+ * own the recipient's identity and the nature of the mailing, and prove that it comes from us.
  *
- * D'où une signature HMAC : le jeton est lisible, mais forger celui d'un autre compte
- * exige la clé du serveur. Sa portée est étroite — il désabonne d'un type d'envoi, rien
- * d'autre : il n'ouvre aucune session, ne lit rien, ne modifie aucune autre préférence.
+ * Hence an HMAC signature: the token is readable, but forging another account's token requires
+ * the server's key. Its scope is narrow: it unsubscribes from one type of mailing and nothing
+ * else. It opens no session, reads nothing, and modifies no other preference.
  */
 
-/** Les envois récurrents dont on peut se désabonner. */
+/** Recurring mailings that can be unsubscribed from. */
 export const UNSUBSCRIBE_KINDS = ['emailDigest', 'weeklyReport'] as const;
 export type UnsubscribeKind = (typeof UNSUBSCRIBE_KINDS)[number];
 
@@ -24,13 +24,13 @@ function signature(payload: string): string {
   return createHmac('sha256', env.JWT_SECRET).update(payload).digest('base64url');
 }
 
-/** `<userId>.<kind>.<signature>` — lisible, vérifiable, sans état côté serveur. */
+/** `<userId>.<kind>.<signature>`: readable, verifiable, stateless on the server. */
 export function signUnsubscribe(userId: number, kind: UnsubscribeKind): string {
   const payload = `${userId}.${kind}`;
   return `${payload}.${signature(payload)}`;
 }
 
-/** Le destinataire et l'envoi visés, ou `null` si le jeton est forgé ou déformé. */
+/** The recipient and targeted mailing, or `null` if the token is forged or malformed. */
 export function verifyUnsubscribe(token: string): { userId: number; kind: UnsubscribeKind } | null {
   const parts = token.split('.');
   if (parts.length !== 3) return null;
@@ -40,8 +40,8 @@ export function verifyUnsubscribe(token: string): { userId: number; kind: Unsubs
   if (!Number.isSafeInteger(userId) || userId <= 0) return null;
   if (!(UNSUBSCRIBE_KINDS as readonly string[]).includes(rawKind)) return null;
 
-  // Comparaison à temps constant : une comparaison ordinaire laisse deviner la signature
-  // octet par octet, en mesurant le temps de réponse.
+  // Constant-time comparison: an ordinary comparison lets the signature be guessed
+  // byte by byte, by measuring the response time.
   const expected = Buffer.from(signature(`${rawId}.${rawKind}`));
   const given = Buffer.from(sig);
   if (expected.length !== given.length || !timingSafeEqual(expected, given)) return null;
@@ -49,7 +49,7 @@ export function verifyUnsubscribe(token: string): { userId: number; kind: Unsubs
   return { userId, kind: rawKind as UnsubscribeKind };
 }
 
-/** Adresse publique du désabonnement, telle qu'elle part dans l'en-tête et dans le corps. */
+/** Public unsubscribe address, as it appears in the header and in the body. */
 export function unsubscribeUrl(userId: number, kind: UnsubscribeKind): string | null {
   if (!env.APP_URL) return null;
   return `${env.APP_URL}/api/unsubscribe/${signUnsubscribe(userId, kind)}`;

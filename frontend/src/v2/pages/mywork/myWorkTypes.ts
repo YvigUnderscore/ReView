@@ -4,14 +4,14 @@
 import type { MediaKind, TaskStatus, TaskType } from '../../types/api';
 
 /**
- * Réponses des deux vues transverses de « ce qui m'attend » :
- * `GET /api/dashboard/tasks` et `GET /api/dashboard/comments`.
+ * Responses of the two cross-cutting views of "what awaits me":
+ * `GET /api/dashboard/tasks` and `GET /api/dashboard/comments`.
  *
- * Elles déplient les compteurs de l'Accueil, et lisent côté serveur exactement le périmètre
- * de ceux-ci (`lib/homeScope`) : la page montre autant de lignes que la carte annonce.
+ * They unfold the home page counters, and read on the server exactly the scope of those
+ * (`lib/homeScope`): the page shows as many rows as the card announces.
  */
 
-/** Une de mes tâches, avec son projet — la page est transverse, le projet fait partie du lieu. */
+/** One of my tasks, with its project: the page is cross-cutting, so the project is part of the location. */
 export interface MyTaskItem {
   id: number;
   name: string;
@@ -23,7 +23,7 @@ export interface MyTaskItem {
   dueDate: string | null;
 }
 
-/** Une note du fil des commentaires, de quoi la lire et ouvrir le média commenté. */
+/** A note from the comment feed: enough to read it and open the commented media. */
 export interface CommentFeedItem {
   id: number;
   mediaId: number;

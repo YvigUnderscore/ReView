@@ -6,11 +6,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../lib/prisma', () => ({
   prisma: { mediaObject: { findMany: vi.fn(), count: vi.fn() } },
 }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: { getPresignedGetUrl: vi.fn(async (k: string) => `https://minio/${k}`) },
   StorageService: { mediaKey: vi.fn(), thumbnailKey: vi.fn() },
 }));
-vi.mock('./JobService', () => ({ enqueueMediaJob: vi.fn() }));
+vi.mock('../lib/queues', () => ({ enqueueMediaJob: vi.fn() }));
 vi.mock('./SocketService', () => ({ emitToProject: vi.fn() }));
 vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
 vi.mock('../lib/settings', () => ({ getNumericSetting: vi.fn(), SETTING_KEYS: {} }));
@@ -30,14 +30,14 @@ function lastWhere(): Prisma.MediaObjectWhereInput {
   return findMany.mock.calls[0]![0]!.where!;
 }
 
-describe('MediaService.listReviews — page Reviews globale (12.C)', () => {
+describe('MediaService.listReviews: global Reviews page (12.C)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     findMany.mockResolvedValue([] as never);
     count.mockResolvedValue(0);
   });
 
-  it('par défaut : publiés de mes projets + mes brouillons (membership pour un ARTIST)', async () => {
+  it('by default: published media of my projects + my drafts (membership for an ARTIST)', async () => {
     await listReviews(artist, {}, page);
     const where = lastWhere();
     expect(where.AND).toEqual([{ OR: [{ published: true }, { published: false, uploaderId: 3 }] }]);
@@ -47,7 +47,7 @@ describe('MediaService.listReviews — page Reviews globale (12.C)', () => {
     });
   });
 
-  it('status=draft : uniquement mes brouillons ; ADMIN sans filtre membership', async () => {
+  it('status=draft: only my drafts; ADMIN without membership filter', async () => {
     await listReviews({ id: 1, role: Role.ADMIN }, { status: 'draft', projectId: 7 }, page);
     const where = lastWhere();
     expect(where.AND).toEqual([{ published: false, uploaderId: 1 }]);
@@ -55,18 +55,18 @@ describe('MediaService.listReviews — page Reviews globale (12.C)', () => {
     expect(version.OR[2]!.asset!.project).toEqual({ deletedAt: null, id: 7 });
   });
 
-  it('assigned=me : les seules versions dont la review m’est confiée (Phase 49)', async () => {
+  it('assigned=me: only the versions whose review is entrusted to me (Phase 49)', async () => {
     await listReviews(artist, { assigned: 'me' }, page);
     const version = lastWhere().version as { reviewers?: unknown };
     expect(version.reviewers).toEqual({ some: { reviewerId: 3 } });
   });
 
-  it('sans assigned : aucune restriction de reviewer', async () => {
+  it('without assigned: no reviewer restriction', async () => {
     await listReviews(artist, {}, page);
     expect((lastWhere().version as { reviewers?: unknown }).reviewers).toBeUndefined();
   });
 
-  it('mappe les items : miniature présignée, localisation, projet', async () => {
+  it('maps the items: presigned thumbnail, location, project', async () => {
     findMany.mockResolvedValue([
       {
         id: 5,
@@ -106,7 +106,7 @@ describe('MediaService.listReviews — page Reviews globale (12.C)', () => {
     });
   });
 
-  it('expose le sprite de survol pour une vidéo qui en a un (42.A — №78)', async () => {
+  it('exposes the hover sprite for a video that has one (42.A — #78)', async () => {
     findMany.mockResolvedValue([
       {
         id: 6,
@@ -130,7 +130,7 @@ describe('MediaService.listReviews — page Reviews globale (12.C)', () => {
     });
   });
 
-  it('pas de sprite de survol pour une image même avec metadata (42.A — №78)', async () => {
+  it('no hover sprite for an image even with metadata (42.A — #78)', async () => {
     findMany.mockResolvedValue([
       {
         id: 7,

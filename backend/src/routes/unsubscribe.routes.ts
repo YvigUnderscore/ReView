@@ -14,30 +14,28 @@ import { localeFromAcceptLanguage, t, type Locale } from '../i18n';
 import { escapeHtml } from '../lib/html';
 
 /**
- * Désabonnement des envois récurrents — route PUBLIQUE, sans session.
+ * Unsubscribing from recurring mailings: a PUBLIC route, without session.
  *
- * C'est la contrepartie de l'en-tête `List-Unsubscribe` : le bouton natif de la
- * messagerie appelle cette adresse sans que le lecteur soit connecté, et souvent depuis
- * les serveurs du fournisseur. Le jeton signé porte donc à lui seul l'identité visée.
+ * It is the counterpart of the `List-Unsubscribe` header: the mail client's native button calls this address
+ * without the reader being logged in, and often from the provider's servers. The signed token therefore
+ * carries on its own the targeted identity.
  *
- * Sa portée est étroite par construction : il éteint UNE préférence d'envoi. Il n'ouvre
- * aucune session, ne révèle rien du compte, et un jeton forgé ne fait rien.
+ * Its scope is narrow by construction: it switches off ONE sending preference. It opens no session, reveals
+ * nothing of the account, and a forged token does nothing.
  *
- * Sans ce chemin, le lecteur qui ne veut plus du digest n'a qu'un geste à sa portée :
- * marquer le message comme indésirable — ce qui abîme la réputation du serveur pour tous
- * les envois du studio, invitations comprises.
+ * Without this path, the reader who no longer wants the digest has only one gesture within reach: marking the
+ * message as spam, which damages the server's reputation for all of the studio's mailings, invitations included.
  *
- * ⚠ Trois routes, et le partage des rôles entre elles n'est pas décoratif :
- * le GET ne DOIT rien modifier. Les passerelles antivirus et les proxys de messagerie
- * (SafeLinks et assimilés) préchargent les liens des messages : un GET qui désabonne
- * désabonne tout seul, sans que personne n'ait cliqué. Le lien reçu par mail reste donc
- * valide, mais il n'affiche qu'une demande de confirmation.
+ * ⚠ Three routes, and the sharing of roles among them is not decorative: the GET MUST change nothing.
+ * Antivirus gateways and mail proxies (SafeLinks and the like) preload the links of messages: a GET that
+ * unsubscribes unsubscribes by itself, without anyone having clicked. The link received by email therefore
+ * remains valid, but only shows a confirmation request.
  */
 const router = Router();
 
 const tokenParam = z.object({ token: z.string().min(8).max(300) });
 
-// Un jeton par compte et par type : le quota protège de l'essai en force sur la signature.
+// One token per account and per type: the quota protects against brute-force attempts on the signature.
 const limiter = rateLimit({ windowMs: 15 * 60 * 1000, max: 60 });
 
 async function unsubscribe(token: string): Promise<boolean> {
@@ -54,14 +52,14 @@ async function unsubscribe(token: string): Promise<boolean> {
     where: { id: parsed.userId },
     data: { preferences: preferences as Prisma.InputJsonValue },
   });
-  logger.info({ userId: parsed.userId, kind: parsed.kind }, 'Désabonnement en un clic');
+  logger.info({ userId: parsed.userId, kind: parsed.kind }, 'One-click unsubscribe');
   return true;
 }
 
 /**
- * Confirmation humaine : la cible du bouton de la page servie par le GET.
+ * Human confirmation: the target of the page's button, served by the GET.
  *
- * Déclarée avant `POST /:token` — sinon le mot « confirm » serait lu comme un jeton.
+ * Declared before `POST /:token`, otherwise the word "confirm" would be read as a token.
  */
 router.post('/:token/confirm', limiter, validate({ params: tokenParam }), async (req, res) => {
   const ok = await unsubscribe(String(req.params.token));
@@ -79,19 +77,18 @@ router.post('/:token/confirm', limiter, validate({ params: tokenParam }), async 
 });
 
 /**
- * Appelé par le bouton natif des messageries (`List-Unsubscribe-Post`). La réponse doit
- * être immédiate et sans page : personne ne la lit.
+ * Called by the mail clients' native button (`List-Unsubscribe-Post`). The response must be immediate and
+ * without a page: nobody reads it.
  */
 router.post('/:token', limiter, validate({ params: tokenParam }), async (req, res) => {
   await unsubscribe(String(req.params.token));
-  // Toujours 204, jeton valide ou non : distinguer les deux cas dirait à un tiers si un
-  // compte existe.
+  // Always 204, valid token or not: distinguishing the two cases would tell a third party whether an account exists.
   res.status(204).end();
 });
 
 /**
- * Le même lien, suivi à la main depuis le corps du message : une page de confirmation.
- * Aucune écriture ici — voir l'avertissement en tête de fichier.
+ * The same link, followed by hand from the body of the message: a confirmation page.
+ * No write here: see the warning at the top of the file.
  */
 router.get('/:token', limiter, validate({ params: tokenParam }), async (req, res) => {
   const token = String(req.params.token);
@@ -110,13 +107,12 @@ router.get('/:token', limiter, validate({ params: tokenParam }), async (req, res
 });
 
 /**
- * Page autonome : ni React, ni session — mais bel et bien traduite.
+ * Standalone page: neither React nor session, but translated nonetheless.
  *
- * Elle l'était en anglais seulement, au motif qu'aucun catalogue n'était disponible côté
- * serveur. Il y en a un, et cette page est justement celle qu'un destinataire externe ouvre
- * après avoir cliqué dans un email : c'est la surface où sa langue compte le plus, et la
- * seule que l'application ne peut pas lui faire choisir. La langue se négocie donc sur
- * `Accept-Language`, comme pour la page publique `/api/docs`.
+ * It was only in English, on the grounds that no catalogue was available server-side. There is one, and this
+ * page is precisely the one an external recipient opens after clicking in an email: it is the surface where
+ * their language matters most, and the only one the application cannot let them choose. The language is
+ * therefore negotiated on `Accept-Language`, as for the public page `/api/docs`.
  */
 function page(
   state: 'confirm' | 'done' | 'invalid',
@@ -135,7 +131,7 @@ function page(
       body: t(locale, 'unsubscribe.invalid.body'),
     },
   }[state];
-  // Le bouton POSTe : c'est ce qui met l'action hors de portée d'un préchargement de lien.
+  // The button POSTs: that is what puts the action out of reach of a link preload.
   const form =
     state === 'confirm'
       ? `<form method="post" action="/api/unsubscribe/${escapeHtml(encodeURIComponent(token))}/confirm" style="margin:20px 0 0">

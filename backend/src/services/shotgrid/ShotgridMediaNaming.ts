@@ -6,20 +6,16 @@ import { sgMediaName } from '../../lib/mediaNaming';
 import type { SyncJournal } from './ShotgridSyncJournal';
 
 /**
- * Réalignement des noms de médias déjà importés.
+ * Realignment of media names already imported.
  *
- * Les médias rapatriés avant cette version portent le nom du fichier joint. Plutôt qu'une
- * migration SQL — qui ne saurait pas quel média vient du site ni quel code lui
- * correspond — la correction se fait à la relecture : chaque passe de synchronisation
- * repasse sur les médias de la version et les renomme si besoin. Idempotent : une version
- * déjà alignée n'écrit rien.
+ * Media fetched before this version carry the name of the attached file. Rather than an SQL migration, which would not know which media come from the
+ * site nor which code matches them, the correction is done on re-reading: each synchronization pass goes back over the version's media and renames them if
+ * needed. Idempotent: a version already aligned writes nothing.
  *
- * Seuls les médias marqués `importedFromShotgrid` sont touchés. Le fichier qu'un artiste a
- * déposé à la main garde son nom : il porte de l'information (`_lin_`, `_acescg_`,
- * `_h265_`) que le code du site ne reprend pas.
+ * Only media marked `importedFromShotgrid` are touched. A file an artist dropped by hand keeps its name: it carries information (`_lin_`, `_acescg_`,
+ * `_h265_`) that the site's code does not reproduce.
  *
- * C'est de la **présentation**, comme la miniature : le verrou de publication ne
- * s'applique pas, et rien de tout ceci n'est exposé en route utilisateur.
+ * This is **presentation**, like the thumbnail: the publication lock does not apply, and none of this is exposed on a user route.
  */
 export async function realignMediaNames(
   ctx: { journal: SyncJournal; settings: { media: { naming: 'sgCode' | 'filename' } } },
@@ -36,8 +32,8 @@ export async function realignMediaNames(
   for (const item of media) {
     const meta = (item.metadata ?? {}) as Record<string, unknown>;
     if (meta.importedFromShotgrid !== true) continue;
-    // Le nom du fichier livré, s'il a été conservé ; sinon le nom courant fait foi pour
-    // l'extension — c'est lui qui vient du site.
+    // The name of the delivered file, if it was kept; otherwise the current name is authoritative for the
+    // extension: it is the one that comes from the site.
     const sourceFilename = typeof meta.sourceFilename === 'string' ? meta.sourceFilename : item.originalName;
     const wanted = sgMediaName({ code, sourceFilename, mimeType: item.mimeType });
     if (wanted === item.originalName) continue;
@@ -45,7 +41,7 @@ export async function realignMediaNames(
       where: { id: item.id },
       data: {
         originalName: wanted,
-        // La première reprise mémorise le nom d'origine, sans quoi il serait perdu.
+        // The first rename records the original name, otherwise it would be lost.
         metadata: { ...meta, sourceFilename } as never,
       },
     });

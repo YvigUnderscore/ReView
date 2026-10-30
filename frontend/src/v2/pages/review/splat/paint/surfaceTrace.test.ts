@@ -24,38 +24,38 @@ const sample = (
 const VIEW = { fovDeg: 50, height: 1000 };
 
 describe('worldPerPixel', () => {
-  it('grandit avec la profondeur et rétrécit quand la vue est plus haute', () => {
+  it('grows with depth and shrinks when the view is higher', () => {
     const near = worldPerPixel(10, 50, 1000);
     expect(near).toBeCloseTo((2 * Math.tan((50 * Math.PI) / 360) * 10) / 1000, 6);
     expect(worldPerPixel(20, 50, 1000)).toBeCloseTo(near * 2, 6);
     expect(worldPerPixel(10, 50, 2000)).toBeCloseTo(near / 2, 6);
   });
 
-  it('ne renvoie jamais de division par zéro', () => {
+  it('never returns a division by zero', () => {
     expect(Number.isFinite(worldPerPixel(0, 0, 0))).toBe(true);
   });
 });
 
-describe('breaksRun — la corde droite au-dessus d’un trou', () => {
-  it('laisse passer un déplacement compatible avec le pas écran', () => {
+describe('breaksRun — the straight rope above a hole', () => {
+  it('lets through a displacement compatible with the screen step', () => {
     const a = sample([0, 0, 0], 10);
     const b = sample([0.05, 0, 0], 10);
     expect(breaksRun(a, b, VIEW)).toBe(false);
   });
 
-  it('coupe un saut disproportionné, même à profondeur égale', () => {
+  it('cuts a disproportionate jump, even at equal depth', () => {
     const a = sample([0, 0, 0], 10);
     const b = sample([1, 0, 0], 10);
     expect(breaksRun(a, b, VIEW)).toBe(true);
   });
 
-  it('juge sur la profondeur la plus proche : un bond vers le fond ne se justifie pas lui-même', () => {
+  it('judges on the nearest depth: a leap towards the background does not justify itself', () => {
     const near = sample([0, 0, 0], 2);
     const far = sample([0, 0, 60], 60);
     expect(breaksRun(near, far, VIEW)).toBe(true);
   });
 
-  it('tolère un geste lent : un pas écran d’un pixel garde un seuil non nul', () => {
+  it('tolerates a slow gesture: a one-pixel screen step keeps a non-zero threshold', () => {
     const a = sample([0, 0, 0], 10);
     const b = sample([0.0005, 0, 0], 10, 0);
     expect(breaksRun(a, b, VIEW)).toBe(false);
@@ -63,7 +63,7 @@ describe('breaksRun — la corde droite au-dessus d’un trou', () => {
 });
 
 describe('runNormal', () => {
-  it('moyenne les directions point → caméra et normalise', () => {
+  it('averages the point → camera directions and normalizes', () => {
     const n = runNormal([sample([0, 0, 0], 5, 6, [1, 0, 0]), sample([0, 0, 0], 5, 6, [0, 1, 0])]);
     expect(n).not.toBeNull();
     expect(n![0]).toBeCloseTo(Math.SQRT1_2, 6);
@@ -71,57 +71,57 @@ describe('runNormal', () => {
     expect(n![2]).toBeCloseTo(0, 6);
   });
 
-  it('renvoie null quand la moyenne s’annule (aucune orientation exploitable)', () => {
+  it('returns null when the average cancels out (no usable orientation)', () => {
     expect(runNormal([])).toBeNull();
     expect(runNormal([sample([0, 0, 0], 1, 6, [1, 0, 0]), sample([0, 0, 0], 1, 6, [-1, 0, 0])])).toBeNull();
   });
 });
 
 describe('flattenObject / strokeCenter', () => {
-  it('aplatit les coordonnées objet dans l’ordre du geste', () => {
+  it('flattens the object coordinates in the order of the gesture', () => {
     expect(flattenObject([sample([1, 2, 3], 1), sample([4, 5, 6], 1)])).toEqual([1, 2, 3, 4, 5, 6]);
   });
 
-  it('centre = moyenne des points, et [0,0,0] sur un trait vide', () => {
+  it('centre = average of the points, and [0,0,0] on an empty stroke', () => {
     expect(strokeCenter([0, 0, 0, 2, 2, 2])).toEqual([1, 1, 1]);
     expect(strokeCenter([])).toEqual([0, 0, 0]);
   });
 });
 
 describe('distanceToSegment', () => {
-  it('mesure la perpendiculaire, et les extrémités quand la projection sort du segment', () => {
+  it('measures the perpendicular, and the endpoints when the projection leaves the segment', () => {
     expect(distanceToSegment([5, 3], [0, 0], [10, 0])).toBeCloseTo(3, 6);
     expect(distanceToSegment([-4, 0], [0, 0], [10, 0])).toBeCloseTo(4, 6);
     expect(distanceToSegment([0, 5], [0, 0], [0, 0])).toBeCloseTo(5, 6);
   });
 });
 
-describe('pickStroke — le trait sous la gomme', () => {
-  // Projecteur d'essai : (x, y) tels quels, et rien derrière la caméra (z > 0).
+describe('pickStroke — the stroke under the eraser', () => {
+  // Test projector: (x, y) as-is, and nothing behind the camera (z > 0).
   const project: Projector = (x, y, z) => (z > 0 ? null : [x, y]);
   const strokes = [
-    { points: [0, 0, 0, 100, 0, 0] }, // trait A, horizontal en y = 0
-    { points: [0, 50, 0, 100, 50, 0] }, // trait B, horizontal en y = 50
+    { points: [0, 0, 0, 100, 0, 0] }, // stroke A, horizontal at y = 0
+    { points: [0, 50, 0, 100, 50, 0] }, // stroke B, horizontal at y = 50
   ];
 
-  it('choisit le trait le plus proche du clic', () => {
+  it('picks the stroke closest to the click', () => {
     expect(pickStroke(strokes, [50, 3], project)).toBe(0);
     expect(pickStroke(strokes, [50, 47], project)).toBe(1);
   });
 
-  it('ne choisit rien au-delà de la tolérance', () => {
+  it('picks nothing beyond the tolerance', () => {
     expect(pickStroke(strokes, [50, 25], project)).toBeNull();
   });
 
-  it('ignore les points derrière la caméra sans relier ce qui les encadre', () => {
-    // Deux extrémités visibles séparées par un point derrière : aucun segment ne doit être
-    // reconstruit entre elles — sinon la gomme mordrait sur un trait qui n'est pas à l'écran.
+  it('ignores points behind the camera without joining what frames them', () => {
+    // Two visible endpoints separated by a point behind: no segment should be
+    // rebuilt between them, otherwise the eraser would bite into a stroke that is not on screen.
     const split = [{ points: [0, 0, 0, 50, 0, 1, 100, 0, 0] }];
     expect(pickStroke(split, [50, 0], project)).toBeNull();
     expect(pickStroke(split, [0, 2], project)).toBe(0);
   });
 
-  it('un trait long ne gagne pas parce qu’il est long', () => {
+  it('a long stroke does not win just because it is long', () => {
     const long = [{ points: [0, 40, 0, 1000, 40, 0] }, { points: [48, 0, 0, 52, 0, 0] }];
     expect(pickStroke(long, [50, 2], project)).toBe(1);
   });

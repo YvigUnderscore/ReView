@@ -4,28 +4,25 @@
 import { describe, expect, it } from 'vitest';
 import { screen, within } from '@testing-library/react';
 import ProductionGrid from './ProductionGrid';
-import { httpError, type MockRequest, type MockResolver } from '../../../../test/apiMock';
-import { renderWithProviders } from '../../../../test/renderWithProviders';
-import { t } from '../../../i18n';
+import { httpError, type MockRequest, type MockResolver } from '@/test/apiMock';
+import { renderWithProviders } from '@/test/renderWithProviders';
+import { t } from '@/v2/i18n';
 import { COL_W_MIN, columnWidth } from './gridLayout';
 import type { GridCell, GridRow, ProjectGrid } from './gridWire';
 
 /**
- * L'écran que la grille remplace était jugé incompréhensible. Ce fichier verrouille les
- * quatre raisons pour lesquelles il l'était, et qu'elle corrige :
+ * The screen the grid replaces was judged incomprehensible. This file locks down the four reasons why it was, and which
+ * the grid corrects:
  *
- * - les colonnes portaient des clés techniques triées alphabétiquement, alors qu'un
- *   référentiel de départements ordonné existe ;
- * - une case vide pouvait aussi bien vouloir dire « à faire » que « rien à faire ici » ;
- * - les couleurs de statut n'étaient nommées nulle part : la case écrit désormais le nom
- *   de son statut, et garde sa couleur ;
- * - la maille séquence était le seul niveau offert, sans jamais descendre au plan.
+ * - the columns carried technical keys sorted alphabetically, whereas an ordered department reference exists;
+ * - an empty cell could just as well mean "to do" as "nothing to do here";
+ * - the status colours were named nowhere: the cell now writes the name of its status, and keeps its colour;
+ * - the shot level was the only one offered, never going down to the shot.
  */
 
 /**
- * happy-dom ne fait aucune mise en page : sans tailles, la table mesurerait zéro pixel et
- * le virtualiseur ne monterait aucune ligne. On lui donne la fenêtre qu'un navigateur
- * mesure — même procédé que la colonne de kanban, qui se virtualise déjà.
+ * happy-dom does no layout: without sizes, the table would measure zero pixels and the virtualiser would mount no row. We
+ * give it the window a browser would measure: same procedure as the kanban column, which is already virtualised.
  */
 const VIEWPORT = 700;
 Element.prototype.getBoundingClientRect = function stubbedRect(this: Element) {
@@ -138,9 +135,9 @@ const render = (grid?: MockResolver) =>
   renderWithProviders(<ProductionGrid projectId={PROJECT} />, { api: api(grid) });
 
 describe('ProductionGrid', () => {
-  it('met un plan par ligne, et les départements en colonnes dans l’ordre du pipe', async () => {
+  it('puts one shot per row, and the departments in columns in pipe order', async () => {
     render();
-    // Le nom du référentiel, pas la clé technique : « Animation », pas « anim ».
+    // The reference name, not the technical key: "Animation", not "anim".
     expect(await screen.findByRole('columnheader', { name: 'Animation' })).toBeTruthy();
     const headers = screen.getAllByRole('columnheader').map((h) => h.textContent);
     expect(headers).toEqual([t('production.grid.shot'), 'Animation', 'Compositing', 'Lighting']);
@@ -148,12 +145,12 @@ describe('ProductionGrid', () => {
     expect(screen.getByRole('link', { name: 'SH020' })).toBeTruthy();
   });
 
-  it('affiche le statut propre du plan, que l’écran d’avant n’affichait nulle part', async () => {
+  it("displays the shot's own status, which the earlier screen displayed nowhere", async () => {
     render();
     expect(
       await screen.findByRole('button', { name: `${t('production.grid.shotStatus')} · In progress` }),
     ).toBeTruthy();
-    // Le plan sans statut le dit, au lieu de laisser la colonne vide.
+    // A shot without a status says so, rather than leaving the column empty.
     expect(
       screen.getByRole('button', {
         name: `${t('production.grid.shotStatus')} · ${t('pipeline.status.none')}`,
@@ -161,7 +158,7 @@ describe('ProductionGrid', () => {
     ).toBeTruthy();
   });
 
-  it('distingue une case « à faire » d’une case hors programme', async () => {
+  it('distinguishes a "to do" cell from an off-schedule cell', async () => {
     render();
     await screen.findByRole('link', { name: 'SH010' });
     const idle = screen.getByRole('gridcell', { name: `Compositing · ${t('production.grid.idle')}` });
@@ -169,30 +166,30 @@ describe('ProductionGrid', () => {
       name: `Lighting · ${t('production.grid.unscheduled')}`,
     });
     expect(offPlan).toHaveLength(2);
-    // Aucune des deux n'écrit de nom : elles n'ont pas de statut, et c'est ce vide qui les
-    // sépare d'une case engagée. Elles restent distinguées par leur marque et leur libellé.
+    // Neither of the two writes a name: they have no status, and it is that emptiness which separates them from a
+    // committed cell. They remain distinguished by their mark and their label.
     expect(idle.textContent).toBe('');
     expect(offPlan[0].textContent).toBe('');
     expect(idle.getAttribute('title')).not.toBe(offPlan[0].getAttribute('title'));
   });
 
-  it('écrit le nom du statut DANS la case, sans rien demander au survol', async () => {
+  it('writes the status name INSIDE the cell, without requiring a hover', async () => {
     render();
     const done = await screen.findByRole('button', { name: /Approved/ });
-    // `textContent`, pas l'étiquette : c'est ce que l'œil lit sans survoler ni tabuler.
+    // `textContent`, not the label: it is what the eye reads without hovering or tabbing.
     expect(done.textContent).toContain('Approved');
     expect(screen.getByRole('button', { name: /Retake/ }).textContent).toContain('Retake');
   });
 
-  it('garde la couleur du référentiel à côté du nom — on ajoute, on ne remplace pas', async () => {
+  it('keeps the reference colour beside the name: we add, we do not replace', async () => {
     render();
     const done = await screen.findByRole('button', { name: /Approved/ });
-    // La pastille est le premier élément stylé de la case ; la teinte est celle du statut.
+    // The dot is the first styled element of the cell; the tint is that of the status.
     const dot = done.querySelector('span[style]');
     expect(dot?.getAttribute('style')).toMatch(/#22cc55|rgb\(34, ?204, ?85\)/i);
   });
 
-  it('traduit l’enum figé dans la case quand le studio n’a aucun référentiel', async () => {
+  it('translates the frozen enum into the cell when the studio has no reference data', async () => {
     const noRefRow: GridRow = {
       ...ROWS[0],
       shotId: 3,
@@ -200,7 +197,7 @@ describe('ProductionGrid', () => {
       cells: [
         cell('anim', {
           taskId: 301,
-          // Ce que sert le serveur sans référentiel : nom vide, enum dans le code.
+          // What the server serves without reference data: an empty name, the enum in the code.
           status: { id: null, code: 'PENDING_REVIEW', name: '', color: null, family: 'review' },
         }),
       ],
@@ -209,23 +206,22 @@ describe('ProductionGrid', () => {
     const label = t('task.status.toReview');
     const button = await screen.findByRole('button', { name: new RegExp(label) });
     expect(button.textContent).toContain(label);
-    // Et jamais l'identifiant lui-même, qui n'est pas un mot d'interface.
+    // And never the identifier itself, which is not a UI word.
     expect(button.textContent).not.toContain('PENDING_REVIEW');
   });
 
-  it('taille la colonne sur le nom le plus long servi, sans la laisser grossir sans fin', async () => {
+  it('sizes the column to the longest name served, without letting it grow endlessly', async () => {
     render();
     const header = await screen.findByRole('columnheader', { name: 'Animation' });
-    // « In progress », le plus long des statuts de la page.
+    // "In progress", the longest of the page's statuses.
     const width = columnWidth('In progress'.length);
     expect(header.style.width).toBe(`${width}px`);
-    // Et le bouton de la case porte cette largeur EN PIXELS : le menu contextuel interpose
-    // un `<div>` sans largeur, où un `w-full` se résoudrait en « largeur du contenu » et
-    // laisserait le nom déborder la colonne.
+    // And the cell's button carries that width IN PIXELS: the context menu interposes a width-less `<div>`, where a
+    // `w-full` would resolve to "content width" and let the name overflow the column.
     expect(screen.getByRole('button', { name: /Approved/ }).style.width).toBe(`${width - 1}px`);
   });
 
-  it('ne prend pas un pixel de plus qu’avant quand tous les noms sont courts', async () => {
+  it('takes not one pixel more than before when all the names are short', async () => {
     const short = (over: Partial<GridCell>): GridCell => ({
       ...cell('anim', over),
       status: { id: 9, code: 'fin', name: 'Final', color: null, family: 'done' },
@@ -235,7 +231,7 @@ describe('ProductionGrid', () => {
     expect(header.style.width).toBe(`${COL_W_MIN}px`);
   });
 
-  it('porte au survol ce que la case ne montre pas : versions, activité, échéance', async () => {
+  it('shows on hover what the cell does not display: versions, activity, deadline', async () => {
     render();
     const done = await screen.findByRole('button', { name: /Approved/ });
     const label = done.getAttribute('aria-label') ?? '';
@@ -244,11 +240,11 @@ describe('ProductionGrid', () => {
     expect(label).toContain(t('production.grid.versions', { count: 3 }));
   });
 
-  it('nomme les familles de statut dans une légende visible', async () => {
+  it('names the status families in a visible legend', async () => {
     render();
     await screen.findByRole('link', { name: 'SH010' });
-    // Portée à la légende : « In progress » et « To do » existent aussi dans le filtre de
-    // statut, et c'est bien le point — la couleur seule ne disait rien nulle part.
+    // Carried over to the legend: "In progress" and "To do" also exist in the status filter, and that is the point:
+    // colour alone said nothing anywhere.
     const legend = within(screen.getByRole('list'));
     for (const key of ['done', 'progress', 'review', 'blocked', 'todo', 'inactive'] as const) {
       expect(legend.getByText(t(`kanban.family.${key}`))).toBeTruthy();
@@ -257,46 +253,44 @@ describe('ProductionGrid', () => {
     expect(legend.getByText(t('production.grid.idle'))).toBeTruthy();
   });
 
-  it('replie une sequence sur son agrégat et rend ses plans quand on la déplie', async () => {
+  it('collapses a sequence onto its aggregate, and renders its shots when expanded', async () => {
     const { user } = render();
     const toggle = await screen.findByRole('button', { name: /SQ010/ });
     expect(toggle.getAttribute('aria-expanded')).toBe('true');
-    // Quatre cases comptées — les deux cases `light`, hors programme, ne comptent pas —
-    // dont une seule faite.
+    // Four cells counted (the two `light` cells, off-schedule, do not count), of which only one is done.
     expect(screen.getByText(t('production.grid.tally', { done: 1, total: 4 }))).toBeTruthy();
 
     await user.click(toggle);
     expect(toggle.getAttribute('aria-expanded')).toBe('false');
     expect(screen.queryByRole('link', { name: 'SH010' })).toBeNull();
-    // L'agrégat survit au repli : c'est lui qui remplace la matrice d'avancement.
+    // The aggregate survives collapsing: it is what replaces the progress matrix.
     expect(screen.getByText(t('production.grid.tally', { done: 1, total: 4 }))).toBeTruthy();
 
     await user.click(toggle);
     expect(screen.getByRole('link', { name: 'SH010' })).toBeTruthy();
   });
 
-  it('masque la colonne qu’aucun plan n’a au programme quand on le demande', async () => {
+  it('hides the column that no shot has on its schedule, when asked', async () => {
     const { user } = render();
     await screen.findByRole('columnheader', { name: 'Lighting' });
     await user.click(screen.getByRole('checkbox', { name: t('production.grid.hideEmptyColumns') }));
     expect(screen.queryByRole('columnheader', { name: 'Lighting' })).toBeNull();
     const kept = screen.getByRole('columnheader', { name: 'Compositing' });
     expect(kept).toBeTruthy();
-    // La grille se resserre sans que les cases restantes perdent leur nom, et la largeur
-    // reste celle du nom le plus long des colonnes ENCORE visibles.
+    // The grid tightens without the remaining cells losing their name, and the width stays that of the longest name among
+    // the columns STILL visible.
     expect(screen.getByRole('button', { name: /Approved/ }).textContent).toContain('Approved');
     expect(kept.style.width).toBe(`${columnWidth('In progress'.length)}px`);
   });
 
-  it('passe le filtre de département au serveur, et redemande une liste neuve', async () => {
+  it('passes the department filter to the server, and requests a fresh list', async () => {
     const seen: string[] = [];
     const { user } = render((req: MockRequest) => {
       seen.push(req.url.searchParams.get('department') ?? '');
       return GRID;
     });
     await screen.findByRole('link', { name: 'SH010' });
-    // Le référentiel arrive par sa propre requête : sans cette attente, le filtre serait
-    // manipulé avant d'avoir ses options.
+    // The reference arrives through its own request: without this wait, the filter would be handled before having its options.
     await screen.findByRole('option', { name: 'Compositing' });
     await user.selectOptions(
       screen.getByRole('combobox', { name: t('production.grid.filterDepartment') }),
@@ -306,23 +300,23 @@ describe('ProductionGrid', () => {
     expect(seen).toContain('comp');
   });
 
-  it('dit combien de plans le projet compte, sans mentir sur la page servie', async () => {
+  it('says how many shots the project has, without misrepresenting the page served', async () => {
     render({ ...GRID, rows: [ROWS[0]], total: 120, nextCursor: null });
     const footer = await screen.findByText(t('production.grid.total', { count: 120 }));
     expect(footer).toBeTruthy();
   });
 
-  it('montre l’erreur du serveur plutôt qu’une grille vide', async () => {
+  it('shows the server error rather than an empty grid', async () => {
     render(httpError(403, 'Forbidden'));
     expect(await screen.findByText(/Forbidden/)).toBeTruthy();
   });
 
-  it('rend un mot honnête quand aucun plan ne correspond aux filtres', async () => {
+  it('renders an honest word when no shot matches the filters', async () => {
     render({ ...GRID, rows: [], total: 0 });
     expect(await screen.findByText(t('production.grid.empty'))).toBeTruthy();
   });
 
-  it('propose le statut et l’assignation au clic droit d’une case', async () => {
+  it('offers status and assignment on the right-click of a cell', async () => {
     const { user } = render();
     const done = await screen.findByRole('button', { name: /Approved/ });
     await user.click(done);

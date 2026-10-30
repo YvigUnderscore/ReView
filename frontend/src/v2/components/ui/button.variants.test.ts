@@ -4,38 +4,38 @@
 import { describe, expect, it } from 'vitest';
 import { buttonVariants } from './button.variants';
 
-/** L'ordre des classes n'a pas de sens en CSS : on compare des ensembles. */
+/** Class order means nothing in CSS: we compare sets. */
 const set = (value: string) => new Set(value.split(/\s+/).filter(Boolean));
 
 const VARIANTS = ['default', 'destructive', 'outline', 'secondary', 'ghost', 'link'] as const;
 
-describe('buttonVariants — lisibilité de la variante sans aplat', () => {
+describe('buttonVariants — readability of the variant without a fill', () => {
   /*
-   * Le grief d'origine : `outline` posait `bg-transparent` sur `border-border`, un trait
-   * décoratif à 1,17:1 en thème sombre. Le bouton existait sans se voir. La correction
-   * n'est pas cosmétique — elle tient à un token précis, dont `theme.a11y.test.ts` vérifie
-   * par ailleurs qu'il atteint bien 3:1. Ce test-ci verrouille l'autre moitié : que la
-   * variante consomme ce token et pas le décoratif.
+   * The original complaint: `outline` put `bg-transparent` on `border-border`, a decorative
+   * line at 1.17:1 in dark theme. The button existed without being visible. The fix is not
+   * cosmetic: it rests on one specific token, which `theme.a11y.test.ts` separately checks
+   * reaches 3:1. This test locks the other half: that the variant consumes that token and
+   * not the decorative one.
    */
-  it('la variante outline dessine sa bordure avec le token des contrôles', () => {
+  it('the outline variant draws its border with the controls token', () => {
     const classes = set(buttonVariants({ variant: 'outline' }));
     expect(classes.has('border-border-strong')).toBe(true);
     expect(classes.has('border-border')).toBe(false);
   });
 
-  it('aucune autre variante ne s’approprie le token des contrôles', () => {
+  it('no other variant takes over the controls token', () => {
     for (const variant of VARIANTS.filter((name) => name !== 'outline')) {
       expect(set(buttonVariants({ variant })).has('border-border-strong'), variant).toBe(false);
     }
   });
 });
 
-describe('buttonVariants — état enfoncé', () => {
+describe('buttonVariants — pressed state', () => {
   /*
-   * L'enfoncement géométrique est commun à tous les contrôles : il est écrit une fois dans
-   * la base du `cva` (et défini dans index.css), jamais recopié par variante.
+   * The geometric press effect is common to all controls: it is written once in the base
+   * of the `cva` (and defined in index.css), never copied per variant.
    */
-  it('pose ui-pressable sur toutes les variantes, sans le répéter', () => {
+  it('applies ui-pressable to all variants, without repeating it', () => {
     for (const variant of VARIANTS) {
       const classes = buttonVariants({ variant })
         .split(/\s+/)
@@ -45,18 +45,18 @@ describe('buttonVariants — état enfoncé', () => {
   });
 
   /*
-   * Un survol sans état enfoncé, c'est un clic qui ne se voit pas : sur une action lente,
-   * rien ne distingue « parti » de « pas pris ». Chaque variante qui réagit au survol doit
-   * donc réagir aussi à l'appui.
+   * A hover without a pressed state is a click that is not visible: on a slow action,
+   * nothing tells "started" apart from "not taken". So every variant that reacts to hover
+   * must also react to press.
    */
-  it('donne à chaque variante un état :active distinct de son survol', () => {
+  it('gives each variant an :active state distinct from its hover', () => {
     for (const variant of VARIANTS) {
       const classes = [...set(buttonVariants({ variant }))];
       const hover = classes.filter((c) => c.startsWith('hover:'));
       const active = classes.filter((c) => c.startsWith('active:'));
       expect(hover.length, `${variant} : survol`).toBeGreaterThan(0);
       expect(active.length, `${variant} : appui`).toBeGreaterThan(0);
-      // L'appui ne redit pas le survol : il pousse la même propriété un cran plus loin.
+      // Pressing does not repeat the hover: it pushes the same property one step further.
       const strip = (prefix: string) => (c: string) => c.slice(prefix.length);
       expect(
         active.map(strip('active:')).some((c) => !hover.map(strip('hover:')).includes(c)),
@@ -66,12 +66,12 @@ describe('buttonVariants — état enfoncé', () => {
   });
 });
 
-describe('buttonVariants — non-régression de forme', () => {
+describe('buttonVariants — shape regression', () => {
   /*
-   * Le refactoring déplace le `cva` dans son propre module : la sortie doit rester
-   * identique au caractère près pour la variante par défaut, la plus employée.
+   * The refactoring moves the `cva` into its own module: the output must stay identical,
+   * character for character, for the default variant, the most used one.
    */
-  it('rend le bouton par défaut inchangé', () => {
+  it('keeps the default button unchanged', () => {
     expect(set(buttonVariants())).toEqual(
       set(
         'ui-pressable inline-flex items-center justify-center gap-1.5 rounded-md text-sm font-medium' +
@@ -82,7 +82,7 @@ describe('buttonVariants — non-régression de forme', () => {
     );
   });
 
-  it('conserve les quatre tailles', () => {
+  it('keeps the four sizes', () => {
     expect(set(buttonVariants({ size: 'sm' })).has('text-xs')).toBe(true);
     expect(set(buttonVariants({ size: 'lg' })).has('text-base')).toBe(true);
     expect(set(buttonVariants({ size: 'icon' })).has('h-8')).toBe(true);

@@ -5,10 +5,9 @@ import { prisma } from './prisma';
 import { logger } from './logger';
 
 /**
- * Journal d'accès aux médias (36.E) : qui a visionné quoi / quand — par compte (review
- * interne) ou par lien de partage (page client). Best effort : ne bloque jamais la
- * requête. Dédup : un même acteur sur un même média ne crée pas plus d'une ligne
- * par fenêtre de 30 minutes (rechargements/seeks ≠ nouvelles consultations).
+ * Media access log (36.E): who viewed what and when — per account (internal review) or per share link (client
+ * page). Best effort: never blocks the request. Dedup: the same actor on the same media creates at most one row per
+ * 30-minute window (reloads/seeks are not new views).
  */
 
 const DEDUP_WINDOW_MS = 30 * 60 * 1000;
@@ -39,5 +38,5 @@ export function logMediaAccess(params: {
         ip: params.ip ?? null,
       },
     });
-  })().catch((err) => logger.warn({ err }, '[mediaAccess] échec de journalisation'));
+  })().catch((err) => logger.warn({ err }, '[mediaAccess] logging failed'));
 }

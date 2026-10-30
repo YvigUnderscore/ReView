@@ -3,17 +3,17 @@
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
 #
-# Suite de validation ReView — à exécuter AVANT de valider/committer du code.
+# ReView validation suite — run BEFORE validating/committing code.
 #
 # Usage :
 #   bash scripts/validate.sh                 # checks sans services (typecheck, build, lint, tests unit)
-#   bash scripts/validate.sh --with-integration   # ajoute les tests d'intégration (nécessite Postgres+Redis+MinIO)
-#   bash scripts/validate.sh --with-e2e            # intégration + smoke Playwright (navigateur requis ; E2E_CHANNEL=msedge en local)
-#   bash scripts/validate.sh --with-shotgrid       # + harnais ShotGrid bout-en-bout (backend ReView démarré requis)
+#   bash scripts/validate.sh --with-integration   # adds the integration tests (requires Postgres+Redis+MinIO)
+#   bash scripts/validate.sh --with-e2e            # integration + Playwright smoke (browser required; E2E_CHANNEL=msedge locally)
+#   bash scripts/validate.sh --with-shotgrid       # + end-to-end ShotGrid harness (running ReView backend required)
 #
-# Les options se cumulent : `--with-integration --with-shotgrid` est valide.
+# Options combine: `--with-integration --with-shotgrid` is valid.
 #
-# Sortie : échoue (exit 1) au premier check rouge. Tout vert = code validable.
+# Exit: fails (exit 1) at the first red check. All green = code is valid.
 #
 set -euo pipefail
 
@@ -34,85 +34,85 @@ step() { printf '\n\033[1;36m▶ %s\033[0m\n' "$1"; }
 skip() { printf '\033[0;33m⏭  %s\033[0m\n' "$1"; }
 
 # ---------- Licence ----------
-# Chaque fichier source porte son en-tête SPDX (AGPL-3.0-or-later) : un fichier extrait
-# du dépôt reste ainsi rattaché à sa licence.
+# Every source file carries its SPDX header (AGPL-3.0-or-later): a file extracted
+# from the repository thus stays tied to its licence.
 step "Licence — en-têtes SPDX sur tous les fichiers source"
 node "$ROOT/scripts/add-license-headers.mjs" --check
 
-# Attribution des dépendances redistribuées (MIT/BSD/ISC/OFL exigent la conservation de
-# leurs notices). Le fichier est généré : il doit refléter l'état des lockfiles.
+# Attribution of redistributed dependencies (MIT/BSD/ISC/OFL require the preservation of
+# their notices). The file is generated: it must reflect the state of the lockfiles.
 step "Licence — THIRD-PARTY-NOTICES.md à jour"
 node "$ROOT/scripts/generate-notices.mjs" --check
 
 # ---------- Traductions ----------
-# Une traduction incomplète est admise (repli sur l'anglais) ; une traduction incohérente
-# ne l'est pas : variable interpolée perdue, forme plurielle absente de la langue, clé
-# orpheline, terme métier traduit. Le script chiffre aussi la couverture par langue.
+# An incomplete translation is accepted (falls back to English); an inconsistent translation
+# is not: lost interpolated variable, missing plural form for the language, orphan key,
+# business term translated. The script also measures coverage per language.
 step "i18n — cohérence des catalogues de traduction"
 node "$ROOT/scripts/check-translations.mjs"
 
-# Un catalogue complet ne prouve pas que l'interface l'utilise : ce contrôle relève les
-# chaînes françaises restées en dur (cliquet — le compte ne peut que baisser).
+# A complete catalogue does not prove that the interface uses it: this check reports the
+# French strings left hard-coded (ratchet — the count can only go down).
 step "i18n — chaînes en dur dans le frontend"
 node "$ROOT/scripts/check-untranslated.mjs"
 
-# La faute symétrique, que le contrôle précédent ne peut pas voir : une clé qui atteint
-# l'écran telle quelle (« task.status.todo » au lieu de « À faire »), faute d'un `t()`.
-# Une clé nue ressemble à un identifiant technique, donc le détecteur de texte en dur
-# l'écarte à raison — celui-ci interroge les types plutôt que le texte.
+# The symmetric fault, which the previous check cannot see: a key that reaches
+# the screen as is ("task.status.todo" instead of "To do"), for lack of a `t()`.
+# A bare key looks like a technical identifier, so the hard-coded text detector
+# rightly sets it aside — this one queries the types rather than the text.
 step "i18n — clés de traduction affichées brutes"
 node "$ROOT/scripts/check-raw-keys.mjs"
 
-# La troisième faute possible : une clé qui reste au catalogue alors que plus personne ne
-# l'affiche. Elle coûte peu à l'écran mais beaucoup à la relecture — quatorze traductions à
-# maintenir pour un message mort — et brouille la mesure de couverture. Le script existait
-# depuis la migration i18n sans être branché ici ; il l'est désormais, catalogues nettoyés.
+# The third possible fault: a key that stays in the catalogue although nobody
+# displays it. It costs little on screen but a lot in review — fourteen translations to
+# maintain for a dead message — and blurs the coverage measure. The script existed
+# since the i18n migration without being wired in here; it is now, catalogues cleaned.
 step "i18n — clés de traduction jamais affichées"
 node "$ROOT/scripts/check-unused-keys.mjs"
 
-# Le backend ne passe pas par les catalogues : ses messages d'erreur remontent tels quels
-# à l'écran, y compris sur la page publique d'un partage client. L'arbitrage est de les
-# écrire en anglais — ce contrôle empêche le français d'y revenir (D2).
+# The backend does not go through the catalogues: its error messages surface as they are
+# on screen, including on the public page of a client share. The decision is to
+# write them in English — this check stops French from creeping back (D2).
 step "i18n — messages d'erreur du backend en anglais"
 node "$ROOT/scripts/check-backend-english.mjs"
 
-# ---------- Thème ----------
-# « Couleurs = tokens du thème » : une classe Tailwind de palette brute (bg-blue-500…)
-# ou une couleur arbitraire (bg-[#…]) échappe au thème et casse la cohérence sombre/clair.
+# ---------- Theme ----------
+# "Colours = theme tokens": a raw-palette Tailwind class (bg-blue-500…)
+# or an arbitrary colour (bg-[#…]) escapes the theme and breaks dark/light consistency.
 step "Thème — couleurs hors tokens (classes Tailwind brutes)"
 node "$ROOT/scripts/check-color-tokens.mjs"
 
-# Une taille de police en pixels ignore le réglage de densité (qui agit sur la racine en rem).
+# A font size in pixels ignores the density setting (which acts on the root in rem).
 step "Thème — tailles de texte en pixels"
 node "$ROOT/scripts/check-text-sizes.mjs"
 
 # ---------- Documentation ----------
-# `DOCUMENTATION/` est du livrable : commité, servi in-app sur /docs, lu sur GitHub. Un lien
-# mort ou une figure manquante n'y font pas échouer un build — ils ne se voient qu'en
-# cliquant dessus, c'est-à-dire trop tard. Le contrôle vérifie le préambule de chaque page
-# (titre, sous-titre, date), la résolution de chaque lien interne et de chaque ancre, la
-# présence de chaque image, et la conformité des figures SVG (viewBox, titre, thème sombre).
+# `DOCUMENTATION/` is a deliverable: committed, served in-app on /docs, read on GitHub. A link
+# that is dead or a missing figure do not fail a build there — they only show up when
+# clicked, that is, too late. The check verifies the preamble of each page
+# (title, subtitle, date), the resolution of each internal link and anchor, the
+# presence of each image, and the conformity of SVG figures (viewBox, title, dark theme).
 step "Documentation — préambules, liens, images et figures"
 node "$ROOT/scripts/check-docs.mjs"
 
 # ---------- Outillage racine ----------
-# Les scripts de la racine (contrôles de la suite, simulateur ShotGrid, i18n) sont du code
-# comme un autre : lintés (via l'ESLint du backend) et formatés comme le reste.
+# The root scripts (suite checks, ShotGrid simulator, i18n) are code
+# like any other: linted (via the backend's ESLint) and formatted like the rest.
 step "Outillage — lint des scripts racine (eslint)"
 node "$ROOT/scripts/lint-scripts.mjs"
 
 step "Outillage — format des scripts racine (prettier --check)"
 ( cd "$ROOT" && ./backend/node_modules/.bin/prettier --check "scripts/**/*.mjs" )
 
-# Un script shell à la syntaxe cassée ne se découvre qu'à l'exécution — bash -n le voit avant.
+# A shell script with broken syntax is only discovered at run time — bash -n sees it beforehand.
 step "Outillage — syntaxe des scripts shell (bash -n)"
 for f in "$ROOT"/scripts/*.sh; do bash -n "$f"; done
 
 # Les workers appellent quatre scripts Python en production (analyse USD, conversion GLB,
-# miniature, cuisson de LUT) que rien ne compilait ni ne lintait : une faute de syntaxe ne
-# se découvrait qu'au premier upload USD d'un studio. `compileall` la voit sans exécuter le
-# code, et sans exiger les dépendances (usd-core, PyOpenColorIO) qu'un poste n'a pas.
-# `PYTHONPYCACHEPREFIX` renvoie les `__pycache__` hors du dépôt : le contrôle ne salit rien.
+# thumbnail, LUT baking) that nothing compiled or linted: a syntax error was not
+# discovered until a studio's first USD upload. `compileall` sees it without running the
+# code, and without requiring the dependencies (usd-core, PyOpenColorIO) a workstation lacks.
+# `PYTHONPYCACHEPREFIX` sends the `__pycache__` files out of the repository: the check dirties nothing.
 step "Outillage — syntaxe des scripts Python des workers (compileall)"
 PY=""
 for candidate in python3 python; do
@@ -121,32 +121,38 @@ for candidate in python3 python; do
   fi
 done
 if [ -z "$PY" ]; then
-  # Sauter proprement : la suite doit rester exécutable sur un poste sans interpréteur.
+  # Skip cleanly: the suite must stay runnable on a workstation without the interpreter.
   skip "Python absent : contrôle des scripts des workers sauté."
 else
   PYTHONPYCACHEPREFIX="$(mktemp -d)" "$PY" -m compileall -q \
     "$ROOT/backend/src/workers/usd" "$ROOT/backend/src/workers/ocio"
-  # `ruff` n'est pas une dépendance du dépôt : présent, on s'en sert ; absent, on continue.
-  if command -v ruff >/dev/null 2>&1; then
-    step "Outillage — lint des scripts Python (ruff)"
-    ruff check "$ROOT/backend/src/workers/usd" "$ROOT/backend/src/workers/ocio"
-  fi
 fi
 
+# `ruff` is MANDATORY (pip install ruff): a lint that is silently skipped when the tool is absent
+# stops protecting anything. Pinned rule set (pyflakes + syntax errors), independent of the
+# defaults of the installed ruff version: CI installs ruff via pip (see validate.yml).
+step "Outillage — lint des scripts Python (ruff)"
+if ! command -v ruff >/dev/null 2>&1; then
+  echo "✗ ruff est requis et introuvable (pip install ruff)." >&2
+  exit 1
+fi
+ruff check --isolated --select E4,E7,E9,F \
+  "$ROOT/backend/src/workers/usd" "$ROOT/backend/src/workers/ocio"
+
 # ---------- Budget de taille (10.F4) ----------
-# Le frontend est couvert par la règle ESLint `max-lines` (300, skipComments). Côté
-# backend, on garde-fou ici la taille des routes (≤ 200 lignes ; la logique métier vit
-# dans services/) — budget spécifique aux routes, distinct du lint ESLint backend.
-# Étend la suite, ne l'affaiblit jamais.
-# Les deux lignes de l'en-tête SPDX ne sont pas du code : elles sortent du décompte, le
-# budget de 200 lignes réelles reste identique.
+# The frontend is covered by the ESLint rule `max-lines` (300, skipComments). On the
+# backend, we guard here the size of the routes (≤ 200 lines; the business logic lives
+# in services/) — a budget specific to the routes, distinct from the backend ESLint lint.
+# Extends the suite, never weakens it.
+# The two lines of the SPDX header are not code: they are left out of the count, the
+# budget of 200 real lines stays identical.
 step "Budget — taille des routes backend (≤ 200 lignes)"
 OVER_BUDGET="$(
   find "$ROOT/backend/src/routes" -name '*.ts' | while read -r f; do
     n=$(wc -l <"$f")
     if head -1 "$f" | grep -q '^// SPDX-FileCopyrightText'; then
       n=$((n - 2))                                             # les deux lignes SPDX
-      [ -z "$(sed -n '3p' "$f" | tr -d '\r')" ] && n=$((n - 1)) # + sa ligne de séparation
+      [ -z "$(sed -n '3p' "$f" | tr -d '\r')" ] && n=$((n - 1)) # + its separator line
     fi
     if [ "$n" -gt 200 ]; then printf '  %s (%s lignes)\n' "${f#"$ROOT/"}" "$n"; fi
   done
@@ -164,30 +170,30 @@ step "Backend — format (prettier --check)"
 step "Backend — lint (eslint, zéro warning)"
 ( cd "$ROOT/backend" && npm run lint )
 
-# Le schéma Prisma est validé sans dépendre d'une base : l'URL factice suffit à `validate`.
+# The Prisma schema is validated without depending on a database: the dummy URL is enough for `validate`.
 step "Backend — schéma Prisma (prisma validate)"
 ( cd "$ROOT/backend" && DATABASE_URL="${DATABASE_URL:-postgresql://validate:validate@localhost:5432/validate}" npx prisma validate )
 
-# `prisma validate` ne dit que « le fichier se parse ». Un modèle modifié sans `migrate dev`
-# passait donc au vert, jusqu'à ce que `migrate deploy` serve en production une base sans la
-# colonne attendue. Ce contrôle rejoue les migrations sur une base fantôme et les confronte
-# au modèle. Il exige Postgres : sans base joignable il se saute (poste sans docker), sauf
-# quand REVIEW_REQUIRE_DRIFT_CHECK=1 — ce que pose le job CI qui, lui, a la base.
+# `prisma validate` only says "the file parses". A model changed without `migrate dev`
+# therefore passed green, until `migrate deploy` served a production database without the
+# expected column. This check replays the migrations on a shadow database and compares them
+# with the model. It requires Postgres: without a reachable database it is skipped (workstation without docker), except
+# when REVIEW_REQUIRE_DRIFT_CHECK=1 — which the CI job, which does have the database, sets.
 step "Backend — dérive schema.prisma ↔ migrations (prisma migrate diff)"
 node "$ROOT/scripts/check-prisma-drift.mjs"
 
-# Le tsconfig de lint étend le typecheck aux tests, à prisma/ et aux scripts — le build,
-# lui, ne compile que src/.
+# The lint tsconfig extends the typecheck to the tests, to prisma/ and to the scripts — the build,
+# for its part, only compiles src/.
 step "Backend — typecheck (tsc --noEmit, tests inclus)"
 ( cd "$ROOT/backend" && npm run typecheck )
 
 step "Backend — build (prisma generate + tsc)"
 ( cd "$ROOT/backend" && npm run build )
 
-# Couverture : mesurée quand le provider est installé, et confrontée aux planchers par
+# Coverage: measured when the provider is installed, and compared to the floors by
 # dossier (`scripts/coverage-floors.json`, cliquet — on monte, jamais on ne descend).
-# Le provider est une dépendance de développement à part ; tant qu'il manque, les tests
-# tournent sans mesure et la suite le dit haut et fort plutôt que de faire semblant.
+# The provider is a separate development dependency; while it is missing, the tests
+# run without measurement and the suite says so loudly rather than pretending.
 has_coverage_provider() { [ -d "$1/node_modules/@vitest/coverage-v8" ]; }
 
 step "Backend — tests unitaires (vitest)"
@@ -230,23 +236,23 @@ fi
 step "Frontend — build (vite build)"
 ( cd "$ROOT/frontend" && npm run build )
 
-# Garde-fou anti-régression sur ce que le navigateur télécharge avant le premier écran.
+# Anti-regression guardrail on what the browser downloads before the first screen.
 step "Frontend — budget du bundle d'entrée"
 node "$ROOT/scripts/check-bundle-budget.mjs"
 
 if [[ "$WITH_E2E" == "1" ]]; then
-  step "E2E — smoke Playwright (parcours critique, lance backend+frontend)"
+  step "E2E — Playwright (smoke + connexion, projets, commentaire de revue ; lance backend+frontend)"
   ( cd "$ROOT/frontend" && npm run test:e2e )
 fi
 
-# Harnais ShotGrid : 1 212 lignes de simulateur et de scénario qui n'avaient jamais tourné
-# autrement qu'à la main. Il vérifie l'invariant le plus coûteux de l'intégration — ne
-# jamais déborder sur le projet voisin — contre un site simulé qui héberge exprès trois
+# ShotGrid harness: 1,212 lines of simulator and scenario that had never run
+# other than by hand. It verifies the most costly invariant of the integration — never
+# spilling over into the neighbouring project — against a simulated site that deliberately hosts three
 # projets aux codes identiques.
 #
-# Hors de `--with-integration` sciemment : le scénario parle au backend ReView **par HTTP**
-# (stack docker démarrée), là où les tests d'intégration montent l'app en mémoire. Il écrit
-# donc dans la base de développement et y laisse son projet de test.
+# Deliberately outside `--with-integration`: the scenario talks to the ReView backend **over HTTP**
+# (docker stack started), whereas the integration tests mount the app in memory. It writes
+# therefore into the development database and leaves its test project there.
 if [[ "$WITH_SHOTGRID" == "1" ]]; then
   step "ShotGrid — harnais bout-en-bout (simulateur + scénario)"
   node "$ROOT/scripts/run-shotgrid-e2e.mjs"

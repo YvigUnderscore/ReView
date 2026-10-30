@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Minimize2 } from 'lucide-react';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 import type { ViewportZoom } from './useViewportZoom';
 
 /**
- * Repère de zoom du lecteur vidéo : rien tant que l'image est ajustée, sinon le taux
- * courant et un retour à l'ajustement d'un clic. Il vit **hors** du calque transformé —
- * c'est la porte de sortie quand la vue est perdue au fond d'un agrandissement.
+ * Zoom badge of the video player: renders nothing while the image is fitted, otherwise shows the
+ * current rate and a one-click return to fit. It lives **outside** the transformed layer — it is
+ * the way out when the view is lost deep inside an enlargement.
  */
 export default function ZoomBadge({ zoom }: { zoom: ViewportZoom }) {
   const t = useT();

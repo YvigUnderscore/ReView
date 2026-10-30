@@ -8,7 +8,7 @@ import { ListPlus, Plus } from 'lucide-react';
 import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
-import { deliverFiles } from '../../stores/deliverFiles';
+import { deliverFiles } from '../stores/deliverFiles';
 import EntityWorkPage from '../components/entity/EntityWorkPage';
 import FullPageDropzone from '../components/FullPageDropzone';
 import { SkeletonRows } from '../components/ui/skeleton';
@@ -30,7 +30,7 @@ import type { AssetOverview } from '../types/api';
 import EntityUnavailable from '../components/EntityUnavailable';
 import { isBadId, isMissingOrForbidden } from '../components/entityAvailability';
 
-/** Détail d'un plan tel que `GET /api/shots/:id` le renvoie. */
+/** Detail of a shot as returned by `GET /api/shots/:id`. */
 interface ShotDetail {
   id: number;
   code: string;
@@ -41,23 +41,23 @@ interface ShotDetail {
   endFrame?: number | null;
   pipelineStatusId?: number | null;
   thumbnailUrl?: string | null;
-  /** Coupé au montage (Phase 45) : les montages automatiques le sautent, lui reste entier. */
+  /** Cut at mount (Phase 45): automatic edits skip it, this one stays whole. */
   omitted?: boolean;
   sequence?: { id: number; code: string; projectId?: number } | null;
 }
 
 /**
- * Le plan, comme page.
+ * The shot, as a page.
  *
- * Une version ne peut pendre que d'une tâche ou d'un asset — jamais d'un plan. Déposer un
- * fichier demande donc d'abord sous quelle étape, exactement comme sur un asset ; le
- * sélecteur sait créer la tâche si elle manque encore. Le dépôt manquait ici alors qu'il
- * existait sur un asset : le même geste échouait selon l'entité ouverte (C3).
+ * A version can only hang from a task or an asset, never from a shot. Dropping a
+ * file therefore first asks under which step, exactly as on an asset; the
+ * selector can create the task if it is still missing. The drop was missing here although it
+ * existed on an asset: the same gesture failed depending on the entity opened (C3).
  */
 export default function ShotPage() {
   const { id } = useParams();
   const shotId = Number(id);
-  // Ouvrir, c'est consulter : la lueur « non consulté » s'éteint ici (lot 9).
+  // Opening is consulting: the "not consulted" glow switches off here (batch 9).
   useMarkVisited('SHOT', shotId);
   const t = useT();
   const navigate = useNavigate();
@@ -83,7 +83,7 @@ export default function ShotPage() {
   });
   const overview = treeQ.data ?? null;
 
-  /** Tâches du plan, telles que l'arbre les a déjà chargées. */
+  /** Tasks of the shot, as the tree has already loaded them. */
   const pickableTasks = useMemo(
     () =>
       (overview?.groups ?? [])
@@ -106,7 +106,7 @@ export default function ShotPage() {
       });
       send?.(version.id);
       toast.success(t('version.created', { name: version.name }));
-      // La version vit sous sa tâche : c'est là qu'on dépose son média et qu'on publie.
+      // The version lives under its task: that is where its media is dropped and published.
       void navigate(`/tasks/${taskId}?version=${version.id}`);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('version.createFailed'));
@@ -115,22 +115,22 @@ export default function ShotPage() {
 
   const withTask = (files: File[] | 'empty', taskId: number | null) => {
     if (!taskId) return;
-    // Regroupement et consigne se décident AVANT de créer la version : un dépôt abandonné
-    // ne doit pas laisser derrière lui une version vide (Phase 50).
+    // Grouping and instruction are decided BEFORE creating the version: an abandoned drop
+    // must not leave an empty version behind (Phase 50).
     if (files === 'empty') return fill(taskId);
     return deliverFiles(projectId, files, (send) => fill(taskId, send));
   };
 
-  // « Ajouter à la playlist » sur la dernière version publiée : c'est elle qu'on pousse
-  // dans les dailies, pas l'historique du plan.
+  // "Add to playlist" on the latest published version: that is the one pushed
+  // into the dailies, not the shot's history.
   const latestVersionId = overview?.latest?.versionId ?? null;
   const playlistEntry = latestVersionId ? playlistMenu.entry({ versionIds: [latestVersionId] }) : null;
 
   const menuExtras: MenuEntry[] = [
-    // Statut du plan, en tête du menu : c'est ce qu'on vient changer le plus souvent.
+    // Shot status, at the top of the menu: it is what one changes most often.
     ...entriesOf(shot ? statusEntry(shot, { canEdit: canManage }) : null),
-    // Omission du montage : elle ne touche que les montages automatiques, le plan garde
-    // tout — d'où la case à cocher plutôt qu'une action au nom définitif.
+    // Omitting the edit: it only touches automatic edits, the shot keeps
+    // everything — hence the checkbox rather than an action with a permanent name.
     ...entriesOf(shot ? omitEntry(shot, { canEdit: canManage }) : null),
     ...(canContribute
       ? [
@@ -142,8 +142,8 @@ export default function ShotPage() {
           },
         ]
       : []),
-    // Poser une étape sur le plan : le geste n'existait que par ricochet — en demandant
-    // une version, ou en assignant quelqu'un — et pas du tout sans ShotGrid.
+    // Setting a step on the shot: the gesture only existed indirectly — by requesting
+    // a version, or by assigning someone — and not at all without ShotGrid.
     ...(canManage
       ? [
           {
@@ -157,8 +157,8 @@ export default function ShotPage() {
     ...(playlistEntry ? [playlistEntry] : []),
   ];
 
-  // Un identifiant inexploitable ou une entité absente rendaient jusqu'ici la coquille
-  // complète, avec des actions actives sur un sujet qui n'existe pas.
+  // An unusable identifier or a missing entity used to render the full
+  // shell, with active actions on a subject that does not exist.
   if (isBadId(shotId) || (shotQ.isError && isMissingOrForbidden(shotQ.error)))
     return <EntityUnavailable kind="shot" error={isBadId(shotId) ? undefined : shotQ.error} />;
   if (shotQ.isError)
@@ -169,9 +169,9 @@ export default function ShotPage() {
       kind="shot"
       id={shotId}
       projectId={projectId}
-      // Titre d'attente, le temps que la fiche arrive. Il disait « Shots #21 » — le titre de
-      // la LISTE, au pluriel, pour un plan unique. L'identifiant seul ne ment sur rien et
-      // n'a pas de forme grammaticale à accorder dans quatorze langues.
+      // Waiting title, until the sheet arrives. It said "Shots #21" — the title of the
+      // LIST, in plural, for a single shot. The identifier alone lies about nothing and
+      // has no grammatical form to agree in fourteen languages.
       title={shot ? shot.code : `#${shotId}`}
       subtitle={shot?.name && shot.name !== shot.code ? shot.name : null}
       entity={shot ?? {}}

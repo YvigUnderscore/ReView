@@ -7,24 +7,23 @@ import { qk, queryClient } from './query';
 import type { ProjectSettings, ReviewRequestRule } from '../types/api';
 
 /**
- * Ce que le projet exige d'une consigne, et comment l'écran le vérifie AVANT d'écrire.
+ * What the project requires of a request, and how the screen checks it BEFORE writing.
  *
- * La règle est vérifiée trois fois — par le service, par l'API et ici. Cette troisième
- * vérification n'est pas de la défiance : c'est ce qui grise un bouton avant l'aller-retour
- * plutôt qu'après, et ce qui permet de dire *ce qui manque* au lieu de rapporter un refus.
- * La garder à un seul endroit, testable, est ce qui l'empêche de diverger des deux autres.
+ * The rule is checked three times — by the service, by the API and here. This third check is not
+ * distrust: it is what greys out a button before the round trip rather than after, and what lets us
+ * say *what is missing* instead of reporting a refusal. Keeping it in a single, testable place is what
+ * stops it from diverging from the other two.
  */
 
-/** Le repli quand les réglages ne sont pas encore chargés : rien n'est exigé. */
+/** The fallback while the settings are not loaded yet: nothing is required. */
 export const NO_RULE: ReviewRequestRule = { requireNote: false, minNoteLength: 5 };
 
 /**
- * La requête des réglages effectifs du projet, décrite une fois.
+ * The request for the project's effective settings, described once.
  *
- * Même clé de cache que partout ailleurs (`qk.projectSettings`) : l'onglet Réglages a
- * souvent déjà chargé la fiche, et une seconde requête pour la même donnée serait du
- * gaspillage. Le hook et le lecteur hors composant la partagent, pour qu'ils ne puissent
- * pas interroger deux endroits différents.
+ * Same cache key as everywhere else (`qk.projectSettings`): the Settings tab has often already loaded
+ * the record, and a second request for the same data would be wasteful. The hook and the reader outside
+ * a component share it, so that they cannot query two different places.
  */
 const ruleQuery = (projectId: number) => ({
   queryKey: qk.projectSettings(projectId),
@@ -33,22 +32,22 @@ const ruleQuery = (projectId: number) => ({
   staleTime: 5 * 60_000,
 });
 
-/** La règle du projet, telle que la lit un écran. */
+/** The project's rule, as a screen reads it. */
 export function useReviewRequestRule(projectId: number | undefined, enabled = true): ReviewRequestRule {
   const { data } = useQuery({ ...ruleQuery(projectId ?? 0), enabled: enabled && !!projectId });
   return data?.reviewRequest ?? NO_RULE;
 }
 
 /**
- * La même règle, lue HORS composant — la file d'upload doit la connaître avant d'avoir un
- * écran à rendre, et un `useQuery` ne se lit pas depuis un store.
+ * The same rule, read OUTSIDE a component — the upload queue must know it before it has a screen to
+ * render, and a `useQuery` cannot be read from a store.
  *
- * Même clé et même requête que le hook : le cache déjà chaud répond sans aller-retour, et
- * la règle ne peut pas dire deux choses différentes selon qui la demande.
+ * Same key and same request as the hook: the cache, already warm, answers without a round trip, and
+ * the rule cannot say two different things depending on who asks.
  *
- * Règle illisible (réseau coupé, projet inconnu) : on retombe sur « rien n'est exigé ».
- * Bloquer un dépôt sur un aller-retour manqué ferait perdre le travail d'un artiste, alors
- * que le serveur reste l'autorité et refusera l'envoi si le projet l'impose.
+ * Unreadable rule (network down, unknown project): we fall back on "nothing is required".
+ * Blocking an upload on a missed round trip would lose an artist's work, whereas the server remains the
+ * authority and will refuse the submission if the project imposes it.
  */
 export async function fetchReviewRequestRule(
   projectId: number | null | undefined,
@@ -62,13 +61,13 @@ export async function fetchReviewRequestRule(
   }
 }
 
-/** Ce qui cloche sur une consigne, ou `null` si elle convient. */
+/** What is wrong with a request, or `null` if it is acceptable. */
 export type NoteIssue = 'missing' | 'too-short' | null;
 
 /**
- * Même verdict que `checkReviewNote` côté serveur, à la lettre : l'espace ne compte pas,
- * une consigne vide n'est un problème que si le projet l'exige, et le plancher s'applique
- * à toute consigne écrite — y compris facultative.
+ * Same verdict as `checkReviewNote` on the server, to the letter: a space does not count, an empty
+ * request is a problem only if the project requires it, and the floor applies to any written request —
+ * including an optional one.
  */
 export function noteIssue(note: string, rule: ReviewRequestRule): NoteIssue {
   const text = note.trim();
@@ -76,5 +75,5 @@ export function noteIssue(note: string, rule: ReviewRequestRule): NoteIssue {
   return text.length < rule.minNoteLength ? 'too-short' : null;
 }
 
-/** Ce qu'on envoie : une consigne vide part en `null`, comme le serveur la range. */
+/** What is sent: an empty request goes out as `null`, as the server stores it. */
 export const toNotePayload = (note: string): string | null => note.trim() || null;

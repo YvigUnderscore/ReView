@@ -44,12 +44,12 @@ import ReviewPageHeader from './review/header/ReviewPageHeader';
 import TheaterExitButton from './review/TheaterExitButton';
 import { useReviewMedia } from './review/useReviewMedia';
 
-/** Review d'un média (vidéo/image/3D) — orchestrateur des panes (découpage 10.C2). */
+/** Review of a media item (video/image/3D); orchestrates the panes (split 10.C2). */
 export default function ReviewPage() {
   const { mediaId } = useParams();
   const id = parseIdParam(mediaId);
-  // key : réinitialise tout l'état (annotations, sélection, vidéo) au changement de
-  // média — navigation précédent/suivant ou changement de version sans quitter l'écran.
+  // key: resets all state (annotations, selection, video) when the media
+  // changes (previous/next navigation or version change) without leaving the screen.
   return <ReviewContent key={id} id={id} rawParam={mediaId} />;
 }
 
@@ -59,28 +59,28 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
 
   const qc = useQueryClient();
   const [commentsOpen, setCommentsOpen] = useState(true);
-  // Commentaire actuellement affiché (carte mise en avant + annotation visible)
+  // Comment currently displayed (highlighted card + visible annotation)
   const [selectedCommentId, setSelectedCommentId] = useState<number | null>(null);
   const [fpsOverride, setFpsOverride] = useState(24);
-  // Comparaison A/B + mode + wipe hissés ici pour être répliqués en live (retours 33).
+  // A/B comparison, mode and wipe are lifted here so they can be replicated live (feedback 33).
   const compare = useCompareState();
-  // Boucle I/O remontée par le lecteur (34.A) : plage in→out du prochain commentaire.
+  // I/O loop lifted from the player (34.A): in→out range of the next comment.
   const [loop, setLoop] = useState<{ in: number | null; out: number | null }>({ in: null, out: null });
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const composerRef = useRef<HTMLTextAreaElement>(null);
-  // Drapeau : distingue un seek programmatique d'un déplacement manuel (qui désélectionne).
+  // Flag: tells a programmatic seek apart from a manual move (which deselects).
   const programmaticSeekRef = useRef(false);
 
-  // Modes d'affichage unifiés (plein écran navigateur + théâtre in-window + PiP) : cf. hook.
-  // Le bloc review entier (en-tête + viewer + playbar + commentaires) passe en plein écran,
-  // pas seulement la zone viewer, pour garder la barre de transport et les commentaires.
+  // Unified display modes (browser fullscreen + in-window theater + PiP): see hook.
+  // The whole review block (header + viewer + playbar + comments) goes fullscreen,
+  // not just the viewer area, so the transport bar and comments stay visible.
   const { reviewRootRef, isFullscreen, toggleFullscreen, theater, setTheater, togglePictureInPicture } =
     useReviewViewport(videoRef);
 
   const mediaQ = useReviewMedia(id);
   const data = mediaQ.data ?? null;
-  // URL parlante : `/review/219` → `/review/perso-principal-v01-219` dès le nom connu.
+  // Readable URL: `/review/219` → `/review/perso-principal-v01-219` as soon as the name is known.
   useCanonicalSlug(rawParam, data ? mediaSlug(data.media.originalName, id) : null);
   const commentsQ = useQuery({
     queryKey: qk.comments(id),
@@ -90,8 +90,8 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
   const comments = commentsQ.data ?? null;
   const error = (mediaQ.error ?? commentsQ.error)?.message ?? null;
 
-  // Couleur d'annotation par utilisateur (14.F) : préférence enregistrée sinon teinte
-  // dérivée de l'id (alignée avec les avatars) ; un choix manuel est persisté.
+  // Per-user annotation color (14.F): saved preference, otherwise a hue
+  // derived from the id (aligned with avatars); a manual choice is persisted.
   const prefsQ = useQuery({
     queryKey: qk.preferences,
     queryFn: () =>
@@ -106,48 +106,48 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
     onColorChange: (c) => {
       void api.patch('/api/users/me/preferences', { annotationColor: c });
     },
-    // Brouillon local (32.C) : les formes 2D en cours survivent à un rechargement.
+    // Local draft (32.C): in-progress 2D shapes survive a reload.
     initialShapes: () => (loadDraft(id)?.shapes as Shape[] | undefined) ?? [],
   });
   useEffect(() => saveDraft(id, { shapes: ann.annot }), [ann.annot, id]);
   const glbSrc = resolveGlbSrc(data);
   const model3d = useModel3DThree(data, glbSrc);
-  // Viewer Gaussian Splat (Spark) — monté seulement pour un média SPLAT (10.G).
+  // Gaussian Splat viewer (Spark), mounted only for a SPLAT media (10.G).
   const splatUrl = data?.media.kind === 'SPLAT' ? data.url : null;
   const splat = useSplat(splatUrl, data?.media.originalName ?? '', mediaReviewAspect(data).value);
-  // Brosse de surface : traits joints au prochain commentaire ; la gomme réécrit ceux d'un
-  // commentaire déjà envoyé, d'où l'identifiant du média (invalidation du fil).
+  // Surface brush: strokes are attached to the next comment; the eraser rewrites those of a
+  // comment already sent, hence the media id (invalidates the thread).
   //
-  // Le MÊME hook sert les deux types spatiaux depuis le lot 13 (il ne lit que la poignée de
-  // scène commune) : on lui passe donc le viewer du média ouvert. Un seul appel, un seul état —
-  // deux instances auraient donné deux piles de traits, dont une invisible à l'envoi.
+  // The SAME hook serves both spatial types since batch 13 (it only reads the shared scene
+  // handle), so we pass it the open media's viewer. One call, one state: two instances would
+  // have produced two stroke stacks, one of them invisible at send time.
   const spatialMedia = data?.media.kind === 'MODEL_3D' || data?.media.kind === 'SPLAT';
   const paint = useSplatPaint(data?.media.kind === 'MODEL_3D' ? model3d : splat, spatialMedia, id);
 
   const loadComments = useCallback(() => qc.invalidateQueries({ queryKey: qk.comments(id) }), [qc, id]);
 
-  // Verrou de publication (Phase 11, table révisée en Phase 50) : un média publié refuse le
-  // montage vidéo, le `transform` d'une version et l'écriture des éditions splat « pour tout le
-  // monde ». Restent autorisées les écritures qui ne touchent pas au fichier d'origine et ne
-  // réécrivent pas ce que les autres commentent — miniature, mise en scène, override USD.
+  // Publish lock (Phase 11, table revised in Phase 50): a published media refuses
+  // video editing, a version's `transform`, and splat edit writes "for everyone". Writes that
+  // do not touch the original file and do not rewrite what others comment on remain allowed:
+  // thumbnail, staging, USD override.
   const canManageMedia = role === 'ADMIN' || role === 'SUPERVISOR' || data?.media.uploaderId === userId;
   /**
-   * Éditeur de splat MONTÉ : gestionnaire, publié ou non. Éditer reste offert après publication —
-   * c'est l'ENREGISTREMENT pour tous qui s'arrête là (`SplatReview`, verrou serveur) ; au-delà,
-   * l'édition part dans un commentaire, comme la proposition de scène 3D.
+   * Splat editor MOUNTED: manager or not, published or not. Editing stays available after publishing;
+   * only the SAVE-for-everyone stops there (`SplatReview`, server lock). Beyond that,
+   * the edit goes into a comment, like the 3D scene proposal.
    */
   const canEditSplat = canManageMedia;
   /**
-   * Transform 3D : le droit vient du SERVEUR (`permissions.editTransform`), plus d'une règle
-   * de rôle recopiée ici. L'ancienne — « non publiée + rôle interne » — offrait les gizmos et
-   * le bouton « Enregistrer » à un artiste qui n'est pas l'auteur de la version, que
-   * `VersionService.update` refuse ensuite en 403. Absent (détail pas encore chargé) : non.
+   * 3D transform: the right comes from the SERVER (`permissions.editTransform`), not from a role
+   * rule copied here. The old one, "unpublished + internal role", offered gizmos and the
+   * "Save" button to an artist who is not the version's author, which `VersionService.update`
+   * then refuses with a 403. Absent (detail not loaded yet): no.
    */
   const canEditTransform = data?.permissions.editTransform ?? false;
-  // Miniature auto à la 1re vue (splat + 3D), tous viewers, si absente (Phase 20).
+  // Auto thumbnail on first view (splat + 3D), all viewers, if missing (Phase 20).
   useAutoThumbnail(id, data, 'SPLAT', splat.ready, splat.captureThumbnail);
   useAutoThumbnail(id, data, 'MODEL_3D', model3d.ready, model3d.captureThumbnail);
-  // Patch du cache après enregistrement des éditions splat + recapture gestionnaire (10.F4).
+  // Cache patch after saving splat edits + manager recapture (10.F4).
   const onSplatEditsSaved = useSplatThumbnail(id, splat, canEditSplat);
 
   const seek = (t: number) => {
@@ -156,45 +156,45 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
     videoRef.current.currentTime = t;
   };
 
-  // Désélectionne le commentaire courant et relâche tout ce qu'il affichait — dessin, points
-  // d'intérêt, traits de brosse, scène proposée. C'est la sortie EXPLICITE (pilule du viewer,
-  // Échap, autre commentaire, entrée en rédaction) : un mouvement de vue, lui, ne masque plus que
-  // le dessin 2D, seul à dépendre de la caméra d'origine (cf. `ReviewViewer`).
+  // Deselects the current comment and releases everything it displayed: drawing, points of
+  // interest, brush strokes, proposed scene. This is the EXPLICIT exit (viewer pill,
+  // Escape, another comment, entering composition). A view movement, on the other hand, only hides
+  // the 2D drawing, the only part that depends on the original camera (see `ReviewViewer`).
   const clearSelection = () => {
     setSelectedCommentId(null);
     ann.clearViewed();
     paint.showFromAnnotation(null);
   };
 
-  // Sélection d'un commentaire : restaure ensemble seek + annotation 2D/3D + caméra (animée).
+  // Comment selection: restores seek + 2D/3D annotation + camera together (animated).
   const selectComment = (c: ReviewComment) => {
     setSelectedCommentId(c.id);
     const { shapes, cameraAnim, sceneOverride, splatEdit } = splitAnnotationParts(c.annotation);
-    // Points d'intérêt du commentaire : la lecture unifie la part `poi` et le `hotspot` unique
-    // des commentaires antérieurs — une pastille numérotée dans les deux cas.
+    // Comment points of interest: reading unifies the `poi` part and the single `hotspot`
+    // of earlier comments, one numbered marker in both cases.
     ann.setViewedPoi(readPoiPoints(c.annotation));
-    // Mode layout : anim caméra jointe → rejouée par le viewer (3D/splat).
+    // Layout mode: attached camera animation → replayed by the viewer (3D/splat).
     ann.setViewedCameraAnim(cameraAnim);
-    // Proposition de scène 3D jointe (46.D) : rejouée pour ce commentaire seulement. Sa jumelle
-    // pour le nuage (lot 14) suit la même règle — lue ici, rejouée par le viewer splat.
+    // Attached 3D scene proposal (46.D): replayed for this comment only. Its twin
+    // for the point cloud (batch 14) follows the same rule, read here and replayed by the splat viewer.
     ann.setViewedSceneOverride(sceneOverride);
-    // Les deux binaires de la proposition de nuage sont des pièces jointes DE CE commentaire :
-    // leurs URL présignées se lisent là, et nulle part ailleurs — une clé étrangère glissée dans
-    // la part ne donne donc rien à rejouer.
+    // The two binaries of the point-cloud proposal are attachments OF THIS comment:
+    // their presigned URLs are read there and nowhere else. A foreign key slipped
+    // into the part therefore yields nothing to replay.
     ann.setViewedSplatEdit(resolveSplatEditProposal(splatEdit, c.attachments));
     if (shapes.length > 0) {
       ann.setAnnotating(false);
       ann.setViewed(shapes as unknown as Shape[]);
     } else ann.setViewed(null);
-    // Traits de la brosse : rendus dans la scène pour ce commentaire — modèle comme nuage
-    // (lot 13). L'identifiant n'est passé que si le spectateur en est l'auteur : c'est ce que la
-    // gomme peut réécrire.
+    // Brush strokes: rendered in the scene for this comment, model and point cloud alike
+    // (batch 13). The id is only passed if the viewer is its author: that is what the
+    // eraser may rewrite.
     if (spatialMedia) paint.showFromAnnotation(c.annotation, c.author?.id === userId ? c.id : null);
-    // Ratio capturé (3D: cameraState.aspect) pour caler l'overlay
+    // Captured ratio (3D: cameraState.aspect) to fit the overlay
     const cam = c.cameraState as { aspect?: number } | null;
     ann.setViewedAspect(cam?.aspect ?? null);
     if (c.timestamp != null) {
-      // Pause : l'annotation est alignée sur cette frame ; la lecture la masquerait aussitôt.
+      // Paused: the annotation is aligned to this frame; playback would hide it immediately.
       videoRef.current?.pause();
       seek(c.timestamp);
     }
@@ -204,14 +204,14 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
     }
   };
 
-  // Lien profond (32.E) : `?frame=`/`?comment=` appliqué une fois à l'arrivée.
+  // Deep link (32.E): `?frame=`/`?comment=` applied once on arrival.
   useDeepLink({ data, comments, videoRef, programmaticSeekRef, fallbackFps: fpsOverride, selectComment });
 
-  // Montage automatique (45) : avec `?timeline=`, la fin d'un plan enchaîne sur le suivant.
+  // Automatic editing (45): with `?timeline=`, the end of a shot chains into the next one.
   useTimelineChain(id, videoRef);
 
-  // Salle de review live (33.B) : driver → diffusion ; spectateurs → application
-  // (playhead, navigation, caméra 3D + DoF splat, comparaison A/B, zoom/pan image).
+  // Live review room (33.B): driver → broadcast; viewers → apply
+  // (playhead, navigation, 3D camera + splat DoF, A/B comparison, image zoom/pan).
   const imageViewApiRef = useRef<ImageViewApi | null>(null);
   const live = useLiveSession({
     mediaId: id,
@@ -232,13 +232,13 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
     imageViewApiRef,
   });
 
-  // Barre de wipe : état hissé + prise de main d'un co-pilote dès la poignée saisie.
+  // Wipe bar: lifted state + co-pilot takeover as soon as the handle is grabbed.
   const sharedWipe = compare.makeSharedWipe(live.claimInteraction);
 
   /**
-   * Ramène la caméra sur un point d'intérêt relu (numéro cliqué dans le fil). Le point est en
-   * espace OBJET : le cadrage retombe au même endroit pour tout spectateur, quelle que soit la
-   * transformation du média — même règle que la présentation caméra.
+   * Brings the camera back to a point of interest reread (number clicked in the thread). The point is in
+   * OBJECT space: framing lands in the same place for every viewer, whatever the
+   * media's transform. Same rule as the camera presentation.
    */
   const focusPoi = (point: PoiPoint) => {
     if (data?.media.kind === 'SPLAT') splat.focusPoi(point);
@@ -246,12 +246,12 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
   };
 
   /**
-   * Démarre/arrête l'annotation.
+   * Starts/stops annotation.
    *
-   * Elle POSAIT jusqu'ici un point de surface au centre du viewer à l'ouverture, sur un modèle
-   * 3D comme sur un splat : un point que personne n'avait désigné rejoignait le commentaire à
-   * chaque bascule. Les points se posent maintenant là où on clique, avec l'outil du rail —
-   * entrer en annotation n'en crée plus aucun.
+   * Until now it PLACED a surface point at the center of the viewer on opening, on a 3D model
+   * as on a splat: a point nobody had designated joined the comment at
+   * every toggle. Points are now placed where you click, with the rail tool;
+   * entering annotation mode no longer creates any.
    */
   const toggleAnnotating = () => {
     ann.setAnnotating((prev) => {
@@ -261,7 +261,7 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
     });
   };
 
-  // Raccourci M : pause + focus du composer (commentaire à la frame courante).
+  // M shortcut: pause + focus the composer (comment at the current frame).
   const openComposer = useCallback(() => {
     setCommentsOpen(true);
     setTimeout(() => composerRef.current?.focus(), 0);
@@ -279,37 +279,36 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
     fps: data?.fps ?? fpsOverride,
   });
 
-  // Publier fige la scène : la mise en scène 3D non enregistrée devient d'abord l'override de
-  // base (46.S) — ce que le gestionnaire voit est ce que les reviewers verront par défaut.
+  // Publishing freezes the scene: unsaved 3D staging first becomes the base
+  // override (46.S), so what the manager sees is what reviewers see by default.
   const publishSceneFirst = usePublishSceneOverride(id, data, ann);
 
-  // Publication + relance de conversion (extrait — budget 300 lignes).
+  // Publish + conversion restart (excerpt, 300-line budget).
   const { reprocessing, publishMedia, reprocessMedia } = useMediaActions(id, model3d, publishSceneFirst);
 
   const kind = data?.media.kind;
   /*
-   * Une seule cadence pour tout l'écran.
+   * One cadence for the whole screen.
    *
-   * La page distribuait la valeur brute de la base — 23.98, l'arrondi au centième — au
-   * panneau de commentaires, aux plages d'annotation et aux liens profonds, tandis que le
-   * viewer recalculait la fraction exacte (23.976) pour son compteur et sa timeline. Les
-   * deux divergent d'une frame toutes les quatre minutes : la même image portait deux
-   * numéros différents sur le même écran, et copier un lien vers une frame puis l'ouvrir
-   * ne rendait pas la même image.
+   * The page distributed the raw database value (23.98, rounded to the hundredth) to the
+   * comments panel, annotation ranges and deep links, while the viewer recomputed the exact
+   * fraction (23.976) for its counter and timeline. The two diverge by one frame every four minutes:
+   * the same frame carried two different numbers on the same screen, and copying a link to a frame
+   * then opening it did not show the same image.
    */
   const fps = data?.fps != null ? exactFrameRate(data.fps) : fpsOverride;
   const startFrame = data?.startFrame ?? 1001;
 
-  // Marqueurs de timeline (34.C) en séparateurs du fil de commentaires (retours 34) —
-  // même query que le lecteur (cache partagé), désactivée hors vidéo (mediaId 0).
+  // Timeline markers (34.C) as separators in the comment thread (feedback 34),
+  // same query as the player (shared cache), disabled outside video (mediaId 0).
   const markersApi = useTimelineMarkers(kind === 'VIDEO' ? id : 0);
 
   // prettier-ignore
   const rootClass = theater ? 'fixed inset-0 z-40 bg-background p-4'
     : isFullscreen ? 'h-screen bg-background p-4' : 'min-h-0 flex-1 p-4';
 
-  // Emplacements de l'en-tête unique : identité, actions, commentaires — et le drapeau
-  // qui dit si le chrome du viewer les héberge ou si la page doit les rendre elle-même.
+  // Slots of the single header: identity, actions, comments, and the flag
+  // saying whether the viewer chrome hosts them or the page must render them itself.
   const {
     hosted,
     identity,
@@ -351,9 +350,9 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
       breadcrumb={<EntityBreadcrumb entity="media" id={id} />}
       width="flush"
     >
-      {/* Le menu natif est bloqué globalement par ContextMenuGuard (A3) : la review n'a plus
-          à marquer l'événement comme traité, ce qui rendait muette toute zone dépourvue de
-          menu métier — en-tête, barre d'options, dock, transport, panneau de commentaires. */}
+      {/* The native menu is blocked globally by ContextMenuGuard (A3): the review no longer
+          has to mark the event as handled, which made silent every area without a
+          business menu: header, options bar, dock, transport, comments panel. */}
       <ReviewHeaderSlotsContext.Provider
         value={hosted ? { identity, actions, comments: commentsColumn } : null}
       >
@@ -369,11 +368,11 @@ function ReviewContent({ id, rawParam }: { id: number; rawParam?: string }) {
           />
           {error && <p className="mb-2 shrink-0 text-sm text-destructive">{error}</p>}
 
-          {/* Corps : viewer (large) + commentaires quand le chrome ne les héberge pas */}
+          {/* Body: viewer (large) + comments when the chrome does not host them */}
           <div className="flex min-h-0 flex-1 gap-4">
-            {/* Frontière de dernier recours : le chrome en pose une au ras du viewport, qui
-                laisse l'en-tête et les commentaires debout quand la vue tombe. Celle-ci ne
-                sert plus qu'au cas où la branche elle-même jette. */}
+            {/* Last-resort boundary: the chrome places one flush with the viewport, which
+                keeps the header and comments standing when the view falls over. This one
+                only serves in case the branch itself throws. */}
             <ErrorBoundary scope="viewer">
               <ReviewViewer
                 data={data}

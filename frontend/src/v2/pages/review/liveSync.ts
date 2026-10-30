@@ -1,15 +1,15 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { getSocket } from '../../../lib/socket';
+import { getSocket } from '@/lib/socket';
 import type { ImageView } from '../../components/ImageReviewViewer';
 
 /**
- * Types et helpers de la session live (33.B) — partagés par `useLiveSession` (extraits
- * pour le budget de 300 lignes). État module : départs différés + dernier média du driver.
+ * Types and helpers of the live session (33.B), shared by `useLiveSession` (extracted to respect
+ * the 300-line budget). Module state: deferred departures and the driver's last media.
  */
 
-/** Participant d'une session live (payload socket `live:state`). */
+/** Participant of a live session (`live:state` socket payload). */
 export interface LiveParticipant {
   id: number;
   displayName: string;
@@ -21,30 +21,30 @@ export interface LiveStatePayload {
   key: string;
   pilotId: number;
   coHostIds: number[];
-  /** Pilote ou co-pilote dont la diffusion fait foi (dernier à avoir interagi). */
+  /** Pilot or co-pilot whose broadcast is authoritative (last to have interacted). */
   driverId: number;
   participants: LiveParticipant[];
 }
 
-/** État diffusé par le driver — appliqué tel quel par les spectateurs. */
+/** State broadcast by the driver, applied as is by the viewers. */
 export interface LiveSyncPayload {
   mediaId: number;
   t?: number;
   playing?: boolean;
   camera?: unknown;
   compareId?: number | null;
-  /** Mode de comparaison (côte-à-côte / wipe / diff 34.E) + barre de wipe (retours 33). */
+  /** Comparison mode (side by side / wipe / diff 34.E) + wipe bar (returns 33). */
   compareMode?: 'side' | 'wipe' | 'diff';
   wipe?: { pos: number; angle: number };
   imageView?: ImageView;
-  /** Interaction explicite (play/seek/navigation/zoom) — vaut prise de main d'un co-pilote. */
+  /** Explicit interaction (play/seek/navigation/zoom): counts as a co-pilot taking over. */
   action?: boolean;
 }
 
 /**
- * Départs différés par clé de session : la navigation interne (média suivant d'une
- * playlist) démonte puis remonte le hook — on n'émet `live:leave` que si aucun
- * nouveau montage n'a repris la session entre-temps (sinon le pilote perdrait la main).
+ * Deferred departures per session key. Internal navigation (next media of a playlist) unmounts,
+ * then remounts the hook. `live:leave` is only emitted if no new mount has resumed the session in
+ * the meantime (otherwise the driver would lose control).
  */
 const pendingLeaves = new Map<string, number>();
 
@@ -67,5 +67,5 @@ export const schedulePendingLeave = (key: string): void => {
   );
 };
 
-/** Dernier média imposé par le driver — distingue navigation suivie / navigation locale. */
+/** Last media imposed by the driver: distinguishes followed navigation from local navigation. */
 export const driverMedia = { lastId: 0 };

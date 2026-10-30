@@ -7,7 +7,7 @@ vi.mock('../lib/prisma', () => ({
   prisma: { user: { findFirst: vi.fn(), update: vi.fn() } },
 }));
 vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: { getPresignedGetUrl: vi.fn() },
   StorageService: class {},
 }));
@@ -19,14 +19,14 @@ import { prisma } from '../lib/prisma';
 const findFirst = vi.mocked(prisma.user.findFirst);
 const update = vi.mocked(prisma.user.update);
 
-describe('UserService.updateMe — profil enrichi (42.B №89)', () => {
+describe('UserService.updateMe: enriched profile (42.B, issue #89)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     findFirst.mockResolvedValue(null);
     update.mockResolvedValue({ id: 1, email: 'a@b.c', avatarKey: null } as never);
   });
 
-  it('persiste fonction / bio / téléphone', async () => {
+  it('persists role / bio / phone', async () => {
     await updateMe(1, { jobTitle: 'Compositing', bio: 'Bonjour', phone: '+33 6' });
     expect(update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -36,7 +36,7 @@ describe('UserService.updateMe — profil enrichi (42.B №89)', () => {
     );
   });
 
-  it('n’écrit que les champs fournis', async () => {
+  it('writes only the supplied fields', async () => {
     await updateMe(1, { firstName: 'Ana' });
     expect(update.mock.calls[0]![0].data).toEqual({ firstName: 'Ana' });
   });

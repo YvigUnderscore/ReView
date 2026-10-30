@@ -10,25 +10,25 @@ import { Button } from './ui/button';
 import PageShell from './PageShell';
 
 /**
- * Ce qu'une page d'entité affiche quand son sujet n'existe pas, n'est pas accessible, ou
- * n'a pas pu être chargé.
+ * What an entity page shows when its subject does not exist, is not accessible, or
+ * could not be loaded.
  *
- * Sans elle, une page d'entité rendait sa coquille avec des données nulles : `/shots/999999`
- * affichait « Shots #999999 » et proposait « + Nouvelle version » et « Rattacher un asset »
- * sur un plan qui n'existe pas ; `/tasks/abc` allait jusqu'à « Tâche #NaN » avec une zone
- * de dépôt de fichiers active. Les pages publiques (partage, invitation) traitaient déjà
- * correctement le cas — c'est le même soin, porté aux pages internes.
+ * Without it, an entity page rendered its shell with null data: `/shots/999999`
+ * displayed "Shots #999999" and offered "+ New version" and "Attach an asset"
+ * on a shot that does not exist; `/tasks/abc` went as far as "Task #NaN" with an active
+ * file drop zone. The public pages (sharing, invitation) already handled
+ * the case correctly: it is the same care, applied to the internal pages.
  *
- * Trois situations, trois messages : l'entité n'existe pas (404), elle ne nous est pas
- * ouverte (403), ou le serveur n'a pas répondu — et dans ce dernier cas seulement, un
- * bouton « Réessayer », parce que c'est le seul cas où réessayer a un sens.
+ * Three situations, three messages: the entity does not exist (404), it is not open
+ * to us (403), or the server did not respond. Only in the last case is there a
+ * "Retry" button, because that is the only case where retrying makes sense.
  */
 
 export type EntityKind = 'shot' | 'sequence' | 'episode' | 'asset' | 'task' | 'project' | 'media';
 
 interface Props {
   kind: EntityKind;
-  /** L'erreur remontée par la query ; absente quand l'identifiant lui-même est invalide. */
+  /** The error surfaced by the query; absent when the identifier itself is invalid. */
   error?: unknown;
   onRetry?: () => void;
 }

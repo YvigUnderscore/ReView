@@ -42,6 +42,22 @@ cd "$ROOT"
 BACKUP_DIR="${1:-./backups}"
 KEEP="${BACKUP_KEEP:-7}"
 MODE="${BACKUP_MODE:-mirror}"
+
+# Validate BEFORE anything is written: rotation deletes directories, and `tail -n +$((KEEP+1))`
+# with KEEP=0 would purge every backup, including the one just made. Must be an integer >= 1.
+case "$KEEP" in
+  ''|*[!0-9]*|0|0[0-9]*)
+    echo "✗ BACKUP_KEEP must be a positive integer >= 1 (got: \"$KEEP\")" >&2
+    exit 1
+    ;;
+esac
+# The rotation root must be a real, non-trivial directory path.
+case "$BACKUP_DIR" in
+  ''|/|.|..|./|../)
+    echo "✗ refusing to use \"$BACKUP_DIR\" as the backup directory" >&2
+    exit 1
+    ;;
+esac
 STAMP="$(date +%Y%m%d-%H%M%S)"
 
 mkdir -p "$BACKUP_DIR/$STAMP"
@@ -85,8 +101,18 @@ fi
 
 # Credentials and bucket are read from the containers themselves: the host's .env may
 # differ (variables forced by compose), the container tells the truth.
-S3_USER="$(docker exec "$MINIO" printenv MINIO_ROOT_USER 2>/dev/null || echo minioadmin)"
-S3_PASS="$(docker exec "$MINIO" printenv MINIO_ROOT_PASSWORD 2>/dev/null || echo minioadmin)"
+S3_USER="$(docker exec "$MINIO" printenv MINIO_ROOT_USER 2>/dev/null || true)"
+S3_PASS="$(docker exec "$MINIO" printenv MINIO_ROOT_PASSWORD 2>/dev/null || true)"
+if [ -z "$S3_USER" ] || [ -z "$S3_PASS" ]; then
+  echo "✗ cannot read MINIO_ROOT_USER / MINIO_ROOT_PASSWORD from the MinIO container ($MINIO): is it running?" >&2
+  exit 1
+fi
+# The credentials reach `mc` through a mode-600 env-file, never `docker run -e KEY=secret`:
+# a value on the command line is visible in `ps`, shell history and `docker inspect`.
+MC_ENVFILE="$(mktemp)"
+trap 'rm -f "$MC_ENVFILE"' EXIT
+chmod 600 "$MC_ENVFILE"
+printf 'MC_HOST_review=http://%s:%s@127.0.0.1:9000\n' "$S3_USER" "$S3_PASS" > "$MC_ENVFILE"
 BUCKET="$(docker exec "$(container_of backend)" printenv S3_BUCKET 2>/dev/null || echo review)"
 
 case "$MODE" in
@@ -104,7 +130,7 @@ case "$MODE" in
     # and the client always matches the server. The image ID never sends docker to a registry.
     MC_IMAGE="$(docker inspect -f '{{.Image}}' "$MINIO")"
     MSYS_NO_PATHCONV=1 docker run --rm --network "container:$MINIO" --entrypoint mc \
-      -e "MC_HOST_review=http://$S3_USER:$S3_PASS@127.0.0.1:9000" \
+      --env-file "$MC_ENVFILE" \
       -v "$HOST_DIR:/backup" "$MC_IMAGE" \
       mirror --overwrite --remove --quiet "review/$BUCKET" /backup/minio-current >/dev/null
 
@@ -142,12 +168,20 @@ echo "▶ Rotation (keeping the $KEEP most recent)…"
 # minio-current is never touched: it IS the mirror.
 # `|| true`: on a first backup, rotation has nothing to purge and several stages of the
 # pipe exit with an error — that is not a backup failure.
+# Only directories named exactly <YYYYMMDD-HHMMSS> are candidates (so `minio-current` and
+# anything foreign in the folder are never touched); symlinks are skipped, and the resolved
+# parent must be the backup directory itself.
 {
   ls -1d "$BACKUP_DIR"/*/ 2>/dev/null \
-    | grep -Ev '/minio-current/$' \
+    | sed 's#/*$##' \
+    | grep -E '/[0-9]{8}-[0-9]{6}$' \
     | sort -r \
     | tail -n +$((KEEP + 1)) \
-    | while read -r dir; do rm -rf "$dir" && echo "  purged: $dir"; done
+    | while read -r dir; do
+        [ -d "$dir" ] && [ ! -L "$dir" ] || continue
+        [ "$(cd "$dir/.." && pwd)" = "$(cd "$BACKUP_DIR" && pwd)" ] || continue
+        rm -rf -- "$dir" && echo "  purged: $dir"
+      done
 } || true
 
 echo "✅ Backup complete: $BACKUP_DIR/$STAMP"

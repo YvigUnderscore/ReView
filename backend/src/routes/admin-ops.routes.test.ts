@@ -23,14 +23,15 @@ vi.mock('../services/OpsService', () => ops);
 vi.mock('../services/ReleaseService', () => releases);
 vi.mock('../services/BackupCatalogService', () => backups);
 vi.mock('../lib/prisma', () => ({ prisma: {} }));
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: Request, _res: Response, next: NextFunction) => {
     req.user = actor.current as Request['user'];
     req.apiToken = actor.apiToken as Request['apiToken'];
     next();
   },
 }));
-// Le limiteur s'appuie sur Redis ; ce qu'on vérifie ici est le contrat de la route.
+// The rate limiter relies on Redis; what is verified here is the route's contract.
 vi.mock('../middleware/rateLimit', () => ({
   rateLimit: () => (_req: Request, _res: Response, next: NextFunction) => next(),
   identityRateKey: () => 'test',
@@ -64,13 +65,13 @@ beforeEach(() => {
 });
 
 describe('GET /api/admin/ops', () => {
-  it('sert l’état complet à un admin', async () => {
+  it('serves the full state to an admin', async () => {
     const res = await request(app).get('/api/admin/ops');
     expect(res.status).toBe(200);
     expect(res.body).toEqual(OVERVIEW);
   });
 
-  it('refuse un rôle qui n’administre pas le studio', async () => {
+  it('refuses a role that does not administer the studio', async () => {
     for (const role of ['SUPERVISOR', 'ARTIST', 'CLIENT']) {
       actor.current = { id: 2, role };
       expect((await request(app).get('/api/admin/ops')).status, role).toBe(403);
@@ -78,17 +79,17 @@ describe('GET /api/admin/ops', () => {
     expect(ops.overview).not.toHaveBeenCalled();
   });
 
-  it('refuse un jeton d’API, même porteur du rôle admin', async () => {
-    // Une ferme de rendu écrit des versions ; elle n'exploite pas l'instance. Le jour où
-    // cette base porte l'exécution, c'est cette ligne qui empêche un jeton fuité de
-    // commander une bascule sans personne devant l'écran.
+  it('refuses an API token, even one carrying the admin role', async () => {
+    // A render farm writes versions; it does not run the instance. The day this database carries the
+    // execution, this line is what prevents a leaked token from ordering a switchover with nobody in
+    // front of the screen.
     actor.apiToken = { id: 7 };
     const res = await request(app).get('/api/admin/ops');
     expect(res.status).toBe(400);
     expect(res.body.error?.code ?? res.body.code).toBe('API_TOKEN_FORBIDDEN');
   });
 
-  it('reste 200 quand GitHub est injoignable — l’écran doit rester lisible', async () => {
+  it('stays 200 when GitHub is unreachable: the screen must stay readable', async () => {
     ops.overview.mockResolvedValue({
       ...OVERVIEW,
       latest: null,
@@ -102,8 +103,8 @@ describe('GET /api/admin/ops', () => {
   });
 });
 
-describe('catalogue et sauvegardes', () => {
-  it('sert le catalogue des releases', async () => {
+describe('catalog and backups', () => {
+  it('serves the release catalog', async () => {
     releases.catalog.mockResolvedValue({ releases: [{ tag: 'v2.4.0' }], checkedAt: 'x', error: null });
     const res = await request(app).get('/api/admin/ops/releases');
     expect(res.status).toBe(200);
@@ -111,13 +112,13 @@ describe('catalogue et sauvegardes', () => {
     expect(releases.catalog).toHaveBeenCalledWith();
   });
 
-  it('« vérifier maintenant » contourne le cache', async () => {
+  it('"check now" bypasses the cache', async () => {
     releases.catalog.mockResolvedValue({ releases: [], checkedAt: 'x', error: null });
     expect((await request(app).post('/api/admin/ops/releases/refresh')).status).toBe(200);
     expect(releases.catalog).toHaveBeenCalledWith({ force: true });
   });
 
-  it('sert le catalogue des sauvegardes', async () => {
+  it('serves the backup catalog', async () => {
     backups.list.mockResolvedValue({
       available: true,
       dir: '/backups',

@@ -12,14 +12,14 @@ import { sendToUser } from './PushService';
 import { getOnlineUserIds } from './PresenceService';
 
 /**
- * Messagerie interne : messages privés et groupes de discussion écrits.
+ * Internal messaging: private messages and written discussion groups.
  *
- * Un fil est soit un tête-à-tête (`isGroup: false`, deux membres, dédupliqué : réécrire à
- * quelqu'un rouvre la conversation existante), soit un groupe nommé qui accepte des
- * arrivées et des départs. Les routes ne font que valider → appeler → répondre (10.D8).
+ * A thread is either a one-to-one conversation (`isGroup: false`, two members, deduplicated: writing to
+ * someone reopens the existing conversation), or a named group that accepts arrivals and departures. The
+ * routes only validate, call and respond (10.D8).
  */
 
-/** Identité minimale d'un participant, telle qu'affichée dans un fil. */
+/** Minimal identity of a participant, as displayed in a thread. */
 export interface ChatUserView {
   id: number;
   displayName: string;
@@ -37,7 +37,7 @@ const memberIdentity = {
   avatarKey: true,
 } as const;
 
-/** Corps d'un message : borné et non vide une fois les espaces retirés. */
+/** Body of a message: bounded, and non-empty once whitespace is removed. */
 export const MESSAGE_MAX_LENGTH = 4000;
 
 async function toChatUser(raw: {
@@ -49,38 +49,37 @@ async function toChatUser(raw: {
   username?: string | null;
   avatarKey?: string | null;
 }): Promise<ChatUserView> {
-  // L'email sert au repli displayName/initials puis repart : la messagerie est ouverte à
-  // tous les comptes, y compris aux CLIENT externes — l'annuaire ne leur doit pas les
-  // adresses du studio (même raisonnement que `UserService.listPresence`).
+  // The email is used for the displayName/initials fallback and then dropped: messaging is open to all
+  // accounts, including external CLIENTs; the directory must not expose studio addresses to them (same
+  // reasoning as `UserService.listPresence`).
   const { displayName, initials, avatarUrl } = await toPublicUser(raw);
   return { id: raw.id, displayName, initials, avatarUrl };
 }
 
 /**
- * Phrase d'un message de service — clé i18n et variables, jamais du texte.
+ * Sentence of a service message: an i18n key and variables, never text.
  *
- * Elle était écrite en français EN BASE au moment de l'événement, puis servie telle
- * quelle : une fois enregistrée, plus rien ne pouvait la retraduire. Le fil porte
- * désormais la clé et ses variables (même dispositif que `ShotgridSyncLog`), et chaque
- * lecteur la voit dans sa langue.
+ * It used to be written in French IN THE DATABASE at the time of the event, then served as is: once stored,
+ * nothing could translate it again. The thread now carries the key and its variables (same mechanism as
+ * `ShotgridSyncLog`), and each reader sees it in their own language.
  */
 interface SystemPhrase {
   key: MessageKey;
   vars: TParams;
 }
 
-/** Colonnes qui portent la phrase d'un message, écrite ou de service. */
+/** Columns that carry the sentence of a message, written or service. */
 const messagePhrase = { body: true, isSystem: true, systemKey: true, systemVars: true } as const;
 
 /**
- * Variables relues de la base. La colonne est du JSON libre : un tableau ou un scalaire
- * n'interpolerait rien, autant rendre `null` et laisser le repli faire son travail.
+ * Variables re-read from the database. The column is free-form JSON: an array or a scalar would interpolate
+ * nothing, so return `null` and let the fallback do its job.
  */
 function toSystemVars(raw: Prisma.JsonValue | null): TParams | null {
   return raw !== null && typeof raw === 'object' && !Array.isArray(raw) ? (raw as TParams) : null;
 }
 
-/** Vérifie l'appartenance au fil et renvoie l'adhésion (403 sinon : un fil est privé). */
+/** Checks membership in the thread and returns the membership (403 otherwise: a thread is private). */
 async function requireMembership(conversationId: number, userId: number) {
   const membership = await prisma.conversationMember.findUnique({
     where: { conversationId_userId: { conversationId, userId } },
@@ -90,19 +89,19 @@ async function requireMembership(conversationId: number, userId: number) {
 }
 
 /**
- * Destinataires recevables : comptes réels, hors soi-même et hors comptes de service
- * (un token machine n'a pas d'interlocuteur). Les identifiants inconnus sont refusés
- * plutôt qu'ignorés — sinon un fil se crée en silence avec moins de monde que demandé.
+ * Acceptable recipients: real accounts, excluding oneself and service accounts (a machine token has no one to
+ * talk to). Unknown identifiers are refused rather than ignored, otherwise a thread would be created silently
+ * with fewer people than requested.
  *
- * Un CLIENT est cantonné aux personnes de ses projets, exactement comme l'annuaire de
- * `UserService.listPresence` : un intervenant extérieur n'a pas à connaître l'équipe
- * entière ni à pouvoir écrire à n'importe qui. Sans ce contrôle, l'annuaire restreint ne
- * tenait qu'en lecture — poster un identifiant arbitraire sur la route de chat ouvrait un
- * tête-à-tête avec n'importe quel compte interne, ou l'enrôlait dans un groupe.
+ * A CLIENT is confined to the people of their projects, exactly like the directory of
+ * `UserService.listPresence`: an external contributor has no business knowing the whole team or being able to
+ * write to anyone. Without this check, the restricted directory was enforced for reads only: posting an
+ * arbitrary identifier to the chat route opened a one-to-one conversation with any internal account, or
+ * enrolled it in a group.
  *
- * Le rôle se relit ici plutôt que de descendre des routes : `resolveTargets` est le seul
- * passage commun à l'ouverture d'un fil et à l'ajout de membres, aucune entrée ne peut
- * donc l'oublier (même raison que l'appartenance vérifiée dans le service).
+ * The role is re-read here rather than passed down from the routes: `resolveTargets` is the only common path
+ * for opening a thread and adding members, so no entry point can forget it (same reason as the membership
+ * checked in the service).
  */
 async function resolveTargets(actorId: number, userIds: number[]): Promise<number[]> {
   const unique = [...new Set(userIds)].filter((id) => id !== actorId);
@@ -122,17 +121,17 @@ async function resolveTargets(actorId: number, userIds: number[]): Promise<numbe
     select: { id: true },
   });
   if (shared.length !== unique.length) {
-    // Refus nommé, pas un filtrage silencieux : le fil demandé n'est pas amputé de
-    // quelques destinataires sans que l'appelant le sache.
+    // A named refusal, not a silent filter: the requested thread is not stripped of a few recipients without
+    // the caller knowing.
     const refused = unique.filter((id) => !shared.some((u) => u.id === id));
     throw forbidden(`Recipient outside your projects: ${refused.join(', ')}`, 'RECIPIENT_OUT_OF_SCOPE');
   }
   return unique;
 }
 
-// ── Lecture ──────────────────────────────────────────────────────────────────
+// ── Reading ──────────────────────────────────────────────────────────────────
 
-/** Dernier message d'un fil, tel qu'il s'affiche sous le nom du fil dans la liste. */
+/** Last message of a thread, as displayed under the thread name in the list. */
 export interface LastMessageView {
   id: number;
   body: string;
@@ -145,7 +144,7 @@ export interface LastMessageView {
 export interface ConversationView {
   id: number;
   isGroup: boolean;
-  /** Nom du groupe ; `null` pour un tête-à-tête (le front affiche l'autre participant). */
+  /** Group name; `null` for a one-to-one conversation (the front end shows the other participant). */
   title: string | null;
   members: ChatUserView[];
   lastMessage: LastMessageView | null;
@@ -154,14 +153,14 @@ export interface ConversationView {
   muted: boolean;
 }
 
-/** Le dernier message tel que la base le rend, `systemVars` remis en forme. */
+/** The last message as the database returns it, with `systemVars` reformatted. */
 function toLastMessage(
   row: (Omit<LastMessageView, 'systemVars'> & { systemVars: Prisma.JsonValue }) | undefined,
 ): LastMessageView | null {
   return row ? { ...row, systemVars: toSystemVars(row.systemVars) } : null;
 }
 
-/** Fils de l'utilisateur, du plus récemment actif au plus ancien. */
+/** The user's threads, from most recently active to oldest. */
 export async function listConversations(userId: number): Promise<ConversationView[]> {
   const memberships = await prisma.conversationMember.findMany({
     where: { userId },
@@ -182,8 +181,8 @@ export async function listConversations(userId: number): Promise<ConversationVie
   });
   if (memberships.length === 0) return [];
 
-  // Non-lus de TOUS les fils en une requête : un compteur par fil ferait autant d'allers
-  // qu'il y a de conversations, à chaque ouverture de la sidebar.
+  // Unread counts for ALL threads in one query: a counter per thread would make as many round trips as there
+  // are conversations, on every opening of the sidebar.
   const unreadRows = await prisma.chatMessage.groupBy({
     by: ['conversationId'],
     where: {
@@ -217,7 +216,7 @@ export interface ChatMessageView {
   conversationId: number;
   body: string;
   isSystem: boolean;
-  /** Clé i18n d'un message de service et ses variables — `null` pour un message écrit. */
+  /** i18n key of a service message and its variables — `null` for a written message. */
   systemKey: string | null;
   systemVars: TParams | null;
   createdAt: Date;
@@ -226,8 +225,8 @@ export interface ChatMessageView {
 }
 
 /**
- * Page de messages, du plus ancien au plus récent (ordre de lecture).
- * `before` = id du plus ancien message déjà affiché → remonte le fil.
+ * Page of messages, from oldest to most recent (reading order). `before` = id of the oldest message already
+ * displayed → scrolls the thread back.
  */
 export async function listMessages(
   conversationId: number,
@@ -261,7 +260,7 @@ export async function listMessages(
   );
 }
 
-/** Total de messages non lus, tous fils confondus (pastille de la sidebar). */
+/** Total unread messages across all threads (sidebar badge). */
 export async function countUnread(userId: number): Promise<number> {
   const memberships = await prisma.conversationMember.findMany({
     where: { userId },
@@ -281,8 +280,8 @@ export async function countUnread(userId: number): Promise<number> {
 }
 
 /**
- * Vue d'un seul fil, du point de vue d'un membre — chacun a ses propres non-lus et sa
- * propre sourdine, la vue n'est donc pas partageable entre destinataires.
+ * View of a single thread, from the point of view of a member: each has their own unread count and their own
+ * mute, so the view cannot be shared between recipients.
  */
 export async function conversationViewFor(conversationId: number, userId: number): Promise<ConversationView> {
   const membership = await prisma.conversationMember.findUnique({
@@ -322,9 +321,9 @@ export async function conversationViewFor(conversationId: number, userId: number
   };
 }
 
-// ── Écriture ─────────────────────────────────────────────────────────────────
+// ── Writing ──────────────────────────────────────────────────────────────────
 
-/** Prévient chaque membre d'un changement sur le fil (sa propre vue, avec ses non-lus). */
+/** Notifies each member of a change on the thread (their own view, with their unread counts). */
 async function broadcastConversation(conversationId: number, memberIds: number[]): Promise<void> {
   await Promise.all(
     memberIds.map(async (id) =>
@@ -334,9 +333,9 @@ async function broadcastConversation(conversationId: number, memberIds: number[]
 }
 
 /**
- * Ouvre un fil. Un seul destinataire et pas de titre = tête-à-tête : on réutilise le fil
- * existant s'il y en a un, sinon deux personnes qui s'écrivent finissent avec autant de
- * fils que de clics, chacun ne portant qu'une partie de l'historique.
+ * Opens a thread. A single recipient and no title = one-to-one: the existing thread is reused if there is
+ * one, otherwise two people writing to each other end up with as many threads as clicks, each holding only
+ * part of the history.
  */
 export async function createConversation(
   actorId: number,
@@ -371,7 +370,7 @@ export async function createConversation(
   return conversationViewFor(conversation.id, actorId);
 }
 
-/** Poste un message et le pousse en temps réel à tous les membres du fil. */
+/** Posts a message and pushes it in real time to all members of the thread. */
 export async function sendMessage(
   conversationId: number,
   authorId: number,
@@ -390,7 +389,7 @@ export async function sendMessage(
     where: { id: conversationId },
     data: { lastMessageAt: message.createdAt },
   });
-  // Écrire vaut lecture : sans ça l'auteur voit sa propre pastille de non-lus grimper.
+  // Writing counts as reading: without this, the author would see their own unread badge climb.
   await prisma.conversationMember.update({
     where: { conversationId_userId: { conversationId, userId: authorId } },
     data: { lastReadAt: message.createdAt },
@@ -411,7 +410,7 @@ export async function sendMessage(
   return view;
 }
 
-/** Diffusion socket + Web Push aux membres hors ligne (sauf fils mis en sourdine). */
+/** Socket broadcast + Web Push to offline members (except threads muted for them). */
 async function fanOutMessage(
   conversationId: number,
   authorId: number | null,
@@ -423,10 +422,10 @@ async function fanOutMessage(
   });
   const online = new Set(getOnlineUserIds());
   const label = view.author?.displayName ?? 'ReView';
-  // Un message de service n'a pas de texte à lui : l'interface le traduit au rendu. La
-  // notification navigateur, elle, sort de l'application et échappe à tout catalogue —
-  // c'est ici, et nulle part ailleurs, qu'elle prend la langue de son destinataire. Les
-  // préférences ne sont lues que dans ce cas : un message écrit part tel qu'il a été tapé.
+  // A service message has no text of its own: the interface translates it at render time. The browser
+  // notification, however, leaves the application and escapes any catalogue: it is here, and nowhere else,
+  // that it takes its recipient's language. Preferences are only read in that case: a written message goes
+  // out as typed.
   const locales = view.systemKey ? await localesOf(members.map((m) => m.userId)) : null;
   for (const m of members) {
     emitToUser(m.userId, 'chat:message', { message: view });
@@ -438,7 +437,7 @@ async function fanOutMessage(
   }
 }
 
-/** Langue de chaque destinataire : sa préférence, sinon celle du studio — en deux requêtes. */
+/** Language of each recipient: their preference, otherwise the studio's — in two queries. */
 async function localesOf(userIds: number[]): Promise<Map<number, Locale>> {
   const [rows, fallback] = await Promise.all([
     prisma.user.findMany({ where: { id: { in: userIds } }, select: { id: true, preferences: true } }),
@@ -447,7 +446,7 @@ async function localesOf(userIds: number[]): Promise<Map<number, Locale>> {
   return new Map(rows.map((u) => [u.id, localeFromPreferences(u.preferences) ?? fallback]));
 }
 
-/** Marque le fil comme lu jusqu'à maintenant (les autres onglets se synchronisent). */
+/** Marks the thread as read up to now (other tabs sync accordingly). */
 export async function markRead(conversationId: number, userId: number): Promise<{ unread: number }> {
   await requireMembership(conversationId, userId);
   await prisma.conversationMember.update({
@@ -458,7 +457,7 @@ export async function markRead(conversationId: number, userId: number): Promise<
   return { unread: await countUnread(userId) };
 }
 
-/** Sourdine d'un fil pour soi seul (coupe le Web Push, garde le fil et ses non-lus). */
+/** Mutes a thread for oneself only (cuts Web Push, keeps the thread and its unread counts). */
 export async function setMuted(
   conversationId: number,
   userId: number,
@@ -473,11 +472,11 @@ export async function setMuted(
 }
 
 /**
- * Message de service (arrivée, départ, renommage) : trace lisible dans le fil.
+ * Service message (arrival, departure, rename): a readable trace in the thread.
  *
- * La clé et ses variables sont enregistrées, pas la phrase. `body` l'est aussi, **en
- * anglais** : les messages postés avant ce changement n'ont pas de clé et c'est lui qui
- * les affiche encore — un onglet plus vieux que le serveur y retombe de la même façon.
+ * The key and its variables are recorded, not the sentence. `body` is too, **in English**: messages posted
+ * before this change have no key, and it is what still displays them: an tab older than the server falls back
+ * to it the same way.
  */
 async function postSystemMessage(conversationId: number, phrase: SystemPhrase): Promise<void> {
   const message = await prisma.chatMessage.create({
@@ -506,7 +505,7 @@ async function postSystemMessage(conversationId: number, phrase: SystemPhrase): 
   });
 }
 
-/** Renomme un groupe (un tête-à-tête tire son nom de l'autre participant). */
+/** Renames a group (a one-to-one takes its name from the other participant). */
 export async function renameConversation(
   conversationId: number,
   userId: number,
@@ -532,9 +531,9 @@ export async function renameConversation(
 }
 
 /**
- * Ajoute des participants. Un tête-à-tête devient un groupe : les deux personnes n'ont
- * plus un fil privé, l'historique est visible des arrivants — c'est le comportement
- * attendu d'un fil qui s'ouvre, et il est annoncé par un message de service.
+ * Adds participants. A one-to-one becomes a group: the two people no longer have a private thread, and the
+ * history is visible to newcomers — the expected behaviour of a thread that is being opened, and it is
+ * announced by a service message.
  */
 export async function addMembers(
   conversationId: number,
@@ -558,8 +557,8 @@ export async function addMembers(
   ]);
   const names = await prisma.user.findMany({ where: { id: { in: toAdd } }, select: memberIdentity });
   const labels = await Promise.all(names.map(async (u) => (await toChatUser(u)).displayName));
-  // `count` sélectionne la forme plurielle : « X a rejoint » / « X et Y ont rejoint » —
-  // l'accord se joue dans chaque langue, il ne peut pas se décider ici.
+  // `count` selects the plural form: "X joined" / "X and Y joined". Agreement is decided in each language; it
+  // cannot be decided here.
   await postSystemMessage(conversationId, {
     key: 'chat.system.joined',
     vars: { names: labels.join(', '), count: labels.length },
@@ -576,9 +575,9 @@ export async function addMembers(
 }
 
 /**
- * Quitte le fil (ou en retire quelqu'un). Le dernier partant emporte la conversation :
- * un fil sans membre n'est plus lisible par personne, le garder ne ferait qu'accumuler
- * des messages orphelins.
+ * Leaves the thread (or removes someone from it). The last departing member takes the conversation with them:
+ * a thread with no member is no longer readable by anyone, and keeping it would only accumulate orphan
+ * messages.
  */
 export async function removeMember(
   conversationId: number,
@@ -619,7 +618,7 @@ export async function removeMember(
   return { left: true };
 }
 
-/** Suppression douce d'un message — par son auteur uniquement. */
+/** Soft-deletes a message — by its author only. */
 export async function deleteMessage(messageId: number, userId: number): Promise<void> {
   const message = await prisma.chatMessage.findUnique({ where: { id: messageId } });
   if (!message || message.deletedAt) throw notFound('Message not found');

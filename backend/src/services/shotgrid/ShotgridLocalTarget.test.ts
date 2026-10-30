@@ -21,7 +21,7 @@ interface Row {
   name: string;
 }
 
-/** Une base en mémoire : ce sont les règles qu'on teste, pas Prisma. */
+/** An in-memory database: it is the rules that are tested here, not Prisma. */
 function table(rows: Row[]) {
   return {
     findById: async (id: number) => rows.find((r) => r.id === id) ?? null,
@@ -45,21 +45,21 @@ beforeEach(() => {
 });
 
 describe('localTarget', () => {
-  it('crée sous le nom du site quand personne ne le porte', async () => {
+  it('creates under the site name when nobody carries it', async () => {
     const r = await call([], 4685, 'sq010', null);
     expect(r).toEqual({ existing: null, name: 'sq010' });
   });
 
-  it('adopte une entité créée avant la liaison', async () => {
-    // Un studio a saisi ses séquences à la main puis relie le projet : on reprend
-    // l'existant plutôt que d'en fabriquer un double.
+  it('adopts an entity created before the link', async () => {
+    // A studio entered its sequences by hand, then linked the project: we take the existing ones
+    // rather than making a duplicate.
     const rows = [{ id: 7, name: 'sq010' }];
     const r = await call(rows, 4685, 'sq010', null);
     expect(r.existing?.id).toBe(7);
     expect(r.name).toBe('sq010');
   });
 
-  it('n’adopte pas une entité déjà contrepartie d’une autre du site', async () => {
+  it('does not adopt an entity already counterpart of another one on the site', async () => {
     links.findByLocal.mockResolvedValue({ sgId: 4685 });
     const rows = [{ id: 7, name: 'DO_NOT_USE_' }];
 
@@ -69,7 +69,7 @@ describe('localTarget', () => {
     expect(r.name).toBe('DO_NOT_USE_ (4686)');
   });
 
-  it('retrouve la désambiguïsée au lieu d’en créer une deuxième', async () => {
+  it('finds the disambiguated one instead of creating a second', async () => {
     links.findByLocal.mockImplementation(async (_c: number, _t: string, id: number) =>
       id === 7 ? { sgId: 4685 } : null,
     );
@@ -84,9 +84,9 @@ describe('localTarget', () => {
     expect(r.name).toBe('DO_NOT_USE_ (4686)');
   });
 
-  it('garde son suffixe à la passe suivante, une fois liée', async () => {
-    // Le cas qui a cassé en production : l'entité est liée, donc trouvée par son id, et
-    // on la renommait vers le nom du site — que sa jumelle porte toujours.
+  it('keeps its suffix on the next pass, once linked', async () => {
+    // The case that broke in production: the entity is linked, hence found by its id, and we renamed it to the site's name,
+    // which its twin still carries.
     const rows = [
       { id: 7, name: 'DO_NOT_USE_' },
       { id: 8, name: 'DO_NOT_USE_ (4686)' },
@@ -98,7 +98,7 @@ describe('localTarget', () => {
     expect(r.name).toBe('DO_NOT_USE_ (4686)');
   });
 
-  it('laisse la première garder le nom du site', async () => {
+  it('lets the first one keep the site name', async () => {
     const rows = [
       { id: 7, name: 'DO_NOT_USE_' },
       { id: 8, name: 'DO_NOT_USE_ (4686)' },
@@ -110,8 +110,8 @@ describe('localTarget', () => {
     expect(r.name).toBe('DO_NOT_USE_');
   });
 
-  it('rend une entité renommée à son nom du site quand il se libère', async () => {
-    // La jumelle a été supprimée côté site : plus rien ne justifie le suffixe.
+  it('returns a renamed entity to its site name when it becomes free', async () => {
+    // The twin was deleted on the site side: nothing justifies the suffix any more.
     const rows = [{ id: 8, name: 'DO_NOT_USE_ (4686)' }];
 
     const r = await call(rows, 4686, 'DO_NOT_USE_', 8);

@@ -17,14 +17,14 @@ import { candidateLocation, resolveScope, SHARE_SELECTION_LIMIT } from './ShareL
 import { prisma } from '../lib/prisma';
 
 /**
- * `resolveScope` est le dernier endroit où l'on peut empêcher un lien de pointer hors de
- * son projet. Tout ce qui passe ici est ensuite écrit tel quel dans la base et sert de
- * périmètre de lecture à un inconnu muni d'un jeton : ces refus sont la fonctionnalité.
+ * `resolveScope` is the last place where a link can be prevented from pointing outside its project.
+ * Everything that passes here is then written as is to the database and serves as the read scope for
+ * an unknown holder of a token: these refusals are the feature.
  */
 beforeEach(() => vi.clearAllMocks());
 
-describe('resolveScope — la cible appartient au projet, ou rien', () => {
-  it('ramène la portée « projet » à une forme sans cible', async () => {
+describe('resolveScope: the target belongs to the project, or nothing', () => {
+  it('reduces the "project" scope to a form without a target', async () => {
     await expect(resolveScope(7, {})).resolves.toEqual({
       scope: ShareScope.PROJECT,
       playlistId: null,
@@ -33,7 +33,7 @@ describe('resolveScope — la cible appartient au projet, ou rien', () => {
     });
   });
 
-  it('accepte une playlist du projet', async () => {
+  it('accepts a playlist of the project', async () => {
     vi.mocked(prisma.playlist.findFirst).mockResolvedValue({ id: 3 } as never);
     await expect(resolveScope(7, { scope: ShareScope.PLAYLIST, playlistId: 3 })).resolves.toMatchObject({
       scope: ShareScope.PLAYLIST,
@@ -44,14 +44,14 @@ describe('resolveScope — la cible appartient au projet, ou rien', () => {
     });
   });
 
-  it("refuse une playlist d'un autre projet", async () => {
+  it('refuses a playlist of another project', async () => {
     vi.mocked(prisma.playlist.findFirst).mockResolvedValue(null);
     await expect(resolveScope(7, { scope: ShareScope.PLAYLIST, playlistId: 3 })).rejects.toMatchObject({
       code: 'SCOPE_TARGET_FOREIGN',
     });
   });
 
-  it('refuse une portée restreinte sans cible', async () => {
+  it('refuses a restricted scope without a target', async () => {
     await expect(resolveScope(7, { scope: ShareScope.PLAYLIST })).rejects.toMatchObject({
       code: 'SCOPE_TARGET_MISSING',
     });
@@ -63,7 +63,7 @@ describe('resolveScope — la cible appartient au projet, ou rien', () => {
     });
   });
 
-  it('accepte une version du projet, quel que soit son rattachement', async () => {
+  it('accepts a version of the project, whatever its attachment', async () => {
     vi.mocked(prisma.version.findFirst).mockResolvedValue({ id: 42 } as never);
     await expect(resolveScope(7, { scope: ShareScope.VERSION, versionId: 42 })).resolves.toMatchObject({
       scope: ShareScope.VERSION,
@@ -73,23 +73,23 @@ describe('resolveScope — la cible appartient au projet, ou rien', () => {
     expect(where.OR).toHaveLength(3);
   });
 
-  it('dédoublonne la sélection et n’en garde que les médias publiés du projet', async () => {
+  it('de-duplicates the selection and keeps only the published media of the project', async () => {
     vi.mocked(prisma.mediaObject.findMany).mockResolvedValue([{ id: 11 }, { id: 12 }] as never);
     await expect(resolveScope(7, { scope: ShareScope.MEDIA, mediaIds: [11, 12, 11] })).resolves.toMatchObject(
       { scope: ShareScope.MEDIA, mediaIds: [11, 12] },
     );
   });
 
-  // Le média demandé mais non publié deviendrait visible le jour de sa publication, sans
-  // qu'on l'ait décidé : on refuse la création plutôt que de l'ignorer en silence.
-  it('refuse la sélection si un média n’est pas partageable', async () => {
+  // A requested but unpublished media would become visible on the day it is published, without
+  // anyone having decided so: we refuse the creation rather than silently ignoring it.
+  it('refuses the selection if a media is not shareable', async () => {
     vi.mocked(prisma.mediaObject.findMany).mockResolvedValue([{ id: 11 }] as never);
     await expect(resolveScope(7, { scope: ShareScope.MEDIA, mediaIds: [11, 99] })).rejects.toMatchObject({
       code: 'SCOPE_TARGET_FOREIGN',
     });
   });
 
-  it('refuse une sélection qui n’en est plus une', async () => {
+  it('refuses a selection that is no longer one', async () => {
     const tooMany = Array.from({ length: SHARE_SELECTION_LIMIT + 1 }, (_, i) => i + 1);
     await expect(resolveScope(7, { scope: ShareScope.MEDIA, mediaIds: tooMany })).rejects.toMatchObject({
       code: 'SCOPE_SELECTION_TOO_LARGE',
@@ -98,8 +98,8 @@ describe('resolveScope — la cible appartient au projet, ou rien', () => {
   });
 });
 
-describe('candidateLocation — reconnaître un média à l’œil dans le sélecteur', () => {
-  it('préfère le plan et son étape', () => {
+describe('candidateLocation: recognizing a media at a glance in the picker', () => {
+  it('prefers the shot and its step', () => {
     expect(
       candidateLocation({
         name: 'V03',
@@ -109,7 +109,7 @@ describe('candidateLocation — reconnaître un média à l’œil dans le séle
     ).toBe('SH020 › comp');
   });
 
-  it("retombe sur l'asset porteur de la tâche", () => {
+  it('falls back to the asset carrying the task', () => {
     expect(
       candidateLocation({
         name: 'V01',
@@ -119,11 +119,11 @@ describe('candidateLocation — reconnaître un média à l’œil dans le séle
     ).toBe('Robot › lookdev');
   });
 
-  it("nomme l'asset quand la version y pend directement", () => {
+  it('names the asset when the version hangs directly from it', () => {
     expect(candidateLocation({ name: 'V01', task: null, asset: { name: 'Robot' } })).toBe('Robot');
   });
 
-  it('se rabat sur le nom de la version quand rien ne la situe', () => {
+  it('falls back to the version name when nothing locates it', () => {
     expect(candidateLocation({ name: 'V07', task: null, asset: null })).toBe('V07');
   });
 });

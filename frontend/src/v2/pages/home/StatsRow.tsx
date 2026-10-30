@@ -8,17 +8,16 @@ import type { DashboardData } from './homeTypes';
 import { useT } from '../../i18n';
 
 /**
- * Compteurs de l'Accueil : mes chiffres d'abord (retakes, reviews qu'on m'a confiées), puis
- * le périmètre (médias en review, commentaires) avec tendance 7 jours.
+ * Home counters: my own figures first (retakes, reviews entrusted to me), then the scope (media
+ * in review, comments), with a 7-day trend.
  *
- * Chaque carte mène à la vue qui la déplie — et c'est la moitié du travail. Deux d'entre
- * elles pointaient l'ancre `#my-tasks`, qui disparaissait avec le bloc « mes tâches » dès
- * qu'on le retirait de son accueil : le clic ne faisait alors rien. Les deux autres menaient
- * à `/reviews` sans filtre, où rien ne correspondait au chiffre affiché — et, pour les
- * commentaires, à une page qui n'en montre aucun.
+ * Each card leads to the view that unfolds it, and that is half the work. Two of them pointed to
+ * the `#my-tasks` anchor, which vanished with the "my tasks" block as soon as it was removed from
+ * the home page: the click then did nothing. The other two led to `/reviews` without a filter,
+ * where nothing matched the displayed figure, and, for comments, to a page that shows none.
  *
- * Un compteur qu'on ne peut pas déplier n'est pas vérifiable : c'est à ce moment-là qu'il
- * commence à mentir sans qu'on le sache.
+ * A counter that cannot be unfolded cannot be verified: that is precisely when it starts lying
+ * without anyone noticing.
  */
 
 function StatCard({
@@ -71,9 +70,9 @@ export default function StatsRow({ stats }: { stats: DashboardData['stats'] }) {
         to="/my-tasks?scope=blocked"
         alert={stats.myRetakes > 0}
       />
-      {/* « Ce qu'on attend de moi », et non plus les verdicts attendus de tout le studio :
-          la carte est posée parmi mes chiffres, son libellé et son calcul le disent enfin
-          tous les deux. Le filtre de la vue est exactement le périmètre du compteur. */}
+      {/* "What is expected of me", instead of the verdicts expected from the whole studio:
+          the card now sits among my own figures, and its label and its computation finally say
+          the same thing. The view's filter is exactly the counter's scope. */}
       <StatCard
         icon={Gavel}
         cls="bg-warning/10 text-warning"
@@ -91,8 +90,8 @@ export default function StatsRow({ stats }: { stats: DashboardData['stats'] }) {
         }
         to="/reviews?status=published&decision=none"
       />
-      {/* Le libellé était emprunté au filtre des commentaires d'une review (« All ») et la
-          carte menait à /reviews, qui n'en montre aucun. Elle a sa clé et son fil. */}
+      {/* The label was borrowed from a review's comment filter ("All"), and the card led to
+          /reviews, which shows none. It now has its own key and thread. */}
       <StatCard
         icon={MessageSquare}
         cls="bg-info/10 text-info"

@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Génération de la playlist maître HLS (Phase 23) et types associés. Pur/testable : la
- * partie ffmpeg vit dans le worker, seule la construction texte est ici.
+ * HLS master playlist generation (Phase 23) and related types. Pure/testable: the ffmpeg part lives in the
+ * worker, only the text construction is here.
  */
 
 export interface HlsRendition {
@@ -11,30 +11,29 @@ export interface HlsRendition {
   width: number;
   videoBitrateK: number;
   audioBitrateK: number;
-  /** Nom de la sous-playlist (relatif au maître), ex. `720p.m3u8`. */
+  /** Name of the sub-playlist (relative to the master), e.g. `720p.m3u8`. */
   playlist: string;
 }
 
-/** Nom de rendition standard depuis une hauteur (ex. 720 → `720p`). */
+/** Standard rendition name from a height (e.g. 720 → `720p`). */
 export const renditionName = (height: number) => `${height}p`;
 
 /**
- * Durée cible d'un segment HLS (s). Courte pour des switchs de qualité réactifs : sans GOP
- * fixe, libx264 pose des keyframes jusqu'à ~10 s d'écart → segments énormes, changement de
- * rendition très lent et vidéo figée (l'audio, lui, décode) le temps du téléchargement.
+ * Target duration of an HLS segment (s). Short for responsive quality switches: without a fixed GOP,
+ * libx264 places keyframes up to ~10 s apart → huge segments, very slow rendition switching and a frozen
+ * picture (the audio still decodes) while downloading.
  */
 export const HLS_SEGMENT_SEC = 2;
 
-/** Taille de GOP (frames) : une keyframe par segment, calée sur le fps source (repli 25). */
+/** GOP size (frames): one keyframe per segment, set on the source fps (fallback 25). */
 export function hlsGopSize(fps?: number): number {
   const f = fps && Number.isFinite(fps) && fps > 0 ? fps : 25;
   return Math.max(1, Math.round(f * HLS_SEGMENT_SEC));
 }
 
 /**
- * Playlist maître référençant chaque rendition (bande passante + résolution). Les URI sont
- * **relatifs** : servis derrière le proxy `/api/media/:id/hls/:file`, ils résolvent
- * correctement (le lecteur résout par rapport à l'URL du maître).
+ * Master playlist referencing each rendition (bandwidth + resolution). The URIs are **relative**: served
+ * behind the `/api/media/:id/hls/:file` proxy, they resolve correctly (the player resolves against the master's URL).
  */
 export function buildMasterPlaylist(renditions: HlsRendition[]): string {
   const lines = ['#EXTM3U', '#EXT-X-VERSION:3'];
@@ -46,7 +45,7 @@ export function buildMasterPlaylist(renditions: HlsRendition[]): string {
   return lines.join('\n') + '\n';
 }
 
-/** Type de contenu HTTP d'un fichier HLS (playlist ou segment). */
+/** HTTP content type of an HLS file (playlist or segment). */
 export function hlsContentType(file: string): string {
   return file.endsWith('.m3u8') ? 'application/vnd.apple.mpegurl' : 'video/mp2t';
 }

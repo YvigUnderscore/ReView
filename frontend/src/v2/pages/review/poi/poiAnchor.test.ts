@@ -12,7 +12,7 @@ import {
   subscribePoiAnchors,
 } from './poiAnchor';
 
-/** Conteneur de viewer, avec les pastilles que le marqueur y pose (posées ici à la main). */
+/** Viewer container, with the hotspots the marker places in it (placed here by hand). */
 function viewerWith(...ranks: number[]) {
   const container = document.createElement('div');
   for (const rank of ranks) {
@@ -28,19 +28,19 @@ beforeEach(() => {
   document.body.replaceChildren();
 });
 
-describe('poiAnchors — les pastilles se lisent par leur rang, pas par l’ordre du DOM', () => {
-  it('range les pastilles par rang : l’index de la liste EST le rang du point', () => {
+describe('poiAnchors — hotspots are read by their rank, not by DOM order', () => {
+  it('sorts the hotspots by rank: the list index IS the rank of the point', () => {
     const container = viewerWith(2, 0, 1);
     expect(poiAnchors(container).map((el) => el.getAttribute(POI_ANCHOR_ATTR))).toEqual(['0', '1', '2']);
   });
 
-  it('sans conteneur, la liste est vide — le calque peut se monter avant le viewer', () => {
+  it('without a container, the list is empty: the layer may mount before the viewer', () => {
     expect(poiAnchors(null)).toEqual([]);
   });
 });
 
-describe('subscribePoiAnchors — le calque se monte avant comme après les pastilles', () => {
-  it('joue le rappel tout de suite avec les pastilles déjà posées', () => {
+describe('subscribePoiAnchors — the layer mounts both before and after the hotspots', () => {
+  it('plays the callback immediately with the hotspots already placed', () => {
     const container = viewerWith(0, 1);
     const seen = vi.fn();
     subscribePoiAnchors(container, seen);
@@ -48,7 +48,7 @@ describe('subscribePoiAnchors — le calque se monte avant comme après les past
     expect(seen.mock.calls[0][0]).toHaveLength(2);
   });
 
-  it('le rejoue à chaque annonce du marqueur — une pastille de plus est vue', () => {
+  it('replays it at each announcement of the marker: one more hotspot is seen', () => {
     const container = viewerWith();
     const seen = vi.fn();
     subscribePoiAnchors(container, seen);
@@ -61,7 +61,7 @@ describe('subscribePoiAnchors — le calque se monte avant comme après les past
     expect(seen.mock.calls[1][0]).toEqual([pastille]);
   });
 
-  it('se désabonne : le calque démonté ne reçoit plus rien', () => {
+  it('unsubscribes: an unmounted layer no longer receives anything', () => {
     const container = viewerWith(0);
     const seen = vi.fn();
     subscribePoiAnchors(container, seen)();
@@ -69,15 +69,15 @@ describe('subscribePoiAnchors — le calque se monte avant comme après les past
     expect(seen).toHaveBeenCalledTimes(1);
   });
 
-  it('sans conteneur, le désabonnement reste appelable', () => {
+  it('without a container, unsubscribing remains callable', () => {
     const seen = vi.fn();
     expect(() => subscribePoiAnchors(null, seen)()).not.toThrow();
     expect(seen).toHaveBeenCalledWith([]);
   });
 });
 
-describe('sameAnchors — un calque ne se réabonne pas pour une liste identique', () => {
-  it('compare nœud pour nœud, dans l’ordre', () => {
+describe('sameAnchors — a layer does not resubscribe for an identical list', () => {
+  it('compares node by node, in order', () => {
     const a = document.createElement('div');
     const b = document.createElement('div');
     expect(sameAnchors([a, b], [a, b])).toBe(true);
@@ -86,8 +86,8 @@ describe('sameAnchors — un calque ne se réabonne pas pour une liste identique
   });
 });
 
-describe('isPoiCardGesture — lire un commentaire ancré n’est pas naviguer', () => {
-  it('reconnaît un geste parti de la carte, ou de n’importe quoi dedans', () => {
+describe('isPoiCardGesture — reading an anchored comment is not navigating', () => {
+  it('recognises a gesture starting from the card, or from anything inside it', () => {
     const card = document.createElement('div');
     card.setAttribute(POI_CARD_ATTR, '');
     const inside = document.createElement('img');
@@ -97,7 +97,7 @@ describe('isPoiCardGesture — lire un commentaire ancré n’est pas naviguer',
     expect(isPoiCardGesture(inside)).toBe(true);
   });
 
-  it('laisse passer un geste sur la scène — et ne trébuche pas sur une cible absente', () => {
+  it('lets a gesture on the scene through, and does not trip on a missing target', () => {
     expect(isPoiCardGesture(document.createElement('canvas'))).toBe(false);
     expect(isPoiCardGesture(null)).toBe(false);
     expect(isPoiCardGesture(window)).toBe(false);

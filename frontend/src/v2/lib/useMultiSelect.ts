@@ -3,7 +3,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-/** Modificateurs de clic pertinents pour la sélection (sous-ensemble de MouseEvent). */
+/** Click modifiers relevant to selection (subset of MouseEvent). */
 export interface SelectModifiers {
   shiftKey?: boolean;
   metaKey?: boolean;
@@ -11,24 +11,24 @@ export interface SelectModifiers {
 }
 
 export interface MultiSelect {
-  /** Ids actuellement sélectionnés (ordre non garanti). */
+  /** Ids currently selected (order not guaranteed). */
   ids: number[];
   count: number;
   isSelected: (id: number) => boolean;
   /**
-   * Clic sur une case / ligne. **Shift** étend la plage depuis la dernière ancre dans
-   * l'ordre visuel ; sinon bascule l'id (Ctrl/Cmd = même comportement additif que la case).
+   * Click on a checkbox / row. **Shift** extends the range from the last anchor in
+   * visual order; otherwise toggles the id (Ctrl/Cmd = same additive behaviour as the checkbox).
    */
   onSelect: (id: number, mods?: SelectModifiers) => void;
   clear: () => void;
-  /** Sélectionne tout l'ensemble visible / le vide s'il est déjà entièrement coché. */
+  /** Selects everything visible / clears it if it is already fully ticked. */
   toggleAll: () => void;
   allSelected: boolean;
 }
 
 /**
- * Cœur pur de la sélection (testable sans renderer). Retourne le nouvel ensemble et
- * la nouvelle ancre. Shift étend la plage [ancre..id] dans l'ordre visuel ; sinon bascule.
+ * Pure core of the selection (testable without a renderer). Returns the new set and
+ * the new anchor. Shift extends the range [anchor..id] in visual order; otherwise toggles.
  */
 export function computeSelection(
   current: Set<number>,
@@ -53,14 +53,14 @@ export function computeSelection(
 }
 
 /**
- * Multi-sélection générique pour les listes (13.A). `orderedIds` = ids dans l'ordre
- * d'affichage (nécessaire au Shift-clic par plage). Échap vide la sélection.
+ * Generic multi-selection for lists (13.A). `orderedIds` = ids in display order
+ * (needed for range Shift-click). Escape clears the selection.
  */
 export function useMultiSelect(orderedIds: number[]): MultiSelect {
   const [selected, setSelected] = useState<Set<number>>(() => new Set());
   const anchor = useRef<number | null>(null);
-  // Ref sur l'ordre courant : évite de recréer onSelect à chaque rendu de liste.
-  // Mise à jour en effet (interdiction d'écrire une ref pendant le rendu).
+  // Ref on the current order: avoids recreating onSelect on each list render.
+  // Updated in an effect (writing a ref during render is forbidden).
   const orderRef = useRef(orderedIds);
   useEffect(() => {
     orderRef.current = orderedIds;
@@ -87,7 +87,7 @@ export function useMultiSelect(orderedIds: number[]): MultiSelect {
     });
   }, []);
 
-  // Échap vide la sélection (uniquement quand il y a une sélection active).
+  // Escape clears the selection (only when there is an active selection).
   useEffect(() => {
     if (selected.size === 0) return;
     const onKey = (e: KeyboardEvent) => {

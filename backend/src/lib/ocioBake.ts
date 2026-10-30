@@ -4,24 +4,22 @@
 import { createHash } from 'node:crypto';
 
 /**
- * Cuisson des LUT 3D d'affichage (OCIO). Module **pur** : entrée = noms de display/view,
- * sortie = texte `.cube` (Iridas/Resolve). Aucune dépendance à MinIO ni à Prisma.
+ * Baking of display 3D LUTs (OCIO). **Pure** module: input = display/view names, output = `.cube` text (Iridas/Resolve).
+ * No dependency on MinIO or Prisma.
  *
- * Deux voies coexistent dans le produit et produisent **le même format** :
- *  1. `ociobakelut` / PyOpenColorIO côté worker (voir `workers/ocio/bakeRunner.ts`) — exact
- *     pour n'importe quelle config, y compris les vues **tone-mappées** (RRT + ODT ACES) ;
- *  2. le repli **intégré** de ce fichier — exact lui aussi, mais **seulement** pour les vues
- *     purement colorimétriques (`Raw`, `Un-tone-mapped`, `Log`). Il **refuse** de produire
- *     une LUT pour une vue tone-mappée plutôt que d'en approcher la courbe : une image
- *     jugée sur une approximation du RRT vaut moins que pas de transformée du tout.
+ * Two paths coexist in the product and produce **the same format**:
+ *  1. `ociobakelut` / PyOpenColorIO on the worker side (see `workers/ocio/bakeRunner.ts`) — exact for any config,
+ *     including **tone-mapped** views (ACES RRT + ODT);
+ *  2. the **built-in** fallback of this file — also exact, but **only** for purely colorimetric views (`Raw`,
+ *     `Un-tone-mapped`, `Log`). It **refuses** to produce a LUT for a tone-mapped view rather than approximating its
+ *     curve: an image judged on an approximation of the RRT is worth less than no transform at all.
  *
- * Convention de domaine (identique à `ociobakelut --displayview --inputspace`) :
- * l'entrée de la LUT est le **code d'entrée encodé dans [0,1]** (sRGB texture par défaut,
- * ce que contient un JPEG/PNG de review) et la sortie est le **code d'affichage**. Le
- * viewer applique donc : décodage → exposition → ré-encodage → LUT → gamma d'affichage.
+ * Domain convention (identical to `ociobakelut --displayview --inputspace`): the LUT input is the **encoded input code in
+ * [0,1]** (sRGB texture by default, what a review JPEG/PNG contains) and the output is the **display code**. The viewer
+ * therefore applies: decode → exposure → re-encode → LUT → display gamma.
  */
 
-/** Coordonnées chromatiques d'un jeu de primaires + son blanc. */
+/** Chromaticity coordinates of a set of primaries + its white. */
 export interface Chromaticities {
   rx: number;
   ry: number;
@@ -33,11 +31,11 @@ export interface Chromaticities {
   wy: number;
 }
 
-/** Fonction de transfert d'un espace (encodage code ↔ linéaire). */
+/** Transfer function of a space (code ↔ linear encoding). */
 export type Transfer =
   { kind: 'linear' } | { kind: 'srgb' } | { kind: 'gamma'; g: number } | { kind: 'acescct' };
 
-/** Un espace couleur = des primaires + une fonction de transfert. */
+/** A colour space = primaries + a transfer function. */
 export interface ColorSpaceSpec {
   primaries: Chromaticities;
   transfer: Transfer;
@@ -52,13 +50,13 @@ export const PRIMARIES = {
   ap0: { rx: 0.7347, ry: 0.2653, gx: 0.0, gy: 1.0, bx: 0.0001, by: -0.077, wx: 0.32168, wy: 0.33767 },
 } as const satisfies Record<string, Chromaticities>;
 
-/** Espace d'entrée par défaut : ce qu'un JPEG/PNG de review contient (sRGB texture). */
+/** Default input space: what a review JPEG/PNG contains (sRGB texture). */
 export const SRGB_TEXTURE: ColorSpaceSpec = { primaries: PRIMARIES.sRGB, transfer: { kind: 'srgb' } };
 
 /**
- * Noms candidats de cet espace **dans une config OCIO**, du plus récent au plus ancien : les
- * configs ACES l'ont appelé successivement `Utility - sRGB - Texture` (1.x), `sRGB - Texture`
- * (studio 2.x) et `srgb_tx` (alias CG). `bake_lut.py` retient le premier qui existe.
+ * Candidate names of this space **in an OCIO config**, from most recent to oldest: the ACES configs called it
+ * `Utility - sRGB - Texture` (1.x), `sRGB - Texture` (studio 2.x) and `srgb_tx` (CG alias). `bake_lut.py` keeps the first
+ * one that exists.
  */
 export const SRGB_TEXTURE_NAMES = [
   'sRGB - Texture',
@@ -68,15 +66,13 @@ export const SRGB_TEXTURE_NAMES = [
   'sRGB',
 ] as const;
 
-/** Liste des candidats sous la forme attendue par `bake_lut.py --inputspace`. */
+/** List of candidates in the form expected by `bake_lut.py --inputspace`. */
 export const SRGB_TEXTURE_NAME = SRGB_TEXTURE_NAMES.join(';');
 
-/** Taille de grille des LUT cuites (33³ = convention Resolve/Iridas). */
+/** Grid size of the baked LUTs (33³ = Resolve/Iridas convention). */
 export const LUT_SIZE = 33;
 
-// ---------------------------------------------------------------------------------------
-// Algèbre 3×3 (ligne majeure)
-// ---------------------------------------------------------------------------------------
+// 3×3 algebra (row-major)
 export type Mat3 = readonly number[];
 
 const mul = (a: Mat3, b: Mat3): number[] => {
@@ -120,7 +116,7 @@ const applyMat = (m: Mat3, v: readonly number[]): [number, number, number] => [
   m[6]! * v[0]! + m[7]! * v[1]! + m[8]! * v[2]!,
 ];
 
-/** Matrice RGB→XYZ d'un jeu de primaires (méthode standard SMPTE RP 177). */
+/** RGB→XYZ matrix of a set of primaries (standard method SMPTE RP 177). */
 export function rgbToXyz(c: Chromaticities): number[] {
   const zr = 1 - c.rx - c.ry;
   const zg = 1 - c.gx - c.gy;
@@ -143,7 +139,7 @@ export function rgbToXyz(c: Chromaticities): number[] {
 
 const BRADFORD: Mat3 = [0.8951, 0.2664, -0.1614, -0.7502, 1.7135, 0.0367, 0.0389, -0.0685, 1.0296];
 
-/** Adaptation chromatique de Bradford entre deux blancs (xy). */
+/** Bradford chromatic adaptation between two whites (xy). */
 export function bradford(from: { x: number; y: number }, to: { x: number; y: number }): number[] {
   const src = applyMat(BRADFORD, [from.x / from.y, 1, (1 - from.x - from.y) / from.y]);
   const dst = applyMat(BRADFORD, [to.x / to.y, 1, (1 - to.x - to.y) / to.y]);
@@ -151,20 +147,18 @@ export function bradford(from: { x: number; y: number }, to: { x: number; y: num
   return mul(invert(BRADFORD), mul(scale, BRADFORD));
 }
 
-/** Matrice linéaire `src` → `dst` (adaptation du blanc incluse). */
+/** Linear matrix `src` → `dst` (white adaptation included). */
 export function primariesMatrix(src: Chromaticities, dst: Chromaticities): number[] {
   const cat = bradford({ x: src.wx, y: src.wy }, { x: dst.wx, y: dst.wy });
   return mul(invert(rgbToXyz(dst)), mul(cat, rgbToXyz(src)));
 }
 
-// ---------------------------------------------------------------------------------------
-// Fonctions de transfert
-// ---------------------------------------------------------------------------------------
+// Transfer functions
 const CCT_A = 10.5402377416545;
 const CCT_B = 0.0729055341958355;
 const CCT_BREAK = 0.0078125;
 
-/** Code encodé → linéaire. */
+/** Encoded code → linear. */
 export function decode(tf: Transfer, v: number): number {
   if (tf.kind === 'linear') return v;
   if (tf.kind === 'gamma') return v <= 0 ? 0 : Math.pow(v, tf.g);
@@ -173,7 +167,7 @@ export function decode(tf: Transfer, v: number): number {
   return v <= CCT_A * CCT_BREAK + CCT_B ? (v - CCT_B) / CCT_A : Math.pow(2, v * 17.52 - 9.72);
 }
 
-/** Linéaire → code encodé. */
+/** Linear → encoded code. */
 export function encode(tf: Transfer, v: number): number {
   if (tf.kind === 'linear') return v;
   if (tf.kind === 'gamma') return v <= 0 ? 0 : Math.pow(v, 1 / tf.g);
@@ -182,11 +176,9 @@ export function encode(tf: Transfer, v: number): number {
   return v <= CCT_BREAK ? CCT_A * v + CCT_B : (Math.log2(Math.max(v, 1e-10)) + 9.72) / 17.52;
 }
 
-// ---------------------------------------------------------------------------------------
-// Reconnaissance des displays / views d'une config ACES
-// ---------------------------------------------------------------------------------------
+// Recognition of the displays / views of an ACES config
 
-/** Displays reconnus par le repli intégré (les displays HDR n'y figurent pas volontairement). */
+/** Displays recognised by the built-in fallback (HDR displays are deliberately not listed). */
 const KNOWN_DISPLAYS: { re: RegExp; space: ColorSpaceSpec }[] = [
   { re: /^s?rgb(\s*-\s*display)?$/i, space: SRGB_TEXTURE },
   {
@@ -215,17 +207,17 @@ const KNOWN_DISPLAYS: { re: RegExp; space: ColorSpaceSpec }[] = [
   },
 ];
 
-/** Espace d'affichage d'un display nommé, ou `null` s'il n'est pas reconnu (HDR, DCI…). */
+/** Colour space of a named display, or `null` if it is not recognised (HDR, DCI…). */
 export function displaySpace(display: string): ColorSpaceSpec | null {
   return KNOWN_DISPLAYS.find((d) => d.re.test(display.trim()))?.space ?? null;
 }
 
 /**
- * Nature d'une vue :
- * - `raw` : les codes sont envoyés tels quels ;
- * - `colorimetric` : conversion de gamut + encodage d'affichage, sans courbe de rendu ;
- * - `log` : encodage ACEScct (inspection de valeurs) ;
- * - `tonemapped` : RRT/ODT ACES — hors de portée du repli intégré.
+ * Nature of a view:
+ * - `raw`: codes are sent as-is;
+ * - `colorimetric`: gamut conversion + display encoding, without rendering curve;
+ * - `log`: ACEScct encoding (value inspection);
+ * - `tonemapped`: ACES RRT/ODT — out of reach of the built-in fallback.
  */
 export type ViewKind = 'raw' | 'colorimetric' | 'log' | 'tonemapped';
 
@@ -237,7 +229,7 @@ export function viewKind(view: string): ViewKind {
   return 'tonemapped';
 }
 
-/** Vrai si le repli intégré sait cuire ce couple **exactement**. */
+/** True if the built-in fallback can bake this pair **exactly**. */
 export function isBuiltinBakeable(display: string, view: string): boolean {
   const kind = viewKind(view);
   if (kind === 'tonemapped') return false;
@@ -245,11 +237,9 @@ export function isBuiltinBakeable(display: string, view: string): boolean {
   return displaySpace(display) !== null;
 }
 
-// ---------------------------------------------------------------------------------------
-// Cuisson
-// ---------------------------------------------------------------------------------------
+// Baking
 
-/** Données d'une LUT 3D : `size³` triplets, rouge variant le plus vite. */
+/** Data of a 3D LUT: `size³` triplets, red varying fastest. */
 export interface CubeLut {
   size: number;
   data: Float32Array;
@@ -258,9 +248,8 @@ export interface CubeLut {
 const clamp01 = (v: number): number => (v < 0 ? 0 : v > 1 ? 1 : v);
 
 /**
- * Cuit la LUT d'un couple display/view avec le repli intégré. Renvoie `null` si la vue
- * demande une courbe de rendu (RRT/ODT) ou si le display n'est pas reconnu : c'est alors au
- * worker OCIO de produire la LUT.
+ * Bakes the LUT of a display/view pair with the built-in fallback. Returns `null` if the view requires a rendering curve
+ * (RRT/ODT) or if the display is not recognised: it is then up to the OCIO worker to produce the LUT.
  */
 export function bakeBuiltinLut(
   display: string,
@@ -299,14 +288,14 @@ export function bakeBuiltinLut(
 }
 
 /**
- * Ligne de provenance écrite en tête du `.cube`. Le viewer la relit pour dire à l'écran
- * **d'où vient** la transformée qu'il applique : la même LUT cuite par OCIO ou par le repli
- * intégré ne vaut pas la même chose pour un superviseur. `bake_lut.py` écrit la même forme.
+ * Provenance line written at the head of the `.cube`. The viewer rereads it to show on screen **where** the transform it
+ * applies comes from: the same LUT baked by OCIO or by the built-in fallback is not worth the same to a supervisor.
+ * `bake_lut.py` writes the same form.
  */
 export const CUBE_SOURCE_PREFIX = '# ReView display transform | source:';
 export const BUILTIN_SOURCE = 'built-in colorimetric';
 
-/** Sérialise une LUT au format `.cube` (Iridas), lisible par Resolve, Nuke et le viewer. */
+/** Serialises a LUT in `.cube` format (Iridas), readable by Resolve, Nuke and the viewer. */
 export function serializeCube(lut: CubeLut, title: string, source = BUILTIN_SOURCE): string {
   const lines = [
     `${CUBE_SOURCE_PREFIX} ${source.replace(/[\r\n]/g, ' ')}`,
@@ -320,10 +309,10 @@ export function serializeCube(lut: CubeLut, title: string, source = BUILTIN_SOUR
   return `${lines.join('\n')}\n`;
 }
 
-/** Nombre maximal d'entrées acceptées à la lecture d'un `.cube` (65³ ≈ 275 000). */
+/** Maximum number of entries accepted when reading a `.cube` (65³ ≈ 275,000). */
 const MAX_CUBE_SIZE = 65;
 
-/** Parse un `.cube` (3D uniquement). Lève si la taille annoncée et le contenu divergent. */
+/** Parses a `.cube` (3D only). Throws if the announced size and the content diverge. */
 export function parseCube(text: string): CubeLut {
   let size = 0;
   const values: number[] = [];
@@ -347,7 +336,7 @@ export function parseCube(text: string): CubeLut {
   return { size, data: Float32Array.from(values) };
 }
 
-/** Identifiant de stockage stable d'un couple display/view (nom lisible + condensé court). */
+/** Stable storage identifier of a display/view pair (readable name + short digest). */
 export function lutSlug(display: string, view: string): string {
   const slug = (s: string) =>
     s
@@ -359,9 +348,9 @@ export function lutSlug(display: string, view: string): string {
   return `${slug(display)}__${slug(view)}__${hash}`;
 }
 
-/** Clé MinIO d'une LUT cuite — rangée **à côté** du `.ocio`, sous le dossier de la config. */
+/** MinIO key of a baked LUT — stored **next to** the `.ocio`, under the config's folder. */
 export const lutStorageKey = (configId: string, display: string, view: string): string =>
   `studio/ocio/luts/${configId}/${lutSlug(display, view)}.cube`;
 
-/** Préfixe MinIO de toutes les LUT d'une config (purge à la désinstallation). */
+/** MinIO prefix of all the LUTs of a config (purged on uninstall). */
 export const lutPrefix = (configId: string): string => `studio/ocio/luts/${configId}/`;

@@ -1,6 +1,7 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import { ignoreFailure } from '../lib/ignoreFailure';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import request from 'supertest';
 import { MediaKind, MediaStatus, TaskType, VersionStatus } from '@prisma/client';
@@ -8,11 +9,11 @@ import { createApp } from '../app';
 import { prisma } from '../lib/prisma';
 
 /**
- * Montage automatique et espace asset (Phase 45) — intégration.
+ * Automatic edit and asset space (Phase 45): integration.
  *
- * Le jeu d'essai reproduit la situation qui a motivé la fonctionnalité : un plan publié
- * à deux étapes du pipe (la plus récente n'étant pas la plus avancée), un plan à une
- * seule étape, un plan sans rien, et un plan coupé au montage.
+ * The test data reproduces the situation that motivated the feature: a shot published at two steps
+ * of the pipeline (the most recent not being the most advanced), a shot with a single step, a shot
+ * with nothing, and a shot cut in the edit.
  */
 const app = createApp({ rateLimit: false });
 let token = '';
@@ -29,7 +30,7 @@ const login = async () => {
   throw new Error('no test administrator account available');
 };
 
-/** Crée une tâche, sa version publiée et un média visible, à l'étape voulue. */
+/** Creates a task, its published version and a visible media at the requested step. */
 async function publish(parent: { shotId?: number; assetId?: number }, department: string, name: string) {
   const type = department === 'ANIMATION' ? TaskType.ANIMATION : TaskType.COMPOSITING;
   const task = await prisma.task.create({
@@ -88,7 +89,7 @@ beforeAll(async () => {
   await makeShot('SH030', 20, false, [1001, 1048]);
   await makeShot('SH040', 30, true);
 
-  // SH010 : compositing d'abord, animation ENSUITE — la plus récente n'est pas la plus avancée.
+  // SH010: compositing first, animation AFTER: the most recent is not the most advanced.
   await publish({ shotId: shots.SH010 }, 'COMPOSITING', 'v0001');
   await publish({ shotId: shots.SH010 }, 'ANIMATION', 'v0009');
   await publish({ shotId: shots.SH020 }, 'ANIMATION', 'v0002');
@@ -100,23 +101,26 @@ beforeAll(async () => {
 });
 
 afterAll(async () => {
-  if (projectId) await prisma.project.delete({ where: { id: projectId } }).catch(() => undefined);
+  if (projectId)
+    await prisma.project
+      .delete({ where: { id: projectId } })
+      .catch(ignoreFailure('itest cleanup failed', { projectId }));
 });
 
 const auth = () => ({ Authorization: `Bearer ${token}` });
 
 describe('montage automatique', () => {
-  it('résout le montage d’une séquence au premier accès, sans création explicite', async () => {
+  it('resolves the edit of a sequence on first access, without explicit creation', async () => {
     const r = await request(app)
       .get(`/api/timelines?projectId=${projectId}&sequenceId=${sequenceId}`)
       .set(auth());
     expect(r.status).toBe(200);
     expect(r.body.timeline.id).toBeGreaterThan(0);
-    // Jamais renommé : le nom reste nul et l'interface affiche son libellé traduit.
+    // Never renamed: the name stays null and the interface displays its translated label.
     expect(r.body.timeline.name).toBeNull();
   });
 
-  it('retient l’étape la plus avancée, pas la version la plus récente', async () => {
+  it('keeps the most advanced step, not the most recent version', async () => {
     const r = await request(app)
       .get(`/api/timelines?projectId=${projectId}&sequenceId=${sequenceId}`)
       .set(auth());
@@ -125,7 +129,7 @@ describe('montage automatique', () => {
     expect(clip.department).toBe('COMPOSITING');
   });
 
-  it('tient la place des plans sans média et saute les plans omis', async () => {
+  it('holds the place of shots without media and skips the omitted shots', async () => {
     const r = await request(app)
       .get(`/api/timelines?projectId=${projectId}&sequenceId=${sequenceId}`)
       .set(auth());
@@ -133,12 +137,12 @@ describe('montage automatique', () => {
     expect(codes).toEqual(['SH010', 'SH020', 'SH030']);
     const gap = r.body.timeline.items[2];
     expect(gap.placeholder).toBe(true);
-    expect(gap.duration).toBe(2); // 48 frames à 24 i/s
+    expect(gap.duration).toBe(2); // 48 frames at 24 fps
     expect(r.body.timeline.gapCount).toBe(1);
     expect(r.body.timeline.totalDuration).toBe(6);
   });
 
-  it('cible une étape précise et retombe en amont au besoin', async () => {
+  it('targets a specific step and falls back upstream if needed', async () => {
     const list = await request(app)
       .get(`/api/timelines?projectId=${projectId}&sequenceId=${sequenceId}`)
       .set(auth());
@@ -153,7 +157,7 @@ describe('montage automatique', () => {
     expect(r.body.timeline.name).toBe('Montage test');
   });
 
-  it('fige une révision puis rend l’écart avec la précédente', async () => {
+  it('freezes a revision then shows the gap with the previous one', async () => {
     const list = await request(app)
       .get(`/api/timelines?projectId=${projectId}&sequenceId=${sequenceId}`)
       .set(auth());
@@ -172,35 +176,35 @@ describe('montage automatique', () => {
     expect(diff.body.diff.removed).toEqual([]);
   });
 
-  it('enchaîne toutes les séquences dans le montage du projet', async () => {
+  it('chains all the sequences in the edit of the project', async () => {
     const r = await request(app).get(`/api/timelines?projectId=${projectId}`).set(auth());
     expect(r.status).toBe(200);
     expect(r.body.timeline.sequenceId).toBeNull();
     expect(r.body.timeline.items).toHaveLength(3);
   });
 
-  it('refuse un montage d’un projet auquel on n’a pas accès', async () => {
+  it('refuses an edit of a project we have no access to', async () => {
     const r = await request(app).get(`/api/timelines?projectId=${projectId}`);
     expect(r.status).toBe(401);
   });
 });
 
 describe('espace asset', () => {
-  it('remonte les versions publiées SOUS une tâche, invisibles auparavant', async () => {
+  it('returns the published versions UNDER a task, previously invisible', async () => {
     const r = await request(app).get(`/api/assets/${assetId}/tree`).set(auth());
     expect(r.status).toBe(200);
     const group = r.body.groups.find((g: { key: string | null }) => g.key === 'COMPOSITING');
     expect(group.items[0].versions[0].name).toBe('v0004');
   });
 
-  it('désigne la version la plus avancée comme dernière version', async () => {
+  it('designates the most advanced version as the latest version', async () => {
     const r = await request(app).get(`/api/assets/${assetId}/latest`).set(auth());
     expect(r.status).toBe(200);
     expect(r.body.latest.versionName).toBe('v0004');
     expect(r.body.latest.department).toBe('COMPOSITING');
   });
 
-  it('répond 404 sur un asset sans version publiée', async () => {
+  it('answers 404 for an asset with no published version', async () => {
     const empty = await prisma.asset.create({ data: { projectId, name: `vide-${Date.now()}` } });
     const r = await request(app).get(`/api/assets/${empty.id}/latest`).set(auth());
     expect(r.status).toBe(404);

@@ -4,14 +4,14 @@
 import { useCallback, useState } from 'react';
 
 /**
- * Le nom sous lequel un invité s'exprime, retenu sur son appareil.
+ * The name a guest speaks under, kept on their device.
  *
- * Un seul nom pour tout ce qu'il pose — sa note comme sa réponse. Deux états séparés
- * laissaient un client signer « Claire » son commentaire et « C. Martin » sa validation sur
- * le même plan, et c'est l'artiste qui devait deviner que c'était la même personne.
+ * One name for everything they post: their note as well as their answer. Two separate states
+ * let a client sign "Claire" on their comment and "C. Martin" on their validation for the same
+ * shot, and the artist then had to guess it was the same person.
  *
- * L'écriture ne peut pas échouer bruyamment : navigation privée, stockage plein, site
- * bloqué — le nom vaut alors pour la session, ce qui est déjà l'essentiel.
+ * The write cannot fail loudly: private browsing, full storage or a blocked site means the name
+ * holds only for the session, which is already the essential part.
  */
 const STORAGE_KEY = 'client-guest-name';
 
@@ -30,7 +30,7 @@ export function useGuestName(): [string, (name: string) => void] {
     try {
       localStorage.setItem(STORAGE_KEY, next);
     } catch {
-      /* stockage indisponible : le nom vaut pour cette session */
+      /* Storage unavailable: the name holds for this session */
     }
   }, []);
   return [name, update];

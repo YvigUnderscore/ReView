@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import PeopleList from '../people/PeopleList';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Button } from '../ui/button';
@@ -13,20 +13,17 @@ import type { AssigneeRef } from '../../types/entities';
 import { useT } from '../../i18n';
 
 /**
- * Qui est responsable de cette séquence, de ce plan, de cet asset.
+ * Who is responsible for this sequence, shot or asset.
  *
- * L'assignation existante passe par les **tâches** : « donne cet asset à Alice » pose Alice
- * sur chacune de ses étapes. C'est la donnée juste du travail, et elle reste. Mais elle ne
- * sait pas dire « cette séquence est suivie par Bruno » quand Bruno n'a aucune tâche dessus
- * — le superviseur de séquence, la production, le lead qui couvre trois plans.
+ * Existing assignment goes through the **tasks**: "give this asset to Alice" puts Alice on each of its steps. That is
+ * the right data about the work, and it stays. But it cannot say "this sequence is followed by Bruno" when Bruno has no
+ * task on it: the sequence supervisor, production, the lead covering three shots.
  *
- * D'où cette liste, à cocher, avec des visages : sur vingt noms qui se ressemblent, la
- * photo est ce qui rend quelqu'un reconnaissable du premier coup d'œil, et le champ de
- * recherche ce qui évite de faire défiler une équipe de cinquante personnes.
+ * Hence this list, with checkboxes and faces: among twenty similar names, the photo is what makes someone recognisable
+ * at a glance, and the search field is what spares scrolling through a team of fifty people.
  *
- * La liste elle-même vit dans `components/people/PeopleList` depuis qu'un autre écran
- * (l'ajout de membres au projet) en avait besoin : elle y a gagné la recherche insensible
- * aux accents et la ligne d'adresse, qui départage deux comptes portant le même nom.
+ * The list itself lives in `components/people/PeopleList`, since another screen (adding members to the project) needed
+ * it: it gained accent-insensitive search and the address line, which tells apart two accounts bearing the same name.
  */
 
 export type AssignKind = 'sequences' | 'shots' | 'assets' | 'episodes';
@@ -43,7 +40,7 @@ export default function PeopleAssignDialog({
   projectId: number;
   kind: AssignKind;
   id: number;
-  /** Ce que l'on assigne, nommé — « SH010 », « Robot ». */
+  /** What is being assigned, named: "SH010", "Robot". */
   title: string;
   current: AssigneeRef[];
   onClose: () => void;
@@ -51,8 +48,8 @@ export default function PeopleAssignDialog({
 }) {
   const t = useT();
   const qc = useQueryClient();
-  // `AssignableMember` porte déjà ce que la liste attend (nom, adresse, rôle, photo) :
-  // aucune conversion, le hook est la source.
+  // `AssignableMember` already carries what the list expects (name, address, role, photo): no conversion,
+  // the hook is the source.
   const members = useProjectMembers(projectId);
   const [selected, setSelected] = useState<number[]>(current.map((p) => p.id));
 
@@ -63,8 +60,8 @@ export default function PeopleAssignDialog({
         .then((r) => r.assignees),
     onSuccess: (people) => {
       toast.success(t('assignees.saved', { count: people.length }));
-      // Les cartes portent les visages : la liste de la page doit se relire, sinon la
-      // photo n'apparaîtrait qu'au prochain chargement complet.
+      // The cards carry faces: the list must be readable again, otherwise the photo would only appear on
+      // the next full load.
       void qc.invalidateQueries({ queryKey: [kind, projectId] });
       void qc.invalidateQueries({ queryKey: [kind.slice(0, -1), id] });
       onSaved?.(people);

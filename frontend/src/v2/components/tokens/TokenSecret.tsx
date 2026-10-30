@@ -7,10 +7,10 @@ import { Button } from '../ui/button';
 import { useT } from '../../i18n';
 
 /**
- * Le secret d'un token, montré une seule fois.
+ * A token's secret, shown only once.
  *
- * Le serveur ne stocke qu'un hachage : ce qui s'affiche ici n'existe nulle part ailleurs.
- * D'où l'avertissement systématique — un token perdu se remplace, il ne se retrouve pas.
+ * The server only stores a hash: what is displayed here exists nowhere else. Hence the
+ * systematic warning: a lost token is replaced, not recovered.
  */
 export default function TokenSecret({ secret }: { secret: string }) {
   const t = useT();

@@ -13,7 +13,7 @@ import {
 } from './ffmpegTimeout';
 
 describe('ffmpegTimeoutMs', () => {
-  it('durée inconnue : forfait', () => {
+  it('unknown duration: flat rate', () => {
     expect(ffmpegTimeoutMs()).toBe(FFMPEG_UNKNOWN_TIMEOUT_MS);
     expect(ffmpegTimeoutMs(null)).toBe(FFMPEG_UNKNOWN_TIMEOUT_MS);
     expect(ffmpegTimeoutMs(0)).toBe(FFMPEG_UNKNOWN_TIMEOUT_MS);
@@ -22,39 +22,39 @@ describe('ffmpegTimeoutMs', () => {
     expect(ffmpegTimeoutMs(Number.POSITIVE_INFINITY)).toBe(FFMPEG_UNKNOWN_TIMEOUT_MS);
   });
 
-  it('média court : le plancher protège des fichiers minuscules', () => {
-    // 5 s × 20 = 100 s, sous le plancher de 5 min.
+  it('short media: the floor protects tiny files', () => {
+    // 5 s × 20 = 100 s, below the 5-minute floor.
     expect(ffmpegTimeoutMs(5)).toBe(FFMPEG_MIN_TIMEOUT_MS);
   });
 
-  it('média moyen : proportionnel à la durée', () => {
-    // 10 min × 20 = 200 min, entre plancher et plafond.
+  it('medium media: proportional to the duration', () => {
+    // 10 min × 20 = 200 min, between floor and ceiling.
     expect(ffmpegTimeoutMs(600)).toBe(600 * 1000 * 20);
   });
 
-  it('média très long : le plafond borne l’attente', () => {
+  it('very long media: the ceiling bounds the wait', () => {
     expect(ffmpegTimeoutMs(10 * 3600)).toBe(FFMPEG_MAX_TIMEOUT_MS);
   });
 
-  it('la fenêtre est monotone en la durée', () => {
+  it('the window is monotonic in the duration', () => {
     const values = [1, 10, 60, 600, 3600, 36_000].map((d) => ffmpegTimeoutMs(d));
     for (let i = 1; i < values.length; i++) expect(values[i]!).toBeGreaterThanOrEqual(values[i - 1]!);
   });
 
-  it('options : facteur et bornes personnalisés', () => {
+  it('options: custom factor and bounds', () => {
     expect(ffmpegTimeoutMs(30, { factor: 2, minMs: 1000, maxMs: 1_000_000 })).toBe(60_000);
     expect(ffmpegTimeoutMs(30, { factor: 2, minMs: 90_000, maxMs: 1_000_000 })).toBe(90_000);
     expect(ffmpegTimeoutMs(30, { factor: 2, minMs: 1000, maxMs: 10_000 })).toBe(10_000);
     expect(ffmpegTimeoutMs(undefined, { unknownMs: 1234 })).toBe(1234);
   });
 
-  it('le résultat est toujours un entier de millisecondes', () => {
+  it('the result is always an integer number of milliseconds', () => {
     expect(Number.isInteger(ffmpegTimeoutMs(12.345))).toBe(true);
   });
 });
 
 describe('ffmpegTimeoutMessage', () => {
-  it('nomme l’étape et la limite, en anglais', () => {
+  it('names the step and the limit, in English', () => {
     expect(ffmpegTimeoutMessage('proxy', 300_000)).toBe(
       'ffmpeg step "proxy" exceeded its 300s time limit and was killed',
     );
@@ -62,7 +62,7 @@ describe('ffmpegTimeoutMessage', () => {
 });
 
 describe('FfmpegTimeoutError', () => {
-  it('porte le message exploitable et l’étape', () => {
+  it('carries the usable message and the step', () => {
     const err = new FfmpegTimeoutError('hls 720p', 600_000);
     expect(err.message).toContain('hls 720p');
     expect(err.message).toContain('600s');
@@ -71,7 +71,7 @@ describe('FfmpegTimeoutError', () => {
     expect(err).toBeInstanceOf(Error);
   });
 
-  it('se distingue d’un échec d’encodage ordinaire (pas de repli libx264)', () => {
+  it('is distinct from an ordinary encoding failure (no libx264 fallback)', () => {
     expect(isFfmpegTimeout(new FfmpegTimeoutError('proxy', 1000))).toBe(true);
     expect(isFfmpegTimeout(new Error('Unknown encoder h264_nvenc'))).toBe(false);
     expect(isFfmpegTimeout('boom')).toBe(false);

@@ -5,34 +5,36 @@ import { useEffect, useRef } from 'react';
 import { isContextTap } from './contextGesture';
 
 /**
- * Clic droit des viewers spatiaux — **bref** ouvre le menu contextuel, **maintenu** vole
- * (Phase 50, lot 8). Un seul hook pour le splat et le modèle 3D : le geste est le même, seul le
- * contenu du menu diffère.
+ * Right click on spatial viewers — a **short** press opens the context menu, a **held** one flies
+ * (Phase 50, lot 8). One hook for the splat and the 3D model: the gesture is the same, only the
+ * menu content differs.
  *
- * Le verdict est rendu au **relâchement du bouton**, jamais à l'arrivée de l'événement
- * `contextmenu` : Chromium le déclenche sur le `mouseup` sous Windows et sur le `mousedown`
- * ailleurs. Mesurer le geste à ce moment-là rendait donc la distinction dépendante de la
- * plateforme — sur un système qui notifie à l'appui, tout vol aurait ouvert le menu avant même
- * d'avoir commencé. L'événement natif du canvas est simplement arrêté, dans tous les cas.
+ * The verdict is taken on **button release**, never on arrival of the `contextmenu` event:
+ * Chromium fires it on `mouseup` under Windows and on `mousedown` elsewhere. Measuring the gesture
+ * at that moment made the distinction platform-dependent — on a system that notifies on press,
+ * every flight would have opened the menu before it even started. The canvas's native event is
+ * simply stopped in all cases.
  *
- * Le menu lui-même est un `ContextMenu` Radix qui enveloppe le pane. On ne peut pas lui laisser
- * l'événement du canvas : `flyControls` l'a déjà consommé (suppression du menu natif), et Radix
- * ignore un événement `defaultPrevented`. On relance donc un événement **neuf** un cran au-dessus
- * du canvas — il remonte jusqu'au menu sans repasser par les écouteurs de vol ni par celui-ci.
+ * The menu itself is a Radix `ContextMenu` wrapping the pane. We cannot let it receive the canvas
+ * event: `flyControls` has already consumed it (suppressing the native menu), and Radix ignores a
+ * `defaultPrevented` event. So a **new** event is re-dispatched one level above the canvas — it
+ * bubbles up to the menu without going through the flight listeners or this hook's.
+ *
+ * Args:
+ *     getDom: Viewer canvas, resolved on demand (the scene is mounted asynchronously).
+ *     ready: Whether the scene is ready.
+ *     prepare: Prepares the menu and says whether it should open. The 3D viewer resolves the
+ *         targeted prim there and refuses empty space; the splat always accepts — its entries
+ *         concern the view, not an object.
  */
 export function useSpatialContextMenu(
-  /** Canvas du viewer (résolu à la demande : la scène est montée en asynchrone). */
   getDom: () => HTMLElement | null,
   ready: boolean,
-  /**
-   * Prépare le menu et dit s'il doit s'ouvrir. Le viewer 3D y résout le prim visé et refuse le
-   * vide ; le splat accepte toujours — ses entrées portent sur la vue, pas sur un objet.
-   */
   prepare: (tap: { clientX: number; clientY: number; altKey: boolean }) => boolean,
 ): void {
   const down = useRef<{ x: number; y: number; at: number } | null>(null);
-  // Rappel rejoué par une ref : l'appelant en fournit un neuf à chaque rendu, et réinstaller les
-  // écouteurs entre l'appui et le relâchement ferait perdre l'origine du geste.
+  // Callback replayed through a ref: the caller provides a new one on each render, and
+  // reinstalling the listeners between press and release would lose the origin of the gesture.
   const prepareRef = useRef(prepare);
   useEffect(() => {
     prepareRef.current = prepare;
@@ -55,7 +57,7 @@ export function useSpatialContextMenu(
         dy: e.clientY - start.y,
         heldMs: e.timeStamp - start.at,
       };
-      if (!isContextTap(tap)) return; // glissé ou maintenu : c'était un vol
+      if (!isContextTap(tap)) return; // dragged or held: it was a flight
       if (!prepareRef.current({ clientX: e.clientX, clientY: e.clientY, altKey: e.altKey })) return;
       dom.parentElement?.dispatchEvent(
         new MouseEvent('contextmenu', {
@@ -66,12 +68,12 @@ export function useSpatialContextMenu(
         }),
       );
     };
-    // Le canvas ne sert jamais le menu natif : c'est le geste ci-dessus qui décide, et lui seul.
+    // The canvas never serves the native menu: the gesture above decides, and it alone.
     const onCtx = (e: MouseEvent) => e.stopPropagation();
 
-    // PHASE DE CAPTURE : les contrôles de caméra sont posés sur le même élément et coupent la
-    // propagation pour les boutons qu'ils traitent (cf. `useUsdPicking`). La capture descend
-    // avant toute écoute en bulle ; ces écouteurs n'empêchent rien d'autre.
+    // CAPTURE PHASE: the camera controls sit on the same element and stop propagation for the
+    // buttons they handle (see `useUsdPicking`). Capture runs down before any bubbling listener;
+    // these listeners prevent nothing else.
     dom.addEventListener('pointerdown', onDown, true);
     dom.addEventListener('pointerup', onUp, true);
     dom.addEventListener('pointercancel', onUp, true);

@@ -3,11 +3,12 @@
 
 import { describe, it, expect } from 'vitest';
 import { buildOpenApiDocument } from './openapi';
+import { V1_BASE_PATH, V1_MOUNTS } from '../routes/v1';
 
 describe('openapi', () => {
-  const doc = buildOpenApiDocument();
+  const doc = buildOpenApiDocument({ base: V1_BASE_PATH, mounts: V1_MOUNTS });
 
-  it('génère un document OpenAPI 3.0 valide avec les chemins clés', () => {
+  it('generates a valid OpenAPI 3.0 document with the key paths', () => {
     expect(doc.openapi).toBe('3.0.0');
     expect(doc.info.title).toBe('ReView API');
     expect(doc.paths?.['/health']).toBeTruthy();
@@ -16,18 +17,18 @@ describe('openapi', () => {
     expect(doc.paths?.['/api/auth/login']?.post).toBeTruthy();
   });
 
-  it('déclare la licence du projet — le document est servi publiquement', () => {
+  it('declares the project licence — the document is served publicly', () => {
     expect(doc.info.license?.name).toBe('AGPL-3.0-or-later');
     expect(doc.info.license?.url).toContain('gnu.org');
   });
 
-  it('expose les schémas partagés et le sécurité bearer', () => {
+  it('exposes the shared schemas and the bearer security', () => {
     expect(doc.components?.schemas?.Project).toBeTruthy();
     expect(doc.components?.schemas?.ProjectPage).toBeTruthy();
     expect(doc.components?.securitySchemes?.bearerAuth).toBeTruthy();
   });
 
-  it('documente le champ « usd » de POST /api/v1/publish — sinon un intégrateur ne peut pas le deviner', () => {
+  it('documents the "usd" field of POST /api/v1/publish — otherwise an integrator cannot guess it', () => {
     const schema = doc.paths?.['/api/v1/publish']?.post?.requestBody as
       | { content?: Record<string, { schema?: { properties?: Record<string, { description?: string }> } }> }
       | undefined;
@@ -36,7 +37,7 @@ describe('openapi', () => {
     expect(usd?.description).toMatch(/première conversion/i);
   });
 
-  it('documente la pagination sur GET /api/projects (query page/pageSize)', () => {
+  it('documents the pagination on GET /api/projects (query page/pageSize)', () => {
     const params = doc.paths?.['/api/projects']?.get?.parameters ?? [];
     const names = params.map((p) => (p as { name?: string }).name);
     expect(names).toContain('page');

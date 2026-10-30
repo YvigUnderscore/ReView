@@ -4,15 +4,14 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * Le journal d'audit ne vaut que par ce qu'on peut en relire, et par ce qu'on ne peut pas
- * en effacer. Ces tests fixent les trois propriétés correspondantes :
+ * The audit log is only worth something through what can be read back from it, and through what cannot be
+ * erased from it. These tests pin the three corresponding properties:
  *
- * - `list` restitue `metadata` (il était supprimé de la réponse : « MEDIA_PURGE · 812 »
- *   sans dire lesquels des trois cents identifiants du lot étaient partis) ;
- * - il le restitue **rédigé** — le chemin d'une URL de webhook est un secret, pas une
- *   donnée d'audit ;
- * - `logAudit` double l'écriture en base d'une émission sur le journal pino, hors de
- *   portée de la politique de rétention.
+ * - `list` returns `metadata` (it was stripped from the response: "MEDIA_PURGE · 812" without saying which
+ *   of the three hundred identifiers in the batch had gone);
+ * - it returns it **redacted**: the path of a webhook URL is a secret, not audit data;
+ * - `logAudit` duplicates the database write as an emission to the pino log, out of reach of the retention
+ *   policy.
  */
 
 const { prismaMock, loggerMock, avatarUrlMock } = vi.hoisted(() => ({
@@ -48,8 +47,8 @@ beforeEach(() => {
   prismaMock.auditLog.create.mockReturnValue({ catch: vi.fn() });
 });
 
-describe('AuditService.list — restitution du metadata (A5-03)', () => {
-  it('rend le metadata de chaque ligne', async () => {
+describe('AuditService.list: metadata output (A5-03)', () => {
+  it('returns the metadata of each row', async () => {
     prismaMock.auditLog.findMany.mockResolvedValue([
       {
         id: 7,
@@ -66,7 +65,7 @@ describe('AuditService.list — restitution du metadata (A5-03)', () => {
     expect(res.items[0]!.metadata).toEqual({ ids: [812, 813, 814] });
   });
 
-  it("n'expose ni le jeton d'un webhook ni un secret nommé", async () => {
+  it('exposes neither a webhook token nor a secret by name', async () => {
     prismaMock.auditLog.findMany.mockResolvedValue([
       {
         id: 8,
@@ -92,7 +91,7 @@ describe('AuditService.list — restitution du metadata (A5-03)', () => {
     expect(JSON.stringify(meta)).not.toContain('hmac-key');
   });
 
-  it('ne rend jamais ni userId brut ni objet utilisateur complet', async () => {
+  it('never returns a raw userId nor a full user object', async () => {
     prismaMock.auditLog.findMany.mockResolvedValue([
       {
         id: 9,
@@ -119,8 +118,8 @@ describe('AuditService.list — restitution du metadata (A5-03)', () => {
   });
 });
 
-describe('redactAuditMetadata — rédiger plutôt qu’omettre', () => {
-  it('laisse passer nombres, booléens, null et chaînes ordinaires', () => {
+describe('redactAuditMetadata: redact rather than omit', () => {
+  it('lets numbers, booleans, null and ordinary strings through', () => {
     expect(redactAuditMetadata({ count: 3, ok: true, none: null, name: 'Seq 010' })).toEqual({
       count: 3,
       ok: true,
@@ -129,15 +128,15 @@ describe('redactAuditMetadata — rédiger plutôt qu’omettre', () => {
     });
   });
 
-  it('réduit une URL à son origine, mais laisse intacte une clé de réglage homonyme', () => {
+  it('reduces a URL to its origin, but leaves a homonymous settings key intact', () => {
     expect(redactAuditMetadata({ url: 'https://hooks.slack.com/services/T/B/XYZ' })).toEqual({
       url: 'https://hooks.slack.com/…',
     });
-    // `key` vaut le NOM du réglage, pas une cible : rien à rédiger.
+    // `key` is the NAME of the setting, not a target: nothing to redact.
     expect(redactAuditMetadata({ key: 'slack_webhook_url' })).toEqual({ key: 'slack_webhook_url' });
   });
 
-  it('borne les listes, les chaînes et la profondeur', () => {
+  it('bounds lists, strings and depth', () => {
     const many = Array.from({ length: 120 }, (_, i) => i);
     const redacted = redactAuditMetadata({ ids: many }) as { ids: unknown[] };
     expect(redacted.ids).toHaveLength(51);
@@ -150,15 +149,15 @@ describe('redactAuditMetadata — rédiger plutôt qu’omettre', () => {
     expect(JSON.stringify(deep)).toContain('[Redacted]');
   });
 
-  it('rédige un secret quelle que soit sa profondeur', () => {
+  it('redacts a secret at any depth', () => {
     expect(redactAuditMetadata({ smtp: { host: 'mail.test', password: 'hunter2' } })).toEqual({
       smtp: { host: 'mail.test', password: '[Redacted]' },
     });
   });
 });
 
-describe('logAudit — copie hors de portée de la rétention (A5-04)', () => {
-  it('émet la ligne sur le journal pino en plus de la base', () => {
+describe('logAudit: copy out of reach of retention (A5-04)', () => {
+  it('emits the row to the pino log in addition to the database', () => {
     logAudit({ userId: 1, action: 'RETENTION_CONFIG', entityType: 'Setting', metadata: { auditLog: 1 } });
     expect(prismaMock.auditLog.create).toHaveBeenCalledOnce();
     expect(loggerMock.info).toHaveBeenCalledWith(
@@ -167,7 +166,7 @@ describe('logAudit — copie hors de portée de la rétention (A5-04)', () => {
     );
   });
 
-  it('rédige aussi la copie journalisée', () => {
+  it('also redacts the logged copy', () => {
     logAudit({
       userId: 1,
       action: 'WEBHOOK_CREATE',
@@ -176,7 +175,7 @@ describe('logAudit — copie hors de portée de la rétention (A5-04)', () => {
     expect(JSON.stringify(loggerMock.info.mock.calls[0])).not.toContain('TOK');
   });
 
-  it('écrit le metadata brut en base : la rédaction ne vaut que pour la restitution', () => {
+  it('writes the raw metadata to the database: redaction only applies to output', () => {
     logAudit({ userId: 1, action: 'SHARE_UNLOCK_FAIL', metadata: { ip: '10.1.2.3' } });
     expect(prismaMock.auditLog.create).toHaveBeenCalledWith({
       data: expect.objectContaining({ metadata: { ip: '10.1.2.3' } }),
@@ -184,8 +183,8 @@ describe('logAudit — copie hors de portée de la rétention (A5-04)', () => {
   });
 });
 
-describe('logLoginAttempt — la connexion laisse une trace (A5-03)', () => {
-  it('consigne LOGIN avec l’auteur quand l’accès est accordé', () => {
+describe('logLoginAttempt: login leaves a trace (A5-03)', () => {
+  it('records LOGIN with the author when access is granted', () => {
     logLoginAttempt({ user: { id: 7 }, granted: true, email: 'alice@studio.com', ip: '10.1.2.3' });
 
     expect(prismaMock.auditLog.create).toHaveBeenCalledWith({
@@ -199,7 +198,7 @@ describe('logLoginAttempt — la connexion laisse une trace (A5-03)', () => {
     });
   });
 
-  it('consigne LOGIN_FAIL sans auteur quand l’adresse ne correspond à aucun compte', () => {
+  it('records LOGIN_FAIL without an author when the address matches no account', () => {
     logLoginAttempt({ user: null, granted: false, email: 'fantome@studio.com' });
 
     expect(prismaMock.auditLog.create).toHaveBeenCalledWith({
@@ -208,13 +207,13 @@ describe('logLoginAttempt — la connexion laisse une trace (A5-03)', () => {
         action: 'LOGIN_FAIL',
         entityType: 'User',
         entityId: null,
-        // L'adresse visée est la donnée qui rend l'énumération visible.
+        // The targeted address is the datum that makes enumeration visible.
         metadata: { email: 'fantome@studio.com', ip: null },
       },
     });
   });
 
-  it('distingue un mot de passe validé d’une session ouverte quand le 2FA est actif', () => {
+  it('distinguishes a validated password from an open session when 2FA is active', () => {
     logLoginAttempt({
       user: { id: 7, totpEnabledAt: new Date() },
       granted: true,
@@ -228,15 +227,15 @@ describe('logLoginAttempt — la connexion laisse une trace (A5-03)', () => {
     expect(data.metadata.pending2fa).toBe(true);
   });
 
-  it('n’a aucun moyen de journaliser le mot de passe : il ne lui est pas passé', () => {
+  it('has no way to log the password: it is never passed in', () => {
     logLoginAttempt({ user: { id: 7 }, granted: false, email: 'alice@studio.com' });
 
     expect(JSON.stringify(prismaMock.auditLog.create.mock.calls)).not.toContain('password');
   });
 });
 
-describe('Garde-fous de rétention offerts au balayage (A5-04)', () => {
-  it('exclut les actions qui décrivent un effacement', () => {
+describe('Retention safeguards offered to the sweep (A5-04)', () => {
+  it('excludes the actions that describe an erasure', () => {
     const cutoff = new Date('2026-01-01T00:00:00Z');
     expect(purgeableAuditWhere(cutoff)).toEqual({
       createdAt: { lt: cutoff },
@@ -247,7 +246,7 @@ describe('Garde-fous de rétention offerts au balayage (A5-04)', () => {
     expect(AUDIT_UNPURGEABLE_ACTIONS).toContain('RETENTION_SWEEP');
   });
 
-  it('pose un plancher de conservation qui rend la manœuvre « 1 jour » impossible', () => {
+  it('sets a retention floor that makes the "1 day" manoeuvre impossible', () => {
     expect(AUDIT_RETENTION_MIN_DAYS).toBeGreaterThanOrEqual(90);
   });
 });

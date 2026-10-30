@@ -7,29 +7,30 @@ import type { Request, Response, NextFunction } from 'express';
 
 const { db, actor } = vi.hoisted(() => ({
   db: {
-    // `count` : la garde d'accès projet commence par vérifier que le projet n'est pas à la
-    // corbeille (`middleware/rbac`). Il ne l'est jamais dans ce fichier.
+    // `count`: the project access guard starts by checking that the project is not in the trash
+    // (`middleware/rbac`). It never is in this file.
     project: { findFirst: vi.fn(), count: vi.fn(() => Promise.resolve(1)) },
     projectMembership: { findUnique: vi.fn() },
     asset: { findUnique: vi.fn() },
     board: { findUnique: vi.fn(), create: vi.fn(), updateMany: vi.fn() },
-    // Présent exprès : si le code se remettait à journaliser, le test 3 le verrait.
+    // Present on purpose: if the code started logging again, test 3 would see it.
     boardChange: { create: vi.fn() },
   },
-  // `vi.hoisted` court avant les imports : pas de `Role.ARTIST` ici, la valeur n'existe pas encore.
+  // `vi.hoisted` runs before the imports: no `Role.ARTIST` here, the value does not exist yet.
   actor: { current: { id: 7, role: 'ARTIST' } },
 }));
 
 vi.mock('../lib/prisma', () => ({ prisma: db }));
 vi.mock('../services/SocketService', () => ({ emitToProject: vi.fn() }));
-vi.mock('../services/StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: {
     getPresignedGetUrl: vi.fn((key: string) => Promise.resolve(`https://minio/get/${key}`)),
     getPresignedPutUrl: vi.fn((key: string) => Promise.resolve(`https://minio/put/${key}`)),
     forgetPresignedUrl: vi.fn(),
   },
 }));
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: Request, _res: Response, next: NextFunction) => {
     req.user = actor.current as Request['user'];
     next();
@@ -45,7 +46,7 @@ const app = express().use(express.json()).use('/api/boards', boardsRoutes).use(e
 
 const document = { elements: [{ id: 'a', type: 'rectangle' }], files: {} };
 const LOADED_AT = '2026-08-22T10:00:00.000Z';
-/** Corps d'une sauvegarde d'éditeur : le document et l'horodatage sur lequel il a chargé. */
+/** Body of an editor save: the document and the timestamp it was loaded at. */
 const save = { document, baseUpdatedAt: LOADED_AT };
 
 beforeEach(() => {
@@ -64,12 +65,11 @@ beforeEach(() => {
 });
 
 /**
- * Verrou d'archivage (38.B) — un projet ARCHIVED est en lecture seule. Le board était la
- * seule écriture de contenu à passer au travers : elle vérifiait l'accès au projet et
- * refusait les CLIENT, mais n'appelait pas `assertProjectWritable`.
+ * Archive lock (38.B): an ARCHIVED project is read-only. The board was the only content write to slip
+ * through: it checked project access and refused CLIENTs, but did not call `assertProjectWritable`.
  */
-describe('PUT /api/boards — verrou d’archivage', () => {
-  it('sauvegarde le board d’un projet ACTIVE', async () => {
+describe('PUT /api/boards — archive lock', () => {
+  it('saves the board of an ACTIVE project', async () => {
     db.project.findFirst.mockResolvedValue({ status: 'ACTIVE' });
     const res = await request(app).put('/api/boards/project/42').send(save);
     expect(res.status).toBe(200);
@@ -78,7 +78,7 @@ describe('PUT /api/boards — verrou d’archivage', () => {
     );
   });
 
-  it('refuse la sauvegarde sur un projet ARCHIVED (403 PROJECT_ARCHIVED) sans rien écrire', async () => {
+  it('refuses the save on an ARCHIVED project (403 PROJECT_ARCHIVED) without writing anything', async () => {
     db.project.findFirst.mockResolvedValue({ status: 'ARCHIVED' });
     const res = await request(app).put('/api/boards/project/42').send(save);
     expect(res.status).toBe(403);
@@ -86,7 +86,7 @@ describe('PUT /api/boards — verrou d’archivage', () => {
     expect(db.board.updateMany).not.toHaveBeenCalled();
   });
 
-  it('refuse aussi le board d’un asset dont le projet est ARCHIVED', async () => {
+  it('also refuses the board of an asset whose project is ARCHIVED', async () => {
     db.project.findFirst.mockResolvedValue({ status: 'ARCHIVED' });
     const res = await request(app).put('/api/boards/asset/5').send(save);
     expect(res.status).toBe(403);
@@ -94,14 +94,14 @@ describe('PUT /api/boards — verrou d’archivage', () => {
     expect(db.board.updateMany).not.toHaveBeenCalled();
   });
 
-  it('laisse lire le board d’un projet ARCHIVED — archivé vaut lecture seule, pas invisible', async () => {
+  it('lets the board of an ARCHIVED project be read: archived means read-only, not invisible', async () => {
     db.project.findFirst.mockResolvedValue({ status: 'ARCHIVED' });
     const res = await request(app).get('/api/boards/project/42');
     expect(res.status).toBe(200);
     expect(res.body.board.document).toEqual(document);
   });
 
-  it('refuse toujours les comptes CLIENT sur un projet ACTIVE', async () => {
+  it('still refuses CLIENT accounts on an ACTIVE project', async () => {
     db.project.findFirst.mockResolvedValue({ status: 'ACTIVE' });
     actor.current = { id: 7, role: Role.CLIENT };
     const res = await request(app).put('/api/boards/project/42').send(save);
@@ -111,25 +111,25 @@ describe('PUT /api/boards — verrou d’archivage', () => {
 });
 
 /**
- * A1-03 — la garde d'écriture lisait le rôle GLOBAL (`req.user.role === CLIENT`) alors que
- * `assertProjectAccess` ne vérifie que l'existence du membership. Un ARTIST rétrogradé
- * CLIENT sur le projet (38.E) écrivait donc le board comme avant.
+ * A1-03: the write guard read the GLOBAL role (`req.user.role === CLIENT`), whereas
+ * `assertProjectAccess` only checks the existence of the membership. An ARTIST demoted to CLIENT on
+ * the project (38.E) therefore wrote the board as before.
  */
-describe('PUT /api/boards — rôle effectif par projet (38.E)', () => {
+describe('PUT /api/boards — effective role per project (38.E)', () => {
   beforeEach(() => {
     db.project.findFirst.mockResolvedValue({ status: 'ACTIVE' });
-    // Global ARTIST (cf. `actor.current`), rétrogradé CLIENT sur le projet 42.
+    // Global ARTIST (cf. `actor.current`), demoted to CLIENT on project 42.
     db.projectMembership.findUnique.mockResolvedValue({ userId: 7, projectId: 42, role: Role.CLIENT });
   });
 
-  it('refuse l’écriture à un ARTIST rétrogradé CLIENT (403 ROLE_FORBIDDEN)', async () => {
+  it('refuses writing to an ARTIST demoted to CLIENT (403 ROLE_FORBIDDEN)', async () => {
     const res = await request(app).put('/api/boards/project/42').send(save);
     expect(res.status).toBe(403);
     expect(res.body.code).toBe('ROLE_FORBIDDEN');
     expect(db.board.updateMany).not.toHaveBeenCalled();
   });
 
-  it('refuse aussi la présignation d’images, qui est une écriture', async () => {
+  it('also refuses image presigning, which is a write', async () => {
     const res = await request(app)
       .post('/api/boards/project/42/files')
       .send({ files: [{ id: 'a1b2c3d4', mimeType: 'image/png' }] });
@@ -137,13 +137,13 @@ describe('PUT /api/boards — rôle effectif par projet (38.E)', () => {
     expect(res.body.code).toBe('ROLE_FORBIDDEN');
   });
 
-  it('lui laisse la lecture — rétrograder retire l’écriture, pas l’accès au projet', async () => {
+  it('leaves them read access: demoting removes the write, not the access to the project', async () => {
     const res = await request(app).get('/api/boards/project/42');
     expect(res.status).toBe(200);
     expect(res.body.board.document).toEqual(document);
   });
 
-  it('inversement : un ARTIST promu SUPERVISOR localement écrit le board', async () => {
+  it('conversely: an ARTIST promoted to SUPERVISOR locally writes the board', async () => {
     db.projectMembership.findUnique.mockResolvedValue({
       userId: 7,
       projectId: 42,
@@ -155,11 +155,11 @@ describe('PUT /api/boards — rôle effectif par projet (38.E)', () => {
 });
 
 /**
- * Le journal `BoardChange` écrivait une ligne à chaque autosave (1,2 s de débounce) et
- * n'était relu par rien : modèle et table retirés.
+ * The `BoardChange` log wrote a line on every autosave (1.2 s debounce) and nothing read it:
+ * the model and the table were removed.
  */
-describe('PUT /api/boards — plus de journal de modifications', () => {
-  it('n’écrit aucune ligne de journal en sauvegardant', async () => {
+describe('PUT /api/boards — no more change log', () => {
+  it('writes no log line when saving', async () => {
     db.project.findFirst.mockResolvedValue({ status: 'ACTIVE' });
     await request(app).put('/api/boards/project/42').send(save);
     expect(db.boardChange.create).not.toHaveBeenCalled();
@@ -167,6 +167,6 @@ describe('PUT /api/boards — plus de journal de modifications', () => {
 });
 
 /**
- * Le document valait `z.any()` sous une limite de corps de 2 Mo : deux captures collées
- * suffisaient à faire répondre 413 à chaque autosave, sans message exploitable.
+ * The document was `z.any()` under a 2 MB body limit: two pasted captures were enough to make every
+ * autosave answer 413, with no usable message.
  */

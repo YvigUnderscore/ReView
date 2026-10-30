@@ -11,7 +11,7 @@ import { escapeHtml } from '../../lib/html';
 import { mediaSourceKey } from '../MediaService';
 import { logger } from '../../lib/logger';
 import { env } from '../../config/env';
-import { storage } from '../StorageService';
+import { storage } from '../../lib/storage';
 import { belongsToProject, projectFilter } from './shotgridProjectGuard';
 import { asDate, asEntityRef, asString, type SgRecord } from './shotgridMapper';
 import { findByLocal, mapSgToLocal, upsertLink } from './shotgridLinks';
@@ -21,12 +21,10 @@ import { confirmGone, touch, type PullContext } from './ShotgridPullService';
 import type { ShotgridWriter } from './ShotgridWriter';
 
 /**
- * Notes ShotGrid ↔ commentaires ReView.
+ * ShotGrid notes <-> ReView comments.
  *
- * Les deux outils portent la même conversation vue de deux endroits : une note de
- * supervision écrite dans ShotGrid doit se lire pendant la review, et un retour posé
- * sur une frame doit exister dans le registre de production. Chaque message garde la
- * marque de sa provenance — sans elle, personne ne sait où répondre.
+ * The two tools carry the same conversation seen from two places: a supervision note written in ShotGrid must be readable during the review, and a
+ * feedback posted on a frame must exist in the production registry. Each message keeps the mark of its origin: without it, nobody knows where to reply.
  */
 
 const NOTE_FIELDS = [
@@ -35,15 +33,15 @@ const NOTE_FIELDS = [
   'note_links',
   'tasks',
   'user',
-  // Sans ce champ, l'API ne renvoie pas les pièces jointes et l'image annotée du
-  // superviseur n'atteint jamais la review — le retour arrive amputé de son sujet.
+  // Without this field, the API does not return the attachments and the supervisor's annotated image never reaches the review: the feedback arrives
+  // stripped of its subject.
   'attachments',
   'created_at',
   'updated_at',
   'project',
 ];
 
-/** Marqueur d'origine, lisible par l'humain comme par la synchronisation. */
+/** Origin marker, readable by humans as well as by the synchronization. */
 const FROM_REVIEW = '[ReView]';
 
 export function isFromReview(content: string | null | undefined): boolean {
@@ -52,26 +50,22 @@ export function isFromReview(content: string | null | undefined): boolean {
 
 export interface NotePullOptions {
   /**
-   * Notes précises à relire (traitement d'un événement). Le filtre de projet reste
-   * posé : un identifiant reçu par webhook ne prouve rien sur son appartenance.
+   * Precise notes to re-read (processing an event). The project filter stays in place: an identifier received by webhook proves nothing about its membership.
    */
   onlySgIds?: number[];
 }
 
 /**
- * Import des notes en commentaires.
+ * Imports notes as comments.
  *
- * Une note ShotGrid pointe une ou plusieurs entités (`note_links`) : on ne retient que
- * celles rattachées à une Version déjà connue de ReView, seul endroit où un commentaire
- * a un sens ici. Les notes créées par ReView sont ignorées — elles reviendraient en
- * double de leur propre commentaire.
+ * A ShotGrid note points to one or several entities (`note_links`): we only keep those attached to a Version already known to ReView, the only place where a
+ * comment makes sense here. Notes created by ReView are ignored: they would come back as a duplicate of their own comment.
  */
 export async function pullNotes(ctx: PullContext, options: NotePullOptions = {}): Promise<void> {
   if (!can(ctx.settings, 'notes', 'read')) return;
 
-  // Le filtre de projet vient toujours en premier et n'est jamais remplacé par la
-  // restriction d'identifiants : les deux se cumulent, et chaque enregistrement reçu
-  // repasse ensuite par `belongsToProject`.
+  // The project filter always comes first and is never replaced by the restriction on identifiers: the two add up, and each record received
+  // then goes through `belongsToProject` again.
   const filters: Array<[string, string, unknown]> = [projectFilter(ctx.scope.sgProjectId)];
   if (options.onlySgIds?.length) filters.push(['id', 'in', options.onlySgIds]);
 
@@ -86,15 +80,13 @@ export async function pullNotes(ctx: PullContext, options: NotePullOptions = {})
   const commentLinks = await mapSgToLocal(ctx.connection.id, 'comment');
 
   /**
-   * Notes supprimées sur le site : **signalées, pas appliquées**.
+   * Notes deleted on the site: **flagged, not applied**.
    *
-   * Un commentaire ReView n'a pas de corbeille — la table n'a pas de `deletedAt`. Honorer
-   * le retrait reviendrait donc à effacer pour de bon un retour de review, ses réponses et
-   * son annotation, sur la foi d'un ménage fait dans ShotGrid. Le reste de l'intégration
-   * met à la corbeille et ne supprime jamais ; on ne fait pas l'inverse ici en silence.
+   * A ReView comment has no trash: the table has no `deletedAt`. Honouring the removal would therefore erase for good a review feedback, its replies and
+   * its annotation, on the strength of a clean-up done in ShotGrid. The rest of the integration moves to the trash and never deletes; we do not do the
+   * opposite here in silence.
    *
-   * Le journal le dit donc, et un humain tranche. Sans cette ligne, l'événement de retrait
-   * ne laissait aucune trace du tout, et l'écart entre les deux outils restait invisible.
+   * The journal therefore says so, and a human decides. Without this line, the removal event left no trace at all, and the gap between the two tools stayed invisible.
    */
   if (options.onlySgIds?.length) {
     const alive = new Set(records.map((r) => r.id));
@@ -121,9 +113,8 @@ export async function pullNotes(ctx: PullContext, options: NotePullOptions = {})
 
     const known = commentLinks.get(record.id);
     if (known) {
-      // Note déjà importée. On repasse tout de même chercher ses pièces jointes tant
-      // qu'on ne l'a pas fait : les notes reçues avant que ce chemin existe n'ont jamais
-      // eu leur image annotée, et rien d'autre ne viendrait la chercher.
+      // Note already imported. We still go back for its attachments as long as we have not: notes received before this path existed never
+      // got their annotated image, and nothing else would come and fetch it.
       if (!linkSaysAttachmentsDone(known.data)) await catchUpNote(ctx, record, known.localId);
       continue;
     }
@@ -135,7 +126,7 @@ export async function pullNotes(ctx: PullContext, options: NotePullOptions = {})
       continue;
     }
 
-    // Le commentaire se pose sur le média de la version : c'est lui que la review affiche.
+    // The comment is placed on the version's media: that is what the review displays.
     const media = await prisma.mediaObject.findFirst({
       where: { versionId: localVersionId, deletedAt: null },
       orderBy: { id: 'asc' },
@@ -164,14 +155,11 @@ export async function pullNotes(ctx: PullContext, options: NotePullOptions = {})
       data: {
         mediaObjectId: media.id,
         userId: authorLink?.localId ?? null,
-        // Qui a écrit, quand la personne n'a pas de compte ici. C'est le cas ordinaire :
-        // le rapprochement se fait sur l'e-mail, et un studio n'a aucune raison d'avoir
-        // les mêmes adresses des deux côtés. Sans ce champ, l'API ne pouvait proposer
-        // qu'un auteur absent — que l'interface affiche « compte supprimé », ce qui est
-        // à la fois faux et vexant pour la personne qui a fait la remarque.
+        // Who wrote, when the person has no account here. This is the ordinary case: matching is done on the e-mail, and a studio has no reason to
+        // have the same addresses on both sides. Without this field, the API could only offer an absent author, which the interface displays as "deleted account",
+        // which is both wrong and hurtful to the person who made the remark.
         guestName: authorRef?.name ?? null,
-        // La provenance est portée par le contenu : elle survit à l'export, au copier
-        // et à la lecture par quelqu'un qui ne connaît pas l'intégration.
+        // The provenance is carried by the content: it survives export, copy and reading by someone who does not know the integration.
         content: `<p><em>ShotGrid</em></p>${
           subject ? `<p><strong>${escapeLines(subject)}</strong></p>` : ''
         }<p>${escapeLines(content)}</p>`,
@@ -195,18 +183,16 @@ export async function pullNotes(ctx: PullContext, options: NotePullOptions = {})
   }
 }
 
-/** Le lien porte-t-il la trace d'un passage sur les pièces jointes ? */
+/** Does the link bear the trace of a pass over the attachments? */
 function linkSaysAttachmentsDone(data: unknown): boolean {
   return Boolean(data && typeof data === 'object' && 'attachmentsImported' in data);
 }
 
 /**
- * Rattrapage d'une note importée avant que ce chemin existe.
+ * Catch-up for a note imported before this path existed.
  *
- * Deux manques à réparer : la pièce jointe, jamais rapatriée, et le nom de l'auteur, resté
- * dans la prose au lieu du champ prévu — ce qui faisait afficher « compte supprimé » à la
- * place d'une personne bien réelle. Le commentaire peut avoir été supprimé depuis : on
- * marque alors quand même le lien, pour ne pas y revenir à chaque synchronisation.
+ * Two gaps to repair: the attachment, never fetched, and the author's name, left in the prose instead of the intended field, which made "deleted account" display
+ * instead of a very real person. The comment may have been deleted since: we then still mark the link, so as not to come back to it at every synchronization.
  */
 async function catchUpNote(ctx: PullContext, record: SgRecord, commentId: number): Promise<void> {
   const comment = await prisma.comment.findUnique({
@@ -221,9 +207,8 @@ async function catchUpNote(ctx: PullContext, record: SgRecord, commentId: number
       where: { id: commentId },
       data: {
         guestName: authorName,
-        // Le nom cesse d'être écrit deux fois : une fois comme auteur, une fois dans le
-        // texte. Ce préfixe est de notre fabrication, pas la prose de quelqu'un — le
-        // normaliser ne réécrit le propos de personne.
+        // The name stops being written twice: once as the author, once in the text. This prefix is of our making, not someone's prose: normalizing it
+        // rewrites no one's remarks.
         content: comment.content.replace(/^<p><em>ShotGrid[^<]*<\/em><\/p>/, '<p><em>ShotGrid</em></p>'),
       },
     });
@@ -247,18 +232,17 @@ async function catchUpNote(ctx: PullContext, record: SgRecord, commentId: number
 export interface PushNoteContext {
   connectionId: number;
   sgProjectId: number;
-  /** Toute écriture passe par là — le projet lié est posé par le writer, pas ici. */
+  /** Every write goes through here: the linked project is set by the writer, not here. */
   writer: Pick<ShotgridWriter, 'create' | 'upload'>;
   attachAnnotations: boolean;
   asUserLogin: string | null;
 }
 
 /**
- * Envoi d'un commentaire ReView en note ShotGrid.
+ * Sends a ReView comment as a ShotGrid note.
  *
- * Le texte reprend le repère de temps : une remarque sur une frame précise perd tout
- * son sens si le lecteur ne sait pas laquelle. L'image annotée part en pièce jointe
- * quand elle existe — c'est elle qui porte l'essentiel du propos.
+ * The text carries the time reference: a remark on a precise frame loses all its meaning if the reader does not know which one. The annotated image goes
+ * as an attachment when it exists: it carries the essentials of the point.
  */
 export async function pushComment(ctx: PushNoteContext, commentId: number): Promise<number | null> {
   const comment = await prisma.comment.findUnique({
@@ -273,25 +257,23 @@ export async function pushComment(ctx: PushNoteContext, commentId: number): Prom
   const versionLink = await findByLocal(ctx.connectionId, 'version', comment.media.versionId);
   if (!versionLink) return null;
 
-  // Un commentaire déjà porté par une note ne doit pas en engendrer une seconde :
-  // une reprise de synchronisation, un rattrapage ou un simple double clic passeraient
-  // sinon deux fois par ici.
+  // A comment already carried by a note must not generate a second one: a synchronization retry, a catch-up or a simple double click would
+  // otherwise pass through here twice.
   const existing = await findByLocal(ctx.connectionId, 'comment', comment.id);
   if (existing) {
-    logger.debug({ commentId, sgNoteId: existing.sgId }, 'Commentaire déjà présent en note ShotGrid');
+    logger.debug({ commentId, sgNoteId: existing.sgId }, 'Comment already present as a ShotGrid note');
     return existing.sgId;
   }
 
   const author = comment.author?.name ?? comment.author?.email ?? 'ReView';
-  // Nom de la version : sans rattachement possible, c'est lui qui situe le retour.
+  // Version name: when attaching is not possible, it is what places the feedback.
   const versionName = (
     await prisma.version.findUnique({
       where: { id: comment.media.versionId },
       select: { name: true },
     })
   )?.name;
-  // Repère de temps : la frame quand la cadence du média permet de la calculer,
-  // l'horodatage sinon. Une remarque sans repère est inexploitable en review.
+  // Time reference: the frame when the media's rate makes it computable, the timestamp otherwise. A remark without a reference is unusable in review.
   const fps = mediaFrameRate(comment.media.metadata);
   const timecode = frameLabel(comment.timestamp, fps);
   const reviewUrl = env.APP_URL
@@ -309,14 +291,12 @@ export async function pushComment(ctx: PushNoteContext, commentId: number): Prom
     .join('\n');
 
   /**
-   * Le rattachement à la version est tenté, pas exigé.
+   * Attaching to the version is attempted, not required.
    *
-   * Certains sites refusent d'écrire `note_links` — restriction de permissions ou de
-   * schéma propre au studio. Perdre le retour pour autant serait absurde : on retombe
-   * sur une note libre dont le sujet et le corps portent le contexte, et le lien de
-   * retour vers ReView reste cliquable.
+   * Some sites refuse to write `note_links`: a permissions restriction, or a schema specific to the studio. Losing the feedback because of it would be absurd:
+   * we fall back on a free note whose subject and body carry the context, and the return link to ReView stays clickable.
    */
-  // Pas de `project` ici : c'est `ShotgridWriter` qui le pose, et lui seul.
+  // No `project` here: it is `ShotgridWriter` that sets it, and it alone.
   const base = {
     subject: timecode ? `ReView — ${timecode}` : 'ReView',
     content: body,
@@ -331,7 +311,7 @@ export async function pushComment(ctx: PushNoteContext, commentId: number): Prom
   } catch (err) {
     logger.info(
       { commentId, sgVersionId: versionLink.sgId, err: err instanceof Error ? err.message : err },
-      'Rattachement de note refusé par le site — note créée sans lien',
+      'Note link refused by the site — note created without a link',
     );
     created = await ctx.writer.create(
       'Note',
@@ -350,21 +330,18 @@ export async function pushComment(ctx: PushNoteContext, commentId: number): Prom
   });
 
   if (ctx.attachAnnotations) await attachAnnotationImage(ctx, created.id, comment);
-  logger.info({ commentId, sgNoteId: created.id }, 'Commentaire poussé en note ShotGrid');
+  logger.info({ commentId, sgNoteId: created.id }, 'Comment pushed as a ShotGrid note');
   return created.id;
 }
 
 /**
- * Pièce jointe : la frame avec le dessin incrusté.
+ * Attachment: the frame with the drawing burned in.
  *
- * L'annotation est stockée en géométrie normalisée, pas en image : envoyée telle
- * quelle, elle ne montrerait rien. La frame est donc extraite du média et composée à la
- * volée, à chaque envoi.
+ * The annotation is stored as normalized geometry, not as an image: sent as is, it would show nothing. The frame is therefore extracted from the media and composed
+ * on the fly, at each send.
  *
- * Ce chemin en avait un second, prioritaire : une capture déjà calculée, lue dans
- * `Comment.screenshotKey`. Personne dans le dépôt n'écrivait jamais cette colonne —
- * le repli était donc l'unique chemin réel, et la lecture donnait l'illusion d'une
- * optimisation. La colonne et sa branche sont parties ensemble
+ * This path had a second one, with priority: an already computed capture, read from `Comment.screenshotKey`. Nobody in the repository ever wrote this column:
+ * the fallback was therefore the only real path, and the read gave the illusion of an optimization. The column and its branch left together
  * (migration `20260908090000_shotgrid_liens_fiables`).
  */
 async function attachAnnotationImage(
@@ -388,13 +365,13 @@ async function attachAnnotationImage(
       `review-annotation-${comment.id}.png`,
       'image/png',
     );
-    logger.info({ commentId: comment.id, sgNoteId }, 'Frame annotée jointe à la note ShotGrid');
+    logger.info({ commentId: comment.id, sgNoteId }, 'Annotated frame attached to the ShotGrid note');
   } catch (err) {
-    logger.warn({ err, commentId: comment.id }, 'Annotation non jointe à la note ShotGrid');
+    logger.warn({ err, commentId: comment.id }, 'Annotation not attached to the ShotGrid note');
   }
 }
 
-/** Repère de temps lisible : numéro de frame si la cadence est connue, sinon m:ss. */
+/** Readable time reference: frame number if the rate is known, otherwise m:ss. */
 export function frameLabel(timestamp: number | null, fps: number | null): string | null {
   if (typeof timestamp !== 'number') return null;
   if (fps && fps > 0) return `frame ${Math.round(timestamp * fps)}`;
@@ -402,7 +379,7 @@ export function frameLabel(timestamp: number | null, fps: number | null): string
   return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, '0')}`;
 }
 
-/** Cadence du média, telle que le pipeline l'a relevée au traitement. */
+/** Rate of the media, as the pipeline recorded it at processing. */
 export function mediaFrameRate(metadata: unknown): number | null {
   if (!metadata || typeof metadata !== 'object') return null;
   const raw = (metadata as Record<string, unknown>).frameRate ?? (metadata as Record<string, unknown>).fps;
@@ -410,7 +387,7 @@ export function mediaFrameRate(metadata: unknown): number | null {
   return typeof value === 'number' && Number.isFinite(value) && value > 0 ? value : null;
 }
 
-/** Texte nu d'un contenu riche — ShotGrid n'affiche pas de HTML dans ses notes. */
+/** Plain text of a rich content: ShotGrid does not display HTML in its notes. */
 export function stripHtml(html: string): string {
   return html
     .replace(/<br\s*\/?>/gi, '\n')
@@ -425,9 +402,8 @@ export function stripHtml(html: string): string {
 }
 
 /**
- * Texte nu d'une note ShotGrid → HTML de commentaire : l'échappement est celui de
- * `lib/html` (six caractères, guillemet compris), les retours à la ligne deviennent des
- * `<br>`. La copie locale qui vivait ici n'échappait ni `"` ni `'`.
+ * Plain text of a ShotGrid note -> comment HTML: the escaping is that of `lib/html` (six characters, quotes included), line breaks become `<br>`.
+ * The local copy that lived here escaped neither `"` nor `'`.
  */
 function escapeLines(text: string): string {
   return escapeHtml(text).replace(/\n/g, '<br>');
@@ -441,11 +417,10 @@ function asEntityRefs(value: unknown): Array<{ id: number; type: string; name?: 
 }
 
 /**
- * Compose la frame commentée et son annotation en une image unique.
+ * Composes the commented frame and its annotation into a single image.
  *
- * ffmpeg fait les deux opérations : extraire l'instant du média, puis incruster le SVG
- * rendu de l'annotation. Passer par le SVG évite d'ajouter une bibliothèque de dessin —
- * et donne exactement la géométrie que l'artiste a tracée à l'écran.
+ * ffmpeg does both operations: extract the instant from the media, then burn in the rendered SVG of the annotation. Going through the SVG avoids adding a
+ * drawing library, and gives exactly the geometry the artist traced on screen.
  */
 async function renderAnnotatedFrame(comment: {
   annotation: unknown;
@@ -463,8 +438,7 @@ async function renderAnnotatedFrame(comment: {
     const source = join(dir, 'source');
     const overlay = join(dir, 'overlay.svg');
     const output = join(dir, 'out.png');
-    // Après transcodage, l'original est effacé et c'est le proxy qui fait foi :
-    // `mediaSourceKey` désigne le fichier réellement servi.
+    // After transcoding, the original is deleted and the proxy is authoritative: `mediaSourceKey` designates the file actually served.
     await storage.downloadToFile(mediaSourceKey(comment.media), source);
     await writeFile(overlay, svg, 'utf8');
 

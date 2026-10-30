@@ -9,7 +9,7 @@ import { pushSupported, currentSubscription, enablePush, disablePush } from '../
 import { useT } from '../../i18n';
 import { Hint } from '../../components/ui/hint';
 
-/** Bascule des notifications Web Push du navigateur courant (42.B — №66). */
+/** Toggle for Web Push notifications in the current browser (42.B, item 66). */
 export default function PushToggle() {
   const t = useT();
   const supported = pushSupported();

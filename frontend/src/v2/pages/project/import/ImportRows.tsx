@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 import type { ImportReport, RowOutcome } from './types';
 
 /**
- * Le fichier, plan par plan. On lit d'abord les chiffres, mais c'est ici qu'on vérifie
- * que « SH0010 » ira bien dans « SQ010 » et qu'il sera créé, pas écrasé.
+ * The file, shot by shot. One reads the figures first, but this is where one checks that "SH0010"
+ * will indeed go into "SQ010" and will be created, not overwritten.
  */
 const TONE: Record<RowOutcome['action'], string> = {
   create: 'text-success',

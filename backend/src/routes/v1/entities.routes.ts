@@ -10,10 +10,10 @@ import { shotSelect, assetSelect, toShot, toAsset } from '../../lib/v1Resources'
 import { idParam, requireShotProject, requireAssetProject } from './helpers';
 
 /**
- * Entités du pipeline adressées par identifiant (API v1) : shots et assets. Ces routes
- * prolongent celles du projet — un client qui a résolu un chemin repart d'ici sans
- * repasser par la hiérarchie. Leurs tâches et leurs versions ont leurs propres fichiers
- * (`tasks.routes`, `versions.routes`).
+ * Pipeline entities addressed by identifier (API v1): shots and assets. These routes extend
+ * the project ones: a client that has resolved a path can continue from here without walking
+ * the hierarchy again. Their tasks and versions have their own files (`tasks.routes`,
+ * `versions.routes`).
  */
 const router = Router();
 

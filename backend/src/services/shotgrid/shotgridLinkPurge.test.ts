@@ -11,22 +11,18 @@ vi.mock('../../lib/logger', () => ({ logger: { warn: vi.fn() } }));
 import { LOCAL_TYPES } from './shotgridLinks';
 
 /**
- * Les liens ShotGrid ne survivent pas à ce qu'ils désignent.
+ * ShotGrid links do not survive what they designate.
  *
- * `ShotgridLink` est polymorphe : aucune clé étrangère, donc aucun `ON DELETE CASCADE`.
- * La garantie tient à douze déclencheurs PostgreSQL, un par type liable. Le risque est
- * qu'un treizième type apparaisse dans `LOCAL_TYPES` sans son déclencheur : le défaut
- * serait invisible — des liens orphelins s'accumuleraient en silence jusqu'à ce qu'une
- * synchronisation écrive sur un fantôme, ce qui était déjà arrivé pour les commentaires.
+ * `ShotgridLink` is polymorphic: no foreign key, hence no `ON DELETE CASCADE`. The guarantee rests on twelve PostgreSQL triggers, one per linkable type. The risk is that
+ * a thirteenth type appears in `LOCAL_TYPES` without its trigger: the defect would be invisible — orphan links would pile up silently until a synchronization wrote to a ghost,
+ * which had already happened with comments.
  *
- * Ce test lit les migrations et confronte les deux listes. Il ne remplace pas une
- * vérification en base (faite à la main sur la pile docker, cascade comprise) : il
- * empêche l'oubli.
+ * This test reads the migrations and confronts the two lists. It does not replace a database check (done by hand on the docker stack, cascade included): it prevents the oversight.
  */
 
 const MIGRATIONS = join(__dirname, '..', '..', '..', 'prisma', 'migrations');
 
-/** Types locaux couverts par un déclencheur, et la table qui le porte. */
+/** Local types covered by a trigger, and the table that carries it. */
 function triggeredTypes(): Map<string, string> {
   const found = new Map<string, string>();
   for (const dir of readdirSync(MIGRATIONS, { withFileTypes: true })) {
@@ -39,14 +35,13 @@ function triggeredTypes(): Map<string, string> {
   return found;
 }
 
-describe('purge des correspondances ShotGrid (déclencheurs)', () => {
-  it('couvre exactement les types que `LOCAL_TYPES` déclare', () => {
+describe('purge of ShotGrid correspondences (triggers)', () => {
+  it('covers exactly the types that `LOCAL_TYPES` declares', () => {
     expect([...triggeredTypes().keys()].sort()).toEqual([...LOCAL_TYPES].sort());
   });
 
-  it('vise la table du modèle correspondant', () => {
-    // Un déclencheur posé sur la mauvaise table effacerait les liens d'entités
-    // homonymes par leur seul identifiant : plus destructeur que l'orphelin corrigé.
+  it('targets the table of the corresponding model', () => {
+    // A trigger set on the wrong table would erase the links of entities that are homonyms by their identifier alone: more destructive than the orphan it corrects.
     expect(Object.fromEntries(triggeredTypes())).toEqual({
       episode: 'Episode',
       sequence: 'Sequence',
@@ -63,9 +58,8 @@ describe('purge des correspondances ShotGrid (déclencheurs)', () => {
     });
   });
 
-  it('nettoie l’existant sur les mêmes types', () => {
-    // La migration corrige aussi le passé : les liens déjà orphelins au moment du
-    // constat (10 sur 14) ne se répareraient pas tout seuls.
+  it('cleans up the existing rows of the same types', () => {
+    // The migration also corrects the past: links already orphaned at the time of the finding (10 out of 14) would not repair themselves.
     const sql = readFileSync(
       join(MIGRATIONS, '20260908090000_shotgrid_liens_fiables', 'migration.sql'),
       'utf8',

@@ -4,16 +4,16 @@
 import type { Role, User } from '../../types/api';
 import { intlLocale } from '../../i18n';
 
-/** Helpers purs de la page admin Utilisateurs (recherche/filtre/tri) — testés. */
+/** Pure helpers for the Users admin page (search/filter/sort) — tested. */
 
 export type UserSort = 'name' | 'role' | 'storage' | 'recent';
 
-/** Nom affichable d'un utilisateur (pseudo > displayName > nom > email). */
+/** Displayable name of a user (handle > displayName > name > email). */
 export function userLabel(u: User): string {
   return u.displayName ?? u.username ?? u.name ?? u.email;
 }
 
-/** Filtre plein-texte (nom, pseudo, email) + rôle, insensible à la casse. */
+/** Full-text filter (name, handle, email) + role, case-insensitive. */
 export function filterUsers(users: User[], q: string, role: Role | 'ALL'): User[] {
   const needle = q.trim().toLowerCase();
   return users.filter((u) => {
@@ -27,7 +27,7 @@ export function filterUsers(users: User[], q: string, role: Role | 'ALL'): User[
 
 const ROLE_ORDER: Record<Role, number> = { ADMIN: 0, SUPERVISOR: 1, ARTIST: 2, CLIENT: 3 };
 
-/** Tri stable selon le critère choisi (copie, sans muter la liste d'origine). */
+/** Stable sort by the chosen criterion (copy, without mutating the original list). */
 export function sortUsers(users: User[], sort: UserSort): User[] {
   const copy = [...users];
   switch (sort) {

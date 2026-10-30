@@ -7,9 +7,9 @@ import { useTimelineChain } from './useTimelineChain';
 import { useT } from '../../i18n';
 
 /**
- * Position dans le montage, affichée dans l'en-tête de review quand l'URL porte
- * `?timeline=ID` (Phase 45). Le nom du montage reste traduit tant que personne ne l'a
- * renommé : il n'est pas stocké en base pour ne pas figer une langue.
+ * Position within the edit, shown in the review header when the URL carries
+ * `?timeline=ID` (Phase 45). The edit's name stays translated until someone renames it: it
+ * is not stored in the database so as not to freeze a language.
  */
 export default function TimelineNavigator({ mediaId }: { mediaId: number }) {
   const t = useT();

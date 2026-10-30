@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('../lib/prisma', () => ({
   prisma: {
     sequence: { findMany: vi.fn(), findUnique: vi.fn(), create: vi.fn() },
-    // Pastille « attend une review » des plans : un agrégat SQL groupé pour la fiche.
+    // "Waiting for review" badge of the shots: a grouped SQL aggregate for the sheet.
     $queryRaw: vi.fn().mockResolvedValue([]),
     $transaction: vi.fn((ops: unknown[]) => Promise.resolve(ops)),
   },
@@ -17,14 +17,14 @@ vi.mock('../lib/thumbnails', () => ({
     Promise.resolve(key ? `url:${key}` : fallback ? `url:${fallback}` : null),
   ),
   firstMediaThumbKeysForShots: vi.fn().mockResolvedValue(new Map([[2, 'derived/9/thumbnail.webp']])),
-  // La séquence et ses assets ont désormais la même image de repli que ses plans : le
-  // premier média publié. Sans média, la carte retombe sur le nom, côté interface.
+  // The sequence and its assets now have the same fallback image as its shots: the
+  // first published media. With no media, the card falls back to the name, on the interface side.
   firstMediaThumbKeysForAssets: vi.fn().mockResolvedValue(new Map()),
   firstMediaThumbKeysForSequences: vi.fn().mockResolvedValue(new Map()),
   firstMediaThumbKeyForSequence: vi.fn().mockResolvedValue(null),
 }));
 
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: { getPresignedGetUrl: vi.fn((key: string) => Promise.resolve(`url:${key}`)) },
 }));
 
@@ -43,7 +43,7 @@ beforeEach(() => {
 });
 
 describe('createBulk', () => {
-  it('refuse un doublon interne au lot, avant toute écriture', async () => {
+  it('refuses an internal duplicate within the batch, before any write', async () => {
     await expect(
       createBulk(1, [
         { code: 'SQ01', name: 'A' },
@@ -54,7 +54,7 @@ describe('createBulk', () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
-  it('refuse le lot entier si un code existe déjà — rien de partiel', async () => {
+  it('refuses the whole batch if a code already exists: nothing partial', async () => {
     vi.mocked(prisma.sequence.findMany).mockResolvedValue([{ code: 'SQ02' }] as never);
     await expect(
       createBulk(1, [
@@ -65,15 +65,15 @@ describe('createBulk', () => {
     expect(prisma.$transaction).not.toHaveBeenCalled();
   });
 
-  it('numérote les séquences dans l’ordre reçu quand aucun ordre n’est donné', async () => {
+  it('numbers the sequences in the order received when no order is given', async () => {
     vi.mocked(prisma.sequence.findMany).mockResolvedValue([] as never);
     await createBulk(3, [
       { code: 'SQ01', name: 'A' },
       { code: 'SQ02', name: 'B', order: 9 },
     ]);
     const created = vi.mocked(prisma.sequence.create).mock.calls.map((c) => c[0].data);
-    // `episodeId: null` : le niveau Épisode est facultatif, et une séquence créée sans
-    // épisode reste hors épisode — l'état normal d'un long-métrage.
+    // `episodeId: null`: the Episode level is optional, and a sequence created without an
+    // episode stays outside any episode, the normal state of a feature film.
     expect(created).toEqual([
       { projectId: 3, name: 'A', code: 'SQ01', order: 0, episodeId: null },
       { projectId: 3, name: 'B', code: 'SQ02', order: 9, episodeId: null },
@@ -87,7 +87,7 @@ describe('getDetail', () => {
     projectId: 1,
     code: 'SQ01',
     thumbnailKey: 'entity-thumbs/sequence/5.jpg',
-    // `assignees` : Prisma rend toujours la relation demandée dans `include`.
+    // `assignees`: Prisma always returns the relation requested in `include`.
     shots: [
       {
         id: 1,
@@ -103,29 +103,29 @@ describe('getDetail', () => {
     assets: [{ id: 8, name: 'Ship', type: 'PROP', typeLabel: null, thumbnailKey: null }],
     departments: [{ id: 4, key: 'comp', name: 'Compositing', color: null }],
     episode: null,
-    // Niveau Épisode éteint : l'état par défaut de tout projet.
+    // Episode level switched off: the default state of every project.
     project: { episodesEnabled: false },
   };
 
-  it('signale une séquence absente plutôt que de rendre un objet vide', async () => {
+  it('reports a missing sequence rather than returning an empty object', async () => {
     vi.mocked(prisma.sequence.findUnique).mockResolvedValue(null);
     await expect(getDetail(404)).rejects.toThrow();
   });
 
-  it('résout les vignettes : explicite, sinon média publié, sinon rien', async () => {
+  it('resolves thumbnails: explicit, otherwise published media, otherwise nothing', async () => {
     vi.mocked(prisma.sequence.findUnique).mockResolvedValue(sequence as never);
     const detail = await getDetail(5);
     expect(detail.thumbnailUrl).toBe('url:entity-thumbs/sequence/5.jpg');
     expect(detail.shots.map((s) => s.thumbnailUrl)).toEqual([
-      'url:entity-thumbs/shot/1.jpg', // vignette choisie à la main
-      'url:derived/9/thumbnail.webp', // repli sur le premier média publié
-      null, // ni l'un ni l'autre
+      'url:entity-thumbs/shot/1.jpg', // thumbnail chosen by hand
+      'url:derived/9/thumbnail.webp', // falls back to the first published media
+      null, // neither one
     ]);
   });
 
-  it('donne aussi une image de repli à la séquence et à ses assets', async () => {
-    // Ni l'une ni les autres n'en avaient : leur carte restait vide même une fois les
-    // plans livrés, alors que l'image existait un cran plus bas.
+  it('also gives a fallback image to the sequence and its assets', async () => {
+    // Neither of them had one: their card stayed empty even once the shots were delivered,
+    // although the image existed one level down.
     vi.mocked(prisma.sequence.findUnique).mockResolvedValue({
       ...sequence,
       thumbnailKey: null,
@@ -139,16 +139,16 @@ describe('getDetail', () => {
     expect(firstMediaThumbKeysForAssets).toHaveBeenCalledWith([8]);
   });
 
-  it('demande les vignettes de plans en une seule passe, pas une par plan', async () => {
+  it('requests the shot thumbnails in a single pass, not one per shot', async () => {
     vi.mocked(prisma.sequence.findUnique).mockResolvedValue(sequence as never);
     await getDetail(5);
     expect(firstMediaThumbKeysForShots).toHaveBeenCalledTimes(1);
     expect(firstMediaThumbKeysForShots).toHaveBeenCalledWith([1, 2, 3]);
   });
 
-  it('borne les plans et les assets de la fiche, et rend le compte réel', async () => {
-    // La fiche affiche tout d'un bloc : sans plafond, une séquence mal découpée
-    // ramènerait la moitié du long-métrage à chaque ouverture.
+  it('bounds the shots and assets of the sheet, and returns the real count', async () => {
+    // The sheet displays everything at once: without a cap, a badly split sequence would
+    // fetch half of the feature film on every opening.
     vi.mocked(prisma.sequence.findUnique).mockResolvedValue(sequence as never);
     await getDetail(5);
     const include = vi.mocked(prisma.sequence.findUnique).mock.calls[0]![0].include as {
@@ -163,9 +163,9 @@ describe('getDetail', () => {
     });
   });
 
-  it('départage l’ordre des plans par id', async () => {
-    // Les plans d'un import partagent order = 0 ; le code ne suffit pas non plus quand
-    // deux séquences fusionnées portent la même numérotation.
+  it('breaks ties in shot order by id', async () => {
+    // Shots from an import share order = 0; the code is not enough either when two merged
+    // sequences carry the same numbering.
     vi.mocked(prisma.sequence.findUnique).mockResolvedValue(sequence as never);
     await getDetail(5);
     const include = vi.mocked(prisma.sequence.findUnique).mock.calls[0]![0].include as {
@@ -176,12 +176,12 @@ describe('getDetail', () => {
 });
 
 /**
- * La liste des séquences ne portait aucune vignette : le champ n'existait pas dans la
- * réponse, si bien que la carte d'une séquence restait grise quoi qu'il arrive. Elle suit
- * maintenant la règle commune — vignette choisie, sinon première image de ses plans.
+ * The sequence list carried no thumbnail: the field did not exist in the response, so a sequence card
+ * stayed grey whatever happened. It now follows the common rule: the chosen thumbnail, otherwise the
+ * first image of its shots.
  */
 describe('signSequenceThumbnails', () => {
-  it('préfère la vignette choisie, retombe sur les plans, et n’invente rien', async () => {
+  it('prefers the chosen thumbnail, falls back on the shots, and invents nothing', async () => {
     vi.mocked(firstMediaThumbKeysForSequences).mockResolvedValue(new Map([[2, 'derived/7/thumbnail.webp']]));
     const rows = [
       { id: 1, thumbnailKey: 'entity-thumbs/sequence/1.jpg' },
@@ -194,7 +194,7 @@ describe('signSequenceThumbnails', () => {
       'url:derived/7/thumbnail.webp',
       null,
     ]);
-    // Une requête pour toute la page : l'arbre de la sidebar en charge deux cents d'un coup.
+    // One query for the whole page: the sidebar tree loads two hundred at once.
     expect(firstMediaThumbKeysForSequences).toHaveBeenCalledTimes(1);
     expect(firstMediaThumbKeysForSequences).toHaveBeenCalledWith([1, 2, 3]);
   });

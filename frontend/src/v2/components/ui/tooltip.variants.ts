@@ -4,34 +4,34 @@
 import { cn } from '../../lib/utils';
 
 /**
- * Réglages et habillage de l'infobulle, isolés du composant pour être vérifiables sans
- * rendu (même découpage que `button.variants.ts` / `card.variants.ts`).
+ * Tooltip settings and styling, isolated from the component so they can be checked without
+ * rendering (same split as `button.variants.ts` / `card.variants.ts`).
  *
- * ## Le délai est un choix de produit
+ * ## The delay is a product choice
  *
- * L'infobulle native du navigateur attend ~1,5 s. Sur un bouton à icône seule, où elle est
- * la seule chose qui dit ce que fait le bouton, cette attente est le défaut lui-même :
- * l'utilisateur qui demande « c'est quoi ? » paie une seconde et demie pour l'apprendre.
+ * The native browser tooltip waits ~1.5 s. On an icon-only button, where it is the only thing
+ * that says what the button does, that wait is the defect itself: the user who asks "what is
+ * this?" pays a second and a half to find out.
  *
- * D'où **250 ms** : sous le seuil des ~400 ms où une interface cesse d'être ressentie comme
- * immédiate, mais au-dessus des ~150 ms d'un survol de passage — sinon balayer une barre de
- * transport dense fait clignoter une infobulle par bouton traversé.
+ * Hence **250 ms**: below the ~400 ms threshold where an interface stops feeling immediate,
+ * but above the ~150 ms of a passing hover — otherwise sweeping a dense transport bar makes a
+ * tooltip flash for every button crossed.
  *
- * `TOOLTIP_SKIP_DELAY_MS` complète : une fois une infobulle ouverte, les suivantes
- * s'affichent **sans délai** pendant cette fenêtre. C'est ce qui rend une barre dense
- * lisible — on la parcourt, on ne l'interroge pas bouton par bouton.
+ * `TOOLTIP_SKIP_DELAY_MS` complements it: once one tooltip is open, the following ones show
+ * **without delay** within this window. This is what makes a dense bar readable — it is swept,
+ * not queried button by button.
  */
 export const TOOLTIP_DELAY_MS = 250;
 
-/** Fenêtre pendant laquelle l'infobulle suivante s'ouvre immédiatement (cf. ci-dessus). */
+/** Window during which the next tooltip opens immediately (see above). */
 export const TOOLTIP_SKIP_DELAY_MS = 500;
 
 /**
- * Un libellé absent ne monte pas d'infobulle du tout.
+ * A missing label mounts no tooltip at all.
  *
- * Les appelants transmettent souvent une valeur optionnelle (`shortcut`, libellé calculé) ;
- * sans ce filtre, une chaîne vide ouvrirait un panneau vide au survol. Les espaces seuls
- * comptent comme absents — ils ne donnent rien à lire.
+ * Callers often pass an optional value (`shortcut`, computed label); without this filter, an
+ * empty string would open an empty panel on hover. Whitespace alone counts as absent — it gives
+ * nothing to read.
  */
 export function shouldRenderTooltip(label: unknown): boolean {
   if (label === undefined || label === null || label === false) return false;
@@ -40,21 +40,20 @@ export function shouldRenderTooltip(label: unknown): boolean {
 }
 
 /**
- * Habillage du panneau.
+ * Panel styling.
  *
- * Deux points que les tests verrouillent :
+ * Two points the tests lock:
  *
- *  1. **`z-[60]`, pas `z-50`.** Tous les calques flottants du dossier (dialog, sheet,
- *     popover, context-menu, lightbox) sont à `z-50`. Une infobulle déclenchée depuis un
- *     bouton d'en-tête de modale est portalisée sur `body` comme la modale elle-même : à
- *     égalité de `z-index`, seul l'ordre du DOM tranche, et il dépend de l'ordre de montage.
- *     Un cran au-dessus rend le résultat indépendant de cet ordre. `z-[60]` est déjà le
- *     cran « au-dessus de tout » du dépôt (cf. `FullPageDropzone`).
- *  2. **`data-[state=delayed-open]` / `data-[state=instant-open]`, jamais `data-[state=open]`.**
- *     Radix Tooltip n'écrit pas `open` dans son `data-state`, contrairement au popover et au
- *     dialog : recopier les classes du popover donne un panneau qui n'anime jamais son
- *     entrée. Les deux états sont couverts, l'ouverture immédiate (fenêtre de grâce
- *     ci-dessus) comme l'ouverture retardée.
+ *  1. **`z-[60]`, not `z-50`.** All the floating layers in the folder (dialog, sheet,
+ *     popover, context-menu, lightbox) are at `z-50`. A tooltip triggered from a modal
+ *     header button is portalled to `body` like the modal itself: at equal `z-index`, only
+ *     DOM order decides, and it depends on the mounting order. One step higher makes the
+ *     result independent of that order. `z-[60]` is already the repo's "above everything"
+ *     step (see `FullPageDropzone`).
+ *  2. **`data-[state=delayed-open]` / `data-[state=instant-open]`, never `data-[state=open]`.**
+ *     Radix Tooltip does not write `open` into its `data-state`, unlike the popover and the
+ *     dialog: copying the popover classes gives a panel that never animates its entry. Both
+ *     states are covered, the immediate opening (grace window above) as well as the delayed one.
  */
 export function tooltipContentClass(className?: string): string {
   return cn(

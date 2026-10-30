@@ -2,24 +2,25 @@
 # SPDX-FileCopyrightText: 2026 Yvig Bidon
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-"""Rendu d'une vignette d'un modele 3D (GLB) via Blender headless.
+"""Render a thumbnail of a 3D model (GLB) via headless Blender.
 
-Invoque par le worker de vignettes spatiales :
+Invoked by the spatial thumbnail worker:
 
     blender -b --factory-startup --python-exit-code 1 --python render_thumb.py -- \\
         --input model.glb --output thumb.png --size 512 --samples 24
 
-Pourquoi Blender : il est deja dans l'image du worker (chaine USD, 45.D) et lit le GLB que
-la conversion produit deja. Le rendu est cadre sur la boite englobante, eclaire par un dome
-neutre, et sort sur **fond transparent** — la tuile prend ainsi la couleur du theme.
+Why Blender: it is already in the worker image (USD chain, 45.D) and reads the GLB that
+the conversion already produces. The render is framed on the bounding box, lit by a
+neutral dome, and output on a **transparent background**, so the tile takes the colour
+of the theme.
 
-Pourquoi Cycles CPU et pas EEVEE : depuis Blender 4.2, EEVEE Next exige un GPU exposant
-OpenGL 4.3. L'image Docker du worker n'en a pas ; un rendu EEVEE y echoue ou sort noir.
-Cycles CPU est plus lent mais donne la meme image partout.
+Why Cycles CPU and not EEVEE: since Blender 4.2, EEVEE Next requires a GPU exposing
+OpenGL 4.3. The worker's Docker image has none; an EEVEE render fails there or comes out
+black. Cycles CPU is slower but gives the same image everywhere.
 
-Sortie : une ligne `REVIEW_THUMB_JSON {...}` sur stdout. Le script ne leve jamais pour un
-modele vide ou illisible : il l'annonce dans le resume et sort en code 0 — une vignette
-absente ne doit pas faire echouer un job.
+Output: a `REVIEW_THUMB_JSON {...}` line on stdout. The script never raises for an
+empty or unreadable model: it reports it in the summary and exits with code 0, since a
+missing thumbnail must not fail a job.
 """
 
 import json
@@ -32,17 +33,17 @@ from mathutils import Vector  # fourni par Blender
 
 MARKER = "REVIEW_THUMB_JSON"
 
-# Vue de trois quarts : la meme que le rasteriseur de splats, pour que les deux familles de
-# medias se ressemblent dans une liste.
+# Three-quarter view: the same as the splat rasterizer, so that both families of
+# media look alike in a list.
 AZIMUTH_DEG = 35.0
 ELEVATION_DEG = 22.0
-# Marge autour du sujet : la boite englobante n'est pas la silhouette, on ne cadre pas au ras.
+# Margin around the subject: the bounding box is not the silhouette, so we do not frame tightly.
 FRAMING_MARGIN = 1.18
 GEOMETRY_TYPES = {"MESH", "CURVE", "SURFACE", "META", "FONT"}
 
 
 def parse_args(argv):
-    """Arguments situes apres le `--` de la ligne de commande Blender."""
+    """Arguments located after the `--` of the Blender command line."""
     if "--" in argv:
         argv = argv[argv.index("--") + 1 :]
     else:
@@ -70,7 +71,7 @@ def emit(rendered, reason="", objects=0):
 
 
 def import_glb(path):
-    """Charge le GLB dans une scene vide. Renvoie le motif d'echec, ou None."""
+    """Loads the GLB into an empty scene. Returns the failure pattern, or None."""
     bpy.ops.wm.read_factory_settings(use_empty=True)
     try:
         bpy.ops.import_scene.gltf(filepath=path)
@@ -80,7 +81,7 @@ def import_glb(path):
 
 
 def world_bounds(objects):
-    """Boite englobante monde de la geometrie, ou None si elle est degeneree."""
+    """World bounding box of the geometry, or None if it is degenerate."""
     lo = Vector((float("inf"),) * 3)
     hi = Vector((float("-inf"),) * 3)
     seen = False
@@ -102,7 +103,7 @@ def world_bounds(objects):
 
 
 def place_camera(scene, center, radius):
-    """Camera perspective 50 mm cadree sur la sphere englobante, en vue de trois quarts."""
+    """50 mm perspective camera framed on the bounding sphere, in three-quarter view."""
     data = bpy.data.cameras.new("ReviewThumbCam")
     data.lens = 50.0
     data.sensor_width = 36.0
@@ -112,7 +113,7 @@ def place_camera(scene, center, radius):
 
     azimuth = math.radians(AZIMUTH_DEG)
     elevation = math.radians(ELEVATION_DEG)
-    # Blender est Z-up : -Y est l'avant de la scene.
+    # Blender is Z-up: -Y is the front of the scene.
     direction = Vector(
         (
             math.sin(azimuth) * math.cos(elevation),
@@ -123,13 +124,13 @@ def place_camera(scene, center, radius):
     half_fov = math.atan((data.sensor_width / 2.0) / data.lens)
     distance = max(radius / math.sin(half_fov) * FRAMING_MARGIN, radius * 1.5, 1e-3)
     camera.location = center + direction * distance
-    # L'axe -Z local de la camera regarde la scene : on aligne donc +Z local sur `direction`.
+    # The camera's local -Z axis looks at the scene, so we align local +Z with `direction`.
     camera.rotation_euler = direction.to_track_quat("Z", "Y").to_euler()
     return camera
 
 
 def light_scene(scene, center, radius):
-    """Dome neutre (fond du monde) + une lumiere cle : lisible sans styliser."""
+    """Neutral dome (world background) plus one key light: readable without stylizing."""
     world = bpy.data.worlds.new("ReviewThumbWorld")
     world.use_nodes = True
     background = world.node_tree.nodes.get("Background")
@@ -152,14 +153,14 @@ def configure_render(scene, size, samples, output):
     scene.cycles.device = "CPU"
     scene.cycles.samples = samples
     scene.cycles.use_adaptive_sampling = True
-    # Rebonds courts : une vignette n'a pas besoin d'inter-reflexions completes, et chaque
-    # rebond coute du temps CPU sur une machine sans GPU.
+    # Short bounces: a thumbnail does not need full inter-reflections, and each
+    # bounce costs CPU time on a machine without a GPU.
     scene.cycles.max_bounces = 4
     try:
         scene.cycles.use_denoising = True
     except Exception:  # noqa: BLE001 - denoiseur absent d'une compilation : on rend brut
         pass
-    # AgX (defaut 4.x) delave les albedos : une vignette d'asset doit ressembler a la texture.
+    # AgX (default in 4.x) washes out albedos: an asset thumbnail should look like its texture.
     try:
         scene.view_settings.view_transform = "Standard"
     except Exception:  # noqa: BLE001 - nom de transform inconnu de cette version
@@ -172,7 +173,7 @@ def configure_render(scene, size, samples, output):
     scene.render.image_settings.file_format = "PNG"
     scene.render.image_settings.color_mode = "RGBA"
     scene.render.image_settings.compression = 80
-    # Le worker impose le nom exact du fichier : Blender ne doit pas y ajouter d'extension.
+    # The worker imposes the exact file name: Blender must not add an extension to it.
     scene.render.use_file_extension = False
     scene.render.filepath = output
 
@@ -215,7 +216,7 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as error:
-        # Message court sur stderr (pas de traceback) : le worker le journalise tel quel.
+        # Short message on stderr (no traceback): the worker logs it as is.
         print("%s: %s" % (type(error).__name__, error), file=sys.stderr)
         sys.stderr.flush()
         sys.exit(1)

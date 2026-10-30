@@ -24,7 +24,7 @@ beforeEach(() => {
   __cryptoTesting.resetLogState();
 });
 
-/** Enveloppe à trois champs : le format écrit avant l'empreinte de clé. */
+/** Three-field envelope: the format written before the key fingerprint existed. */
 function envelopeHeritee(plain: string, material: string): string {
   const k = createHash('sha256').update(material).digest();
   const iv = randomBytes(12);
@@ -33,8 +33,8 @@ function envelopeHeritee(plain: string, material: string): string {
   return [iv.toString('base64'), cipher.getAuthTag().toString('base64'), enc.toString('base64')].join('.');
 }
 
-describe('crypto — rotation de clé (A3-08)', () => {
-  it('nomme la rotation dans le journal au lieu de rendre un null muet', () => {
+describe('crypto — key rotation (A3-08)', () => {
+  it('names the rotation in the log instead of returning a silent null', () => {
     const enc = encryptSecret('mot-de-passe-smtp');
     env.APP_ENCRYPTION_KEY = 'une-toute-autre-cle-9876543210abc';
     __cryptoTesting.resetLogState();
@@ -46,7 +46,7 @@ describe('crypto — rotation de clé (A3-08)', () => {
     expect(contexte.remedy).toContain('APP_ENCRYPTION_KEY');
   });
 
-  it("n'inonde pas le journal quand tous les secrets deviennent illisibles", () => {
+  it('does not flood the log when all secrets become unreadable', () => {
     const encs = [encryptSecret('a'), encryptSecret('b'), encryptSecret('c')];
     env.APP_ENCRYPTION_KEY = 'une-toute-autre-cle-9876543210abc';
     __cryptoTesting.resetLogState();
@@ -54,11 +54,11 @@ describe('crypto — rotation de clé (A3-08)', () => {
     expect(logger.error).toHaveBeenCalledTimes(1);
   });
 
-  it('déchiffre encore les enveloppes écrites avant l’empreinte de clé', () => {
+  it('still decrypts envelopes written before the key fingerprint', () => {
     expect(decryptSecret(envelopeHeritee('ancien-secret', CLE_INITIALE))).toBe('ancien-secret');
   });
 
-  it('avertit une fois quand la clé dérive de JWT_SECRET', () => {
+  it('warns once when the key derives from JWT_SECRET', () => {
     env.APP_ENCRYPTION_KEY = undefined;
     __cryptoTesting.resetLogState();
     expect(usesDerivedEncryptionKey()).toBe(true);
@@ -69,26 +69,26 @@ describe('crypto — rotation de clé (A3-08)', () => {
   });
 });
 
-describe('crypto — secrets chiffrés (Phase 22)', () => {
-  it('round-trip chiffre puis déchiffre', () => {
+describe('crypto — encrypted secrets (Phase 22)', () => {
+  it('round-trip encrypts then decrypts', () => {
     const secret = 'mon-mot-de-passe-smtp-123';
     const enc = encryptSecret(secret);
-    expect(enc).not.toContain(secret); // pas en clair
+    expect(enc).not.toContain(secret); // not in plaintext
     expect(decryptSecret(enc)).toBe(secret);
   });
 
-  it('produit un chiffré différent à chaque appel (IV aléatoire)', () => {
+  it('produces a different ciphertext on each call (random IV)', () => {
     expect(encryptSecret('x')).not.toBe(encryptSecret('x'));
   });
 
-  it('renvoie null sur une valeur altérée ou invalide', () => {
+  it('returns null on an altered or invalid value', () => {
     expect(decryptSecret('nimportequoi')).toBeNull();
     const enc = encryptSecret('secret');
     const tampered = enc.slice(0, -4) + 'AAAA';
     expect(decryptSecret(tampered)).toBeNull();
   });
 
-  it('gère les chaînes vides et unicode', () => {
+  it('handles empty strings and unicode', () => {
     expect(decryptSecret(encryptSecret(''))).toBe('');
     expect(decryptSecret(encryptSecret('éà—✓'))).toBe('éà—✓');
   });

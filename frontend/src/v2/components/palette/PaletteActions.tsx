@@ -10,12 +10,11 @@ import { useT } from '../../i18n';
 import { matchDestinations } from './paletteMatch';
 
 /**
- * Actions générales de la palette (A3).
+ * General actions of the palette (A3).
  *
- * Elles vivaient dans le menu du clic droit, qui s'ouvrait sur n'importe quel point de
- * l'écran et proposait les mêmes entrées quel que soit ce qu'on visait. Le clic droit est
- * désormais réservé aux menus métier ; ces actions-là, qui portent sur la page entière,
- * sont à leur place ici — cherchables, et accessibles au clavier.
+ * They used to live in the right-click menu, which opened on any point of the screen and offered the same entries whatever
+ * one was aiming at. Right-click is now reserved for domain menus; these actions, which apply to the whole page, belong
+ * here: searchable, and reachable by keyboard.
  */
 export default function PaletteActions({
   query,
@@ -23,9 +22,9 @@ export default function PaletteActions({
   onShortcuts,
   onToggleSidebar,
 }: {
-  /** Saisie courante : les actions restent cherchables au lieu de disparaître à la frappe. */
+  /** Current input: the actions stay searchable instead of disappearing as one types. */
   query: string;
-  /** Ferme la palette avant d'exécuter l'action. */
+  /** Closes the palette before running the action. */
   onRun: (action: () => void) => void;
   onShortcuts: () => void;
   onToggleSidebar: () => void;
@@ -53,8 +52,8 @@ export default function PaletteActions({
       key: 'refresh',
       label: t('gctx.refreshData'),
       icon: <RefreshCw size={15} className="text-muted-foreground" />,
-      // Ciblé sur les requêtes réellement montées : l'ancien menu invalidait tout le
-      // cache, y compris les écrans que l'on ne regardait pas.
+      // Targeted at the queries actually mounted: the old menu invalidated the whole cache, including the screens one
+      // was not looking at.
       run: () => void qc.invalidateQueries({ type: 'active' }),
     },
     {

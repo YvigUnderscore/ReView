@@ -6,8 +6,8 @@ import { createViewSync, viewsEqual } from './useImageCompareSync';
 
 const view = (scale: number, cx = 0.5, cy = 0.5) => ({ scale, cx, cy });
 
-describe('viewsEqual — égalité de vues à epsilon près (34.D)', () => {
-  it('égalité stricte et tolérance epsilon', () => {
+describe('viewsEqual — view equality within epsilon (34.D)', () => {
+  it('strict equality and epsilon tolerance', () => {
     expect(viewsEqual(view(2), view(2))).toBe(true);
     expect(viewsEqual(view(2), view(2 + 1e-5))).toBe(true);
     expect(viewsEqual(view(2), view(2.1))).toBe(false);
@@ -16,38 +16,38 @@ describe('viewsEqual — égalité de vues à epsilon près (34.D)', () => {
   });
 });
 
-describe('createViewSync — relais A↔B sans boucle (34.D)', () => {
-  it('propage la vue du maître vers le pane B', () => {
+describe('createViewSync — A↔B relay without a loop (34.D)', () => {
+  it('propagates the master view to pane B', () => {
     const sync = createViewSync();
     const applyB = vi.fn();
     expect(sync.fromMaster(view(2), applyB)).toBe(true);
     expect(applyB).toHaveBeenCalledWith(view(2));
   });
 
-  it('coupe l’écho : la vue ré-émise par B après application est ignorée', () => {
+  it('cuts the echo: the view re-emitted by B after application is ignored', () => {
     const sync = createViewSync();
     const applyB = vi.fn();
     const applyA = vi.fn();
-    sync.fromSlave(view(1), applyA, applyB); // fit initial de B (consommé)
+    sync.fromSlave(view(1), applyA, applyB); // initial fit of B (consumed)
     sync.fromMaster(view(2), applyB); // A → B
     expect(sync.fromSlave(view(2 + 1e-5), applyA, applyB)).toBe(false);
     expect(applyA).not.toHaveBeenCalled();
   });
 
-  it('le fit initial de B adopte la vue du maître au lieu de l’écraser', () => {
+  it('the initial fit of B adopts the master view instead of overwriting it', () => {
     const sync = createViewSync();
     const applyA = vi.fn();
     const applyB = vi.fn();
-    sync.fromMaster(view(3, 0.2, 0.8), null); // le maître est déjà zoomé, B pas monté
-    sync.fromSlave(view(1), applyA, applyB); // fit initial de B
+    sync.fromMaster(view(3, 0.2, 0.8), null); // the master is already zoomed, B not mounted
+    sync.fromSlave(view(1), applyA, applyB); // initial fit of B
     expect(applyA).not.toHaveBeenCalled();
     expect(applyB).toHaveBeenCalledWith(view(3, 0.2, 0.8));
   });
 
-  it('reste bidirectionnel : une vraie manipulation de B repart vers A', () => {
+  it('stays bidirectional: a real manipulation of B goes back to A', () => {
     const sync = createViewSync();
     const applyA = vi.fn();
-    sync.fromSlave(view(1), applyA, null); // fit initial (consommé)
+    sync.fromSlave(view(1), applyA, null); // initial fit (consumed)
     expect(sync.fromSlave(view(3), applyA, null)).toBe(true);
     expect(applyA).toHaveBeenCalledWith(view(3));
   });

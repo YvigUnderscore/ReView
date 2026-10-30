@@ -9,7 +9,7 @@ import {
   MAX_COMMENT_ATTACHMENTS,
   uploadCommentAttachments,
   type CommentAttachment,
-} from '../../../lib/commentAttachments';
+} from '../../lib/commentAttachments';
 import { useImagePaste } from '../../lib/useImagePaste';
 import { useEditComment } from '../../lib/commentsApi';
 import type { ReviewComment } from '../../types/api';
@@ -20,7 +20,7 @@ import { useMentions } from './useMentions';
 import { useObjectUrls } from './useObjectUrls';
 import { useT } from '../../i18n';
 
-/** Texte brut du contenu stocké : le champ d'édition n'affiche pas de balisage. */
+/** Plain text of the stored content: the edit field does not display markup. */
 function plainOf(html: string): string {
   const tmp = document.createElement('div');
   tmp.innerHTML = html;
@@ -28,12 +28,11 @@ function plainOf(html: string): string {
 }
 
 /**
- * Édition d'un commentaire (D5).
+ * Editing a comment (D5).
  *
- * Trois manques réparés d'un coup : les pièces jointes s'ajoutent et se retirent à volonté
- * (le `PATCH` les ignorait), la liste envoyée est complète — ce qui n'y figure plus quitte
- * le stockage — et l'autocomplétion `@mention`, offerte à la saisie et à la réponse,
- * l'est enfin ici aussi.
+ * Three gaps fixed at once: attachments can be added and removed freely (the `PATCH` used to
+ * ignore them), the list sent is complete (anything no longer in it leaves storage), and the
+ * `@mention` autocomplete, offered when writing and replying, is now available here too.
  */
 export default function CommentEditForm({
   comment,
@@ -79,10 +78,10 @@ export default function CommentEditForm({
       edit.mutate(
         {
           id: comment.id,
-          // Le serveur exige un contenu : une note réduite à ses images garde le même
-          // marqueur minimal qu'à la création, plutôt que de repartir en 400.
+          // The server requires content: a note reduced to its images keeps the same minimal
+          // marker as at creation, rather than being sent back as a 400.
           content: text.trim() || '(image)',
-          // La clé, le nom et le type — jamais l'URL présignée, qui n'appartient pas au fil.
+          // Key, name and type only, never the presigned URL, which does not belong to the thread.
           attachments: [...kept.map(({ key, name, contentType }) => ({ key, name, contentType })), ...added],
         },
         { onSuccess: onDone },

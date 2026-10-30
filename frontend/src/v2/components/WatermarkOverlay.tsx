@@ -5,9 +5,9 @@ import { useMemo } from 'react';
 import { watermarkTileUrl } from '../lib/watermark';
 
 /**
- * Filigrane dissuasif au nom du spectateur (35.B) — posé au-dessus des viewers.
- * `mix-blend-difference` le rend lisible sur fonds clairs comme sombres ;
- * non interactif (pointer-events-none), ignoré des lecteurs d'écran.
+ * Deterrent watermark bearing the viewer's name (35.B): placed above the viewers.
+ * `mix-blend-difference` keeps it readable on light and dark backgrounds alike;
+ * non-interactive (pointer-events-none), ignored by screen readers.
  */
 export default function WatermarkOverlay({ text, opacity = 0.08 }: { text: string; opacity?: number }) {
   const tile = useMemo(() => watermarkTileUrl(text), [text]);

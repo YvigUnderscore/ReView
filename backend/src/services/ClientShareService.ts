@@ -11,7 +11,7 @@ import {
   type ShareLink,
 } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 import { imageTypeFromKey } from '../lib/uploadContentType';
 import { shareState, verifyShareSession } from '../lib/shareAccess';
 import { buildShareBrowse, type ShareBrowse } from './shareBrowse';
@@ -23,39 +23,37 @@ import { AppError, forbidden, notFound, unauthorized } from '../lib/errors';
 import { SETTING_KEYS } from '../lib/settings';
 
 /**
- * Accès public par lien de partage (35.C/35.D) — logique commune aux routes `/api/client`.
- * Principe : l'ouverture d'une session de partage (JWT court) consomme une vue ; les
- * sous-routes exigent cette session, la limite de vues ne peut donc pas être contournée.
+ * Public access through a share link (35.C/35.D): logic shared by the `/api/client` routes. Principle:
+ * opening a share session (short-lived JWT) consumes a view; sub-routes require that session, so the view
+ * limit cannot be bypassed.
  */
 
 export const STUDIO_LOGO_KEY = SETTING_KEYS.STUDIO_LOGO;
 
 /**
- * Plafond de médias servis par la page publique. Un lien de projet sur un long-métrage
- * renvoyait la table entière, sans `take` : plusieurs milliers de lignes et autant d'URLs
- * présignées de miniature, à chaque ouverture. Au-delà de ce plafond, la page annonce
- * `hasMore` — la réponse d'un lien qui montre trop est de le restreindre, pas de pagineer
- * un catalogue devant un client.
+ * Cap on the media served by the public page. A project link on a feature film returned the whole table,
+ * without `take`: several thousand rows and as many thumbnail presigned URLs, on every opening. Beyond this
+ * cap, the page announces `hasMore`: the answer to a link that shows too much is to narrow it, not to
+ * paginate a catalogue in front of a client.
  */
 export const SHARE_MEDIA_LIMIT = 200;
 
 /**
- * Un plan, une séquence ou un asset masqué (`hiddenAt`, cf. `VisibilityRule`) : l'élément
- * existe, mais aucun écran interne ne le propose. Il n'avait aucune raison d'être proposé
- * au client non plus — et depuis que la page publique range les médias par entité, le
- * laisser passer ne montrerait plus seulement un nom de fichier mais le **nom et le code**
- * de ce qu'on a justement décidé de masquer.
+ * A shot, sequence or asset that is hidden (`hiddenAt`, see `VisibilityRule`): the item exists, but no
+ * internal screen offers it. It had no reason to be offered to the client either, and since the public page
+ * now groups media by entity, letting it through would show not just a file name but the **name and code** of
+ * what we have just decided to hide.
  *
- * `omitted` (plan coupé au montage) n'est PAS filtré : ce n'est pas une règle de visibilité,
- * les écrans internes continuent de le montrer, et une livraison publiée reste une livraison.
+ * `omitted` (shot cut at mount time) is NOT filtered: this is not a visibility rule, internal screens keep
+ * showing it, and a published delivery remains a delivery.
  */
 const VISIBLE = { deletedAt: null, hiddenAt: null };
 
 /**
- * Médias visibles côté client : publiés, READY, version publiée, dans le projet partagé.
- * Les filtres `deletedAt: null` sont indispensables : la corbeille est un soft-delete, et
- * sans eux un plan mis à la corbeille reste listé — et téléchargeable — sur le lien public,
- * alors qu'il a disparu de l'interface interne.
+ * Media visible to the client: published, READY, published version, within the shared project. The
+ * `deletedAt: null` filters are essential: the trash is a soft delete, and without them a shot moved to the
+ * trash stays listed, and downloadable, on the public link although it has disappeared from the internal
+ * interface.
  */
 export const publishedMediaWhere = (projectId: number) => ({
   status: 'READY' as const,
@@ -65,8 +63,8 @@ export const publishedMediaWhere = (projectId: number) => ({
     published: true,
     deletedAt: null,
     OR: [
-      // La séquence est facultative (un plan sans séquence est un cas normal) : on n'exige
-      // sa visibilité que lorsqu'il y en a une, sinon le `OR` interne écarterait le plan.
+      // The sequence is optional (a shot without a sequence is a normal case): we only require its visibility
+      // when there is one, otherwise the internal `OR` would exclude the shot.
       {
         task: {
           shot: {
@@ -82,30 +80,29 @@ export const publishedMediaWhere = (projectId: number) => ({
   },
 });
 
-/** Ce qu'il faut savoir d'un lien pour décider ce qu'il ouvre. */
+/** What must be known about a link to decide what it opens. */
 export interface ShareScopeRef {
   projectId: number;
   scope: ShareScope;
   playlistId: number | null;
   versionId: number | null;
-  /** Sélection explicite (portée MEDIA) ; vide pour les autres portées. */
+  /** Explicit selection (MEDIA scope); empty for the other scopes. */
   mediaIds: number[];
 }
 
-/** Lien chargé, sa sélection de médias aplatie en identifiants. */
+/** Loaded link, its media selection flattened to identifiers. */
 export type ShareRecord = ShareLink & { mediaIds: number[] };
 
 /**
- * Filtre qui ne retient aucun média. Une portée dont la cible a disparu ne doit pas
- * retomber sur « tout le projet » : c'est exactement l'élargissement silencieux que la
- * portée existe pour empêcher.
+ * Filter that retains no media. A scope whose target has disappeared must not fall back to "the whole
+ * project": that is exactly the silent widening the scope exists to prevent.
  */
 const MATCHES_NOTHING: Prisma.MediaObjectWhereInput = { id: { in: [] } };
 
 /**
- * Ce que CE lien ouvre — à appliquer partout où le partage lit un média (liste, URL
- * présignée, fil de commentaires), et pas seulement à l'affichage de la liste : sinon un
- * client à qui l'on n'a montré qu'un plan télécharge les autres en devinant leur id.
+ * What THIS link opens: to be applied everywhere sharing reads a media (list, presigned URL, comment thread),
+ * and not only when displaying the list; otherwise a client who was only shown one shot could download the
+ * others by guessing their id.
  */
 export function shareMediaWhere(share: ShareScopeRef): Prisma.MediaObjectWhereInput {
   const base = publishedMediaWhere(share.projectId);
@@ -127,7 +124,7 @@ export function shareMediaWhere(share: ShareScopeRef): Prisma.MediaObjectWhereIn
   }
 }
 
-/** Lien par token, ou 404 s'il est inconnu/révoqué/expiré (sans distinguer, anti-énumération). */
+/** Token link, or 404 if unknown/revoked/expired (without distinguishing, against enumeration). */
 export async function loadShare(token: string): Promise<ShareRecord> {
   const share = await prisma.shareLink.findUnique({
     where: { token },
@@ -141,8 +138,8 @@ export async function loadShare(token: string): Promise<ShareRecord> {
 }
 
 /**
- * Sous-routes : lien valide + session de partage obligatoire (header `X-Share-Auth`).
- * Un lien épuisé reste lisible pour une session déjà ouverte (la vue est comptée).
+ * Sub-routes: valid link + mandatory share session (`X-Share-Auth` header).
+ * An exhausted link remains readable for a session already open (the view is counted).
  */
 export async function loadShareWithSession(token: string, req: Request): Promise<ShareRecord> {
   const share = await loadShare(token);
@@ -153,9 +150,9 @@ export async function loadShareWithSession(token: string, req: Request): Promise
 }
 
 /**
- * Ce qu'il faut savoir d'un média pour le RANGER : sa version, et le chemin jusqu'à son
- * parent. Les trois branches sont exactement celles du `OR` de `publishedMediaWhere` — le
- * `select` les suit d'un coup plutôt que de relancer une requête par entité.
+ * What must be known about a media to FILE it: its version, and the path up to its parent. The three branches
+ * are exactly those of the `OR` in `publishedMediaWhere`: the `select` follows them at once rather than
+ * issuing one query per entity.
  */
 const shareTreeSelect = {
   id: true,
@@ -167,7 +164,7 @@ const shareTreeSelect = {
     select: {
       id: true,
       name: true,
-      // Version posée DIRECTEMENT sur un asset, sans passer par une tâche.
+      // Version set DIRECTLY on an asset, without going through a task.
       asset: { select: { id: true, name: true, type: true, typeLabel: true } },
       task: {
         select: {
@@ -198,7 +195,7 @@ const shareTreeSelect = {
 
 type ShareMediaRow = Prisma.MediaObjectGetPayload<{ select: typeof shareTreeSelect }>;
 
-/** Une tuile de la page publique, avec de quoi la situer. */
+/** A tile of the public page, with what is needed to locate it. */
 export interface ShareMediaTile {
   id: number;
   kind: MediaKind;
@@ -206,9 +203,9 @@ export interface ShareMediaTile {
   thumbnailUrl: string | null;
   createdAt: string;
   version: { id: number; name: string; taskName: string | null };
-  /** Ce lien s'est déjà prononcé sur cette version — la file d'accueil l'écarte. */
+  /** This link has already given its verdict on this version: the home queue leaves it out. */
   decided: boolean;
-  /** Où le média est rangé. Des clés, jamais des libellés : le rendu lit les nœuds. */
+  /** Where the media is filed. Keys, never labels: rendering reads the nodes. */
   placement: {
     episodeId: number | null;
     sequenceId: number | null;
@@ -218,9 +215,9 @@ export interface ShareMediaTile {
 }
 
 /**
- * Sur quelles versions CE lien s'est-il déjà prononcé ? C'est ce qui alimente la file
- * « en attente de votre retour » de l'accueil : un client qui revient doit retrouver où il
- * en était, et non recommencer à lire une grille du plus récent au plus ancien.
+ * On which versions has THIS link already given its verdict? This feeds the home page's "awaiting your
+ * feedback" queue: a returning client must find where they were, not restart reading a grid from newest to
+ * oldest.
  */
 async function decidedVersionIds(shareLinkId: number, versionIds: number[]): Promise<Set<number>> {
   if (versionIds.length === 0) return new Set();
@@ -232,7 +229,7 @@ async function decidedVersionIds(shareLinkId: number, versionIds: number[]): Pro
   return new Set(rows.map((r) => r.versionId));
 }
 
-/** Rattachement d'une ligne, en identifiants seulement. */
+/** Filing of a row, identifiers only. */
 function placementOf(row: ShareMediaRow): ShareMediaTile['placement'] {
   const shot = row.version.task?.shot ?? null;
   const asset = row.version.asset ?? row.version.task?.asset ?? null;
@@ -245,14 +242,13 @@ function placementOf(row: ShareMediaRow): ShareMediaTile['placement'] {
 }
 
 /**
- * Médias du lien, bornés, l'arborescence qui va avec, et de quoi dire au destinataire qu'il
- * n'a pas tout.
+ * The link's media, bounded, with the tree that goes with them, and what is needed to tell the recipient that
+ * they do not have everything.
  *
- * **Un seul `findMany`** : même `where`, même `orderBy`, même `take` qu'avant — seul le
- * `select` s'est étoffé. L'arborescence est DÉRIVÉE de ces lignes, jamais requêtée depuis
- * `projectId` : c'est le seul mécanisme qui garantisse qu'un lien de portée MEDIA ne nomme
- * pas le plan voisin. Et une seule URL présignée par média, comme avant : les nœuds ne
- * portent qu'un `coverMediaId`, pas une vignette de plus à signer.
+ * **A single `findMany`**: same `where`, same `orderBy`, same `take` as before; only the `select` has been
+ * enriched. The tree is DERIVED from these rows, never queried from `projectId`: it is the only mechanism
+ * guaranteeing that a MEDIA-scope link does not name the neighbouring shot. And a single presigned URL per
+ * media, as before: the nodes only carry a `coverMediaId`, not one more thumbnail to sign.
  */
 export async function listShareMedia(
   share: ShareScopeRef,
@@ -262,8 +258,8 @@ export async function listShareMedia(
   const [rows, total] = await Promise.all([
     prisma.mediaObject.findMany({
       where,
-      // `id` départage : deux médias créés dans la même milliseconde (un import de lot)
-      // s'échangeaient leur place d'un appel à l'autre.
+      // `id` breaks ties: two media created in the same millisecond (a batch import) would swap places from
+      // one call to the next.
       orderBy: [{ createdAt: 'desc' }, { id: 'desc' }],
       take: SHARE_MEDIA_LIMIT,
       select: shareTreeSelect,
@@ -287,17 +283,18 @@ export async function listShareMedia(
 }
 
 /**
- * Quelles playlists CE lien nomme.
+ * Which playlists THIS link names.
  *
- * - `PROJECT` : celles du projet qui contiennent au moins un média de la portée — le `some`
- *   est écrit avec `shareMediaWhere` lui-même, une playlist ne peut donc pas servir de
- *   passe-droit vers un brouillon ou la corbeille.
- * - `PLAYLIST` : celle du lien, épinglée par `id` ET `projectId`.
- * - `VERSION` / `MEDIA` : **aucune**. `null`, et non une liste calculée : nommer « les
- *   playlists qui contiennent cette version » révélerait l'existence de dailies que le
- *   destinataire n'a jamais reçus. Une portée qui ne montre qu'un plan ne nomme rien d'autre.
- * - `PLAYLIST` sans cible : `null` aussi — une portée dont la cible a disparu ne retombe pas
- *   sur « tout », même pour une simple liste de noms.
+ * - `PROJECT`: those of the project that contain at least one media in scope. The `some` is written with
+ * `shareMediaWhere` itself,
+ *   so a playlist cannot serve as a pass to a draft or to the trash.
+ * - `PLAYLIST`: the link's own, pinned by `id` AND `projectId`.
+ * - `VERSION` / `MEDIA`: **none**. `null`, not a computed list: naming "the playlists containing this
+ * version" would reveal the
+ *   existence of dailies the recipient never received. A scope that shows only one shot names nothing else.
+ * - `PLAYLIST` without a target: `null` too; a scope whose target has disappeared does not fall back to
+ * "everything", even for a
+ *   mere list of names.
  */
 export function sharePlaylistWhere(share: ShareScopeRef): Prisma.PlaylistWhereInput | null {
   const holdsVisibleMedia = { some: { version: { media: { some: shareMediaWhere(share) } } } };
@@ -313,26 +310,26 @@ export function sharePlaylistWhere(share: ShareScopeRef): Prisma.PlaylistWhereIn
   }
 }
 
-/** Au-delà, une page d'accueil de partage cesse d'être un accueil. */
+/** Beyond this, a sharing home page stops being a home page. */
 export const SHARE_PLAYLIST_LIMIT = 30;
 
-/** Une carte de playlist de l'accueil — des identifiants, jamais une vignette de plus. */
+/** A playlist card on the home page: identifiers, never one more thumbnail. */
 export interface SharePlaylistCard {
   id: number;
   name: string;
   updatedAt: string;
-  /** Items en portée : peut dépasser `mediaIds.length` quand la page est bornée. */
+  /** Items in scope: may exceed `mediaIds.length` when the page is bounded. */
   itemCount: number;
-  /** Médias de la playlist PRÉSENTS dans la page servie, dans l'ordre de la playlist. */
+  /** Playlist media PRESENT in the page served, in playlist order. */
   mediaIds: number[];
   coverMediaIds: number[];
 }
 
 /**
- * Cartes de playlist de l'accueil. Les identifiants sont **intersectés** avec la page de
- * médias déjà renvoyée : un id au-delà du plafond désignerait une tuile absente du payload,
- * donc une vignette vide. `itemCount`, lui, reste le total en portée — la carte dit la
- * vérité sur ce que la playlist contient, la grille ne montre que ce qu'elle peut ouvrir.
+ * Home-page playlist cards. The identifiers are **intersected** with the media page already returned: an
+ * identifier beyond the cap would point to a tile absent from the payload, hence an empty thumbnail.
+ * `itemCount`, for its part, remains the total in scope: the card tells the truth about what the playlist
+ * contains; the grid only shows what it can open.
  */
 export async function listSharePlaylists(
   share: ShareScopeRef,
@@ -349,8 +346,7 @@ export async function listSharePlaylists(
       id: true,
       name: true,
       updatedAt: true,
-      // Compteur FILTRÉ par la portée : un `_count` nu annoncerait « 12 » pour trois items
-      // ouvrables.
+      // Counter FILTERED by the scope: a bare `_count` would announce "12" for three openable items.
       _count: { select: { items: { where: inScope } } },
       items: {
         where: inScope,
@@ -361,7 +357,7 @@ export async function listSharePlaylists(
               media: {
                 where: shareMediaWhere(share),
                 orderBy: [{ createdAt: 'asc' }, { id: 'asc' }],
-                select: { id: true }, // des identifiants : aucune signature de plus
+                select: { id: true }, // identifiers: no extra signature
               },
             },
           },
@@ -385,8 +381,8 @@ export async function listSharePlaylists(
 }
 
 /**
- * Un média précis, s'il est dans la portée du lien. Le `AND` n'est pas cosmétique : la
- * portée MEDIA pose elle-même un filtre `id`, qu'un objet littéral écraserait.
+ * A specific media, if it is within the link's scope. The `AND` is not cosmetic: the MEDIA scope itself sets
+ * an `id` filter, which a literal object would overwrite.
  */
 export async function findShareMedia(share: ShareScopeRef, id: number): Promise<MediaObject> {
   const media = await prisma.mediaObject.findFirst({ where: { AND: [{ id }, shareMediaWhere(share)] } });
@@ -395,18 +391,17 @@ export async function findShareMedia(share: ShareScopeRef, id: number): Promise<
 }
 
 /**
- * Le fil qu'un invité lit — **liste blanche de colonnes**, pas un `include` sur la ligne
- * entière. Sans `select`, Prisma rend toutes les colonnes scalaires : `attachments` (des
- * clés MinIO), `assigneeId`, `resolvedById`, `state`, `timelineId` partaient sur une page
- * publique alors que rien ne les y affiche. `annotation` est le seul champ ajouté, et il
- * l'est délibérément : c'est ce qui permet au client de revoir le dessin qu'on lui montre,
- * et celui qu'il vient de poser.
+ * The thread a guest reads: **column allow-list**, not an `include` on the whole row. Without a `select`,
+ * Prisma returns all scalar columns: `attachments` (MinIO keys), `assigneeId`, `resolvedById`, `state`,
+ * `timelineId` would leave on a public page although nothing displays them there. `annotation` is the only
+ * field added, and it is added deliberately: it lets the client see again the drawing we show them, and the
+ * one they just placed.
  *
- * `OR: [{ timelineId: null }, { sharedToShot: true }]` : un retour écrit depuis un montage
- * n'appartient qu'à ce montage tant que personne ne l'a renvoyé sur la review du plan. Le
- * fil interne pose ce garde-fou depuis la Phase 46 ; la route publique l'avait oublié.
+ * `OR: [{ timelineId: null }, { sharedToShot: true }]`: a feedback written from an edit belongs only to that
+ * edit as long as no one has sent it back to the shot's review. The internal thread has enforced this guard
+ * since Phase 46; the public route had forgotten it.
  */
-/** Pièces jointes d'un commentaire, moins les binaires que sa proposition d'édition référence. */
+/** Attachments of a comment, minus the binaries its edit proposal references. */
 export function dropSplatEditBlobs(attachments: unknown, annotation: unknown): unknown {
   if (!Array.isArray(attachments)) return attachments;
   const keys = splatEditBlobKeys(annotation);
@@ -432,34 +427,33 @@ export async function listShareComments(mediaObjectId: number) {
       createdAt: true,
       isEdited: true,
       annotation: true,
-      // `id` + `name` et rien d'autre : le fil les affiche, et l'identifiant sert de clé de
-      // rendu. Ni e-mail, ni avatar, ni rôle ne descendent sur une page publique.
+      // `id` + `name` and nothing else: the thread displays them, and the identifier serves as the render
+      // key. No email, avatar or role comes down to a public page.
       author: { select: { id: true, name: true } },
-      // Les clés ne descendent PAS : `publicAttachments` les échange contre des URL
-      // présignées. Sans cela, une image jointe par le studio restait invisible du client,
-      // qui lisait « voir la pièce jointe » nulle part et ne voyait que du texte.
+      // The keys do NOT come down: `publicAttachments` exchanges them for presigned URLs. Without this, an
+      // image attached by the studio remained invisible to the client, who read "view the attachment" nowhere
+      // and saw only text.
       attachments: true,
     },
   });
   return Promise.all(
     rows.map(async ({ attachments, ...comment }) => ({
       ...comment,
-      // Les binaires d'une proposition d'édition de nuage (masque, ops) sont stockés comme des
-      // pièces jointes — c'est ce qui leur donne la purge — mais ce ne sont pas des fichiers que
-      // l'on offre : sur une page publique ils descendraient en URL présignée vers un bitset que
-      // personne n'ouvre. Écartés par leur clé, avant présignature.
+      // The binaries of a cloud-edit proposal (mask, ops) are stored as attachments — that is what gives them
+      // their purge — but they are not files on offer: on a public page they would come down as presigned
+      // URLs to a bitset no one opens. Excluded by their key, before presigning.
       attachments: await publicAttachments(dropSplatEditBlobs(attachments, comment.annotation)),
     })),
   );
 }
 
-/** Les deux réponses que ce lien peut poser, ou `null` s'il n'en a pas le droit. */
+/** The two answers this link may give, or `null` if it has no right to give any. */
 export async function shareDecisionStatuses(share: ShareRecord) {
   if (share.permission !== SharePermission.DECIDE) return null;
   return guestStatuses(share.projectId);
 }
 
-/** Ce qu'un invité envoie avec son retour. Les formes libres sont revalidées à l'écriture. */
+/** What a guest sends with their feedback. Free-form shapes are revalidated on write. */
 export interface ShareCommentInput {
   guestName: string;
   content: string;
@@ -469,21 +463,20 @@ export interface ShareCommentInput {
 }
 
 /**
- * Retour d'un invité. Deux gardes avant d'écrire, dans cet ordre : la **permission** du lien
- * (un lien en lecture seule ne devient pas commentable parce qu'on lui poste un corps
- * valide) puis la **portée** — `findShareMedia` refuse un identifiant deviné, y compris
- * celui d'un média du même projet.
+ * A guest's feedback. Two guards before writing, in this order: the link's **permission** (a read-only link
+ * does not become commentable because a valid body is posted to it), then the **scope**: `findShareMedia`
+ * refuses a guessed identifier, including that of a media in the same project.
  *
- * `createGuest` déclenche ensuite la même chaîne qu'un retour interne (suiveurs, webhooks,
- * journal v1, note ShotGrid) : le retour d'un client n'est pas un citoyen de seconde zone.
+ * `createGuest` then triggers the same chain as an internal feedback (followers, webhooks, v1 journal,
+ * ShotGrid note): a client's feedback is not a second-class citizen.
  */
 /**
- * Avis d'un invité sur la version que porte un média — **un avis, pas un verdict**.
+ * A guest's opinion on the version carried by a media — **an opinion, not a verdict**.
  *
- * Trois gardes, dans cet ordre : la **permission** du lien (seul `DECIDE` ouvre ce droit ;
- * commenter et se prononcer ne sont pas le même mandat), la **portée** — `findShareMedia`
- * refuse un identifiant deviné — puis le **statut**, que `decideAsGuest` restreint aux deux
- * réponses offertes. Le statut courant de la version n'est jamais touché.
+ * Three guards, in this order: the link's **permission** (only `DECIDE` grants this right; commenting and
+ * giving a verdict are not the same mandate), the **scope**: `findShareMedia` refuses a guessed identifier,
+ * then the **status**, which `decideAsGuest` restricts to the two answers offered. The version's current
+ * status is never touched.
  */
 export async function createShareDecision(
   share: ShareRecord,
@@ -520,9 +513,9 @@ export async function createShareComment(
       annotation: body.annotation,
     },
   );
-  // Un retour d'invité ne laissait pour trace que la charge utile d'un webhook : le journal
-  // d'audit dit désormais quel lien a écrit, et sur quel média. Sans le texte du retour —
-  // le journal est rendu à l'écran d'administration et recopié dans pino.
+  // A guest's feedback used to leave only the webhook payload as a trace: the audit log now says which link
+  // wrote it, and on which media. Without the text of the feedback: the log is shown on the admin screen and
+  // copied into pino.
   logAudit({
     action: 'SHARE_COMMENT',
     entityType: 'Project',
@@ -538,8 +531,8 @@ export async function createShareComment(
 }
 
 /**
- * Consomme une vue (incrément atomique, borné par `maxViews` côté SQL pour éviter toute
- * course). Lève 410 si la limite est atteinte.
+ * Consumes a view (atomic increment, bounded by `maxViews` on the SQL side to avoid any race). Throws 410 if
+ * the limit has been reached.
  */
 export async function consumeView(share: ShareLink): Promise<void> {
   const where =
@@ -551,7 +544,7 @@ export async function consumeView(share: ShareLink): Promise<void> {
   if (updated.count === 0) throw new AppError('This link has reached its view limit', 410);
 }
 
-/** Habillage studio de la page client : nom + logo (Setting `studio_logo_key`, présigné). */
+/** Studio skinning of the client page: name + logo (Setting `studio_logo_key`, presigned). */
 export async function studioBranding(): Promise<{ name: string; logoUrl: string | null }> {
   const [studio, logo] = await Promise.all([
     prisma.studio.findFirst({ select: { name: true } }),

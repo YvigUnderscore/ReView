@@ -9,15 +9,13 @@ import { SECTION_KEYWORDS } from '../../pages/admin/settingsSearch';
 import { SURFACE_LIMITS, searchDocSurfaces, searchSettingsSurfaces } from './surfaceSearch';
 
 /**
- * Les deux familles de la recherche globale qui ne sont pas des lignes de base.
+ * The two families of the global search that are not baseline rows.
  *
- * Le symptôme relevé à l'usage tient en un mot : **« watermark » ne rendait rien**. Le
- * réglage existe (Diffusion), la documentation lui consacre trois chapitres, et la palette
- * restait muette — parce qu'aucune des deux n'est un enregistrement en base.
+ * The symptom observed in use comes down to one word: **"watermark" rendered nothing**. The setting exists (in the Diffusion
+ * section), the documentation devotes three chapters to it, and the palette stayed silent, because neither is a database record.
  *
- * Le cloisonnement est vérifié ici comme celui des familles serveur : à la source, avant que
- * la liste ne soit constituée. `/admin/*` est refusé à tout autre rôle qu'ADMIN ; proposer
- * ces écrans à un artiste serait lui promettre une porte fermée.
+ * Segregation is checked here as it is for the server families: at the source, before the list is built. `/admin/*` is refused
+ * to every role other than ADMIN; offering these screens to an artist would promise them a closed door.
  */
 
 const page = (path: string, title: string, summary = '', headings: string[] = []) => ({
@@ -53,35 +51,35 @@ const MANIFEST: DocsSection[] = [
   },
 ];
 
-describe('recherche de pages de documentation', () => {
-  it('trouve une page par son titre', () => {
+describe('documentation page search', () => {
+  it('finds a page by its title', () => {
     const hits = searchDocSurfaces(MANIFEST, 'secure distribution', t);
     expect(hits.map((h) => h.label)).toEqual(['Secure distribution']);
   });
 
-  it('trouve une page par son contenu — « watermark » n’est ni dans son titre ni dans son sous-titre', () => {
+  it('finds a page by its content: "watermark" is in neither its title nor its subtitle', () => {
     const hits = searchDocSurfaces(MANIFEST, 'watermark', t);
     expect(hits.map((h) => h.label)).toEqual(['Secure distribution', 'Sharing with clients']);
   });
 
-  it('dit pourquoi la page correspond : la section, puis le chapitre trouvé', () => {
+  it('says why the page matches: the section, then the chapter found', () => {
     const [hit] = searchDocSurfaces(MANIFEST, 'watermark', t);
     expect(hit.hint).toBe(`${t('docs.sectionAdminGuide')} · Viewer watermark`);
   });
 
-  it('ouvre la page sur son chemin de manifest', () => {
+  it('opens the page on its manifest path', () => {
     const [hit] = searchDocSurfaces(MANIFEST, 'quarantine', t);
     expect(hit.to).toBe('/docs?p=admin-guide%2Fstorage.md');
   });
 
-  it('place le titre avant le chapitre : ce qui porte le mot passe devant ce qui le mentionne', () => {
+  it('places the title before the chapter: what carries the word goes ahead of what merely mentions it', () => {
     const hits = searchDocSurfaces(MANIFEST, 'storage', t);
     expect(hits[0].label).toBe('Storage');
   });
 
-  it('ignore la casse et les accents, des deux côtés', () => {
-    // Le lecteur tape dans sa langue, la documentation est en anglais : « DÉFENCES » doit
-    // rejoindre « defences » comme « heros » rejoint « héros ».
+  it('ignores case and accents, on both sides', () => {
+    // The reader types in their language, the documentation is in English: "DÉFENCES" must match "defences" the way
+    // "heros" matches "héros".
     for (const typed of ['DEFENCES', 'DÉFENCES', 'defences']) {
       expect(
         searchDocSurfaces(MANIFEST, typed, t).map((h) => h.label),
@@ -90,14 +88,14 @@ describe('recherche de pages de documentation', () => {
     }
   });
 
-  it('exige tous les mots : « watermark quarantine » ne rend pas les deux pages', () => {
+  it('requires all the words: "watermark quarantine" does not return both pages', () => {
     expect(searchDocSurfaces(MANIFEST, 'watermark quarantine', t)).toEqual([]);
     expect(searchDocSurfaces(MANIFEST, 'watermark logo', t).map((h) => h.label)).toEqual([
       'Secure distribution',
     ]);
   });
 
-  it('reste cherchable par titre sur un manifest sans chapitres (build antérieur)', () => {
+  it('stays findable by title on a manifest without chapters (earlier build)', () => {
     const old: DocsSection[] = [
       {
         dir: 'api',
@@ -109,7 +107,7 @@ describe('recherche de pages de documentation', () => {
     expect(searchDocSurfaces(old, 'watermark', t)).toEqual([]);
   });
 
-  it('borne le nombre de pages proposées', () => {
+  it('caps the number of pages offered', () => {
     const many: DocsSection[] = [
       {
         dir: 'user-guide',
@@ -120,13 +118,13 @@ describe('recherche de pages de documentation', () => {
     expect(searchDocSurfaces(many, 'review', t)).toHaveLength(SURFACE_LIMITS.docs);
   });
 
-  it('ne rend rien sur une saisie vide — la palette n’est pas un sommaire', () => {
+  it('renders nothing on an empty input: the palette is not a table of contents', () => {
     expect(searchDocSurfaces(MANIFEST, '   ', t)).toEqual([]);
   });
 });
 
-describe('recherche d’écrans de réglages', () => {
-  it('« watermark » rend l’écran où on le règle — le symptôme de départ', () => {
+describe('settings screens search', () => {
+  it('"watermark" renders the screen where it is set: the starting symptom', () => {
     const hits = searchSettingsSurfaces('watermark', 'ADMIN', t);
     expect(hits).toHaveLength(1);
     expect(hits[0].to).toBe('/admin/distribution');
@@ -134,50 +132,49 @@ describe('recherche d’écrans de réglages', () => {
     expect(hits[0].hint).toBe(t('admin.group.reviewContexts'));
   });
 
-  it('trouve aussi par le mot français, et par un libellé de champ', () => {
+  it('also finds by the French word, and by a field label', () => {
     expect(searchSettingsSurfaces('filigrane', 'ADMIN', t).map((h) => h.to)).toEqual(['/admin/distribution']);
-    // « Uploads simultanés » est un champ, pas un nom de section — et il mène désormais à
-    // l'écran qui le rend, « Stockage », et non plus à la section fourre-tout.
+    // "Uploads simultanés" is a field, not a section name, and it now leads to the screen that renders it, "Storage",
+    // rather than to the catch-all section.
     expect(searchSettingsSurfaces(t('settings.maxUploads'), 'ADMIN', t).map((h) => h.to)).toEqual([
       '/admin/storage',
     ]);
   });
 
-  it('place l’écran qui porte le mot avant celui qui l’a en synonyme', () => {
-    // « Corbeille » est aussi le sujet d'un réglage de la Rétention (le délai avant purge) ;
-    // l'écran Corbeille, lui, s'appelle ainsi — c'est celui qu'on cherche d'abord.
+  it('places the screen carrying the word before the one that has it as a synonym', () => {
+    // "Corbeille" is also the subject of a Retention setting (the delay before purge); the Corbeille screen is named
+    // that way, and it is the one searched for first.
     const hits = searchSettingsSurfaces(t('admin.tab.trash'), 'ADMIN', t);
     expect(hits.map((h) => h.to)).toContain('/admin/retention');
     expect(hits[0].to).toBe('/admin/trash');
   });
 
-  it('ne propose aucun écran d’administration aux autres rôles — il leur serait refusé', () => {
+  it('offers no administration screen to other roles: it would be refused to them', () => {
     for (const role of ['SUPERVISOR', 'ARTIST', 'CLIENT'] as const) {
       expect(searchSettingsSurfaces('watermark', role, t), role).toEqual([]);
     }
     expect(searchSettingsSurfaces('watermark', undefined, t)).toEqual([]);
   });
 
-  it('borne le nombre d’écrans proposés', () => {
+  it('caps the number of screens offered', () => {
     expect(searchSettingsSurfaces('a', 'ADMIN', t).length).toBeLessThanOrEqual(SURFACE_LIMITS.settings);
     expect(searchSettingsSurfaces('a', 'ADMIN', t)).toHaveLength(SURFACE_LIMITS.settings);
   });
 
-  it('ne rend rien sur une saisie vide, ni sur un mot absent', () => {
+  it('renders nothing on an empty input, nor on an absent word', () => {
     expect(searchSettingsSurfaces('  ', 'ADMIN', t)).toEqual([]);
     expect(searchSettingsSurfaces('zzzz', 'ADMIN', t)).toEqual([]);
   });
 
-  it('borne chaque famille, sans exception', () => {
+  it('caps each family, without exception', () => {
     for (const limit of Object.values(SURFACE_LIMITS)) expect(limit).toBeGreaterThan(0);
   });
 
   /**
-   * Une section ajoutée à la barre latérale sans mot-clé ne se chercherait que par son
-   * titre traduit — c'est-à-dire par le mot que personne n'emploie. Les deux tables vivent
-   * côte à côte dans `pages/admin/` : ce test est ce qui les tient ensemble.
+   * A section added to the sidebar without a keyword could only be searched by its translated title, that is, by the
+   * word nobody uses. The two tables live side by side in `pages/admin/`: this test is what holds them together.
    */
-  it('couvre chaque écran de réglages par des mots-clés d’usage', () => {
+  it('covers each settings screen with keywords people actually use', () => {
     for (const section of adminSections(t)) {
       expect(Object.keys(SECTION_KEYWORDS), section.key).toContain(section.key);
     }

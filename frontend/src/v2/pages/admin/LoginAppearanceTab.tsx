@@ -5,7 +5,7 @@ import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Save, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -18,12 +18,13 @@ import { useT } from '../../i18n';
 import type { LoginAppearance } from '../../lib/branding';
 import { backdropStyle, overlayStyle } from '../auth/loginStyles';
 import { Hint } from '../../components/ui/hint';
+import { isWebImage, presignAndUpload } from '@/v2/lib/presignedUpload';
 
 /**
- * Section « Page de connexion » : habillage de l'écran vu avant toute authentification —
- * image de fond, voile, flou, disposition, accroche, logo. L'aperçu utilise les mêmes
- * fonctions de style que la vraie page, pour qu'il n'y ait rien à découvrir après
- * l'enregistrement.
+ * "Login page" section: styling of the screen seen before any authentication —
+ * background image, veil, blur, layout, tagline, logo. The preview uses the same
+ * style functions as the real page, so there is nothing to discover after
+ * saving.
  */
 export default function LoginAppearanceTab() {
   const t = useT();
@@ -42,7 +43,7 @@ export default function LoginAppearanceTab() {
 
   const set = (patch: Partial<LoginAppearance>) => setDraft((d) => d && { ...d, ...patch });
 
-  // Le branding est partagé avec la page de connexion : l'invalider fait suivre l'app.
+  // Branding is shared with the login page: invalidating it makes the app follow.
   const invalidate = () => {
     void qc.invalidateQueries({ queryKey: qk.admin('login-appearance') });
     void qc.invalidateQueries({ queryKey: qk.branding });
@@ -72,20 +73,20 @@ export default function LoginAppearanceTab() {
     const file = e.target.files?.[0];
     if (fileRef.current) fileRef.current.value = '';
     if (!file) return;
-    if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) {
+    if (!isWebImage(file.type)) {
       toast.error(t('profile.avatar.invalidFormat'));
       return;
     }
     setBusy(true);
     try {
-      const { url, key } = await api.post<{ url: string; key: string }>(
+      const { key } = await presignAndUpload(
         '/api/studio/login-appearance/bg/presign',
         { contentType: file.type },
+        file,
+        t('profile.avatar.uploadFailed'),
       );
-      const upload = await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-      if (!upload.ok) throw new Error(t('profile.avatar.uploadFailed'));
-      // L'image est enregistrée tout de suite : téléverser sans poser la clé laisserait un
-      // objet orphelin dans le stockage et rien à l'écran.
+      // The image is saved straight away: uploading without setting the key would leave an
+      // orphan object in storage and nothing on screen.
       await put({ bgKey: key });
       toast.success(t('login.appearance.imageUpdated'));
     } catch (err) {
@@ -203,8 +204,8 @@ export default function LoginAppearanceTab() {
             />
             <span className="font-medium">{t('login.appearance.showLogo')}</span>
           </label>
-          {/* Cet écran décide si le logo s'affiche, pas quel logo : la marque du studio est
-              une seule image, déposée une seule fois. */}
+          {/* This screen decides whether the logo is shown, not which logo: the studio's brand is
+              a single image, uploaded only once. */}
           <SettingsPointer
             section="settings"
             label={t('settings.group.studio')}
@@ -234,7 +235,7 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
   );
 }
 
-/** Aperçu miniature : mêmes couches que la vraie page, en réduction. */
+/** Thumbnail preview: same layers as the real page, scaled down. */
 function Preview({ login }: { login: LoginAppearance }) {
   const t = useT();
   const bg = backdropStyle(login);

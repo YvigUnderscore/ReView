@@ -2,25 +2,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { logger } from '../../lib/logger';
-import { shotgridQueue } from '../JobService';
+import { shotgridQueue } from '../../lib/queues';
 import { listActiveConnections } from './ShotgridSyncService';
 import { parseSettings } from './shotgridSettings';
 
 /**
- * Rythme des travaux ShotGrid : relevé périodique et réconciliation nocturne.
+ * Rhythm of ShotGrid jobs: periodic reading and nightly reconciliation.
  *
- * Ce module ne crée aucun `Worker` — c'est toute sa raison d'être. Le planificateur
- * vivait dans le module du worker, si bien qu'une route qui aurait voulu le rappeler
- * après un changement de réglages aurait démarré un second consommateur de file dans le
- * process API. Faute de pouvoir l'appeler, les réglages de rythme ne prenaient effet
- * qu'au redémarrage : basculer une connexion en « relevé » ne relevait rien avant le
- * prochain déploiement.
+ * This module creates no `Worker` — that is its whole reason for being. The scheduler lived in the worker's module, so a route that wanted to call it again after a
+ * settings change would have started a second queue consumer in the API process. Unable to call it, the rhythm settings only took effect at restart: switching a
+ * connection to "polling" polled nothing until the next deployment.
  */
 
 /**
- * (Re)pose les travaux périodiques d'après les réglages de chaque connexion.
- * Appelée au démarrage et après toute modification des réglages : une connexion
- * basculée de webhook à relevé doit voir son rythme changer sans redémarrage.
+ * (Re)sets the periodic jobs from each connection's settings.
+ * Called at startup and after any settings change: a connection switched from webhook to polling must see its rhythm change without a restart.
  */
 export async function scheduleShotgridJobs(): Promise<void> {
   const repeatables = await shotgridQueue.getRepeatableJobs();
@@ -59,13 +55,12 @@ export async function scheduleShotgridJobs(): Promise<void> {
       );
     }
   }
-  logger.info({ connections: connections.length }, '[shotgrid.worker] travaux périodiques posés');
+  logger.info({ connections: connections.length }, '[shotgrid.worker] periodic jobs scheduled');
 }
 
 /**
- * Rattrapage au démarrage : l'instance vient peut-être de passer des heures hors ligne.
- * Décalé de quelques secondes pour ne pas concurrencer le démarrage du service, et
- * étalé entre les connexions pour ne pas marteler le site du studio.
+ * Catch-up at startup: the instance may have been offline for hours.
+ * Offset by a few seconds so as not to compete with the service's startup, and spread across connections so as not to hammer the studio's site.
  */
 export async function catchUpOnBoot(): Promise<void> {
   const connections = await listActiveConnections();

@@ -4,27 +4,27 @@
 import { Select } from '../../ui/select';
 import { Checkbox } from '../../ui/checkbox';
 import { Button } from '../../ui/button';
-import { useEpisodesEnabled, useEpisodesQuery } from '../../../lib/episodesApi';
-import { useSequencesQuery } from '../../../lib/queries';
-import { useDepartments } from '../../../lib/departmentsApi';
-import { useProjectMembers } from '../../../lib/useProjectRole';
-import { usePipelineStatuses } from '../../../lib/shotgridApi';
-import { TASK_STATUSES, TASK_STATUS_LABEL_KEY } from '../../../lib/taskStatus';
+import { useEpisodesEnabled, useEpisodesQuery } from '@/v2/lib/episodesApi';
+import { useSequencesQuery } from '@/v2/lib/queries';
+import { useDepartments } from '@/v2/lib/departmentsApi';
+import { useProjectMembers } from '@/v2/lib/useProjectRole';
+import { usePipelineStatuses } from '@/v2/lib/shotgridApi';
+import { TASK_STATUSES, TASK_STATUS_LABEL_KEY } from '@/v2/lib/taskStatus';
 import { NO_FILTERS, hasFilters, type GridFilters } from './gridWire';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
- * Les filtres de la grille.
+ * The grid's filters.
  *
- * Cinq d'entre eux sont servis par la route, qui les applique en base : un plan reste une
- * ligne ENTIÈRE, le filtre décide s'il s'affiche et jamais quelles cases il montre — une
- * grille dont les colonnes se vident au filtrage ne se lit plus.
+ * Five of them are served by the route, which applies them in the database: a shot remains an ENTIRE row, and the filter
+ * decides whether it is displayed, never which cells it shows. A grid whose columns empty out when filtering can no longer
+ * be read.
  *
- * Le sixième — masquer les colonnes vides — est purement local : il ne demande rien au
- * serveur, il retire les départements qu'aucun plan de la page n'a au programme.
+ * The sixth, hiding empty columns, is purely local: it asks nothing of the server, and removes the departments that no shot
+ * on the page has on its schedule.
  */
 
-/** Sentinelle « tous » : un `<option>` ne peut pas porter une valeur absente. */
+/** "All" sentinel: an `<option>` cannot carry an absent value. */
 const ALL = 'all';
 
 const asNumber = (value: string): number | null => (value === ALL ? null : Number(value));
@@ -52,8 +52,8 @@ export default function GridFilterBar({
   const statusesQ = usePipelineStatuses('task', projectId);
 
   const statuses = statusesQ.data ?? [];
-  // Sans référentiel, le serveur accepte la valeur de l'enum figé : ce sont les mêmes
-  // libellés que partout ailleurs, et la route sait lire les deux vocabulaires.
+  // Without reference data, the server accepts the value of the frozen enum: these are the same labels as everywhere
+  // else, and the route can read both vocabularies.
   const statusOptions =
     statuses.length > 0
       ? statuses.map((status) => ({ value: status.code, label: status.name }))

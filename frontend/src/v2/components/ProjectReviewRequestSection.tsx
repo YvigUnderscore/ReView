@@ -10,20 +10,20 @@ import { SETTINGS_KEYWORDS } from './settings/settingsKeywords';
 import type { ReviewRequestRule } from '../types/api';
 import { useT } from '../i18n';
 
-/** Les bornes du plancher, miroir de `lib/projectSettings` côté serveur. */
+/** The floor bounds, mirror of `lib/projectSettings` on the server. */
 const MIN = 1;
 const MAX = 280;
 
 /**
- * Ce que le projet exige quand quelqu'un est tagué comme ReViewer d'un média.
+ * What the project requires when someone is tagged as ReViewer of a media.
  *
- * Deux réglages, et un seul geste à comprendre : exiger la consigne, et dire à partir de
- * combien de caractères elle en est une. Le second reste réglable même quand le premier est
- * éteint — le plancher s'applique à toute consigne écrite, et un studio qui n'impose rien
- * veut quand même écarter « ok ».
+ * Two settings, and a single gesture to understand: require the instruction, and say from
+ * how many characters it counts as one. The second remains adjustable even when the first is
+ * switched off: the floor applies to any written instruction, and a studio that imposes nothing
+ * still wants to rule out "ok".
  *
- * Rendu à deux endroits : l'onglet Réglages d'un projet, et les défauts studio dont il
- * hérite. Un seul composant pour les deux, comme la convention de nommage.
+ * Rendered in two places: the project's Settings tab, and the studio defaults it
+ * inherits. One component for both, like the naming convention.
  */
 export default function ProjectReviewRequestSection({
   value,
@@ -67,8 +67,8 @@ export default function ProjectReviewRequestSection({
             onChange={(e) =>
               onChange({
                 ...value,
-                // Un champ vidé au clavier ne doit pas écrire `NaN` dans les réglages du
-                // studio : on retombe sur le plancher le temps que la saisie reprenne.
+                // A field emptied by keyboard must not write `NaN` into the studio settings:
+                // we fall back to the floor until the input resumes.
                 minNoteLength: Math.min(Math.max(Number(e.target.value) || MIN, MIN), MAX),
               })
             }

@@ -1,12 +1,12 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { NumberField } from '../../../components/ui/number-field';
-import { SegmentedControl } from '../../../components/ui/segmented-control';
+import { NumberField } from '@/v2/components/ui/number-field';
+import { SegmentedControl } from '@/v2/components/ui/segmented-control';
 import type { SplatTransform } from '../reviewTypes';
 import type { GizmoSettings, GizmoTargetKind } from '../viewer/gizmos/gizmoSettings';
 import { eulerDegToQuat, quatToEulerDeg } from './transformMath';
-import { useT, type Tr } from '../../../i18n';
+import { useT, type Tr } from '@/v2/i18n';
 
 const AXES = ['X', 'Y', 'Z'] as const;
 
@@ -15,16 +15,16 @@ const spaces = (t: Tr) => [
   { value: 'world' as const, label: t('transform.world') },
 ];
 
-/** Le pas d'accrochage se saisit dans le même champ que le reste — 0 vaut « libre ». */
+/** The snap step is entered in the same field as the rest: 0 means "free". */
 function snapValue(v: number | null): number {
   return v ?? 0;
 }
 
 /**
- * Options des gizmos `translate` / `rotate` / `scale` — remplace `TransformFields` et
- * `Model3DTransformBar` qui flottaient sur la scène. La barre ne montre que la grandeur de
- * l'outil armé : position pour déplacer, rotation pour tourner, échelle pour redimensionner.
- * Le two-way est conservé : un drag du gizmo met les champs à jour, une saisie applique.
+ * Options of the `translate` / `rotate` / `scale` gizmos. Replaces `TransformFields` and
+ * `Model3DTransformBar`, which floated over the scene. The bar only shows the magnitude of the armed
+ * tool: position to move, rotation to turn, scale to resize. Two-way binding is kept: a drag of the
+ * gizmo updates the fields, and an entry applies.
  */
 export default function TransformOptions({
   tool,
@@ -35,9 +35,9 @@ export default function TransformOptions({
   gizmo,
 }: {
   tool: 'translate' | 'rotate' | 'scale';
-  /** Cible du gizmo (« Splat », « Boîte 2 », nom de l'objet). */
+  /** Target of the gizmo ("Splat", "Box 2", object name). */
   target: string;
-  /** Forme du volume actif — contextualise le libellé de l'échelle. */
+  /** Shape of the active volume: contextualises the scale label. */
   shape: 'box' | 'sphere' | null;
   value: SplatTransform;
   onCommit: (t: SplatTransform) => void;

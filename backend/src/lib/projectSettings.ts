@@ -7,29 +7,27 @@ import { burninConfigSchema, type BurninConfig } from './burnin';
 import { badRequest } from './errors';
 
 /**
- * Réglages projet : départements + nomenclature + pipeline (résolution/framerate).
+ * Project settings: departments + naming convention + pipeline (resolution/framerate).
  *
- * Deux niveaux :
- *  - défauts studio (table Setting, clé `project_defaults`, JSON) — appliqués à la
- *    création d'un projet et comme valeurs de repli.
- *  - override par projet (colonne Project.settings, JSON) — prioritaire si présent.
+ * Two levels:
+ *  - studio defaults (Setting table, key `project_defaults`, JSON) — applied when a project is created and as fallback values.
+ *  - per-project override (Project.settings column, JSON) — takes precedence when present.
  *
- * Le pipeline (résolution/framerate) est en plus hérité au niveau séquence/shot via
- * leur colonne `settings` (override partiel), résolu par `resolveEntitySettings`.
- * Les start/end frames restent sur les colonnes dédiées (Project.startFrame,
- * Shot.startFrame/endFrame). Pas de colorspace (décision Phase 18).
+ * The pipeline (resolution/framerate) is also inherited at sequence/shot level through their `settings` column (partial override),
+ * resolved by `resolveEntitySettings`. The start/end frames remain on the dedicated columns (Project.startFrame, Shot.startFrame/endFrame).
+ * No colorspace (Phase 18 decision).
  */
 
 export interface Department {
-  key: string; // identifiant court stable (ex: ANIM)
-  name: string; // libellé affiché (ex: Animation)
+  key: string; // short stable identifier (e.g. ANIM)
+  name: string; // display label (e.g. Animation)
 }
 
 export interface Nomenclature {
-  sequencePrefix: string; // ex: SQ
-  shotPrefix: string; // ex: SH
-  padding: number; // nombre de chiffres (ex: 3 → 010)
-  step: number; // pas d'incrément (ex: 10 → 010, 020, 030)
+  sequencePrefix: string; // e.g. SQ
+  shotPrefix: string; // e.g. SH
+  padding: number; // number of digits (e.g. 3 → 010)
+  step: number; // increment step (e.g. 10 → 010, 020, 030)
 }
 
 export interface Resolution {
@@ -37,7 +35,7 @@ export interface Resolution {
   height: number;
 }
 
-/** Réglages pipeline effectifs (après héritage) d'une entité. */
+/** Effective pipeline settings (after inheritance) of an entity. */
 export interface PipelineSettings {
   resolution: Resolution;
   framerate: number;
@@ -45,35 +43,33 @@ export interface PipelineSettings {
 
 export type NamingMode = 'off' | 'warn' | 'reject';
 
-/** Convention de nommage à l'upload (38.C) : regex + politique d'application. */
+/** Naming convention on upload (38.C): regex + enforcement policy. */
 export interface NamingRule {
-  pattern: string; // regex JS (chaîne) ; vide = pas de contrainte
-  mode: NamingMode; // off : ignoré · warn : avertit · reject : refuse l'upload
+  pattern: string; // JS regex (string); empty = no constraint
+  mode: NamingMode; // off: ignored · warn: warns · reject: refuses the upload
 }
 
 /**
- * Ce que le projet exige quand quelqu'un est tagué comme ReViewer d'un média.
+ * What the project requires when someone is tagged as a ReViewer of a media.
  *
- * Taguer sans dire quoi regarder ne fait gagner de temps qu'à celui qui tague : le
- * destinataire ouvre la livraison sans savoir si on attend de lui la lumière, le timing ou
- * le raccord. Un studio peut donc rendre la consigne obligatoire — et lui donner un
- * plancher, sans lequel « ok » et « voir » satisfont la règle sans rien apprendre.
+ * Tagging without saying what to look at only saves time for the tagger: the recipient opens the delivery without knowing whether
+ * light, timing or the match is expected. A studio can therefore make the instruction mandatory — and give it a floor, without which
+ * "ok" and "see" satisfy the rule while teaching nothing.
  *
- * Le plancher s'applique à **toute note écrite**, même quand elle n'est pas obligatoire :
- * une consigne facultative de deux caractères n'est pas une consigne courte, c'est une
- * consigne vide qui a pris la place d'un champ vide.
+ * The floor applies to **every written note**, even when it is not mandatory: an optional two-character instruction is not a short
+ * instruction, it is an empty one that took the place of an empty field.
  */
 export interface ReviewRequestRule {
-  /** Taguer quelqu'un sans consigne est-il refusé ? */
+  /** Is tagging someone without an instruction refused? */
   requireNote: boolean;
-  /** Longueur minimale d'une consigne écrite, en caractères. */
+  /** Minimum length of a written instruction, in characters. */
   minNoteLength: number;
 }
 
 /**
- * Éclairage HDRI par défaut d'un projet (39.F) — miroir de `LightingConfig` (frontend).
- * Rejoué à l'ouverture d'un média 3D qui n'a pas d'éclairage propre (`splatPresentation.lighting`).
- * `hdriId` référence la bibliothèque instance ; les autres champs ont des défauts neutres.
+ * Default HDRI lighting of a project (39.F) — mirror of `LightingConfig` (frontend).
+ * Replayed when opening a 3D media that has no lighting of its own (`splatPresentation.lighting`).
+ * `hdriId` references the instance library; the other fields have neutral defaults.
  */
 export interface LightingDefault {
   hdriId?: string;
@@ -84,9 +80,9 @@ export interface LightingDefault {
 }
 
 /**
- * Gestion de couleur du projet (39.B) : config OCIO + display/view choisis. `configId` référence une
- * config installée (`OcioService`) ; vide = config par défaut du studio. Sans display/view, le viewer
- * garde son rendu actuel (la transformation OCIO pixel-exacte est un lot ultérieur).
+ * Project colour management (39.B): OCIO config + chosen display/view. `configId` references an installed config (`OcioService`);
+ * empty = the studio's default config. Without a display/view, the viewer keeps its current rendering (the pixel-exact OCIO transform
+ * is a later batch).
  */
 export interface ColorSettings {
   configId?: string;
@@ -97,34 +93,31 @@ export interface ColorSettings {
 export interface ProjectSettings extends PipelineSettings {
   departments: Department[];
   nomenclature: Nomenclature;
-  /** Convention de nommage des fichiers à l'upload (38.C). */
+  /** File naming convention applied on upload (38.C). */
   naming: NamingRule;
-  /** Consigne exigée d'un ReViewer tagué sur un média. */
+  /** Instruction required from a tagged ReViewer on a media. */
   reviewRequest: ReviewRequestRule;
-  /** Override partiel des burn-ins (35.A) — résolu champ par champ sur le template studio. */
+  /** Partial burn-in override (35.A) — resolved field by field on the studio template. */
   burnin?: Partial<BurninConfig>;
-  /** Éclairage HDRI par défaut du viewer 3D (39.F), hérité studio→projet. */
+  /** Default HDRI lighting of the 3D viewer (39.F), inherited studio → project. */
   defaultLighting?: LightingDefault;
-  /** Gestion de couleur OCIO du projet (39.B) : config + display/view. */
+  /** Project OCIO colour management (39.B): config + display/view. */
   color?: ColorSettings;
 }
 
 /**
- * Un motif expose-t-il au « catastrophic backtracking » ?
+ * Does a pattern expose itself to "catastrophic backtracking"?
  *
- * La convention de nommage est une regex saisie par un gestionnaire de projet, puis exécutée
- * sur le nom de CHAQUE fichier téléversé. Node n'offre aucun délai maximal sur une regex :
- * un motif comme `(a+)+$` confronté à un nom bien choisi bloque la boucle d'événements —
- * donc toute l'API, pour tout le studio, sur une seule requête.
+ * The naming convention is a regex typed by a project manager, then executed on the name of EVERY uploaded file. Node offers no maximum
+ * delay on a regex: a pattern such as `(a+)+$` confronted with a well-chosen name blocks the event loop — hence the whole API, for the
+ * whole studio, on a single request.
  *
- * Critère : un groupe QUANTIFIÉ dont le corps contient lui-même un quantificateur ou une
- * alternance. C'est la forme des explosions exponentielles (`(a+)+`, `(a*)*`, `(a|a)+`,
- * `(a|b|ab)*`, `(a{1,3})+`) ; une convention de nommage légitime n'en a jamais besoin.
+ * Criterion: a QUANTIFIED group whose body itself contains a quantifier or an alternation. This is the shape of exponential explosions
+ * (`(a+)+`, `(a*)*`, `(a|a)+`, `(a|b|ab)*`, `(a{1,3})+`); a legitimate naming convention never needs it.
  *
- * L'analyse se fait par parcours à parenthèses équilibrées, et non par une regex sur la
- * regex : une expression régulière ne sait pas compter les parenthèses, et toute tentative
- * précédente laissait donc passer les groupes imbriqués — `((a+))+` reste exponentiel
- * (mesuré ici : 30 caractères = ~13 s de boucle d'événements bloquée).
+ * The analysis walks the balanced parentheses, rather than applying a regex to the regex: a regular expression cannot count parentheses,
+ * and every earlier attempt therefore let nested groups through — `((a+))+` remains exponential (measured here: 30 characters = ~13 s of
+ * blocked event loop).
  */
 export function isCatastrophicPattern(pattern: string): boolean {
   const starts: number[] = [];
@@ -133,10 +126,10 @@ export function isCatastrophicPattern(pattern: string): boolean {
   for (let i = 0; i < pattern.length; i++) {
     const c = pattern[i]!;
     if (c === '\\') {
-      i++; // échappement : le caractère suivant est littéral
+      i++; // escape: the next character is literal
       continue;
     }
-    // À l'intérieur d'une classe [...], `(`, `|` et les quantificateurs sont littéraux.
+    // Inside a class [...], `(`, `|` and the quantifiers are literal.
     if (inClass) {
       if (c === ']') inClass = false;
       continue;
@@ -152,18 +145,18 @@ export function isCatastrophicPattern(pattern: string): boolean {
     if (c !== ')') continue;
 
     const open = starts.pop();
-    if (open === undefined) continue; // parenthèse orpheline : `new RegExp` refusera
-    // Le groupe est-il quantifié ? (`*`, `+`, ou `{n,}` — `{n}` et `{n,m}` sont bornés)
+    if (open === undefined) continue; // orphan parenthesis: `new RegExp` will refuse it
+    // Is the group quantified? (`*`, `+`, or `{n,}` — `{n}` and `{n,m}` are bounded)
     const after = pattern.slice(i + 1);
     const quantified = /^[*+]/.test(after) || /^\{\d+,\}/.test(after);
     if (!quantified) continue;
-    // …et son corps contient-il de quoi produire plusieurs analyses de la même entrée ?
+    // …and does its body contain enough to produce several parses of the same input?
     if (hasAmbiguityInside(pattern.slice(open + 1, i))) return true;
   }
   return false;
 }
 
-/** Le corps d'un groupe porte-t-il un quantificateur ou une alternance (hors classe) ? */
+/** Does the body of a group carry a quantifier or an alternation (outside a class)? */
 function hasAmbiguityInside(body: string): boolean {
   let inClass = false;
   for (let i = 0; i < body.length; i++) {
@@ -186,9 +179,8 @@ function hasAmbiguityInside(body: string): boolean {
 }
 
 /**
- * Teste un nom de fichier contre la convention du projet (38.C). Une regex invalide, un motif
- * dangereux, ou un mode `off`/motif vide n'entravent jamais l'upload (`pass: true`,
- * `mode: 'off'`) — la convention est une aide à la rigueur, pas un verrou de sécurité.
+ * Tests a file name against the project's convention (38.C). An invalid regex, a dangerous pattern, or an `off` mode / empty pattern
+ * never hinder the upload (`pass: true`, `mode: 'off'`) — the convention is an aid to rigour, not a security lock.
  */
 export function checkNaming(
   filename: string,
@@ -206,14 +198,12 @@ export function checkNaming(
 }
 
 /**
- * La consigne donnée à un ReViewer satisfait-elle la règle du projet ?
+ * Does the instruction given to a ReViewer satisfy the project's rule?
  *
- * Rendu plutôt que levé : la même règle sert à trois endroits — le service, qui refuse ;
- * l'API, qui doit dire *pourquoi* ; et l'écran, qui désactive le bouton avant même
- * l'appel. Une fonction pure est la seule forme qui tienne les trois.
+ * Returned rather than thrown: the same rule serves three places — the service, which refuses; the API, which must say *why*; and the screen,
+ * which disables the button before even calling. A pure function is the only form that holds all three.
  *
- * L'espace ne compte pas : la note est comparée après `trim`, sans quoi cinq espaces
- * passeraient un plancher de cinq caractères.
+ * Whitespace does not count: the note is compared after `trim`, otherwise five spaces would pass a five-character floor.
  */
 export type NoteVerdict = 'ok' | 'missing' | 'too-short';
 
@@ -225,7 +215,7 @@ export function checkReviewNote(note: string | null | undefined, rule: ReviewReq
 
 export const STUDIO_DEFAULTS_KEY = 'project_defaults';
 
-// Bornes de sécurité (partagées par le sanitize et les schémas Zod).
+// Safety bounds (shared by the sanitize and the Zod schemas).
 const DIM_MIN = 1;
 const DIM_MAX = 16384;
 const FPS_MIN = 1;
@@ -237,22 +227,20 @@ const ROTATION_MIN = -180;
 const ROTATION_MAX = 180;
 
 /**
- * Bornes du plancher de consigne. Cinq caractères par défaut : de quoi écarter « ok » et
- * « voir » sans exiger une phrase — « lumière » en fait sept, et c'est déjà une consigne.
- * Le plafond tient une phrase courte imposée : au-delà, le studio ne demande plus une
- * consigne, il demande un rapport, et l'uploader écrira n'importe quoi pour passer.
+ * Bounds of the instruction floor. Five characters by default: enough to rule out "ok" and "see" without demanding a sentence — "lumière"
+ * (light) has seven, and that is already an instruction. The ceiling holds a short imposed sentence: beyond it, the studio is no longer asking
+ * for an instruction but for a report, and the uploader will write anything to get past it.
  */
 const NOTE_MIN_LENGTH_FLOOR = 1;
 const NOTE_MIN_LENGTH_CEILING = 280;
 export const DEFAULT_NOTE_MIN_LENGTH = 5;
 
-/** Longueur maximale d'une consigne stockée — au-delà, c'est un commentaire de review. */
+/** Maximum length of a stored instruction — beyond it, it is a review comment. */
 export const REVIEW_NOTE_MAX_LENGTH = 2000;
 
 /**
- * Une consigne telle qu'elle arrive : bornée, et effaçable (`null`) — « finalement,
- * regarde tout ». La longueur MINIMALE n'est pas ici : elle dépend du projet, que seul le
- * service connaît. Zod borne ce qui est universel, le service tranche le reste.
+ * An instruction as it arrives: bounded, and erasable (`null`) — "in the end, look at everything". The MINIMUM length is not here: it depends
+ * on the project, which only the service knows. Zod bounds what is universal, the service decides the rest.
  */
 export const reviewNoteSchema = z.string().max(REVIEW_NOTE_MAX_LENGTH).nullable().optional();
 
@@ -272,9 +260,8 @@ const FALLBACK: ProjectSettings = {
   ],
   nomenclature: { sequencePrefix: 'SQ', shotPrefix: 'SH', padding: 3, step: 10 },
   naming: { pattern: '', mode: 'off' },
-  // Rien n'est exigé par défaut : un studio qui n'a jamais demandé de consigne ne doit pas
-  // voir ses publications refusées au premier déploiement. Le plancher, lui, est posé — il
-  // ne sert que le jour où le studio coche la case.
+  // Nothing is required by default: a studio that never asked for an instruction must not see its publications refused at the first deployment.
+  // The floor is set, however — it only serves on the day the studio ticks the box.
   reviewRequest: { requireNote: false, minNoteLength: DEFAULT_NOTE_MIN_LENGTH },
   resolution: { width: 1920, height: 1080 },
   framerate: 24,
@@ -288,13 +275,13 @@ function sanitizeResolution(raw: unknown, base: Resolution): Resolution {
   };
 }
 
-/** Liste de départements reçue : ne garde que les entrées complètes. */
+/** Received list of departments: keeps only the complete entries. */
 function sanitizeDepartments(raw: unknown): Department[] | undefined {
   if (!Array.isArray(raw)) return undefined;
   return raw.filter((d): d is Department => !!d && typeof d.key === 'string' && typeof d.name === 'string');
 }
 
-/** Nomenclature reçue, champ par champ, sur un socle. */
+/** Received naming, field by field, on a base. */
 function sanitizeNomenclature(raw: unknown, base: Nomenclature): Nomenclature {
   const n = (raw ?? {}) as Partial<Nomenclature>;
   return {
@@ -313,12 +300,12 @@ function sanitize(raw: unknown, base: ProjectSettings): ProjectSettings {
   const framerate = Number.isFinite(o.framerate) ? clampFps(Number(o.framerate)) : base.framerate;
   const naming = sanitizeNaming(o.naming, base.naming);
   const reviewRequest = sanitizeReviewRequest(o.reviewRequest, base.reviewRequest);
-  // Burn-ins : override PARTIEL conservé tel quel (clés connues, types vérifiés) — la
-  // résolution effective (fusion avec le template studio) est faite par lib/burnin.
+  // Burn-ins: PARTIAL override kept as-is (known keys, checked types) — the effective resolution (merge with the studio template)
+  // is done by lib/burnin.
   const burnin = sanitizeBurninOverride(o.burnin) ?? base.burnin;
-  // Éclairage par défaut (39.F) : absent → hérite du socle ; présent → nettoyé/borné.
+  // Default lighting (39.F): absent → inherits from the base; present → cleaned/bounded.
   const defaultLighting = 'defaultLighting' in o ? sanitizeLighting(o.defaultLighting) : base.defaultLighting;
-  // Couleur OCIO (39.B) : absent → hérite ; présent → nettoyé.
+  // OCIO colour (39.B): absent → inherits; present → cleaned.
   const color = 'color' in o ? sanitizeColor(o.color) : base.color;
   return {
     departments,
@@ -333,7 +320,7 @@ function sanitize(raw: unknown, base: ProjectSettings): ProjectSettings {
   };
 }
 
-/** Nettoie les réglages couleur (39.B) : chaînes bornées, undefined si vide. */
+/** Cleans the colour settings (39.B): bounded strings, undefined if empty. */
 function sanitizeColor(raw: unknown): ColorSettings | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
   const o = raw as Partial<ColorSettings>;
@@ -348,7 +335,7 @@ function sanitizeColor(raw: unknown): ColorSettings | undefined {
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
-/** Nettoie l'éclairage par défaut (39.F) : bornes exposition/rotation, hdriId string, undefined si vide. */
+/** Cleans the default lighting (39.F): exposure/rotation bounds, hdriId string, undefined if empty. */
 function sanitizeLighting(raw: unknown): LightingDefault | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
   const o = raw as Partial<LightingDefault>;
@@ -369,11 +356,10 @@ function sanitizeLighting(raw: unknown): LightingDefault | undefined {
 }
 
 /**
- * Nettoie la règle de consigne de review, champ par champ, sur un socle.
+ * Cleans the review instruction rule, field by field, on a base.
  *
- * Le plancher est borné plutôt que refusé : ce réglage descend du studio vers des dizaines
- * de projets, et une valeur aberrante héritée (`0`, `-1`, `10000`) ne doit pas rendre
- * impossible le tag d'un ReViewer sur toute une production.
+ * The floor is bounded rather than refused: this setting descends from the studio to dozens of projects, and an inherited aberrant value
+ * (`0`, `-1`, `10000`) must not make tagging a ReViewer impossible across a whole production.
  */
 function sanitizeReviewRequest(raw: unknown, base: ReviewRequestRule): ReviewRequestRule {
   const o = (raw ?? {}) as Partial<ReviewRequestRule>;
@@ -388,14 +374,13 @@ function sanitizeReviewRequest(raw: unknown, base: ReviewRequestRule): ReviewReq
   };
 }
 
-/** Nettoie la règle de nommage (pattern borné, mode dans l'ensemble autorisé). */
+/** Cleans the naming rule (pattern bounded, mode within the authorised set). */
 function sanitizeNaming(raw: unknown, base: NamingRule): NamingRule {
   const o = (raw ?? {}) as Partial<NamingRule>;
   const mode: NamingMode = o.mode === 'warn' || o.mode === 'reject' || o.mode === 'off' ? o.mode : base.mode;
   const pattern = typeof o.pattern === 'string' ? o.pattern.slice(0, 200) : base.pattern;
-  // Refus à l'ÉCRITURE, en plus du garde-fou à l'exécution : un motif explosif n'a alors
-  // aucune chance d'atteindre le chemin d'upload, et le superviseur voit tout de suite que
-  // sa convention est refusée — au lieu de la croire active alors qu'elle est neutralisée.
+  // Refused on WRITE, in addition to the runtime guard: an explosive pattern then has no chance of reaching the upload path, and the supervisor
+  // sees straight away that their convention is refused — instead of believing it active when it is neutralised.
   if (pattern && isCatastrophicPattern(pattern))
     throw badRequest(
       'Naming pattern rejected: nested quantifier or alternation (the server could stall on it)',
@@ -404,7 +389,7 @@ function sanitizeNaming(raw: unknown, base: NamingRule): NamingRule {
   return { pattern, mode };
 }
 
-/** Filtre un override burn-in partiel (clés/types connus uniquement), undefined si vide. */
+/** Filters a partial burn-in override (known keys/types only), undefined if empty. */
 function sanitizeBurninOverride(raw: unknown): Partial<BurninConfig> | undefined {
   if (!raw || typeof raw !== 'object') return undefined;
   const o = raw as Record<string, unknown>;
@@ -417,8 +402,8 @@ function sanitizeBurninOverride(raw: unknown): Partial<BurninConfig> | undefined
 }
 
 /**
- * Applique un override pipeline partiel (JSON d'une séquence/shot) par-dessus un socle.
- * Seuls les champs présents et valides sont pris en compte ; le reste hérite du parent.
+ * Applies a partial pipeline override (JSON of a sequence/shot) on top of a base.
+ * Only the fields present and valid are taken into account; the rest inherits from the parent.
  */
 export function applyPipelineOverride(base: PipelineSettings, raw: unknown): PipelineSettings {
   const o = (raw ?? {}) as { resolution?: unknown; framerate?: unknown };
@@ -430,14 +415,14 @@ export function applyPipelineOverride(base: PipelineSettings, raw: unknown): Pip
   return { resolution, framerate };
 }
 
-/** Pipeline (résolution/framerate) extrait de réglages projet résolus. */
+/** Pipeline (resolution/framerate) extracted from resolved project settings. */
 export function pipelineOf(settings: ProjectSettings): PipelineSettings {
   return { resolution: settings.resolution, framerate: settings.framerate };
 }
 
 /**
- * Réglages pipeline effectifs d'une entité après héritage projet→séquence→shot.
- * Chaque override (séquence puis shot) est un JSON partiel appliqué dans l'ordre.
+ * Effective pipeline settings of an entity after project → sequence → shot inheritance.
+ * Each override (sequence then shot) is a partial JSON applied in order.
  */
 export function resolveEntitySettings(
   project: ProjectSettings,
@@ -454,13 +439,13 @@ export function resolveEntitySettings(
   return pipeline;
 }
 
-/** Schéma Zod d'une résolution (partagé routes). */
+/** Zod schema of a resolution (shared with the routes). */
 export const resolutionSchema = z.object({
   width: z.number().int().min(DIM_MIN).max(DIM_MAX),
   height: z.number().int().min(DIM_MIN).max(DIM_MAX),
 });
 
-/** Schéma Zod d'un override pipeline (séquence/shot) : champs optionnels. */
+/** Zod schema of a pipeline override (sequence/shot): optional fields. */
 export const pipelineOverrideSchema = z
   .object({
     resolution: resolutionSchema.optional(),
@@ -468,7 +453,7 @@ export const pipelineOverrideSchema = z
   })
   .strict();
 
-/** Schémas Zod par section — partagés entre l'écriture complète (PUT) et le PATCH. */
+/** Zod schemas per section — shared between the full write (PUT) and the PATCH. */
 const sectionSchemas = {
   departments: z.array(z.object({ key: z.string().min(1).max(40), name: z.string().min(1).max(80) })),
   nomenclature: z.object({
@@ -499,7 +484,7 @@ const sectionSchemas = {
   }),
 } as const;
 
-/** Schéma Zod des réglages projet/studio complets (tous optionnels). */
+/** Zod schema of the complete project/studio settings (all optional). */
 export const projectSettingsSchema = z.object({
   departments: sectionSchemas.departments.optional(),
   nomenclature: sectionSchemas.nomenclature.optional(),
@@ -513,9 +498,8 @@ export const projectSettingsSchema = z.object({
 });
 
 /**
- * Schéma Zod d'un PATCH de réglages projet : une section absente reste inchangée,
- * une section à `null` retourne à l'héritage studio. `.strict()` pour qu'une clé
- * inconnue soit refusée plutôt que silencieusement perdue.
+ * Zod schema of a project settings PATCH: an absent section stays unchanged, a section at `null` returns to the studio inheritance.
+ * `.strict()` so that an unknown key is refused rather than silently lost.
  */
 export const projectSettingsPatchSchema = z
   .object({
@@ -531,7 +515,7 @@ export const projectSettingsPatchSchema = z
   })
   .strict();
 
-/** Défauts studio (Setting.project_defaults), fusionnés avec le repli interne. */
+/** Studio defaults (Setting.project_defaults), merged with the internal fallback. */
 export async function getStudioProjectDefaults(): Promise<ProjectSettings> {
   const row = await prisma.setting.findUnique({ where: { key: STUDIO_DEFAULTS_KEY } });
   if (!row) return FALLBACK;
@@ -542,7 +526,7 @@ export async function getStudioProjectDefaults(): Promise<ProjectSettings> {
   }
 }
 
-/** Enregistre les défauts studio. */
+/** Saves the studio defaults. */
 export async function setStudioProjectDefaults(value: unknown): Promise<ProjectSettings> {
   const clean = sanitize(value, FALLBACK);
   await prisma.setting.upsert({
@@ -553,30 +537,26 @@ export async function setStudioProjectDefaults(value: unknown): Promise<ProjectS
   return clean;
 }
 
-/** Réglages effectifs d'un projet : override projet par-dessus les défauts studio. */
+/** Effective settings of a project: project override on top of the studio defaults. */
 export async function resolveProjectSettings(projectSettings: unknown): Promise<ProjectSettings> {
   const studio = await getStudioProjectDefaults();
   return sanitize(projectSettings, studio);
 }
 
 /* ------------------------------------------------------------------------------------- *
- *  Override ≠ effectif
+ *  Override vs effective
  *
- *  La même forme JSON servait aux deux : la lecture rendait l'effectif (fusionné avec les
- *  défauts studio) et l'écriture le réenregistrait tel quel dans `Project.settings`. Ouvrir
- *  l'onglet Réglages puis cliquer Enregistrer figeait donc la résolution, la cadence, la
- *  nomenclature, les burn-ins, l'éclairage et l'OCIO du studio dans le projet : changer
- *  ensuite un défaut studio n'avait plus aucun effet, sans que rien ne le signale.
+ *  The same JSON shape served both: reading returned the effective values (merged with the studio defaults) and writing stored them back
+ *  verbatim in `Project.settings`. Opening the settings tab and clicking Save therefore froze the studio's resolution, framerate, naming,
+ *  burn-ins, lighting and OCIO into the project: changing a studio default afterwards had no effect, and nothing signalled it.
  *
- *  Ce qui suit sépare les deux lectures et donne à l'écriture une granularité de SECTION :
- *  une section absente du JSON du projet est héritée, une section présente est surchargée,
- *  et un PATCH à `null` la rend à l'héritage.
+ *  What follows separates the two readings and gives writes SECTION granularity: an absent section of the project JSON is inherited, a
+ *  present section is overridden, and a PATCH with `null` returns it to inheritance.
  * ------------------------------------------------------------------------------------- */
 
 /**
- * Sections d'un override projet — unité d'écriture du PATCH et d'affichage de l'héritage.
- * `resolution` et `framerate` restent distinctes : un projet peut livrer en 4K à la cadence
- * du studio.
+ * Sections of a project override — the write unit of the PATCH and the display unit of the inheritance.
+ * `resolution` and `framerate` stay distinct: a project may deliver in 4K at the studio's framerate.
  */
 export const SETTINGS_SECTIONS = [
   'resolution',
@@ -592,24 +572,22 @@ export const SETTINGS_SECTIONS = [
 
 export type SettingsSection = (typeof SETTINGS_SECTIONS)[number];
 
-/** Ce que le projet stocke réellement : les seules sections qu'il surcharge. */
+/** What the project actually stores: only the sections it overrides. */
 export type ProjectSettingsOverride = Partial<Pick<ProjectSettings, SettingsSection>>;
 
-/** Corps d'un PATCH : section absente = inchangée, section `null` = retour à l'héritage. */
+/** Body of a PATCH: absent section = unchanged, `null` section = return to inheritance. */
 export type ProjectSettingsPatch = { [K in SettingsSection]?: ProjectSettings[K] | null };
 
 const SECTION_SET = new Set<string>(SETTINGS_SECTIONS);
 
-/** Une valeur de section est-elle réellement fournie (présente et non nulle) ? */
+/** Is a section value actually supplied (present and non-null)? */
 function provided(o: Record<string, unknown>, key: string): boolean {
   return key in o && o[key] !== undefined && o[key] !== null;
 }
 
 /**
- * Nettoie un override : SEULES les sections présentes ressortent, sans jamais être
- * complétées par les défauts studio. C'est la différence avec `sanitize`, qui rend un
- * réglage complet. Le socle studio ne sert ici qu'à borner les champs manquants d'une
- * section partiellement remplie.
+ * Cleans an override: ONLY the sections present come out, never completed by the studio defaults. This is the difference with `sanitize`,
+ * which returns a complete setting. The studio base only serves here to bound the missing fields of a partially filled section.
  */
 export function sanitizeOverride(raw: unknown, studio: ProjectSettings): ProjectSettingsOverride {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return {};
@@ -634,15 +612,14 @@ export function sanitizeOverride(raw: unknown, studio: ProjectSettings): Project
   return out;
 }
 
-/** Sections effectivement surchargées par le projet (le reste est hérité du studio). */
+/** Sections actually overridden by the project (the rest is inherited from the studio). */
 export function overriddenSections(override: ProjectSettingsOverride): SettingsSection[] {
   return SETTINGS_SECTIONS.filter((section) => override[section] !== undefined);
 }
 
 /**
- * Clés du JSON stocké qui ne sont pas des sections de réglages (`isTemplate`, notamment).
- * Elles survivent à toute écriture : l'ancien PUT les effaçait, le schéma Zod n'en
- * connaissant aucune.
+ * Keys of the stored JSON that are not settings sections (`isTemplate`, notably). They survive any write: the former PUT erased them,
+ * the Zod schema knowing none of them.
  */
 function extraKeys(stored: unknown): Record<string, unknown> {
   if (!stored || typeof stored !== 'object' || Array.isArray(stored)) return {};
@@ -654,9 +631,8 @@ function extraKeys(stored: unknown): Record<string, unknown> {
 }
 
 /**
- * Applique un PATCH section par section sur le JSON stocké d'un projet.
- * Section absente : inchangée · section `null` : retirée (retour à l'héritage) ·
- * section fournie : remplacée par sa version nettoyée.
+ * Applies a PATCH section by section on a project's stored JSON.
+ * Absent section: unchanged · `null` section: removed (return to inheritance) · supplied section: replaced by its cleaned version.
  */
 export function patchStoredSettings(
   stored: unknown,
@@ -679,7 +655,7 @@ export function patchStoredSettings(
   return { ...extraKeys(stored), ...next };
 }
 
-/** Remplace l'override entier (PUT) : seules les sections envoyées restent surchargées. */
+/** Replaces the whole override (PUT): only the sections sent remain overridden. */
 export function replaceStoredSettings(
   stored: unknown,
   body: unknown,
@@ -688,20 +664,18 @@ export function replaceStoredSettings(
   return { ...extraKeys(stored), ...sanitizeOverride(body, studio) };
 }
 
-/** Override d'un projet tel qu'il est stocké, nettoyé (sans complétion studio). */
+/** A project's override as stored, cleaned (without studio completion). */
 export async function resolveProjectOverride(projectSettings: unknown): Promise<ProjectSettingsOverride> {
   const studio = await getStudioProjectDefaults();
   return sanitizeOverride(projectSettings, studio);
 }
 
 /**
- * Réglages effectifs d'un projet à partir de son id (charge la colonne settings).
+ * Effective settings of a project from its id (loads the settings column).
  *
- * Les départements ne viennent plus du JSON mais de la table `Department` (B1) : c'est
- * elle qui fait foi depuis que ce sont des entités. Tout le reste du pipe
- * (`lib/pipelineOrder.ts`, l'élection de la dernière version, les regroupements
- * d'affichage) continue de lire `settings.departments` sans savoir d'où ils sortent.
- * Le JSON reste lu en repli, le temps qu'une base non migrée se rattrape.
+ * Departments no longer come from the JSON but from the `Department` table (B1): it is authoritative since they became entities. The rest of
+ * the pipe (`lib/pipelineOrder.ts`, the election of the latest version, the display groupings) keeps reading `settings.departments` without
+ * knowing where they come from. The JSON is still read as a fallback, while an unmigrated database catches up.
  */
 export async function resolveProjectSettingsById(projectId: number): Promise<ProjectSettings> {
   const [project, departments] = await Promise.all([
@@ -712,7 +686,7 @@ export async function resolveProjectSettingsById(projectId: number): Promise<Pro
   return departments.length > 0 ? { ...base, departments } : base;
 }
 
-/** Départements du projet, sinon ceux du studio. Ordre du pipe, amont → aval. */
+/** Project departments, otherwise the studio's. Pipe order, upstream → downstream. */
 async function listDepartmentsForProject(projectId: number): Promise<Department[]> {
   const orderBy = [{ order: 'asc' as const }, { key: 'asc' as const }];
   const own = await prisma.department.findMany({

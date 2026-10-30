@@ -3,19 +3,19 @@
 
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import type { MediaResp } from './reviewTypes';
 import { isEmptyOverride, mergeOverrides, normalizeOverride } from './three/sceneOverride';
 import { useT } from '../../i18n';
 
 /**
- * Publier fige la scène (verrou Phase 11) : la mise en scène 3D **non enregistrée** du
- * gestionnaire devient d'abord l'override de base (46.S) — ce qu'il voit au moment de publier
- * est ce que les reviewers verront par défaut, sans passer par « Enregistrer pour tous ».
+ * Publishing freezes the scene (Phase 11 lock): the manager's **unsaved** 3D staging becomes the base
+ * override first (46.S) — what they see at the moment of publishing is what reviewers will see by
+ * default, without going through "Save for everyone".
  *
- * Renvoie un rappel pour `useMediaActions` : `false` annule la publication — publier sans la
- * mise en scène voulue la perdrait définitivement, l'override étant figé ensuite.
+ * Returns a callback for `useMediaActions`: `false` cancels the publication — publishing without the
+ * intended staging would lose it for good, the override being frozen afterwards.
  */
 export function usePublishSceneOverride(
   id: number,
@@ -32,8 +32,8 @@ export function usePublishSceneOverride(
     try {
       const merged = mergeOverrides(normalizeOverride(data.usdOverride), pending);
       await api.put(`/api/media/${id}/usd/override`, { override: merged });
-      // Cache ciblé, pas de refetch : les URLs présignées changeraient et rechargeraient le
-      // viewer en pleine publication.
+      // Targeted cache, no refetch: the presigned URLs would change and reload the viewer in the middle
+      // of the publication.
       qc.setQueryData<MediaResp>(qk.media(id), (old) => (old ? { ...old, usdOverride: merged } : old));
       setSceneOverride(null);
       return true;

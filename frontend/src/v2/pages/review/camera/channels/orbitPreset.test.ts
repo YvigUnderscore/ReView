@@ -8,14 +8,14 @@ import { animKeyTimes, CHANNEL_IDS, hasAnimation, type CameraAnimV2 } from './mo
 import type { SplatCamera } from '../../reviewTypes';
 
 /**
- * L'orbite doit être un cercle parcouru à vitesse constante : c'est la sonde qui a chiffré le
- * défaut (rayon modulé de 4,9 %, vitesse de 16 %, cassure de 45° au bouclage) qui sert ici de
- * test. Échantillonnage dense de l'animation réellement produite, via `sampleAnimV2`.
+ * The orbit must be a circle traversed at constant speed: the probe that quantified the bug
+ * (radius modulated by 4.9%, speed varying by 16%, a 45° break on looping) serves here as the
+ * test. Dense sampling of the animation actually produced, via `sampleAnimV2`.
  */
 
 const BASE: SplatCamera = { position: { x: 0, y: 0, z: 0 }, target: { x: 0, y: 0, z: 0 } };
 
-/** Vue à 10 unités de la cible, élevée de 3 — un cadrage d'orbite ordinaire. */
+/** View 10 units from the target, raised by 3 — an ordinary orbit framing. */
 const view = (over: Partial<SplatCamera> = {}): SplatCamera => ({
   position: { x: 9, y: 3, z: 4 },
   target: { x: 1, y: 0.5, z: -2 },
@@ -23,7 +23,7 @@ const view = (over: Partial<SplatCamera> = {}): SplatCamera => ({
   ...over,
 });
 
-/** Échantillonne l'orbite en `steps` points et rend les poses (une par temps croissant). */
+/** Samples the orbit at `steps` points and returns the poses (one per increasing time). */
 function samples(anim: CameraAnimV2, steps: number) {
   const out = [];
   for (let i = 0; i <= steps; i++) out.push(sampleAnimV2(anim, (i / steps) * ORBIT_DURATION_MS, BASE));
@@ -31,7 +31,7 @@ function samples(anim: CameraAnimV2, steps: number) {
 }
 
 describe('orbitStartFromView', () => {
-  it('reprend le turntable : rayon horizontal, hauteur, distance à la cible conservée', () => {
+  it('matches the turntable: horizontal radius, height, distance to the target kept', () => {
     const v = view();
     const start = orbitStartFromView(v);
     expect(start.center).toEqual(v.target);
@@ -40,16 +40,16 @@ describe('orbitStartFromView', () => {
     expect(Math.hypot(start.radius, start.height)).toBeCloseTo(Math.hypot(9 - 1, 3 - 0.5, 4 + 2), 10);
   });
 
-  it('depuis une vue plongeante verticale, garde la distance au lieu de retomber à 1 unité', () => {
-    const v = view({ position: { x: 1, y: 20.5, z: -2 } }); // pile au-dessus de la cible
+  it('from a vertical top-down view, keeps the distance instead of falling back to 1 unit', () => {
+    const v = view({ position: { x: 1, y: 20.5, z: -2 } }); // directly above the target
     const start = orbitStartFromView(v);
-    // Le défaut : rayon = 1 et orbite à une autre échelle. La distance, elle, est intacte.
+    // The bug: radius = 1 and orbit at a different scale. The distance, however, is intact.
     expect(start.radius).toBeGreaterThan(10);
     expect(Math.hypot(start.radius, start.height)).toBeCloseTo(20, 10);
-    expect(start.height).toBeGreaterThan(0); // la caméra reste au-dessus
+    expect(start.height).toBeGreaterThan(0); // the camera stays above
   });
 
-  it('garde la caméra sous la cible quand elle la survole par le bas', () => {
+  it('keeps the camera below the target when it looks over it from underneath', () => {
     const start = orbitStartFromView(view({ position: { x: 1, y: -19.5, z: -2 } }));
     expect(start.height).toBeLessThan(0);
     expect(Math.hypot(start.radius, start.height)).toBeCloseTo(20, 10);
@@ -57,14 +57,14 @@ describe('orbitStartFromView', () => {
 });
 
 describe('orbitPresetV2', () => {
-  it('est jouable et boucle', () => {
+  it('is playable and loops', () => {
     const anim = orbitPresetV2(view());
     expect(hasAnimation(anim)).toBe(true);
     expect(anim.loop).toBe(true);
     expect(animKeyTimes(anim)).toEqual([0, 1500, 3000, 4500, 6000, 7500, 9000, 10500, 12000]);
   });
 
-  it('garde un rayon constant (l’ancien preset le modulait de 4,9 %)', () => {
+  it('keeps a constant radius (the old preset modulated it by 4.9%)', () => {
     const v = view();
     const r = orbitStartFromView(v).radius;
     const radii = samples(orbitPresetV2(v), 720).map((p) =>
@@ -74,7 +74,7 @@ describe('orbitPresetV2', () => {
     expect((Math.max(...radii) - Math.min(...radii)) / r).toBeLessThan(0.01);
   });
 
-  it('garde une vitesse constante à 1 % près (l’ancien preset variait de 16 %)', () => {
+  it('keeps a constant speed to within 1% (the old preset varied by 16%)', () => {
     const poses = samples(orbitPresetV2(view()), 720);
     const speeds: number[] = [];
     for (let i = 1; i < poses.length; i++) {
@@ -86,7 +86,7 @@ describe('orbitPresetV2', () => {
     for (const s of speeds) expect(Math.abs(s - mean) / mean).toBeLessThan(0.01);
   });
 
-  it('boucle sans cassure de direction (45° à chaque tour avant)', () => {
+  it('loops without a direction break (45° on every pass before)', () => {
     const anim = orbitPresetV2(view());
     const step = 4;
     const before = sampleAnimV2(anim, ORBIT_DURATION_MS - step, BASE).position;
@@ -100,18 +100,18 @@ describe('orbitPresetV2', () => {
     expect(Math.acos(Math.min(1, cos)) * (180 / Math.PI)).toBeLessThan(1);
   });
 
-  it('n’écrit qu’une clé par canal constant (45 clés constantes avant)', () => {
+  it('writes only one key per constant channel (45 constant keys before)', () => {
     const anim = orbitPresetV2(view());
     const count = (id: (typeof CHANNEL_IDS)[number]) => anim.channels[id]?.keys.length ?? 0;
     expect(count('px')).toBe(9);
     expect(count('pz')).toBe(9);
     for (const id of ['py', 'tx', 'ty', 'tz', 'fov'] as const) expect(count(id)).toBe(1);
-    expect(count('roll')).toBe(0); // horizon droit : la vue ne porte pas de tilt
+    expect(count('roll')).toBe(0); // level horizon: the view carries no tilt
     const total = CHANNEL_IDS.reduce((n, id) => n + count(id), 0);
     expect(total).toBe(23);
   });
 
-  it('les canaux constants restent constants malgré leur clé unique', () => {
+  it('constant channels stay constant despite their single key', () => {
     const v = view();
     const poses = samples(orbitPresetV2(v), 200);
     for (const p of poses) {
@@ -123,7 +123,7 @@ describe('orbitPresetV2', () => {
     }
   });
 
-  it('écrit le tilt quand la vue en porte un (rejeu déterministe, la pose de base n’est pas persistée)', () => {
+  it('writes the tilt when the view carries one (deterministic replay; the base pose is not persisted)', () => {
     const anim = orbitPresetV2(view({ roll: 0.2 }));
     expect(anim.channels.roll?.keys).toHaveLength(1);
     expect(sampleAnimV2(anim, 5000, BASE).roll).toBeCloseTo(0.2, 6);

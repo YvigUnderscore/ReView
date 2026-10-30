@@ -8,9 +8,9 @@ const W = 96;
 const H = 48;
 
 /**
- * Aperçu miniature d'un environnement HDRI (.hdr/.exr) — Phase 22. Décodage client
- * (RGBELoader/EXRLoader, imports dynamiques hors bundle initial) puis tonemap Reinhard
- * vers un canvas. Best-effort : en cas d'échec, le canvas reste sombre.
+ * Thumbnail preview of an HDRI environment (.hdr/.exr) — Phase 22. Client-side decoding
+ * (RGBELoader/EXRLoader, dynamic imports outside the initial bundle), then Reinhard tonemap
+ * onto a canvas. Best-effort: on failure, the canvas stays dark.
  */
 export default function HdriPreview({ url, format }: { url: string; format: 'hdr' | 'exr' }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -44,7 +44,7 @@ export default function HdriPreview({ url, format }: { url: string; format: 'hdr
         }
         tex.dispose();
       } catch {
-        /* aperçu best-effort — la liste reste utilisable sans miniature */
+        /* best-effort preview — the list stays usable without a thumbnail */
       }
     })();
     return () => {

@@ -2,48 +2,48 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Propriétaire unique de `controls.enabled` des viewers spatiaux (Phase 50, lot 8).
+ * Single owner of `controls.enabled` for spatial viewers (Phase 50, lot 8).
  *
- * Trois modules gelaient l'orbite en écrivant le booléen directement — le vol (`flyControls`),
- * les gizmos de transformation, et le relais de molette des overlays qui compte sur elle. Aucun
- * ne savait ce que les autres voulaient : chaque démontage de gizmo remettait `enabled` à `true`
- * sans se demander si quelqu'un d'autre retenait encore l'orbite. Armer puis désarmer un gizmo
- * pendant un vol rendait donc l'orbite **en plein vol**, derrière le dos de `flyControls` : la
- * souris se remettait à orbiter au lieu de diriger le regard.
+ * Three modules froze the orbit by writing the boolean directly: fly (`flyControls`), the
+ * transform gizmos, and the wheel relay of the overlays that relies on it. None knew what the
+ * others wanted: each gizmo unmount set `enabled` back to `true` without checking whether
+ * someone else still held the orbit. Arming then disarming a gizmo during a fly therefore
+ * restored the orbit **in the middle of the fly**, behind the back of `flyControls`: the mouse
+ * started orbiting again instead of steering the view.
  *
- * Un booléen ne peut pas porter deux raisons à la fois. On compte donc les **inhibiteurs** :
- * chacun prend un jeton nommé, le rend quand il a fini, et l'orbite ne revient qu'au dernier
- * jeton rendu. Plus personne n'écrit `enabled` à la main — c'est la seule façon d'empêcher la
- * rustine suivante de réintroduire le même défaut ailleurs.
+ * A boolean cannot carry two reasons at once. So the **inhibitors** are counted: each one takes
+ * a named token, releases it when done, and the orbit only comes back once the last token is
+ * released. Nobody writes `enabled` by hand anymore — this is the only way to prevent the next
+ * quick fix from reintroducing the same defect elsewhere.
  */
 
-/** Cible minimale : tout objet portant l'interrupteur d'orbite (`OrbitControls`). */
+/** Minimal target: any object carrying the orbit switch (`OrbitControls`). */
 export interface OrbitToggle {
   enabled: boolean;
 }
 
-/** L'orbite répond-elle, avec ce nombre d'inhibiteurs ? Fonction pure, testable seule. */
+/** Is the orbit enabled with this number of inhibitors? Pure function, testable on its own. */
 export function orbitEnabled(inhibitors: number): boolean {
   return inhibitors <= 0;
 }
 
 /**
- * Jetons en cours par cible. Une `WeakMap` : rien ne retient un viewer démonté, et deux viewers
- * montés en même temps (comparaison A/B) comptent chacun les leurs.
+ * Active tokens per target. A `WeakMap`: nothing retains an unmounted viewer, and two viewers
+ * mounted at the same time (A/B comparison) each count their own.
  */
 const held = new WeakMap<OrbitToggle, { reason: string }[]>();
 
-/** Raisons qui retiennent l'orbite, dans l'ordre de prise — diagnostic et tests. */
+/** Reasons currently holding the orbit, in acquisition order (for diagnostics and tests). */
 export function orbitInhibitors(target: OrbitToggle): readonly string[] {
   return (held.get(target) ?? []).map((token) => token.reason);
 }
 
 /**
- * Retient l'orbite au nom de `reason` et rend la fonction qui la relâche.
+ * Holds the orbit on behalf of `reason` and returns the function that releases it.
  *
- * La libération est **idempotente** et ne relâche que son propre jeton : un nettoyage rejoué
- * (démontage d'effet React, dispose appelé deux fois) ne rend jamais l'orbite à la place d'un
- * autre inhibiteur encore actif.
+ * Release is **idempotent** and only releases its own token: a replayed cleanup (React effect
+ * unmount, dispose called twice) never restores the orbit in place of another inhibitor that
+ * is still active.
  */
 export function inhibitOrbit(target: OrbitToggle, reason: string): () => void {
   const list = held.get(target) ?? [];
@@ -54,7 +54,7 @@ export function inhibitOrbit(target: OrbitToggle, reason: string): () => void {
   return () => {
     const current = held.get(target);
     const at = current ? current.indexOf(token) : -1;
-    if (!current || at < 0) return; // déjà relâché
+    if (!current || at < 0) return; // already released
     current.splice(at, 1);
     target.enabled = orbitEnabled(current.length);
   };

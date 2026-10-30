@@ -12,7 +12,10 @@
   "digest.by": "par {name}",
   "digest.commentOn": "{author} sur {media}",
   "digest.optOut": "Vous recevez cet email car le digest quotidien est activé dans votre profil ReView.",
-  "digest.preview": { "one": "Ce qui a bougé sur {count} projet depuis hier.", "other": "Ce qui a bougé sur {count} projets depuis hier." },
+  "digest.preview": {
+    "one": "Ce qui a bougé sur {count} projet depuis hier.",
+    "other": "Ce qui a bougé sur {count} projets depuis hier."
+  },
 
   "weekly.subject": "ReView — rapport hebdomadaire de production",
   "weekly.title": "Rapport hebdomadaire de production",
@@ -24,7 +27,10 @@
   "weekly.column.retakes": "Retakes",
   "weekly.column.openNotes": "Notes ouvertes",
   "weekly.optOut": "Vous recevez ce rapport car il est activé dans votre profil ReView (superviseurs).",
-  "weekly.preview": { "one": "La semaine sur {count} projet : livraisons, décisions, notes ouvertes.", "other": "La semaine sur {count} projets : livraisons, décisions, notes ouvertes." },
+  "weekly.preview": {
+    "one": "La semaine sur {count} projet : livraisons, décisions, notes ouvertes.",
+    "other": "La semaine sur {count} projets : livraisons, décisions, notes ouvertes."
+  },
 
   "smtp.test.subject": "ReView — test SMTP",
   "smtp.test.title": "Test SMTP",
@@ -52,13 +58,19 @@
   "notification.reviewAssigned": "La review de la version {version} vous a été confiée",
   "notification.reviewNoteUpdated": "La consigne a changé sur une review qu'on vous a confiée : {version}",
   "notification.clientDecision": "{name} a répondu « {status} » sur la version {version} depuis un lien de partage",
-  "chat.system.joined": { "one": "{names} a rejoint la conversation", "other": "{names} ont rejoint la conversation" },
+  "chat.system.joined": {
+    "one": "{names} a rejoint la conversation",
+    "other": "{names} ont rejoint la conversation"
+  },
   "chat.system.left": "{name} a quitté la conversation",
   "chat.system.removed": "{name} a été retiré",
   "chat.system.renamed": "Le groupe s'appelle désormais « {title} »",
   "chat.mediaPublished": "🎬 Nouveau média publié : {name}",
   "chat.decision": "{icon} Décision « {status} » sur la version {version}",
-  "chat.decisionBulk": { "one": "{icon} Décision « {status} » sur {count} version", "other": "{icon} Décision « {status} » sur {count} versions" },
+  "chat.decisionBulk": {
+    "one": "{icon} Décision « {status} » sur {count} version",
+    "other": "{icon} Décision « {status} » sur {count} versions"
+  },
   "chat.newComment": "💬 Nouveau commentaire sur un média (projet #{project})",
   "chat.montageComment": "🎬 Nouveau retour sur un montage (projet #{project})",
   "share.mail.subject": "Accès à {project}",
@@ -72,7 +84,10 @@
   "share.mail.cta": "Ouvrir le lien",
   "share.mail.expiry": "Ce lien expire le {date}.",
   "share.mail.noExpiry": "Ce lien n'a pas de date d'expiration.",
-  "share.mail.viewLimit": { "one": "Il peut être ouvert {count} fois en tout.", "other": "Il peut être ouvert {count} fois en tout." },
+  "share.mail.viewLimit": {
+    "one": "Il peut être ouvert {count} fois en tout.",
+    "other": "Il peut être ouvert {count} fois en tout."
+  },
   "share.mail.password": "Il est protégé par un mot de passe, transmis séparément.",
   "share.mail.fallback": "Si le bouton ne fonctionne pas, collez ce lien dans votre navigateur :",
   "notesSheet.title": "Notes de review",

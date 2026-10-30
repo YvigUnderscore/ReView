@@ -12,7 +12,10 @@
   "digest.by": "von {name}",
   "digest.commentOn": "{author} zu {media}",
   "digest.optOut": "Sie erhalten diese E-Mail, weil die tägliche Zusammenfassung in Ihrem ReView-Profil aktiviert ist.",
-  "digest.preview": { "one": "Was sich seit gestern in {count} Projekt getan hat.", "other": "Was sich seit gestern in {count} Projekten getan hat." },
+  "digest.preview": {
+    "one": "Was sich seit gestern in {count} Projekt getan hat.",
+    "other": "Was sich seit gestern in {count} Projekten getan hat."
+  },
 
   "weekly.subject": "ReView — wöchentlicher Produktionsbericht",
   "weekly.title": "Wöchentlicher Produktionsbericht",
@@ -24,7 +27,10 @@
   "weekly.column.retakes": "Retakes",
   "weekly.column.openNotes": "Offene Notizen",
   "weekly.optOut": "Sie erhalten diesen Bericht, weil er in Ihrem ReView-Profil aktiviert ist (Supervisor).",
-  "weekly.preview": { "one": "Die Woche in {count} Projekt: Lieferungen, Entscheidungen, offene Notizen.", "other": "Die Woche in {count} Projekten: Lieferungen, Entscheidungen, offene Notizen." },
+  "weekly.preview": {
+    "one": "Die Woche in {count} Projekt: Lieferungen, Entscheidungen, offene Notizen.",
+    "other": "Die Woche in {count} Projekten: Lieferungen, Entscheidungen, offene Notizen."
+  },
 
   "smtp.test.subject": "ReView — SMTP-Test",
   "smtp.test.title": "SMTP-Test",
@@ -52,13 +58,19 @@
   "notification.reviewAssigned": "Ihnen wurde die review der version {version} zugewiesen",
   "notification.reviewNoteUpdated": "Die Anweisung zu einer dir anvertrauten Review hat sich geändert: {version}",
   "notification.clientDecision": "{name} hat „{status}“ zur version {version} über einen Freigabelink geantwortet",
-  "chat.system.joined": { "one": "{names} ist der Unterhaltung beigetreten", "other": "{names} sind der Unterhaltung beigetreten" },
+  "chat.system.joined": {
+    "one": "{names} ist der Unterhaltung beigetreten",
+    "other": "{names} sind der Unterhaltung beigetreten"
+  },
   "chat.system.left": "{name} hat die Unterhaltung verlassen",
   "chat.system.removed": "{name} wurde entfernt",
   "chat.system.renamed": "Die Gruppe heißt jetzt « {title} »",
   "chat.mediaPublished": "🎬 Neues Medium veröffentlicht: {name}",
   "chat.decision": "{icon} Entscheidung « {status} » zur version {version}",
-  "chat.decisionBulk": { "one": "{icon} Entscheidung « {status} » zu {count} version", "other": "{icon} Entscheidung « {status} » zu {count} versions" },
+  "chat.decisionBulk": {
+    "one": "{icon} Entscheidung « {status} » zu {count} version",
+    "other": "{icon} Entscheidung « {status} » zu {count} versions"
+  },
   "chat.newComment": "💬 Neuer Kommentar zu einem Medium (Projekt #{project})",
   "chat.montageComment": "🎬 Neue Rückmeldung zu einem Schnitt (Projekt #{project})",
   "share.mail.subject": "Zugang zu {project}",
@@ -72,7 +84,10 @@
   "share.mail.cta": "Link öffnen",
   "share.mail.expiry": "Dieser Link läuft am {date} ab.",
   "share.mail.noExpiry": "Dieser Link hat kein Ablaufdatum.",
-  "share.mail.viewLimit": { "one": "Er kann insgesamt {count} Mal geöffnet werden.", "other": "Er kann insgesamt {count} Mal geöffnet werden." },
+  "share.mail.viewLimit": {
+    "one": "Er kann insgesamt {count} Mal geöffnet werden.",
+    "other": "Er kann insgesamt {count} Mal geöffnet werden."
+  },
   "share.mail.password": "Er ist durch ein Passwort geschützt, das Ihnen separat zugeht.",
   "share.mail.fallback": "Wenn die Schaltfläche nicht funktioniert, fügen Sie diesen Link in Ihren Browser ein:",
   "notesSheet.title": "Review-Notizen",

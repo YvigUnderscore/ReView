@@ -4,22 +4,22 @@
 import { useRef, useState, type PointerEvent, type WheelEvent } from 'react';
 import { normalizeRect, type SelectCombine, type SelectionShape } from './shapes2d';
 
-/** Distance (px) entre deux points consécutifs du lasso (limite la taille du polygone). */
+/** Distance (px) between two consecutive lasso points (limits the polygon size). */
 const LASSO_STEP = 3;
 
 /**
- * Overlay de tracé de sélection (10.G) : capte le pointeur quand un outil de sélection est
- * actif, dessine le rectangle, le lasso ou le curseur du pinceau en SVG (tokens de thème via
- * currentColor) et remonte la forme (au lâcher) ou les coups de pinceau (en continu, V3) avec
- * le mode de combinaison (Maj = ajouter, Alt = retirer ; pinceau : le 1ᵉʳ coup sans modificateur
- * remplace, les suivants du même geste ajoutent).
+ * Selection drawing overlay (10.G): captures the pointer while a selection tool is
+ * active, draws the rectangle, lasso or brush cursor in SVG (theme tokens via
+ * currentColor) and reports the shape (on release) or the brush strokes (continuously, V3) with
+ * the combine mode (Shift = add, Alt = remove; brush: the 1st stroke without a modifier
+ * replaces, the following strokes of the same gesture add).
  *
- * **La navigation continue de passer.** L'overlay couvre le canvas : tout ce qu'il ne relaie pas
- * n'existe plus pour la scène. La molette l'était déjà (zoom d'orbite) ; le **bouton droit** ne
- * l'était pas, si bien qu'armer un outil de sélection supprimait le vol *et* le menu contextuel
- * du viewer. Ses événements sont désormais rejoués sur le canvas, et le menu natif reste bloqué
- * ici comme là-bas — c'est le geste mesuré côté canvas qui décide entre vol et menu
- * (`viewer/useSpatialContextMenu`), jamais l'overlay.
+ * **Continuous navigation passes through.** The overlay covers the canvas: anything it does not
+ * relay no longer exists for the scene. The wheel already was (orbit zoom); the **right button**
+ * was not, so arming a selection tool suppressed both the fly *and* the viewer's context menu.
+ * Its events are now replayed on the canvas, and the native menu stays blocked here as elsewhere.
+ * The gesture measured on the canvas decides between fly and menu
+ * (`viewer/useSpatialContextMenu`), never the overlay.
  */
 export default function SelectionOverlay({
   tool,
@@ -30,31 +30,31 @@ export default function SelectionOverlay({
   onBrushEnd,
 }: {
   tool: 'rect' | 'lasso' | 'brush';
-  /** Rayon du pinceau en pixels (outil brush). */
+  /** Brush radius in pixels (brush tool). */
   brushRadius?: number;
-  /** Canvas Three (résolu à la demande) : cible des événements de navigation relayés. */
+  /** Three canvas (resolved on demand): target of relayed navigation events. */
   getCanvas: () => HTMLElement | null;
   onCommit: (
     shape: SelectionShape,
     combine: SelectCombine,
     viewport: { width: number; height: number },
   ) => void;
-  /** Coup de pinceau (outil brush) — appelé en continu pendant le drag. */
+  /** Brush stroke (brush tool), called continuously during the drag. */
   onBrush?: (
     point: { x: number; y: number },
     combine: SelectCombine,
     viewport: { width: number; height: number },
   ) => void;
   /**
-   * Fin du coup de pinceau (lâcher ou pointeur perdu). C'est ce qui fait du trait **un seul**
-   * cran d'historique : sans cette borne, la sélection ne saurait pas où s'arrête le geste et
-   * Ctrl+Z ne rendrait qu'un stamp sur des dizaines.
+   * End of the brush stroke (release or pointer lost). This is what makes the stroke **one**
+   * history step: without this boundary, the selection would not know where the gesture ends and
+   * Ctrl+Z would undo a single stamp out of dozens.
    */
   onBrushEnd?: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [drag, setDrag] = useState<{ start: [number, number]; points: [number, number][] } | null>(null);
-  // Curseur du pinceau (suivi hors drag pour afficher le cercle) + combinaison du geste en cours.
+  // Brush cursor (tracked outside the drag to show the circle) and combine mode of the current gesture.
   const [cursor, setCursor] = useState<[number, number] | null>(null);
   const brushStroke = useRef<{ combine: SelectCombine; last: [number, number] } | null>(null);
 
@@ -68,10 +68,10 @@ export default function SelectionOverlay({
     onBrush?.({ x: p[0], y: p[1] }, combine, viewport());
   };
 
-  /** Le bouton droit est-il en cause (appui/relâchement, ou maintenu pendant un mouvement) ? */
+  /** Is the right button involved (press/release, or held during a move)? */
   const isRightButton = (e: PointerEvent): boolean => e.button === 2 || (e.buttons & 2) !== 0;
 
-  /** Rejoue l'événement sur le canvas Three : le vol et le menu contextuel le reçoivent. */
+  /** Replays the event on the Three canvas: the fly and the context menu receive it. */
   const relay = (type: 'pointerdown' | 'pointermove' | 'pointerup', e: PointerEvent): void => {
     getCanvas()?.dispatchEvent(new globalThis.PointerEvent(type, e.nativeEvent));
   };
@@ -85,7 +85,7 @@ export default function SelectionOverlay({
     try {
       e.currentTarget.setPointerCapture(e.pointerId);
     } catch {
-      // pointeur synthétique (tests) sans capture possible — le drag fonctionne quand même
+      // synthetic pointer (tests) without possible capture: the drag still works
     }
     const p = local(e);
     if (tool === 'brush') {
@@ -98,7 +98,7 @@ export default function SelectionOverlay({
   };
 
   const onPointerMove = (e: PointerEvent) => {
-    // Vol en cours : le geste appartient à la caméra, on ne trace pas par-dessus.
+    // Fly in progress: the gesture belongs to the camera, we do not trace over it.
     if (isRightButton(e)) {
       relay('pointermove', e);
       return;
@@ -111,7 +111,7 @@ export default function SelectionOverlay({
       const dist = Math.hypot(p[0] - stroke.last[0], p[1] - stroke.last[1]);
       if (dist < Math.max(3, brushRadius / 3)) return;
       stroke.last = p;
-      // Après le 1ᵉʳ coup, le geste cumule (un « replace » par déplacement viderait le trait).
+      // After the 1st stroke, the gesture accumulates (a "replace" per move would empty the stroke).
       if (stroke.combine === 'replace') stroke.combine = 'add';
       stamp(p, stroke.combine);
       return;
@@ -145,7 +145,7 @@ export default function SelectionOverlay({
     const [x1, y1] = local(e);
     if (tool === 'rect') {
       const rect = normalizeRect(x0, y0, x1, y1);
-      if (rect.w < 2 && rect.h < 2) return; // simple clic : ignoré (pas de sélection vide)
+      if (rect.w < 2 && rect.h < 2) return; // simple click: ignored (no empty selection)
       onCommit({ kind: 'rect', rect }, combine, viewport());
     } else {
       if (drag.points.length < 3) return;
@@ -153,13 +153,13 @@ export default function SelectionOverlay({
     }
   };
 
-  // Relaye la molette au canvas Three (OrbitControls) pour garder le zoom pendant la sélection.
+  // Relays the wheel to the Three canvas (OrbitControls) to keep the zoom during selection.
   const onWheel = (e: WheelEvent) => {
     getCanvas()?.dispatchEvent(new globalThis.WheelEvent('wheel', e.nativeEvent));
   };
 
-  // Le menu natif du navigateur n'a pas sa place sur le viewer, et l'overlay ne sert aucun menu :
-  // l'événement s'arrête ici. Le menu du viewer s'ouvre depuis le canvas, sur le geste relayé.
+  // The browser's native menu has no place on the viewer, and the overlay serves no menu:
+  // the event stops here. The viewer's menu opens from the canvas, on the relayed gesture.
   const onContextMenu = (e: { preventDefault: () => void; stopPropagation: () => void }) => {
     e.preventDefault();
     e.stopPropagation();
@@ -175,8 +175,8 @@ export default function SelectionOverlay({
       onPointerDown={onPointerDown}
       onPointerMove={onPointerMove}
       onPointerUp={onPointerUp}
-      // Pointeur perdu en plein trait (capture volée, geste système) : le trait se ferme quand
-      // même, sinon son cran d'historique resterait ouvert et avalerait le trait suivant.
+      // Pointer lost mid-stroke (capture stolen, system gesture): the stroke still closes,
+      // otherwise its history step would stay open and swallow the next stroke.
       onPointerCancel={() => {
         brushStroke.current = null;
         onBrushEnd?.();

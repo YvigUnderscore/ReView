@@ -6,16 +6,16 @@ import type { CurveKey } from '../channels/model';
 import { handleSpanMs, isWeighted, slopeOf, typeOut, type TangentSide } from '../channels/tangents';
 import { timeToX, valueToY, type TimeView, type ValueView } from './viewTransform';
 
-/** Longueur d'écran d'une poignée **non pondérée** (le poids n'a alors aucun sens). */
+/** Screen length of an **unweighted** handle (the weight is meaningless then). */
 const HANDLE_PX = 34;
 
 /**
- * Poignées de tangente de la clé primaire (Phase 17 ; côtés séparés Phase 50, lot 7).
+ * Tangent handles of the primary key (Phase 17; split sides Phase 50, batch 7).
  *
- * La poignée montre la pente que la lecture utilise **vraiment** (`slopeOf`), et non `tout ?? 0` :
- * sur une clé lissée, elle était tracée à plat alors que la courbe partait en pente — puis le drag
- * faisait sauter la courbe sur cette fausse valeur. Une clé **pondérée** porte des poignées carrées
- * dont la longueur est le poids ; les autres gardent une longueur d'écran fixe.
+ * The handle shows the slope the read **actually** uses (`slopeOf`), not `tout ?? 0`: on a smooth
+ * key it was drawn flat while the curve left at a slope — then dragging made the curve jump to
+ * that false value. A **weighted** key carries square handles whose length is the weight; the
+ * others keep a fixed screen length.
  */
 export default function TangentHandles({
   keys,
@@ -40,7 +40,7 @@ export default function TangentHandles({
   return (
     <>
       {(['in', 'out'] as const).map((side) => {
-        // Un palier n'a pas de forme à régler côté sortant : sa poignée serait un mensonge.
+        // A step has no shape to adjust on the outgoing side: its handle would be a lie.
         if (side === 'out' && typeOut(k) === 'step') return null;
         const dir = side === 'out' ? 1 : -1;
         const span = handleSpanMs(keys, index, side);

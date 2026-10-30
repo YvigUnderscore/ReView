@@ -1,16 +1,16 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { CommentAttachment } from '../../lib/commentAttachments';
+import type { CommentAttachment } from '../lib/commentAttachments';
 
 /**
- * Types API partagés (10.E2) — une entité = une définition.
- * Miroir des réponses backend (backend/src/routes/* + prisma/schema.prisma) :
- * les variantes par endpoint se composent avec Pick/intersection, ici ou dans
- * la page concernée — jamais par re-déclaration d'interface.
+ * Shared API types (10.E2) — one entity, one definition.
+ * Mirror of the backend responses (backend/src/routes/* + prisma/schema.prisma): per-endpoint
+ * variants are composed with Pick/intersection, here or in the relevant page — never by
+ * redeclaring an interface.
  */
 
-// ── Enums (miroir de backend/prisma/schema.prisma) ───────────────────────────
+// ── Enums (mirror of backend/prisma/schema.prisma) ───────────────────────────
 export type Role = 'ADMIN' | 'SUPERVISOR' | 'ARTIST' | 'CLIENT';
 export type UserStatus = 'AVAILABLE' | 'AWAY' | 'DND';
 export type ProjectStatus = 'ACTIVE' | 'ON_HOLD' | 'COMPLETED' | 'ARCHIVED';
@@ -24,7 +24,7 @@ export type MediaStatus = 'UPLOADING' | 'PROCESSING' | 'READY' | 'FAILED';
 export type AnnouncementType = 'INFO' | 'WARNING' | 'MAINTENANCE';
 export type AnnouncementFrequency = 'PERMANENT' | 'FIRST_LOGIN' | 'FIRST_OF_DAY';
 
-// ── Annonces studio (Phase 22) ────────────────────────────────────────────────
+// ── Studio announcements (Phase 22) ───────────────────────────────────────────
 export interface Announcement {
   id: number;
   title: string;
@@ -38,15 +38,15 @@ export interface Announcement {
   createdAt: string;
   updatedAt: string;
 }
-/** GET /api/announcements (admin) — avec nombre d'accusés de lecture. */
+/** GET /api/announcements (admin) — with the number of read receipts. */
 export type AnnouncementAdmin = Announcement & { _count: { reads: number } };
 
-/** Palier de qualité HLS (contexte Vidéo). */
+/** HLS quality rung (Video context). */
 export interface TranscodeRendition {
   height: number;
   videoBitrateK: number;
 }
-/** GET /api/admin/transcode — config de transcodage vidéo (contexte Vidéo, Phase 22/23). */
+/** GET /api/admin/transcode — video transcoding config (Video context, Phase 22/23). */
 export interface TranscodeConfig {
   enabled: boolean;
   crf: number;
@@ -54,11 +54,11 @@ export interface TranscodeConfig {
   audioBitrateK: number;
   maxHeight: number;
   ladder: TranscodeRendition[];
-  /** Scene detection (34.H) : marqueurs « Plan n » posés aux coupes (opt-in). */
+  /** Scene detection (34.H): "Shot n" markers placed at cuts (opt-in). */
   sceneDetection?: boolean;
 }
 
-/** GET /api/studio/smtp — config SMTP (jamais le mot de passe). */
+/** GET /api/studio/smtp — SMTP config (never the password). */
 export interface SmtpConfig {
   host: string;
   port: number;
@@ -69,8 +69,8 @@ export interface SmtpConfig {
   envOverride: boolean;
 }
 
-// ── Utilisateurs ──────────────────────────────────────────────────────────────
-/** Ligne complète de GET /api/users (admin). */
+// ── Users ─────────────────────────────────────────────────────────────────────
+/** Full row of GET /api/users (admin). */
 export interface User {
   id: number;
   email: string;
@@ -78,7 +78,7 @@ export interface User {
   firstName: string | null;
   lastName: string | null;
   username: string | null;
-  /** Profil enrichi (42.B — №89). */
+  /** Enriched profile (42.B — №89). */
   jobTitle?: string | null;
   bio?: string | null;
   phone?: string | null;
@@ -90,27 +90,27 @@ export interface User {
   storageUsed: number;
   storageLimit: number | null;
   online?: boolean;
-  /** Compte créé par invitation, lien encore valide et jamais utilisé (annuaire admin). */
+  /** Account created by invitation, link still valid and never used (admin directory). */
   invitePending?: boolean;
 }
-/** Référence minimale (author de version, assignee de tâche). */
+/** Minimal reference (version author, task assignee). */
 export type UserRef = Pick<User, 'id' | 'name'>;
-/** Auteur affiché avec avatar (commentaires, documents). */
+/** Author displayed with avatar (comments, documents). */
 export type AuthorRef = Pick<User, 'id' | 'name' | 'displayName' | 'initials' | 'avatarUrl'>;
 
-// Entités du pipe (Project, Sequence, Shot, Asset) — module séparé (budget de lignes).
+// Pipeline entities (Project, Sequence, Shot, Asset) — separate module (line budget).
 export * from './entities';
 
-// Tâches (Task, TaskWithAssignee, ChecklistItem, TaskDetail) — module séparé (budget de lignes).
+// Tasks (Task, TaskWithAssignee, ChecklistItem, TaskDetail) — separate module (line budget).
 export * from './task';
 
-// USD & provenance de conversion 3D (ModelSource, UsdModelInfo…) — module séparé (Phase 45).
+// USD & 3D conversion provenance (ModelSource, UsdModelInfo…) — separate module (Phase 45).
 export * from './usd';
-// Niveau Épisode (facultatif par projet) — même règle : une entité, une définition.
+// Episode level (optional per project) — same rule: one entity, one definition.
 export * from './episode';
 
-// ── Versions & médias ─────────────────────────────────────────────────────────
-/** Statut de review personnalisable du studio (Phase 31). */
+// ── Versions & media ──────────────────────────────────────────────────────────
+/** Studio-customisable review status (Phase 31). */
 export interface ReviewStatus {
   id: number;
   name: string;
@@ -120,15 +120,15 @@ export interface ReviewStatus {
   isRetake: boolean;
   isDefault: boolean;
 }
-/** Décision de review historisée d'une version (Phase 31). */
+/** Recorded review decision of a version (Phase 31). */
 export interface ReviewDecision {
   id: number;
   status: ReviewStatus;
   comment: string | null;
   author: UserRef | null;
   /**
-   * Avis posé depuis un lien de partage : `author` est nul et c'est ce nom qui dit qui s'est
-   * prononcé. Un tel avis N'A PAS changé le statut de la version — le studio tranche.
+   * Opinion given from a share link: `author` is null and this name says who gave it. Such an
+   * opinion did NOT change the version's status — the studio decides.
    */
   guestName: string | null;
   createdAt: string;
@@ -138,26 +138,26 @@ export interface Version {
   name: string;
   status: VersionStatus;
   published: boolean;
-  /** Décision de review courante (dernière posée), null si aucune. */
+  /** Current review decision (last one set), null if none. */
   reviewStatus?: ReviewStatus | null;
 }
-/** GET /api/versions?taskId=|assetId= — _count.media filtré par visibilité. */
+/** GET /api/versions?taskId=|assetId= — _count.media filtered by visibility. */
 export type VersionListItem = Version & {
   createdAt: string;
   author: UserRef | null;
   _count: { media: number };
-  /** Brouillons de l'appelant dans cette version — publiables d'un geste (Phase 46). */
+  /** The caller's drafts in this version — publishable in one gesture (Phase 46). */
   draftCount: number;
 };
-/** GET /api/versions/:id — médias visibles inclus. */
+/** GET /api/versions/:id — visible media included. */
 export type VersionDetail = Version & {
   taskId: number | null;
   assetId: number | null;
   media: MediaSummary[];
 };
 
-// ── Playlists de dailies (Phase 33) ──────────────────────────────────────────
-/** GET /api/playlists?projectId= — liste légère. */
+// ── Dailies playlists (Phase 33) ─────────────────────────────────────────────
+/** GET /api/playlists?projectId= — lightweight list. */
 export interface PlaylistSummary {
   id: number;
   projectId: number;
@@ -166,32 +166,32 @@ export interface PlaylistSummary {
   updatedAt: string;
   createdBy: UserRef | null;
   /**
-   * Vignettes des premières versions (quatre au plus), déjà signées.
+   * Thumbnails of the first versions (four at most), already signed.
    *
-   * Une liste de dailies s'identifie à ce qu'elle contient, pas à son nom : « Dailies
-   * mardi » et « Dailies mercredi » ne se distinguent qu'à l'image.
+   * A dailies list is identified by what it contains, not by its name: "Dailies Tuesday" and
+   * "Dailies Wednesday" can only be told apart by the image.
    */
   previews?: string[];
   _count: { items: number };
 }
-/** Item du détail : version + premier média visible (lecture enchaînée). */
+/** Detail item: version + first visible media (chained playback). */
 export interface PlaylistItemEntry {
   id: number;
   order: number;
   version: {
     id: number;
     name: string;
-    /** Localisation lisible (SQ · SH › tâche, ou asset › tâche). */
+    /** Human-readable location (SQ · SH › task, or asset › task). */
     location: string;
     mediaCount: number;
     reviewStatus: Pick<ReviewStatus, 'id' | 'name' | 'color'> | null;
   };
   media: (Pick<Media, 'id' | 'kind' | 'originalName'> & { thumbnailUrl: string | null }) | null;
 }
-/** GET /api/playlists/:id — items ordonnés. */
+/** GET /api/playlists/:id — ordered items. */
 export type PlaylistDetail = Omit<PlaylistSummary, '_count'> & { items: PlaylistItemEntry[] };
 
-/** Marqueur de timeline nommé/coloré partagé (Phase 34.C). */
+/** Shared named/coloured timeline marker (Phase 34.C). */
 export interface TimelineMarker {
   id: number;
   frame: number;
@@ -202,7 +202,7 @@ export interface TimelineMarker {
   createdAt: string;
 }
 
-/** GET /api/live/sessions?projectId= — session live en cours (badges LIVE, retours 33). */
+/** GET /api/live/sessions?projectId= — live session in progress (LIVE badges, feedback 33). */
 export interface LiveSessionSummary {
   key: string;
   projectId: number;
@@ -227,29 +227,28 @@ export type MediaSummary = Pick<Media, 'id' | 'kind' | 'originalName' | 'status'
   thumbnailUrl?: string | null;
 };
 
-// ── Membres du projet ─────────────────────────────────────────────────────────
+// ── Project members ───────────────────────────────────────────────────────────
 /** GET /api/projects/:id → memberships. */
 export interface Membership {
   id: number;
   role: Role | null;
-  // `avatarUrl` : les écrans d'assignation montrent des visages, pas des lignes de
-  // texte — sur vingt noms qui se ressemblent, c'est ce qui rend quelqu'un
-  // reconnaissable du premier coup d'œil.
+  // `avatarUrl`: assignment screens show faces, not lines of text — among twenty similar names,
+  // that is what makes someone recognisable at first glance.
   user: Pick<User, 'id' | 'name' | 'email' | 'role' | 'username'> & {
     firstName?: string | null;
     lastName?: string | null;
     avatarUrl?: string | null;
     isService?: boolean;
     /**
-     * Départements de la personne, bornés au vocabulaire de CE projet (lot 10). Le serveur
-     * les filtre : la liste complète mêlerait les étapes d'autres projets, que l'onglet
-     * Membres ne sait ni montrer ni retirer.
+     * The person's departments, limited to the vocabulary of THIS project (lot 10). The server
+     * filters them: the full list would mix in steps from other projects, which the Members tab
+     * can neither show nor remove.
      */
     departments?: Pick<Department, 'id' | 'key' | 'name' | 'color'>[];
   };
 }
 
-// ── Commentaires de review ────────────────────────────────────────────────────
+// ── Review comments ───────────────────────────────────────────────────────────
 export interface ReviewReaction {
   id: number;
   emoji: string;
@@ -257,7 +256,7 @@ export interface ReviewReaction {
 }
 export interface ReviewComment {
   id: number;
-  /** Média porteur — une réponse vise celui du parent, pas celui affiché à l'écran. */
+  /** Carrying media — a reply targets its parent's, not the one displayed on screen. */
   mediaObjectId?: number | null;
   content: string;
   timestamp: number | null;
@@ -267,10 +266,10 @@ export interface ReviewComment {
   cameraState: unknown;
   annotation: unknown;
   isEdited: boolean;
-  /** État du fil (D1) ; absent sur les commentaires antérieurs — voir `stateOf`. */
+  /** Thread state (D1); absent on earlier comments — see `stateOf`. */
   state?: 'OPEN' | 'WIP' | 'QUESTION' | 'WONT_FIX' | 'RESOLVED' | null;
   isResolved: boolean;
-  /** Note visible du partage client (32) : acceptée par l'API, pilotée par rien avant D1. */
+  /** Visible note of the client share (32): accepted by the API, driven by nothing before D1. */
   isVisibleToClient?: boolean;
   assigneeId?: number | null;
   resolvedBy?: AuthorRef | null;
@@ -282,12 +281,12 @@ export interface ReviewComment {
 
 // ── Notifications ─────────────────────────────────────────────────────────────
 /**
- * referenceId = tâche (TASK_ASSIGNED), playlist (LIVE), ou média — et pour les types portés
- * par une version (REVIEW_ASSIGNED, REVIEW_DECISION), le PREMIER média de cette version,
- * seul id que le viewer sait ouvrir. Sinon projet.
+ * referenceId = task (TASK_ASSIGNED), playlist (LIVE), or media — and for types carried by a
+ * version (REVIEW_ASSIGNED, REVIEW_DECISION), the FIRST media of that version, the only id the
+ * viewer knows how to open. Otherwise the project.
  *
- * Le type est dérivé du genre côté serveur (`lib/notificationKinds`) : c'est ce qui a mis
- * fin au `review_decision` en minuscules, que le front ne reconnaissait pas.
+ * The type is derived from the kind on the server side (`lib/notificationKinds`): that is what
+ * ended the lowercase `review_decision`, which the front end did not recognise.
  */
 export type NotificationType =
   | 'TASK_ASSIGNED'
@@ -303,9 +302,9 @@ export interface Notification {
   id: number;
   type: NotificationType | string;
   /**
-   * Clé traduisible et ses paramètres (D2). La phrase était écrite en français EN BASE
-   * puis servie telle quelle : `content` reste renvoyé, en anglais, comme repli pour les
-   * notifications antérieures.
+   * Translatable key and its parameters (D2). The sentence used to be written in French IN THE
+   * DATABASE and served as is: `content` is still returned, in English, as a fallback for earlier
+   * notifications.
    */
   messageKey?: string | null;
   params?: Record<string, string | number> | null;
@@ -316,7 +315,7 @@ export interface Notification {
   createdAt: string;
 }
 
-// ── Réglages projet (nomenclature / départements) ─────────────────────────────
+// ── Project settings (naming / departments) ───────────────────────────────────
 export interface Nomenclature {
   sequencePrefix: string;
   shotPrefix: string;
@@ -324,74 +323,73 @@ export interface Nomenclature {
   step: number;
 }
 /**
- * Département — étape du pipe (B1). Entité de plein droit : un référentiel de studio
- * (`projectId` null) hérité par défaut, qu'un projet peut remplacer par sa propre liste.
+ * Department — pipeline step (B1). A full-fledged entity: a studio reference (`projectId` null)
+ * inherited by default, which a project may replace with its own list.
  *
- * `order` n'est pas cosmétique : c'est le rang amont → aval qui décide de « la dernière
- * version » d'un asset ou d'un plan.
+ * `order` is not cosmetic: it is the upstream → downstream rank that decides "the latest
+ * version" of an asset or a shot.
  */
 export interface Department {
   id: number;
   studioId: number;
-  /** Null = référentiel du studio, hérité par tous ses projets. */
+  /** Null = studio reference, inherited by all its projects. */
   projectId: number | null;
   key: string;
   name: string;
   order: number;
-  /** Teinte d'affichage (hex #RRGGBB), normalisée à l'écran par `statusSwatch`. */
+  /** Display tint (hex #RRGGBB), normalised on screen by `statusSwatch`. */
   color: string | null;
   /**
-   * Image du département, déjà signée par le serveur. Au-delà de six étapes, une pastille
-   * de couleur ne se distingue plus — le logo du studio pour « Compositing », si.
+   * Department image, already signed by the server. Beyond six steps a colour dot is no longer
+   * distinguishable — the studio logo for "Compositing" is.
    */
   imageUrl?: string | null;
   /**
-   * La personne peut-elle créer une tâche dans cette étape ? Consultatif : c'est ce qui
-   * permet de proposer deux entrées plutôt que douze, mais le serveur revérifie à
-   * l'écriture — un client ne se contrôle pas lui-même.
+   * Can the person create a task in this step? Advisory: it is what allows offering two entries
+   * instead of twelve, but the server re-checks on write — a client does not police itself.
    */
   writable?: boolean;
 }
 /**
- * Le pipe tel que les réglages et les vues qui en dérivent le renvoient : la table
- * `Department` y est projetée sur `key`/`name`, déjà triée par `order`. L'identité et
- * la teinte ne sont pas sur le fil — n'attendre ici que ces deux champs.
+ * The pipeline as the settings and the views derived from it return it: the `Department` table is
+ * projected onto `key`/`name`, already sorted by `order`. Identity and tint are not on the wire —
+ * expect only these two fields here.
  */
 export type DepartmentSummary = Pick<Department, 'key' | 'name'>;
-/** Résolution de livraison (px). */
+/** Delivery resolution (px). */
 export interface Resolution {
   width: number;
   height: number;
 }
-/** Réglages pipeline effectifs (résolus) d'une entité — Phase 18. */
+/** Effective (resolved) pipeline settings of an entity — Phase 18. */
 export interface PipelineSettings {
   resolution: Resolution;
   framerate: number;
 }
-/** Override pipeline partiel (séquence/shot) : hérite du parent si absent. */
+/** Partial pipeline override (sequence/shot): inherits from the parent if absent. */
 export interface PipelineOverride {
   resolution?: Resolution;
   framerate?: number;
 }
 export type NamingMode = 'off' | 'warn' | 'reject';
-/** Convention de nommage des fichiers à l'upload (38.C). */
+/** File naming convention on upload (38.C). */
 export interface NamingRule {
   pattern: string;
   mode: NamingMode;
 }
 /**
- * Ce que le projet exige quand on confie la review d'une version à quelqu'un.
+ * What the project requires when a version's review is assigned to someone.
  *
- * Le plancher vaut pour toute consigne écrite, même facultative : une consigne de deux
- * caractères n'est pas une consigne courte, c'est un champ rempli pour passer.
+ * The floor applies to any written brief, even an optional one: a two-character brief is not a
+ * short brief, it is a field filled in just to get past it.
  */
 export interface ReviewRequestRule {
-  /** Confier une review sans consigne est-il refusé ? */
+  /** Is assigning a review without a brief refused? */
   requireNote: boolean;
-  /** Longueur minimale d'une consigne écrite, en caractères. */
+  /** Minimum length of a written brief, in characters. */
   minNoteLength: number;
 }
-/** Éclairage HDRI par défaut d'un projet (39.F) — miroir de LightingConfig (review). */
+/** Default HDRI lighting of a project (39.F) — mirror of LightingConfig (review). */
 export interface LightingDefault {
   hdriId?: string;
   exposure: number;
@@ -399,30 +397,30 @@ export interface LightingDefault {
   showBackground: boolean;
   groundShadow: boolean;
 }
-/** Gestion de couleur OCIO d'un projet (39.B) : config + display/view. */
+/** OCIO colour management of a project (39.B): config + display/view. */
 export interface ColorSettings {
   configId?: string;
   display?: string;
   view?: string;
 }
-/** GET /api/projects/:id/settings — aussi la shape des défauts studio (admin). */
+/** GET /api/projects/:id/settings — also the shape of the studio defaults (admin). */
 export interface ProjectSettings extends PipelineSettings {
   departments: DepartmentSummary[];
   nomenclature: Nomenclature;
-  /** Convention de nommage à l'upload (38.C). */
+  /** Naming convention on upload (38.C). */
   naming: NamingRule;
-  /** Consigne exigée quand on confie la review d'une version. */
+  /** Brief required when a version's review is assigned. */
   reviewRequest: ReviewRequestRule;
-  /** Override burn-ins partiel du projet (35.A) — voir types/share.ts. */
+  /** Partial burn-in override of the project (35.A) — see types/share.ts. */
   burnin?: Partial<import('./share').BurninConfig>;
-  /** Éclairage HDRI par défaut du viewer 3D (39.F), hérité studio→projet. */
+  /** Default HDRI lighting of the 3D viewer (39.F), inherited studio → project. */
   defaultLighting?: LightingDefault;
-  /** Gestion de couleur OCIO du projet (39.B) : config + display/view. */
+  /** OCIO colour management of the project (39.B): config + display/view. */
   color?: ColorSettings;
 }
 
-// Modules séparés (budget) : partage (35), stats (43.A), planning (43.C), préférences (42.A),
-// explorateur d'administration (refonte admin).
+// Separate modules (budget): sharing (35), stats (43.A), schedule (43.C), preferences (42.A),
+// administration explorer (admin redesign).
 export * from './chat';
 export * from './profile';
 export * from './share';

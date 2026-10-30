@@ -6,12 +6,10 @@ import { prisma } from '../../lib/prisma';
 import { logger } from '../../lib/logger';
 
 /**
- * Journal d'une exécution de synchronisation.
+ * Journal of a synchronization run.
  *
- * Une synchronisation touche des centaines d'entités : sans trace, un import partiel
- * est indébuggable. Les messages sont enregistrés sous forme de clé i18n + variables,
- * jamais de phrase toute faite — le journal se relit dans la langue du lecteur, des
- * mois après l'exécution.
+ * A synchronization touches hundreds of entities: without a trace, a partial import is undebuggable. Messages are recorded as an i18n key plus variables,
+ * never as a ready-made sentence: the journal is read back in the reader's language, months after the run.
  */
 
 export type SyncKind =
@@ -62,9 +60,8 @@ export class SyncJournal {
   }
 
   /**
-   * Ajoute une ligne au journal. Le plafond évite qu'une synchronisation en échec
-   * répété n'écrive des dizaines de milliers de lignes : au-delà, seuls les compteurs
-   * continuent d'avancer, et un dernier message le signale.
+   * Adds a line to the journal. The cap prevents a repeatedly failing synchronization from writing tens of thousands of lines: beyond it, only the counters
+   * keep advancing, and a final message says so.
    */
   async log(
     level: 'info' | 'warn' | 'error' | 'conflict',
@@ -98,8 +95,8 @@ export class SyncJournal {
   }
 
   /**
-   * Conflit détecté : les deux côtés ont changé depuis la dernière synchronisation.
-   * En politique manuelle, la ligne reste non résolue et attend un arbitrage humain.
+   * Conflict detected: both sides have changed since the last synchronization.
+   * Under the manual policy, the row stays unresolved and awaits human arbitration.
    */
   async conflict(
     messageKey: string,
@@ -120,7 +117,7 @@ export class SyncJournal {
         stats: stats as unknown as Prisma.InputJsonValue,
       },
     });
-    logger.info({ runId: this.runId, status: finalStatus, stats }, 'Synchronisation ShotGrid terminée');
+    logger.info({ runId: this.runId, status: finalStatus, stats }, 'ShotGrid sync finished');
   }
 
   async fail(err: unknown): Promise<void> {
@@ -134,7 +131,7 @@ export class SyncJournal {
         stats: Object.fromEntries(this.counters) as unknown as Prisma.InputJsonValue,
       },
     });
-    logger.error({ runId: this.runId, err: message }, 'Synchronisation ShotGrid en échec');
+    logger.error({ runId: this.runId, err: message }, 'ShotGrid sync failed');
   }
 
   get totals(): SyncCounters {
@@ -150,7 +147,7 @@ export class SyncJournal {
   }
 }
 
-/** Exécutions récentes d'une connexion, pour l'onglet ShotGrid. */
+/** Recent runs of a connection, for the ShotGrid tab. */
 export async function listRuns(connectionId: number, limit = 20) {
   return prisma.shotgridSyncRun.findMany({
     where: { connectionId },
@@ -180,7 +177,7 @@ export async function listLogs(
   return { items, total };
 }
 
-/** Conflits non arbitrés, tous runs confondus — bannière et page de comparaison. */
+/** Unarbitrated conflicts, all runs combined — banner and comparison page. */
 export async function listOpenConflicts(connectionId: number) {
   return prisma.shotgridSyncLog.findMany({
     where: { level: 'conflict', resolvedAt: null, run: { connectionId } },

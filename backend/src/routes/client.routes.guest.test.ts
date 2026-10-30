@@ -4,19 +4,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * Surface PUBLIQUE de partage — la seule écriture de l'application ouverte à un anonyme.
+ * PUBLIC sharing surface: the only write of the application open to an anonymous visitor.
  *
- * Deux constats se referment ici :
- *  - **A2-02** : `POST /:token/media/:id/comments` n'avait aucun frein de débit, alors que
- *    `/unlock`, juste au-dessus, en a un. Chaque appel crée une ligne, diffuse une socket,
- *    part en webhook et en note ShotGrid.
- *  - **A2-04** : `cameraState` y était déclaré `z.any()`, c'est-à-dire du JSON de forme et
- *    de volume libres écrits en base sur présentation d'un lien.
+ * Two findings are closed here:
+ *  - **A2-02**: `POST /:token/media/:id/comments` had no rate brake, whereas `/unlock`, just above it,
+ *    has one. Each call creates a row, broadcasts a socket, and goes out as a webhook and a ShotGrid note.
+ *  - **A2-04**: `cameraState` was declared `z.any()` there, that is, JSON of free shape and free volume
+ *    written to the database on presentation of a link.
  */
 
 const { db, share } = vi.hoisted(() => ({
-  // `findShareMedia` est appelée DANS le service : un mock d'export ne l'intercepte pas
-  // (ESM). C'est donc le dépôt qu'on bouchonne, et la portée s'exécute pour de vrai.
+  // `findShareMedia` is called INSIDE the service: a mock of the export does not intercept it (ESM).
+  // It is therefore the repository that is stubbed, and the scope runs for real.
   db: {
     comment: { findMany: vi.fn() },
     mediaObject: { findFirst: vi.fn(() => Promise.resolve({ id: 128, storageKey: 'review/x.mp4' })) },
@@ -33,13 +32,13 @@ const { db, share } = vi.hoisted(() => ({
 }));
 
 vi.mock('../lib/prisma', () => ({ prisma: db }));
-vi.mock('../services/StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: { getPresignedGetUrl: vi.fn(() => Promise.resolve('https://minio/x?sig')) },
   StorageService: { mediaKey: vi.fn(), thumbnailKey: vi.fn() },
 }));
-// Le service reste RÉEL, seuls ses accès au dépôt sont bouchonnés : ce qui est mesuré ici
-// est la chaîne complète d'écriture d'un invité — permission du lien, portée, validation des
-// blobs — et non la fidélité d'un mock. `createGuest` reste le seul point d'arrêt.
+// The service stays REAL; only its repository accesses are stubbed: what is measured here is the
+// complete write chain of a guest (link permission, scope, validation of the blobs), not the fidelity
+// of a mock. `createGuest` remains the only breakpoint.
 vi.mock('../services/ClientShareService', async (importActual) => ({
   ...(await importActual<typeof import('../services/ClientShareService')>()),
   loadShare: vi.fn(() => Promise.resolve(share)),
@@ -67,7 +66,7 @@ vi.mock('../lib/watermarkConfig', () => ({
 }));
 vi.mock('../services/AuditService', () => ({ logAudit: vi.fn() }));
 vi.mock('../lib/mediaAccess', () => ({ logMediaAccess: vi.fn() }));
-vi.mock('../services/JobService', () => ({ enqueueMediaJob: vi.fn(), enqueueSpatialThumb: vi.fn() }));
+vi.mock('../lib/queues', () => ({ enqueueMediaJob: vi.fn(), enqueueSpatialThumb: vi.fn() }));
 vi.mock('../services/SocketService', () => ({ emitToProject: vi.fn() }));
 
 import express from 'express';
@@ -76,15 +75,15 @@ import clientRoutes from './client.routes';
 import { errorHandler } from '../middleware/error';
 import { createGuest } from '../services/CommentService';
 
-/** Même plafond de corps que `app.ts` : c'est le schéma qu'on mesure, pas le parseur. */
+/** Same body ceiling as `app.ts`: it is the schema that is measured, not the parser. */
 const json = express.json({ limit: '2mb' });
 const app = express().use(json).use('/api/client', clientRoutes).use(errorHandler);
-/** Même routeur, mais derrière un proxy de confiance : `req.ip` y suit `X-Forwarded-For`. */
+/** Same router, but behind a trusted proxy: `req.ip` follows `X-Forwarded-For` there. */
 const behindProxy = express();
 behindProxy.set('trust proxy', true);
 behindProxy.use(json).use('/api/client', clientRoutes).use(errorHandler);
 
-/** Les compteurs sont keyés sur le jeton : un jeton par cas = un budget neuf. */
+/** Counters are keyed on the token: one token per case means a fresh budget. */
 const tokenOf = (name: string) => name.padEnd(24, 'x');
 
 const post = (token: string, body: Record<string, unknown>) =>
@@ -94,26 +93,26 @@ const comment = { guestName: 'Claire', content: 'le raccord saute' };
 
 beforeEach(() => vi.mocked(createGuest).mockClear());
 
-describe('POST /:token/media/:id/comments — schéma de la pose caméra (A2-04)', () => {
-  it('accepte la pose que le viewer 3D envoie réellement', async () => {
+describe('POST /:token/media/:id/comments — camera pose schema (A2-04)', () => {
+  it('accepts the pose that the 3D viewer actually sends', async () => {
     const cameraState = { position: { x: 1, y: 2, z: 3 }, target: { x: 0, y: 0, z: 0 }, fov: 45 };
     await post(tokenOf('shape-ok'), { ...comment, cameraState }).expect(201);
     expect(vi.mocked(createGuest).mock.calls[0]?.[2]).toMatchObject({ cameraState });
   });
 
-  it('refuse un blob quelconque et n’écrit rien', async () => {
+  it('rejects an arbitrary blob and writes nothing', async () => {
     const cameraState = { pad: 'A'.repeat(200_000) };
     await post(tokenOf('shape-ko'), { ...comment, cameraState }).expect(400);
     expect(createGuest).not.toHaveBeenCalled();
   });
 
-  it('tolère l’absence de pose comme le fait la page de partage', async () => {
+  it('tolerates the absence of a pose, as the share page does', async () => {
     await post(tokenOf('shape-nul'), { ...comment, cameraState: null }).expect(201);
   });
 });
 
-describe('POST /:token/media/:id/comments — frein de débit (A2-02)', () => {
-  it('borne un invité à trente commentaires par quart d’heure, puis refuse en 429', async () => {
+describe('POST /:token/media/:id/comments — rate brake (A2-02)', () => {
+  it('bounds a guest to thirty comments per quarter hour, then refuses with 429', async () => {
     const token = tokenOf('freinip');
     for (let i = 0; i < 30; i += 1) {
       expect((await post(token, comment)).status).toBe(201);
@@ -124,11 +123,11 @@ describe('POST /:token/media/:id/comments — frein de débit (A2-02)', () => {
   });
 
   /**
-   * Le point qui justifie la double clé : sous `TRUST_PROXY`, l'IP est ce que l'appelant
-   * déclare. La renouveler rouvre autant de compteurs par IP qu'on veut — et ne rouvre
-   * rien du compteur par lien, qui est le seul plafond réellement infalsifiable ici.
+   * The point that justifies the double key: under `TRUST_PROXY`, the IP is whatever the caller
+   * declares. Renewing it reopens as many per-IP counters as one likes, and reopens nothing of the
+   * per-link counter, which is the only ceiling that is truly unforgeable here.
    */
-  it('ne se laisse pas rouvrir en changeant d’adresse déclarée', async () => {
+  it('cannot be reopened by changing the declared address', async () => {
     const token = tokenOf('freinlien');
     const send = (ip: string) =>
       request(behindProxy)
@@ -138,8 +137,8 @@ describe('POST /:token/media/:id/comments — frein de débit (A2-02)', () => {
     for (let i = 0; i < 120; i += 1) {
       expect((await send(`10.0.0.${i}`)).status).toBe(201);
     }
-    // 121ᵉ appel, adresse encore jamais vue : son compteur par IP est vierge, le budget du
-    // lien ne l'est plus.
+    // 121st call, address never seen before: its per-IP counter is fresh, but the link's budget
+    // no longer is.
     expect((await send('10.9.9.9')).status).toBe(429);
   });
 });

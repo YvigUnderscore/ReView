@@ -14,13 +14,13 @@ import { VideoDiffOverlay } from './DiffOverlay';
 import VideoPane from './VideoPane';
 
 /**
- * Branche **vidéo** du viewer de review (extrait de ReviewViewer, budget 300) : lecteur
- * maître (menu clic droit, trim) + comparaison — wipe/diff en overlay (A/B simple) ou
- * panes esclaves synchronisés, en côte-à-côte (1) ou grille 2×2 (2-3, 34.D).
+ * **Video** branch of the review viewer (extracted from ReviewViewer, budget 300): master
+ * player (right-click menu, trim) + comparison — wipe/diff as an overlay (simple A/B) or
+ * synchronized slave panes, side by side (1) or in a 2×2 grid (2-3, 34.D).
  *
- * Tous les panes ajustent leur média dans une **zone commune** (`CompareFitProvider`) : le
- * maître porte la timeline et le transport sous l'image, les panes B un en-tête, et deux
- * ajustements chacun chez soi donnaient deux tailles d'affichage à l'écran.
+ * All panes fit their media into a **common area** (`CompareFitProvider`): the master carries
+ * the timeline and transport under the image, the B panes a header, and two separate fits
+ * would give two display sizes on screen.
  */
 export default function VideoReviewSection({
   data,
@@ -78,7 +78,7 @@ export default function VideoReviewSection({
   sharedWipe?: ComponentProps<typeof VideoWipeOverlay>['sharedWipe'];
 }) {
   const compareId = compareIds[0] ?? null;
-  // Grille 2×2 (34.D) : dès 2 panes B — wipe/diff n'ont de sens qu'en A/B simple.
+  // 2×2 grid (34.D): from 2 B panes on — wipe/diff only make sense in simple A/B.
   const gridActive = compareIds.length >= 2;
   return (
     <CompareFitProvider>
@@ -137,7 +137,7 @@ export default function VideoReviewSection({
               startFrame={startFrame}
               onFullscreen={onFullscreen}
               trimRange={
-                // Le proxy trimé actif redémarre à 0 : l'ombrage ne vaut que sur la vidéo complète.
+                // The active trimmed proxy restarts at 0: the shading only applies to the full video.
                 data.trim && !data.trimProxyReady
                   ? { start: data.trim.inFrame / fps, end: data.trim.outFrame / fps }
                   : null
@@ -151,7 +151,7 @@ export default function VideoReviewSection({
             />
           </div>
         </ReviewContextMenu>
-        {/* Panes B synchronisés sur le maître : côte-à-côte (1) ou grille 2×2 (34.D). */}
+        {/* B panes synchronized to the master: side by side (1) or 2×2 grid (34.D). */}
         {(compareMode === 'side' || gridActive) &&
           compareIds.map((id) => (
             <VideoComparePane

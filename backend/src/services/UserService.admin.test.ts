@@ -20,7 +20,7 @@ vi.mock('../lib/userCache', () => ({ invalidateAuthUser: vi.fn() }));
 vi.mock('../lib/sessions', () => ({ revokeAllCredentials: vi.fn() }));
 vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
 vi.mock('./InvitationService', () => ({ assertCanInvite: vi.fn(), sendInvitation: vi.fn() }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: { getPresignedGetUrl: vi.fn() },
   StorageService: class {},
 }));
@@ -32,7 +32,7 @@ import { logAudit } from './AuditService';
 import { revokeAllCredentials } from '../lib/sessions';
 import { Role } from '@prisma/client';
 
-/** Le compte visé, tel que le lisent `updateUser` et `assertNotLastAdmin`. */
+/** The targeted account, as read by `updateUser` and `assertNotLastAdmin`. */
 const target = (over: Partial<{ role: Role; isService: boolean; disabledAt: Date | null }> = {}) =>
   db.user.findUnique.mockResolvedValue({
     role: Role.ADMIN,
@@ -41,10 +41,10 @@ const target = (over: Partial<{ role: Role; isService: boolean; disabledAt: Date
     ...over,
   });
 
-/** Le `where` du comptage des administrateurs restants. */
+/** The `where` of the count of remaining administrators. */
 const countWhere = () => (db.user.count.mock.calls[0]![0] as { where: Record<string, unknown> }).where;
 
-/** Le `data` réellement écrit par le premier `user.update`. */
+/** The `data` actually written by the first `user.update`. */
 const updateData = () => (db.user.update.mock.calls[0]![0] as { data: Record<string, unknown> }).data;
 
 beforeEach(() => {
@@ -58,23 +58,22 @@ beforeEach(() => {
 });
 
 /**
- * Sans ce garde-fou, l'unique administrateur pouvait se rétrograder, se désactiver ou être
- * supprimé : le studio restait debout mais plus personne ne pouvait créer un compte ni
- * toucher aux réglages, et `setup` refuse de rejouer dès qu'un studio existe. Le seul
- * recours était un UPDATE SQL sur la base.
+ * Without this guard, the sole administrator could demote themselves, deactivate themselves or be deleted: the studio
+ * stayed up but nobody could create an account or touch the settings, and `setup` refuses to run again once a studio
+ * exists. The only recourse was a SQL UPDATE on the database.
  */
 describe('assertNotLastAdmin', () => {
-  it('laisse passer tant qu’un autre administrateur actif subsiste', async () => {
+  it('lets it through as long as another active administrator remains', async () => {
     db.user.count.mockResolvedValue(1);
     await expect(assertNotLastAdmin(1)).resolves.toBeUndefined();
   });
 
-  it('refuse quand il n’en reste aucun autre (400 LAST_ADMIN)', async () => {
+  it('refuses when no other remains (400 LAST_ADMIN)', async () => {
     db.user.count.mockResolvedValue(0);
     await expect(assertNotLastAdmin(1)).rejects.toMatchObject({ statusCode: 400, code: 'LAST_ADMIN' });
   });
 
-  it('ne compte que les administrateurs utilisables : ni service, ni désactivé, ni soi-même', async () => {
+  it('counts only usable administrators: neither service, nor deactivated, nor oneself', async () => {
     db.user.count.mockResolvedValue(1);
     await assertNotLastAdmin(1);
     expect(countWhere()).toEqual({
@@ -85,13 +84,13 @@ describe('assertNotLastAdmin', () => {
     });
   });
 
-  it('ne s’applique pas à un compte qui n’est pas administrateur', async () => {
+  it('does not apply to an account that is not an administrator', async () => {
     target({ role: Role.ARTIST });
     await expect(assertNotLastAdmin(1)).resolves.toBeUndefined();
     expect(db.user.count).not.toHaveBeenCalled();
   });
 
-  it('ne s’applique ni à un compte de service ni à un administrateur déjà désactivé', async () => {
+  it('applies neither to a service account nor to an already deactivated administrator', async () => {
     target({ isService: true });
     await assertNotLastAdmin(1);
     target({ disabledAt: new Date() });
@@ -99,20 +98,20 @@ describe('assertNotLastAdmin', () => {
     expect(db.user.count).not.toHaveBeenCalled();
   });
 
-  it('reste silencieux sur un compte inexistant (le 404 est le travail de l’appelant)', async () => {
+  it("stays silent on a nonexistent account (the 404 is the caller's job)", async () => {
     db.user.findUnique.mockResolvedValue(null);
     await expect(assertNotLastAdmin(404)).resolves.toBeUndefined();
   });
 });
 
-describe('changeRole — dernier administrateur', () => {
-  it('refuse de rétrograder le dernier administrateur', async () => {
+describe('changeRole: last administrator', () => {
+  it('refuses to demote the last administrator', async () => {
     db.user.count.mockResolvedValue(0);
     await expect(changeRole(1, 1, Role.ARTIST)).rejects.toMatchObject({ code: 'LAST_ADMIN' });
     expect(db.user.update).not.toHaveBeenCalled();
   });
 
-  it('accepte la rétrogradation dès qu’un autre administrateur reste', async () => {
+  it('accepts the demotion as soon as another administrator remains', async () => {
     db.user.count.mockResolvedValue(1);
     await changeRole(1, 2, Role.ARTIST);
     expect(db.user.update).toHaveBeenCalledWith(
@@ -120,15 +119,15 @@ describe('changeRole — dernier administrateur', () => {
     );
   });
 
-  it('promouvoir en ADMIN ne compte rien', async () => {
+  it('promoting to ADMIN counts for nothing', async () => {
     await changeRole(1, 2, Role.ADMIN);
     expect(db.user.count).not.toHaveBeenCalled();
     expect(db.user.update).toHaveBeenCalled();
   });
 });
 
-describe('updateUser — dernier administrateur et désactivation', () => {
-  it('refuse de rétrograder le dernier administrateur', async () => {
+describe('updateUser: last administrator and deactivation', () => {
+  it('refuses to demote the last administrator', async () => {
     db.user.count.mockResolvedValue(0);
     await expect(updateUser(1, 1, { role: Role.SUPERVISOR })).rejects.toMatchObject({
       code: 'LAST_ADMIN',
@@ -136,13 +135,13 @@ describe('updateUser — dernier administrateur et désactivation', () => {
     expect(db.user.update).not.toHaveBeenCalled();
   });
 
-  it('refuse de désactiver le dernier administrateur', async () => {
+  it('refuses to deactivate the last administrator', async () => {
     db.user.count.mockResolvedValue(0);
     await expect(updateUser(1, 1, { disabled: true })).rejects.toMatchObject({ code: 'LAST_ADMIN' });
     expect(db.user.update).not.toHaveBeenCalled();
   });
 
-  it('désactive : date posée, identifiants révoqués, audit nommé USER_DISABLE', async () => {
+  it('deactivates: date set, credentials revoked, audit named USER_DISABLE', async () => {
     db.user.count.mockResolvedValue(1);
     await updateUser(1, 2, { disabled: true });
     expect(updateData().disabledAt).toBeInstanceOf(Date);
@@ -150,54 +149,54 @@ describe('updateUser — dernier administrateur et désactivation', () => {
     expect(logAudit).toHaveBeenCalledWith(expect.objectContaining({ action: 'USER_DISABLE' }));
   });
 
-  it('réactive : la date retombe à null, audit nommé USER_ENABLE', async () => {
+  it('reactivates: the date falls back to null, audit named USER_ENABLE', async () => {
     target({ disabledAt: new Date('2026-01-01') });
     await updateUser(1, 2, { disabled: false });
     expect(updateData()).toEqual({ disabledAt: null });
     expect(logAudit).toHaveBeenCalledWith(expect.objectContaining({ action: 'USER_ENABLE' }));
-    // Réactiver ne coupe rien : les jetons ont déjà été révoqués à la désactivation.
+    // Reactivating cuts nothing: the tokens were already revoked at deactivation.
     expect(revokeAllCredentials).not.toHaveBeenCalled();
   });
 
-  it('re-désactiver ne rajeunit pas la date : c’est celle du départ', async () => {
+  it('deactivating again does not renew the date: it is the departure date', async () => {
     const departure = new Date('2026-01-01');
     target({ disabledAt: departure, role: Role.ARTIST });
     await updateUser(1, 2, { disabled: true });
     expect(updateData()).toEqual({ disabledAt: departure });
   });
 
-  it('une édition ordinaire garde l’action USER_UPDATE', async () => {
+  it('an ordinary edit keeps the USER_UPDATE action', async () => {
     target({ role: Role.ARTIST });
     await updateUser(1, 2, { name: 'Ana' });
     expect(logAudit).toHaveBeenCalledWith(expect.objectContaining({ action: 'USER_UPDATE' }));
   });
 });
 
-describe('setDisabled / deleteUser — chemin par défaut et geste explicite', () => {
-  it('setDisabled écrit la date sans rien supprimer', async () => {
+describe('setDisabled / deleteUser: default path and explicit gesture', () => {
+  it('setDisabled writes the date without deleting anything', async () => {
     target({ role: Role.ARTIST });
     await setDisabled(1, 2, true);
     expect(db.user.delete).not.toHaveBeenCalled();
     expect(updateData().disabledAt).toBeInstanceOf(Date);
   });
 
-  it('setDisabled refuse qu’on se désactive soi-même', async () => {
+  it('setDisabled refuses to deactivate oneself', async () => {
     await expect(setDisabled(1, 1, true)).rejects.toMatchObject({ statusCode: 400 });
     expect(db.user.update).not.toHaveBeenCalled();
   });
 
-  it('deleteUser refuse de supprimer le dernier administrateur', async () => {
+  it('deleteUser refuses to delete the last administrator', async () => {
     db.user.count.mockResolvedValue(0);
     await expect(deleteUser(1, 2)).rejects.toMatchObject({ code: 'LAST_ADMIN' });
     expect(db.user.delete).not.toHaveBeenCalled();
   });
 
-  it('deleteUser refuse l’auto-suppression avant tout autre contrôle', async () => {
+  it('deleteUser refuses self-deletion before any other check', async () => {
     await expect(deleteUser(1, 1)).rejects.toMatchObject({ statusCode: 400 });
     expect(db.user.count).not.toHaveBeenCalled();
   });
 
-  it('deleteUser révoque les partages ouverts par la personne, puis supprime', async () => {
+  it('deleteUser revokes the shares opened by the person, then deletes', async () => {
     target({ role: Role.ARTIST });
     db.shareLink.updateMany.mockResolvedValue({ count: 3 });
     await deleteUser(1, 2);

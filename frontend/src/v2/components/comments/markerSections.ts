@@ -4,12 +4,12 @@
 import type { ReviewComment, TimelineMarker } from '../../types/api';
 
 /**
- * Découpage du fil de commentaires par les marqueurs de timeline (retours 34) : chaque
- * marqueur devient un séparateur, les commentaires horodatés sont rangés dans la section
- * du dernier marqueur qui les précède (frame du marqueur ≤ frame du commentaire).
+ * Splits the comment thread by timeline markers (feedback round 34): each marker becomes a
+ * separator, and timestamped comments are filed in the section of the last marker preceding them
+ * (marker frame <= comment frame).
  */
 export interface MarkerSection {
-  /** null = section de tête (avant le premier marqueur + commentaires sans timecode). */
+  /** null = head section (before the first marker, plus comments without a timecode). */
   marker: TimelineMarker | null;
   comments: ReviewComment[];
 }
@@ -26,7 +26,7 @@ export function markerSections(
     ...sorted.map((m) => ({ marker: m, comments: [] as ReviewComment[] })),
   ];
   for (const c of comments) {
-    // Sans timecode : commentaire général → section de tête, avant les « chapitres ».
+    // Without a timecode: a general comment goes to the head section, before the "chapters".
     const frame = c.timestamp != null ? Math.round(c.timestamp * (fps || 24)) : null;
     let idx = 0;
     if (frame != null) for (let i = 0; i < sorted.length; i++) if (frame >= sorted[i].frame) idx = i + 1;

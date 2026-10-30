@@ -1,8 +1,8 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { MediaKind } from '../../../types/api';
-import type { MessageKey } from '../../../i18n';
+import type { MediaKind } from '@/v2/types/api';
+import type { MessageKey } from '@/v2/i18n';
 import { modesFor, switcherModesFor, type ModeId, type ReviewMode } from './modes';
 import {
   DEFAULT_TOOL,
@@ -14,38 +14,36 @@ import {
 } from './tools';
 
 /**
- * Registre des raccourcis de la review — **source de vérité unique**.
+ * Review shortcut registry — **single source of truth**.
  *
- * Deux listes existaient : celle que les gestionnaires appliquent, et celle que l'aide
- * (`components/ShortcutsHelp`) récitait. Elles ont divergé — l'aide omettait `Tab`, `+`/`-`,
- * les crochets de décalage A/B, les bookmarks caméra et la moitié des outils du rail, tout en
- * promettant un outil « Zoom » qui n'armait rien. Ce fichier porte donc les deux rôles :
+ * Two lists used to exist: the one the handlers apply, and the one the help
+ * (`components/ShortcutsHelp`) recited. They had diverged — the help omitted `Tab`, `+`/`-`, the
+ * A/B offset brackets, the camera bookmarks and half of the rail tools, while promising a "Zoom"
+ * tool that armed nothing. This file therefore carries both roles:
  *
- *  1. `chromeCommandFor` **résout** une frappe du chrome (mode, outil, dock, repos) — c'est ce
- *     que `useChromeState` applique, et rien d'autre ne décide de ces touches ;
- *  2. `reviewShortcutGroups` **décrit** tous les raccourcis de la review pour l'aide, qui s'en
- *     déduit au lieu de tenir sa propre copie.
+ *  1. `chromeCommandFor` **resolves** a chrome keystroke (mode, tool, dock, reset) — this is what
+ *     `useChromeState` applies, and nothing else decides these keys;
+ *  2. `reviewShortcutGroups` **describes** every review shortcut for the help, which derives from it
+ *     instead of keeping its own copy.
  *
- * Les touches d'outils et les deux actions de vue sont **dérivées de `tools.ts`** : on ne les
- * recopie jamais, sinon la divergence revient par la porte de service. Chaque entrée nomme le
- * gestionnaire qui l'exécute (`handler`) : une entrée sans gestionnaire est un raccourci mort,
- * et le test du registre le refuse.
+ * Tool keys and the two view actions are **derived from `tools.ts`**: they are never copied, or the
+ * divergence would come back through the service door. Each entry names the handler that runs it
+ * (`handler`): an entry without a handler is a dead shortcut, and the registry test rejects it.
  */
 
 /**
- * Une touche telle qu'elle s'affiche. `char` est un caractère technique, rendu dans un `<kbd>` :
- * une lettre, un chiffre, un symbole, ou un nom de modificateur identique dans toutes les
- * langues (`Ctrl`, `Alt`, `Tab`). Tout nom de touche qui se traduit — Espace, Maj, Suppr, clic
- * droit, ZQSD — passe par `nameKey`, jamais par `char` : les treize autres catalogues doivent
- * pouvoir le rendre.
+ * A key as it is displayed. `char` is a technical character, rendered in a `<kbd>`: a letter, a
+ * digit, a symbol, or a modifier name identical in all languages (`Ctrl`, `Alt`, `Tab`). Any key
+ * name that gets translated — Space, Shift, Delete, right click, ZQSD — goes through `nameKey`,
+ * never through `char`: the thirteen other catalogues must be able to render it.
  */
 export type KeyToken = { char: string } | { nameKey: MessageKey };
 
 export interface ReviewShortcut {
-  /** Touches du raccourci, dans l'ordre d'affichage. */
+  /** Keys of the shortcut, in display order. */
   keys: KeyToken[];
   labelKey: MessageKey;
-  /** Hook ou composant qui exécute réellement le geste. */
+  /** Hook or component that actually runs the gesture. */
   handler: string;
 }
 
@@ -57,12 +55,12 @@ export interface ShortcutGroup {
 const ch = (char: string): KeyToken => ({ char });
 const named = (nameKey: MessageKey): KeyToken => ({ nameKey });
 
-/** Touches identiques partout : ce sont les seules à s'écrire en clair dans un `char`. */
+/** Keys identical everywhere: these are the only ones written as plain text in a `char`. */
 export const NEUTRAL_KEY_NAMES = ['Ctrl', 'Alt', 'Tab'];
 
-// ───────────────────────────── résolution d'une frappe ─────────────────────────────
+// ───────────────────────────── keystroke resolution ─────────────────────────────
 
-/** Ce qu'une frappe demande au chrome. `null` = la touche ne nous appartient pas. */
+/** What a keystroke asks of the chrome. `null` = the key is not ours. */
 export type ChromeCommand =
   | { action: 'panel' }
   | { action: 'rest' }
@@ -73,32 +71,32 @@ export interface ChromeKeyContext {
   kind: MediaKind;
   mode: ModeId;
   tool: ToolId;
-  /** Modes offerts par la bascule, dans l'ordre des touches numériques. */
+  /** Modes offered by the toggle, in digit-key order. */
   modes: ReviewMode[];
   /**
-   * Outils réellement au rail pour un mode. Par défaut ceux du type de média ; le lecteur de
-   * montage passe les siens — un outil absent du rail ne doit pas être armable au clavier.
+   * Tools actually on the rail for a mode. Defaults to those of the media type; the edit mount
+   * passes its own — a tool absent from the rail must not be armable from the keyboard.
    */
   toolsOf: (mode: ModeId) => ReviewTool[];
 }
 
 /**
- * Résout une frappe du chrome. Fonction pure : les gardes (saisie en cours, modificateurs,
- * dialogue ouvert) restent au gestionnaire, qui seul connaît l'événement.
+ * Resolves a chrome keystroke. Pure function: the guards (input in progress, modifiers, open
+ * dialog) stay with the handler, which alone knows the event.
  */
 export function chromeCommandFor(key: string, ctx: ChromeKeyContext): ChromeCommand | null {
   if (key === 'Tab') return { action: 'panel' };
-  // Échap ne fait quelque chose que s'il y a de quoi : sinon la touche repart vers les autres
-  // écouteurs (sortie du mode théâtre, désélection d'un commentaire).
+  // Escape only does something when there is something to do: otherwise the key goes back to the other
+  // listeners (leaving theater mode, deselecting a comment).
   if (key === 'Escape') return ctx.tool === DEFAULT_TOOL ? null : { action: 'rest' };
 
   const index = Number(key) - 1;
   if (Number.isInteger(index) && index >= 0 && index < ctx.modes.length)
     return { action: 'mode', mode: ctx.modes[index].value };
 
-  // Lettre d'outil : le mode courant d'abord, sinon les autres modes — armer l'outil d'un
-  // autre mode y bascule (T/R/S ramènent à « Nettoyer », un outil de tracé arme l'annotation),
-  // au lieu de ne rien faire.
+  // Tool letter: the current mode first, otherwise the other modes — arming the tool of another
+  // mode switches to it (T/R/S bring back "Clean up", a drawing tool arms annotation),
+  // instead of doing nothing.
   const letter = key.toUpperCase();
   if (letter.length !== 1) return null;
   for (const mode of toolSearchOrder(ctx.kind, ctx.mode)) {
@@ -108,16 +106,16 @@ export function chromeCommandFor(key: string, ctx: ChromeKeyContext): ChromeComm
   return null;
 }
 
-// ─────────────────────────────── description pour l'aide ───────────────────────────────
+// ─────────────────────────────── description for the help ───────────────────────────────
 
 const CHROME = 'useChromeState';
 
-/** Rangées des outils d'un type de média — leurs touches viennent de `tools.ts`. */
+/** Rows of the tools of a media type — their keys come from `tools.ts`. */
 function toolRows(kind: MediaKind): ReviewShortcut[] {
   const rows: ReviewShortcut[] = [];
-  // Un outil revient dans plusieurs modes (`nav` partout, la mise au point en exploration et
-  // en mise en scène) : une rangée par couple touche + libellé. La clé de traduction n'est
-  // jamais concaténée dans un identifiant — une clé n'a rien à faire dans une chaîne assemblée.
+  // A tool recurs in several modes (`nav` everywhere, focus in exploration and
+  // in staging): one row per key + label pair. The translation key is
+  // never concatenated into an identifier — a key has no business in an assembled string.
   const seen = new Map<string, Set<MessageKey>>();
   for (const mode of modesFor(kind))
     for (const tool of toolsFor(mode.value, kind)) {
@@ -129,17 +127,17 @@ function toolRows(kind: MediaKind): ReviewShortcut[] {
   return rows;
 }
 
-/** Les deux actions de vue (`F`, `H`) avec le libellé du type de média. */
+/** The two view actions (`F`, `H`) with the media type's label. */
 function viewRows(kind: MediaKind, handler: string): ReviewShortcut[] {
   return viewActionsFor(kind).map((a) => ({ keys: [ch(a.key)], labelKey: a.labelKey, handler }));
 }
 
-/** Raccourcis du chrome, communs aux quatre viewers. */
+/** Chrome shortcuts, shared by the four viewers. */
 function chromeRows(): ReviewShortcut[] {
   return [
     {
-      // Les touches numériques suivent la bascule de mode : au plus trois modes (spatial),
-      // deux sur un média plat. L'infobulle de chaque segment porte le même numéro.
+      // The digit keys follow the mode toggle: at most three modes (spatial),
+      // two on a flat media. Each segment's tooltip carries the same number.
       keys: switcherModesFor('SPLAT').map((_, i) => ch(String(i + 1))),
       labelKey: 'review.mode',
       handler: CHROME,
@@ -147,14 +145,14 @@ function chromeRows(): ReviewShortcut[] {
     { keys: [ch('Tab')], labelKey: 'shortcuts.dock', handler: CHROME },
     { keys: [named('common.escKey')], labelKey: 'shortcuts.restTool', handler: CHROME },
     { keys: [ch('Ctrl'), ch('V')], labelKey: 'shortcuts.pasteReference', handler: 'ReviewCanvasRefs' },
-    // Deux rangées plutôt qu'un « Ctrl + Z / Y » : chaque touche est écrite telle qu'on la presse.
-    // Un seul gestionnaire pour tous les historiques de la review depuis le lot 9 (annotation en
-    // cours, brosse 3D, éditeur de splat) : il sert le plus prioritaire qui a un cran à rendre.
+    // Two rows rather than one "Ctrl + Z / Y": each key is written as it is pressed.
+    // A single handler for all the review histories since batch 9 (annotation in
+    // progress, 3D brush, splat editor): it serves the highest-priority one that has a step to undo.
     { keys: [ch('Ctrl'), ch('Z')], labelKey: 'common.undo', handler: 'useUndoScope' },
     { keys: [ch('Ctrl'), ch('Y')], labelKey: 'common.redo', handler: 'useUndoScope' },
-    // Le clic droit porte les actions dans les QUATRE viewers depuis le lot 8 : bref, il ouvre le
-    // menu ; maintenu, il vole (spatial seulement). Les deux gestes se départagent dans
-    // `viewer/contextGesture`, et le vol garde sa propre rangée plus bas.
+    // Right-click carries the actions in ALL FOUR viewers since batch 8: briefly, it opens the
+    // menu; held, it steals (spatial only). The two gestures are told apart in
+    // `viewer/contextGesture`, and flight keeps its own row further down.
     {
       keys: [named('key.rightClick')],
       labelKey: 'shortcuts.contextMenuBrief',
@@ -163,7 +161,7 @@ function chromeRows(): ReviewShortcut[] {
   ];
 }
 
-/** Transport du lecteur vidéo et décalage de la comparaison A/B. */
+/** Video player transport and A/B comparison offset. */
 function videoRows(): ReviewShortcut[] {
   const transport = 'useReviewShortcuts';
   return [
@@ -184,7 +182,7 @@ function videoRows(): ReviewShortcut[] {
   ];
 }
 
-/** Vue des deux viewers plats : ajuster, 1:1, pas de zoom. */
+/** View of the two flat viewers: fit, 1:1, no zoom. */
 function flatRows(): ReviewShortcut[] {
   return [
     ...toolRows('VIDEO'),
@@ -193,7 +191,7 @@ function flatRows(): ReviewShortcut[] {
   ];
 }
 
-/** Viewers spatiaux : outils, vol, cadrage, édition, bookmarks et transport caméra. */
+/** Spatial viewers: tools, flight, framing, editing, bookmarks and camera transport. */
 function spatialRows(): ReviewShortcut[] {
   const camera = 'useCameraShortcuts';
   return [
@@ -205,8 +203,8 @@ function spatialRows(): ReviewShortcut[] {
     },
     ...viewRows('SPLAT', 'useFrameShortcuts'),
     { keys: [named('key.delete')], labelKey: 'shortcuts.deleteSelection', handler: 'useEditorShortcuts' },
-    // Même touche, deux viewers : sur un splat elle retire les points sélectionnés, sur une
-    // scène USD elle masque le prim désigné — un override, jamais une suppression de fichier.
+    // Same key, two viewers: on a splat it removes the selected points, on a
+    // USD scene it hides the designated prim — an override, never a file deletion.
     { keys: [named('key.delete')], labelKey: 'shortcuts.hidePrim', handler: 'useSceneEditShortcuts' },
     {
       keys: [ch('Alt'), ch('1'), ch('9')],
@@ -225,9 +223,9 @@ function spatialRows(): ReviewShortcut[] {
 }
 
 /**
- * Tous les groupes de raccourcis de la review, dans l'ordre d'affichage de l'aide. La section
- * « Navigation », elle, reste pilotée par `lib/shortcutRegistry` : ses touches sont
- * reconfigurables et persistées côté compte, ce que ces raccourcis-là ne sont pas.
+ * All the review shortcut groups, in the help's display order. The "Navigation" section, however,
+ * stays driven by `lib/shortcutRegistry`: its keys are reconfigurable and persisted on the account,
+ * which these shortcuts are not.
  */
 export function reviewShortcutGroups(): ShortcutGroup[] {
   return [

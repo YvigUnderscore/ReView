@@ -20,25 +20,23 @@ import { CARD_ASSIGNEE_SELECT, awaitingReviewByShot, signAssignees } from '../li
 import { unseenByShot } from './EntityVisitService';
 
 /**
- * Logique métier des séquences (C3).
+ * Business logic for sequences (C3).
  *
- * Une séquence n'avait pas de page : c'était un accordéon dans un onglet, et son montage
- * se cachait derrière un dépliage. Le détail renvoyé ici est donc celui d'une vraie fiche
- * — sa vignette, ses départements, et ses plans avec de quoi les reconnaître (image,
- * statut, plage de frames) plutôt qu'une liste de codes.
+ * A sequence used to have no page: it was an accordion inside a tab, and its editing was hidden
+ * behind a fold-out. The detail returned here is therefore that of a real sheet: its thumbnail, its
+ * departments, and its shots with what is needed to recognize them (image, status, frame range)
+ * rather than a list of codes.
  *
- * Les vignettes de plans sont résolues en une passe groupée : la variante unitaire dans
- * un `.map` signait une URL MinIO par plan, ce qui rendait l'ouverture lente bien avant
- * qu'une séquence n'atteigne cent plans.
+ * Shot thumbnails are resolved in a single grouped pass: the per-item variant inside a `.map` signed
+ * one MinIO URL per shot, which made opening slow well before a sequence reached a hundred shots.
  */
 
 /**
- * Plans et assets ramenés par la fiche d'une séquence.
+ * Shots and assets returned by a sequence's sheet.
  *
- * La fiche les affiche d'un bloc : elle n'est pas paginée, mais elle ne peut pas non plus
- * être non bornée — une séquence mal découpée porterait la moitié du long-métrage. Le
- * plafond est haut pour ne jamais mordre sur un découpage sain (une séquence dépasse
- * rarement la centaine de plans) et `shotCount`/`assetCount` disent le compte réel.
+ * The sheet displays them at once: it is not paginated, but it cannot be unbounded either: a badly
+ * split sequence would carry half of the feature film. The cap is high so it never bites a healthy
+ * breakdown (a sequence rarely exceeds a hundred shots), and `shotCount`/`assetCount` report the real count.
  */
 const DETAIL_LIMIT = 500;
 
@@ -47,18 +45,17 @@ export interface BulkSequenceItem {
   code: string;
   order?: number;
   /**
-   * Épisode d'accueil (niveau facultatif, cf. `EpisodeService`). Absent ou `null` : la
-   * séquence reste hors épisode — l'état normal d'un long-métrage, et celui d'un projet
-   * où le niveau n'est pas activé.
+   * Host episode (optional level, see `EpisodeService`). Absent or `null`: the sequence stays outside
+   * any episode, the normal state of a feature film and of a project where the level is not enabled.
    */
   episodeId?: number | null;
 }
 
 /**
- * Les épisodes cités appartiennent-ils bien à ce projet ?
+ * Do the cited episodes belong to this project?
  *
- * Sans ce contrôle, un identifiant emprunté à un autre film rangerait la séquence dans
- * l'épisode du voisin — et le rattachement ne se voit depuis aucune des deux pages.
+ * Without this check, an identifier borrowed from another film would file the sequence under the
+ * neighbour's episode, and the attachment is visible from neither page.
  */
 async function assertEpisodesInProject(projectId: number, items: BulkSequenceItem[]): Promise<void> {
   const ids = [...new Set(items.map((i) => i.episodeId).filter((v): v is number => typeof v === 'number'))];
@@ -69,7 +66,7 @@ async function assertEpisodesInProject(projectId: number, items: BulkSequenceIte
   }
 }
 
-/** Création en lot : un doublon dans le lot ou en base annule tout, rien n'est créé. */
+/** Bulk creation: a duplicate inside the batch or in the database cancels everything; nothing is created. */
 export async function createBulk(projectId: number, items: BulkSequenceItem[]) {
   const codes = items.map((i) => i.code);
   const dupInBatch = codes.find((c, i) => codes.indexOf(c) !== i);
@@ -97,7 +94,7 @@ export async function createBulk(projectId: number, items: BulkSequenceItem[]) {
   );
 }
 
-/** Ce qu'un PATCH de séquence peut porter — la route l'a déjà validé (Zod). */
+/** What a sequence PATCH may carry. The route has already validated it (Zod). */
 export interface UpdateSequenceInput {
   name?: string;
   code?: string;
@@ -109,11 +106,11 @@ export interface UpdateSequenceInput {
 }
 
 /**
- * Modifie une séquence, avec les deux allers-retours ShotGrid qu'elle entraîne.
+ * Updates a sequence, with the two ShotGrid round trips it entails.
  *
- * La route se contentait d'écrire en base : le statut restait local — le site gardait
- * l'ancien et la synchronisation suivante ramenait sa valeur, si bien que le changement
- * s'annulait tout seul — et la description n'était protégée par rien.
+ * The route used to write to the database only: the status stayed local, so the site kept the old one and
+ * the next synchronisation brought its value back, cancelling the change by itself. The description was
+ * not protected by anything.
  */
 export async function update(
   id: number,
@@ -121,18 +118,17 @@ export async function update(
   body: UpdateSequenceInput,
   actorId?: number | null,
 ) {
-  await assertProjectWritable(projectId); // 38.B : projet archivé = lecture seule
-  // La description peut être tenue par ShotGrid : l'écrire ici la ferait diverger jusqu'à
-  // ce que la synchronisation suivante l'écrase, sans rien dire à personne.
+  await assertProjectWritable(projectId); // 38.B: archived project is read-only
+  // The description may be owned by ShotGrid: writing it here would make them diverge until the
+  // next synchronisation overwrites it, without telling anyone.
   if (body.description !== undefined) await assertDescriptionWritable(projectId);
-  // Le statut doit venir du vocabulaire de CE projet, comme pour une tâche.
+  // The status must come from THIS project's vocabulary, as for a task.
   if (body.pipelineStatusId !== undefined) {
     await PipelineStatusService.assertBelongsToProject(projectId, 'sequence', body.pipelineStatusId);
   }
   const sequence = await prisma.sequence.update({ where: { id }, data: body });
-  // Même raison que pour un plan : le front écoute `sequence:update`, mais personne ne
-  // l'émettait sur le chemin d'édition ordinaire — un statut changé restait invisible sur
-  // un écran déjà ouvert.
+  // Same reason as for a shot: the front end listens to `sequence:update`, but nobody emitted it
+  // on the ordinary edit path, so a changed status stayed invisible on a screen already open.
   emitToProject(projectId, 'sequence:update', { projectId, id });
   if (body.pipelineStatusId !== undefined) {
     await enqueuePush(projectId, { type: 'sequence-status', sequenceId: id, actorId });
@@ -143,10 +139,10 @@ export async function update(
   return sequence;
 }
 
-/** Fiche complète d'une séquence : ses plans, ses assets, sa vignette, ses départements. */
+/** Full sheet of a sequence: its shots, its assets, its thumbnail, its departments. */
 export async function getDetail(
   id: number,
-  /** Qui regarde — état « non consulté » des cartes de plans de la fiche (lot 9). */
+  /** Who is looking: the "unseen" state of the sheet's shot cards (batch 9). */
   userId?: number,
 ) {
   const sequence = await prisma.sequence.findUnique({
@@ -154,8 +150,8 @@ export async function getDetail(
     include: {
       shots: {
         where: { deletedAt: null, hiddenAt: null },
-        // `id` en dernier départage : les plans d'un import partagent `order = 0`, et le
-        // code ne suffit pas quand deux séquences fusionnées portent la même numérotation.
+        // `id` as the final tie-break: shots from an import share `order = 0`, and the code is
+        // not enough when two merged sequences carry the same numbering.
         orderBy: [{ order: 'asc' }, { code: 'asc' }, { id: 'asc' }],
         take: DETAIL_LIMIT,
         include: {
@@ -164,8 +160,8 @@ export async function getDetail(
             where: { deletedAt: null, hiddenAt: null },
             select: { id: true, name: true, type: true },
           },
-          // La page de séquence affiche ses plans avec la carte de l'onglet Plans :
-          // elle a donc besoin des mêmes visages.
+          // The sequence page shows its shots with the Shots-tab card: so it needs the same
+          // faces.
           assignees: { select: CARD_ASSIGNEE_SELECT, orderBy: { id: 'asc' } },
         },
       },
@@ -178,12 +174,11 @@ export async function getDetail(
       _count: { select: { shots: { where: { deletedAt: null, hiddenAt: null } } } },
       departments: { select: { id: true, key: true, name: true, color: true }, orderBy: { order: 'asc' } },
       assignees: { select: CARD_ASSIGNEE_SELECT, orderBy: { id: 'asc' } },
-      // Épisode d'appartenance (niveau facultatif) : la page de séquence en fait un lien
-      // de remontée. `null` sur un long-métrage — la fiche ne montre alors rien de plus.
+      // Host episode (optional level): the sequence page turns it into a link back up. `null` on a
+      // feature film, in which case the sheet shows nothing more.
       episode: { select: { id: true, code: true, name: true } },
-      // Le réglage du projet, pour taire l'épisode quand le niveau est éteint : le
-      // rattachement survit à l'extinction (rien n'est détruit), mais il ne doit alors
-      // laisser aucune trace à l'écran.
+      // The project setting, to hide the episode when the level is off: the attachment survives
+      // switching off (nothing is destroyed), but it must then leave no trace on screen.
       project: { select: { episodesEnabled: true } },
     },
   });
@@ -194,8 +189,8 @@ export async function getDetail(
     firstMediaThumbKeysForShots(shotIds),
     awaitingReviewByShot(shotIds),
     signAssignees(sequence.shots),
-    // Les plans de la fiche portent la même carte que l'onglet Plans : ils s'allument
-    // selon la même règle, sans quoi le même plan brillerait d'un écran à l'autre.
+    // The sheet's shots carry the same card as the Shots tab: they light up under the same
+    // rule, otherwise the same shot would glow differently from one screen to the next.
     userId ? unseenByShot(userId, sequence.shots) : Promise.resolve(new Map<number, boolean>()),
   ]);
   const shots = await Promise.all(
@@ -206,8 +201,8 @@ export async function getDetail(
       unseen: unseen.get(s.id) ?? false,
     })),
   );
-  // Les assets de la fiche n'avaient droit qu'à leur vignette choisie : ils apparaissaient
-  // vides alors que leurs versions portaient des images. Même règle que partout ailleurs.
+  // The sheet's assets were only entitled to their chosen thumbnail: they appeared empty while
+  // their versions carried images. Same rule as everywhere else.
   const assetFallbacks = await firstMediaThumbKeysForAssets(sequence.assets.map((a) => a.id));
   const assets = await Promise.all(
     sequence.assets.map(async (a) => ({
@@ -227,9 +222,9 @@ export async function getDetail(
 }
 
 /**
- * Vignette effective d'une liste de séquences, en une passe (arbre de la sidebar, onglet
- * Séquences, fiche d'un épisode). La liste n'en renvoyait aucune : les cartes de séquences
- * restaient grises quoi qu'il arrive, faute d'URL signée — le champ n'était même pas là.
+ * Effective thumbnail for a list of sequences, in one pass (sidebar tree, Sequences tab, episode sheet).
+ * The list used to return none: sequence cards stayed grey whatever happened, for lack of a signed URL:
+ * the field was not even there.
  */
 export async function signSequenceThumbnails<T extends { id: number; thumbnailKey: string | null }>(
   rows: T[],

@@ -5,12 +5,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MediaKind, MediaStatus, Role } from '@prisma/client';
 
 /**
- * Publication d'office (Phase 50) — le lot qui retire « publier » de la liste des gestes.
+ * Automatic publication (Phase 50) — the batch that removes "publish" from the list of gestures.
  *
- * Trois règles s'y jouent, et elles se tiennent : un média naît publié sauf si le studio a
- * gardé le mode brouillon ; la consigne obligatoire, qui refusait autrefois la publication,
- * refuse maintenant l'upload ; et un média publié dont le traitement a échoué garde droit à
- * UNE relance, sans quoi il serait mort à jamais.
+ * Three rules play out here, and they hold together: a media is born published unless the studio kept draft
+ * mode; the mandatory brief, which used to refuse publication, now refuses the upload; and a published media
+ * whose processing failed keeps the right to ONE retry, failing which it would be dead for ever.
  */
 
 const { db } = vi.hoisted(() => ({
@@ -25,17 +24,17 @@ const { db } = vi.hoisted(() => ({
     version: { findUnique: vi.fn(), update: vi.fn() },
     projectMembership: { findUnique: vi.fn() },
     user: { findUnique: vi.fn(), update: vi.fn() },
-    // Le compteur de relance se lit et se dépense SOUS VERROU DE LIGNE (CP-SEC phase 50) :
-    // `reprocess` passe donc par une transaction interactive. Le bouchon la joue à plat, avec
-    // le même client — ce que le test éprouve est la règle du compteur, pas le verrou, qui
-    // n'a de sens que contre une vraie base (et que le test d'intégration exerce).
+    // The retry counter is read and spent UNDER ROW LOCK (CP-SEC phase 50): `reprocess` therefore goes
+    // through an interactive transaction. The stub plays it flat, with the
+    // same client — what the test exercises is the counter's rule, not the lock, which only makes sense
+    // against a real database (and which the integration test exercises).
     $transaction: vi.fn((fn: (tx: unknown) => unknown) => fn(db)),
     $queryRaw: vi.fn(),
   },
 }));
 
 vi.mock('../lib/prisma', () => ({ prisma: db }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: {
     getPresignedPutUrl: vi.fn(),
     getPresignedGetUrl: vi.fn(),
@@ -46,7 +45,7 @@ vi.mock('./StorageService', () => ({
   },
   StorageService: { mediaKey: vi.fn(() => 'projects/p/sh/v/1/f.mov'), thumbnailKey: vi.fn() },
 }));
-vi.mock('./JobService', () => ({
+vi.mock('../lib/queues', () => ({
   enqueueMediaJob: vi.fn(() => Promise.resolve()),
   enqueueSpatialThumb: vi.fn(() => Promise.resolve()),
 }));
@@ -80,22 +79,22 @@ vi.mock('../lib/settings', () => ({
     STORAGE_LIMIT_USER: 'storage_limit_user',
   },
 }));
-// La règle de consigne reste RÉELLE (`checkReviewNote`) : c'est elle qu'on éprouve. Seule la
-// lecture des réglages du projet est simulée.
+// The brief rule remains REAL (`checkReviewNote`): it is that which is exercised. Only the reading of the
+// project's settings is simulated.
 vi.mock('../lib/projectSettings', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/projectSettings')>()),
   resolveProjectSettingsById: vi.fn(),
 }));
-// Le contenu déposé n'est pas l'objet du test : la détection est simulée, les magic bytes
-// sont éprouvés dans `lib/fileSignatures`.
+// The deposited content is not the subject of the test: detection is simulated, the magic bytes are exercised
+// in `lib/fileSignatures`.
 vi.mock('../lib/fileSignatures', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/fileSignatures')>()),
   validateMediaHeader: vi.fn(() => 'mov'),
 }));
 
 import { createUpload, finalize, reprocess } from './MediaService';
-import { storage } from './StorageService';
-import { enqueueMediaJob } from './JobService';
+import { storage } from '../lib/storage';
+import { enqueueMediaJob } from '../lib/queues';
 import { isDraftModeEnabled } from '../lib/settings';
 import { resolveProjectSettingsById } from '../lib/projectSettings';
 import { notifyWatchers } from './WatchService';
@@ -103,7 +102,7 @@ import { notifyWatchers } from './WatchService';
 const PROJECT = 42;
 const USER = { id: 7, role: Role.ARTIST };
 
-/** Les réglages du projet, réduits aux deux sections que ce chemin lit. */
+/** The project settings, reduced to the two sections this path reads. */
 const settings = (requireNote: boolean, minNoteLength = 5) =>
   ({ naming: { pattern: '', mode: 'off' }, reviewRequest: { requireNote, minNoteLength } }) as never;
 
@@ -122,9 +121,9 @@ beforeEach(() => {
   db.mediaObject.count.mockResolvedValue(0);
   db.mediaObject.aggregate.mockResolvedValue({ _sum: { size: 0n } });
   db.mediaObject.create.mockResolvedValue({ id: 1 });
-  // Prisma rend la LIGNE COMPLÈTE après un update : `published` en fait partie, et c'est lui
-  // qui décide si la finalisation annonce la publication. Un mock qui ne renvoie que le
-  // `data` écrit laisserait ce chemin muet sans que rien ne le signale.
+  // Prisma returns the WHOLE ROW after an update: `published` is part of it, and it is what decides whether
+  // finalization announces the publication. A mock returning only the
+  // written `data` would leave this path silent without anything signalling it.
   db.mediaObject.update.mockImplementation((args: { data: Record<string, unknown> }) => ({
     id: 1,
     versionId: 3,
@@ -135,15 +134,15 @@ beforeEach(() => {
     metadata: {},
     ...args.data,
   }));
-  // Sert deux lectures : l'état publié du parent (createUpload) et la liste des médias que
-  // `syncVersionPublication` compte. Une version vide ne se publie pas — défaut neutre.
+  // Serves two reads: the published state of the parent (createUpload) and the list of media that
+  // `syncVersionPublication` counts. An empty version is not published — neutral default.
   db.version.findUnique.mockResolvedValue({ published: false, media: [] });
   db.user.findUnique.mockResolvedValue({ storageLimit: null });
   vi.mocked(storage.getPresignedPutUrl).mockResolvedValue('https://minio.invalid/put');
 });
 
-describe('createUpload — naissance publiée selon le réglage `draftMode`', () => {
-  it('publie d’office quand le mode brouillon est désactivé (défaut)', async () => {
+describe('createUpload: birth published according to the `draftMode` setting', () => {
+  it('publishes automatically when draft mode is disabled (default)', async () => {
     const res = await createUpload(USER, upload());
 
     expect(res.published).toBe(true);
@@ -152,7 +151,7 @@ describe('createUpload — naissance publiée selon le réglage `draftMode`', ()
     );
   });
 
-  it('garde le brouillon quand le mode brouillon est actif', async () => {
+  it('keeps the draft when draft mode is active', async () => {
     vi.mocked(isDraftModeEnabled).mockResolvedValue(true);
 
     const res = await createUpload(USER, upload());
@@ -163,7 +162,7 @@ describe('createUpload — naissance publiée selon le réglage `draftMode`', ()
     );
   });
 
-  it('en mode brouillon, hérite tout de même de la version déjà publiée', async () => {
+  it('in draft mode, still inherits the version already published', async () => {
     vi.mocked(isDraftModeEnabled).mockResolvedValue(true);
     db.version.findUnique.mockResolvedValue({ published: true });
 
@@ -171,7 +170,7 @@ describe('createUpload — naissance publiée selon le réglage `draftMode`', ()
   });
 });
 
-describe('finalize — consigne obligatoire déplacée à l’upload', () => {
+describe('finalize: mandatory brief moved to the upload', () => {
   beforeEach(() => {
     db.mediaObject.findUnique.mockResolvedValue({
       id: 1,
@@ -189,19 +188,19 @@ describe('finalize — consigne obligatoire déplacée à l’upload', () => {
     vi.mocked(storage.setObjectContentType).mockResolvedValue(undefined);
   });
 
-  it('refuse l’upload sans consigne quand le projet l’exige — avant tout appel au stockage', async () => {
+  it('refuses the upload without a brief when the project requires one — before any call to storage', async () => {
     vi.mocked(resolveProjectSettingsById).mockResolvedValue(settings(true));
 
     await expect(finalize(USER, 1)).rejects.toMatchObject({
       statusCode: 400,
       code: 'UPLOAD_NOTE_REQUIRED',
     });
-    // Rien n'a été touché : le client peut rappeler `finalize` avec sa consigne.
+    // Nothing has been touched: the client can call `finalize` again with its brief.
     expect(storage.statObject).not.toHaveBeenCalled();
     expect(db.mediaObject.update).not.toHaveBeenCalled();
   });
 
-  it('refuse une consigne plus courte que le plancher du projet', async () => {
+  it("refuses a brief shorter than the project's floor", async () => {
     vi.mocked(resolveProjectSettingsById).mockResolvedValue(settings(true, 10));
 
     await expect(finalize(USER, 1, 'ok')).rejects.toMatchObject({
@@ -210,7 +209,7 @@ describe('finalize — consigne obligatoire déplacée à l’upload', () => {
     });
   });
 
-  it('accepte l’upload avec sa consigne, et la garde dans les métadonnées', async () => {
+  it('accepts the upload with its brief, and keeps it in the metadata', async () => {
     vi.mocked(resolveProjectSettingsById).mockResolvedValue(settings(true));
 
     await finalize(USER, 1, '  Regarder le raccord au 1042  ');
@@ -222,11 +221,11 @@ describe('finalize — consigne obligatoire déplacée à l’upload', () => {
     );
   });
 
-  it('laisse passer l’upload sans consigne quand le projet n’en exige pas', async () => {
+  it('lets through the upload without a brief when the project does not require one', async () => {
     await expect(finalize(USER, 1)).resolves.toMatchObject({ detectedExtension: 'mov' });
   });
 
-  it('annonce la publication d’office : la version suit, les suiveurs sont prévenus', async () => {
+  it('announces the automatic publication: the version follows, the followers are alerted', async () => {
     db.version.findUnique.mockResolvedValue({
       published: false,
       media: [{ published: true, status: MediaStatus.READY }],
@@ -240,7 +239,7 @@ describe('finalize — consigne obligatoire déplacée à l’upload', () => {
     );
   });
 
-  it('en mode brouillon, n’annonce rien : « publier » reste un geste', async () => {
+  it('in draft mode, announces nothing: "publish" remains a gesture', async () => {
     vi.mocked(isDraftModeEnabled).mockResolvedValue(true);
     db.version.findUnique.mockResolvedValue({
       published: false,
@@ -254,8 +253,8 @@ describe('finalize — consigne obligatoire déplacée à l’upload', () => {
   });
 });
 
-describe('reprocess — une relance après échec, aucune sur un média sain', () => {
-  /** `assertMediaManage` passe : l'utilisateur est un superviseur du projet. */
+describe('reprocess: a retry after failure, none on a healthy media', () => {
+  /** `assertMediaManage` passes: the user is a supervisor of the project. */
   const manage = { id: 7, role: Role.SUPERVISOR };
 
   const media = (over: Record<string, unknown>) => ({
@@ -275,7 +274,7 @@ describe('reprocess — une relance après échec, aucune sur un média sain', (
     db.projectMembership.findUnique.mockResolvedValue({ userId: manage.id, projectId: PROJECT, role: null });
   });
 
-  it('refuse la relance d’un média publié SAIN, avec son propre code', async () => {
+  it('refuses the retry of a HEALTHY published media, with its own code', async () => {
     db.mediaObject.findUnique.mockResolvedValue(media({ status: MediaStatus.READY }));
 
     await expect(reprocess(manage, 1)).rejects.toMatchObject({
@@ -285,7 +284,7 @@ describe('reprocess — une relance après échec, aucune sur un média sain', (
     expect(enqueueMediaJob).not.toHaveBeenCalled();
   });
 
-  it('autorise la première relance d’un média publié en échec, et la compte', async () => {
+  it('allows the first retry of a published media in failure, and counts it', async () => {
     db.mediaObject.findUnique.mockResolvedValue(media({}));
 
     const res = await reprocess(manage, 1);
@@ -298,7 +297,7 @@ describe('reprocess — une relance après échec, aucune sur un média sain', (
     );
   });
 
-  it('refuse la deuxième relance, le compteur étant consommé', async () => {
+  it('refuses the second retry, the counter having been consumed', async () => {
     db.mediaObject.findUnique.mockResolvedValue(media({ metadata: { publishedReprocessCount: 1 } }));
 
     await expect(reprocess(manage, 1)).rejects.toMatchObject({
@@ -307,7 +306,7 @@ describe('reprocess — une relance après échec, aucune sur un média sain', (
     });
   });
 
-  it('ne compte rien sur un brouillon : sa relance reste libre', async () => {
+  it('counts nothing on a draft: its retry stays free', async () => {
     db.mediaObject.findUnique.mockResolvedValue(media({ published: false, status: MediaStatus.READY }));
 
     await reprocess(manage, 1);

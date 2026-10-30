@@ -11,15 +11,15 @@ import * as ReleaseService from './ReleaseService';
 import type { ReleaseError, ReleaseInfo } from './ReleaseService';
 
 /**
- * Ce que l'écran « Mises à jour & sauvegardes » a besoin de savoir, en une réponse.
+ * What the "Updates & backups" screen needs to know, in one response.
  *
- * Une seule route plutôt que quatre : l'écran ne sait rien montrer d'utile tant qu'il
- * ignore *à la fois* la version en service, ce qui est paru depuis, et ce que l'instance
- * est capable de faire elle-même. Trois requêtes qui arrivent dans le désordre donnent
- * trois états transitoires faux — « à jour » avant d'avoir demandé, notamment.
+ * A single route rather than four: the screen cannot usefully show anything while it ignores *at the same
+ * time* the version in service, what has been released since, and what the instance
+ * is capable of doing itself. Three requests arriving out of order give three false transitional states — "up
+ * to date" before having asked, in particular.
  */
 
-/** Comment cette instance change de version. */
+/** How this instance changes version. */
 export type UpdateMode = 'registry' | 'build';
 
 export interface OpsOverview {
@@ -28,31 +28,31 @@ export interface OpsOverview {
     commit: string | null;
     builtAt: string | null;
     node: string;
-    /** Adresse des sources — obligation AGPL §13, et repère de diagnostic. */
+    /** Address of the sources — AGPL §13 obligation, and a diagnostic marker. */
     source: string;
   };
   /**
-   * `registry` : les images publiées sont récupérées (`REVIEW_IMAGE_PREFIX` est posé).
-   * `build` : la pile se construit sur le serveur du studio. Ce n'est pas un détail
-   * d'exploitation — c'est ce qui décide si une mise à jour dure deux minutes ou une heure.
+   * `registry`: the published images are fetched (`REVIEW_IMAGE_PREFIX` is set).
+   * `build`: the stack is built on the studio's server. This is not an operational detail — it is what
+   * decides whether an update takes two minutes or an hour.
    */
   mode: UpdateMode;
   latest: ReleaseInfo | null;
-  /** Tout ce qui est paru depuis la version en service : ce que la mise à jour apporterait. */
+  /** Everything released since the running version: what the update would bring. */
   newer: ReleaseInfo[];
   release: { checkedAt: string | null; error: ReleaseError | null };
   updateAvailable: boolean;
   backups: BackupCatalog;
-  /** L'instance sait-elle agir sur elle-même, et jusqu'où ? */
+  /** Can the instance act on itself, and to what extent? */
   mechanism: Mechanism;
-  /** L'opération en cours, s'il y en a une : c'est elle qui tient l'écran. */
+  /** The operation in progress, if any: it is that which holds the screen. */
   activeRun: RunSummary | null;
   recentRuns: RunSummary[];
-  /** Les commandes exactes, pour l'exploitant qui préfère — ou doit — passer par un terminal. */
+  /** The exact commands, for the operator who prefers — or must — go through a terminal. */
   commands: { update: string | null; backup: string; enableAgent: string };
 }
 
-/** Le mode se lit dans l'environnement, comme `scripts/update.sh` le lit dans `.env`. */
+/** The mode is read from the environment, as `scripts/update.sh` reads it from `.env`. */
 export function updateMode(environment: NodeJS.ProcessEnv = process.env): UpdateMode {
   return environment.REVIEW_IMAGE_PREFIX?.trim() ? 'registry' : 'build';
 }

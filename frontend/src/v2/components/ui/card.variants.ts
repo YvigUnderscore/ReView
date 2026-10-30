@@ -4,23 +4,22 @@
 import { cva, type VariantProps } from 'class-variance-authority';
 
 /**
- * Les variantes de la carte, isolées du composant pour être vérifiables sans rendu.
+ * Card variants, isolated from the component so they can be checked without rendering.
  *
- * L'échelle ne vient pas de shadcn — son `p-6` n'apparaît nulle part ici — mais du relevé
- * des surfaces réellement dessinées dans l'application : un panneau de réglages ou de
- * statistiques est `rounded-lg … p-4` (le motif de loin le plus fréquent), une ligne de
- * liste `rounded-md … px-3 py-2`. `variant` fixe la forme, `padding` la densité, et les
- * deux se combinent : un panneau et une ligne ne dosent pas leur marge de la même façon
- * (uniforme pour l'un, horizontale pour l'autre), d'où les combinaisons ci-dessous
- * plutôt qu'une seule échelle qui conviendrait mal aux deux.
+ * The scale does not come from shadcn (its `p-6` appears nowhere here) but from a survey
+ * of the surfaces actually drawn in the app: a settings or statistics panel is
+ * `rounded-lg … p-4` (by far the most frequent pattern), a list row is `rounded-md … px-3 py-2`.
+ * `variant` sets the shape, `padding` the density, and the two combine: a panel and a row
+ * do not dose their margin the same way (uniform for one, horizontal for the other), hence
+ * the combinations below rather than a single scale that would suit neither well.
  */
 export const cardVariants = cva('border border-border bg-card text-card-foreground', {
   variants: {
-    /** Panneau posé sur la page, ou ligne/bloc compact à l'intérieur d'une liste. */
+    /** Panel laid on the page, or compact row/block inside a list. */
     variant: { panel: 'rounded-lg', row: 'rounded-md' },
-    /** `none` laisse l'espacement aux sous-composants (`CardHeader`, `CardContent`). */
+    /** `none` leaves the spacing to the sub-components (`CardHeader`, `CardContent`). */
     padding: { none: '', sm: '', md: '', lg: '' },
-    /** Carte cliquable : la bordure répond au survol. */
+    /** Clickable card: the border responds to hover. */
     interactive: { true: 'transition-colors hover:border-primary', false: '' },
   },
   compoundVariants: [

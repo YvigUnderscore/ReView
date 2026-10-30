@@ -6,14 +6,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('./prisma', () => ({
   prisma: { mediaObject: { findMany: vi.fn(), deleteMany: vi.fn() } },
 }));
-vi.mock('../services/StorageService', () => ({
+vi.mock('./storage', () => ({
   storage: { deleteObject: vi.fn(), deletePrefix: vi.fn(), abortMultipartUpload: vi.fn() },
 }));
 vi.mock('./logger', () => ({ logger: { info: vi.fn(), warn: vi.fn() } }));
 
 import { purgeStaleUploads, STALE_UPLOAD_HOURS } from './staleUploads';
 import { prisma } from './prisma';
-import { storage } from '../services/StorageService';
+import { storage } from './storage';
 
 const findMany = vi.mocked(prisma.mediaObject.findMany);
 const deleteMany = vi.mocked(prisma.mediaObject.deleteMany);
@@ -28,18 +28,18 @@ beforeEach(() => {
 });
 
 /**
- * Un onglet fermé pendant un envoi laissait une ligne `UPLOADING` éternelle. Comme
- * `createUpload` refuse au-delà de `MAX_CONCURRENT_UPLOADS` lignes dans cet état, cinq
- * accidents suffisaient à bloquer un compte pour de bon.
+ * A tab closed during an upload left an eternal `UPLOADING` row. Since `createUpload`
+ * refuses beyond `MAX_CONCURRENT_UPLOADS` rows in that state, five accidents were enough
+ * to block an account for good.
  */
 describe('purgeStaleUploads', () => {
-  it('ne touche à rien quand aucun envoi ne traîne', async () => {
+  it('does nothing when no stale upload exists', async () => {
     findMany.mockResolvedValue([] as never);
     await expect(purgeStaleUploads()).resolves.toEqual({ purged: 0 });
     expect(deleteMany).not.toHaveBeenCalled();
   });
 
-  it('supprime la ligne, l’objet déposé et les dérivés éventuels', async () => {
+  it('deletes the row, the stored object and any derivatives', async () => {
     findMany.mockResolvedValue([
       { id: 11, storageKey: 'projects/demo/a.mov' },
       { id: 12, storageKey: '' },
@@ -49,13 +49,13 @@ describe('purgeStaleUploads', () => {
 
     expect(deleteMany).toHaveBeenCalledWith({ where: { id: { in: [11, 12] } } });
     expect(storage.deleteObject).toHaveBeenCalledWith('projects/demo/a.mov');
-    // Clé vide : rien à supprimer côté objet, mais le préfixe est tenté quand même.
+    // Empty key: nothing to delete on the object side, but the prefix is still attempted.
     expect(storage.deleteObject).toHaveBeenCalledTimes(1);
     expect(storage.deletePrefix).toHaveBeenCalledWith('derived/11/');
     expect(storage.deletePrefix).toHaveBeenCalledWith('derived/12/');
   });
 
-  it('ne retient que les envois plus vieux que le délai', async () => {
+  it('only picks uploads older than the cutoff', async () => {
     findMany.mockResolvedValue([] as never);
     const before = Date.now();
     await purgeStaleUploads();
@@ -64,7 +64,7 @@ describe('purgeStaleUploads', () => {
     expect(before - cutoff).toBeGreaterThanOrEqual(STALE_UPLOAD_HOURS * 3600 * 1000 - 1000);
   });
 
-  it('survit à un MinIO indisponible : la ligne est libérée quand même', async () => {
+  it('survives an unavailable MinIO: the row is still released', async () => {
     findMany.mockResolvedValue([{ id: 13, storageKey: 'k/x.mov' }] as never);
     vi.mocked(storage.deleteObject).mockRejectedValue(new Error('MinIO down'));
     vi.mocked(storage.deletePrefix).mockRejectedValue(new Error('MinIO down'));
@@ -74,13 +74,13 @@ describe('purgeStaleUploads', () => {
   });
 
   /**
-   * A4-02 / INFRA-04. Un multipart jamais complété n'a AUCUN objet à `storageKey` :
-   * `DeleteObject` y est un aller-retour perdu, et les parts déjà reçues — 30 Go pour un
-   * master coupé à 80 % — restent dans `.minio.sys/multipart/`, que ni `ListObjectsV2`,
-   * ni `mc ls`, ni le rapport de stockage ne voient. Seul `AbortMultipartUpload` les libère,
-   * et son `uploadId` disparaît avec la ligne.
+   * A4-02 / INFRA-04. A multipart upload that was never completed has NO object at
+   * `storageKey`: `DeleteObject` is a wasted round trip there, and the parts already
+   * received — 30 GB for a master cut at 80% — stay in `.minio.sys/multipart/`, which
+   * neither `ListObjectsV2`, `mc ls`, nor the storage report can see. Only
+   * `AbortMultipartUpload` frees them, and its `uploadId` disappears with the row.
    */
-  it('abandonne le multipart au lieu de supprimer un objet qui n’existe pas', async () => {
+  it('aborts the multipart upload instead of deleting an object that does not exist', async () => {
     findMany.mockResolvedValue([
       {
         id: 21,
@@ -93,13 +93,13 @@ describe('purgeStaleUploads', () => {
     await expect(purgeStaleUploads()).resolves.toEqual({ purged: 1 });
 
     expect(abortMultipart).toHaveBeenCalledWith('projects/demo/shots/sh0100/v01/21/master.mov', 'up-42');
-    // Un aller-retour MinIO au lieu de deux, et c'est le seul qui libère quelque chose.
+    // One MinIO round trip instead of two, and it is the only one that frees anything.
     expect(abortMultipart).toHaveBeenCalledTimes(1);
     expect(storage.deleteObject).not.toHaveBeenCalled();
     expect(storage.deletePrefix).toHaveBeenCalledExactlyOnceWith('derived/21/');
   });
 
-  it('vide le préfixe des frames d’une séquence coupée en route', async () => {
+  it('empties the frame prefix of a sequence that was cut off midway', async () => {
     findMany.mockResolvedValue([
       {
         id: 22,
@@ -117,10 +117,10 @@ describe('purgeStaleUploads', () => {
   });
 
   /**
-   * Ces deux colonnes portent les seuls fils qui mènent aux octets déjà déposés. Le
-   * `deleteMany` les efface : ne pas les avoir lues AVANT, c'est les perdre définitivement.
+   * These two columns hold the only threads leading to the bytes already stored. The
+   * `deleteMany` erases them: if they were not read BEFORE, they are lost for good.
    */
-  it('lit metadata et le préfixe de séquence avant d’effacer les lignes', async () => {
+  it('reads metadata and the sequence prefix before deleting the rows', async () => {
     findMany.mockResolvedValue([] as never);
     await purgeStaleUploads();
     const select = (findMany.mock.calls.at(-1)?.[0] as { select: Record<string, unknown> }).select;
@@ -128,7 +128,7 @@ describe('purgeStaleUploads', () => {
     expect(select.imageSequence).toEqual({ select: { storagePrefix: true } });
   });
 
-  it('libère la ligne même si l’abandon du multipart échoue (MinIO indisponible)', async () => {
+  it('releases the row even if aborting the multipart upload fails (MinIO unavailable)', async () => {
     findMany.mockResolvedValue([
       { id: 23, storageKey: 'k/m.mov', metadata: { multipartUploadId: 'up-x' }, imageSequence: null },
     ] as never);

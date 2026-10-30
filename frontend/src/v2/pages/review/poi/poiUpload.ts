@@ -5,32 +5,30 @@ import {
   isAllowedAttachment,
   MAX_COMMENT_ATTACHMENTS,
   type CommentAttachment,
-} from '../../../../lib/commentAttachments';
+} from '@/v2/lib/commentAttachments';
 import type { PoiDraft } from './usePoiDraft';
 import type { PoiPoint } from './poiPoints';
 
 /**
- * Les images des points partent dans la MÊME liste de pièces jointes que celles du composeur :
- * un seul téléversement — celui du lot 5 — et un seul commentaire porteur. Chaque point note
- * ensuite lesquelles sont les siennes, par leur clé.
+ * The point images go in the SAME attachment list as those of the composer: a single upload, and a
+ * single carrying comment. Each point then notes which are its own, by their key.
  *
- * Tout le travail délicat est ici, et il est pur : décider quels fichiers partent, dans quel
- * ordre, et lesquels sont perdus au plafond. Le téléversement, lui, ne fait que suivre le plan.
+ * All the delicate work is here, and it is pure: deciding which files leave, in what order, and which are
+ * lost at the ceiling. The upload itself merely follows the plan.
  */
 export interface PoiUploadPlan {
-  /** Fichiers à téléverser, dans cet ordre : ceux des points d'abord, puis ceux du composeur. */
+  /** Files to upload, in this order: those of the points first, then those of the composer. */
   files: File[];
-  /** Nombre de pièces retenues par point, dans l'ordre des points. */
+  /** Number of files retained per point, in the order of the points. */
   counts: number[];
-  /** Fichiers écartés (type refusé ou plafond atteint) — l'appelant le dit à l'auteur. */
+  /** Files set aside (refused type or ceiling reached): the caller tells the author. */
   dropped: number;
 }
 
 /**
- * Les images des POINTS passent devant : l'image d'un point EST sa remarque, alors qu'une pièce
- * du composeur se rejoint d'un message suivant. Les fichiers d'un type refusé sont écartés ici,
- * avant l'envoi — c'est ce qui garantit que le téléversement rend **une pièce par fichier, dans
- * l'ordre**, et donc que la répartition par clé est exacte.
+ * Point images go AHEAD: a point's image IS its remark, whereas a composer attachment is joined by a
+ * following message. Files of a refused type are set aside here, before sending. This is what guarantees
+ * that the upload returns **one attachment per file, in order**, and therefore that the split by key is exact.
  */
 export function poiUploadPlan(
   points: readonly PoiDraft[],
@@ -58,8 +56,8 @@ export function poiUploadPlan(
 }
 
 /**
- * Points prêts à être stockés : la géométrie, la remarque, et les clés des pièces qui leur
- * reviennent — découpées dans l'ordre du plan.
+ * Points ready to be stored: the geometry, the remark, and the keys of the attachments that belong to
+ * them, split in the order of the plan.
  */
 export function poiStoredPoints(
   points: readonly PoiDraft[],

@@ -12,7 +12,10 @@
   "digest.by": "da {name}",
   "digest.commentOn": "{author} nant'à {media}",
   "digest.optOut": "Ricevi st'e-mail perchè u riassuntu ghjurnalieru hè attivatu in u to prufilu ReView.",
-  "digest.preview": { "one": "Ciò chì hà cambiatu in {count} prughjettu dapoi eri.", "other": "Ciò chì hà cambiatu in {count} prughjetti dapoi eri." },
+  "digest.preview": {
+    "one": "Ciò chì hà cambiatu in {count} prughjettu dapoi eri.",
+    "other": "Ciò chì hà cambiatu in {count} prughjetti dapoi eri."
+  },
 
   "weekly.subject": "ReView — rapportu settimanale di pruduzzione",
   "weekly.title": "Rapportu settimanale di pruduzzione",
@@ -24,7 +27,10 @@
   "weekly.column.retakes": "Retakes",
   "weekly.column.openNotes": "Note aperte",
   "weekly.optOut": "Ricevi stu rapportu perchè hè attivatu in u to prufilu ReView (supervisori).",
-  "weekly.preview": { "one": "A settimana in {count} prughjettu : cunsegne, decisioni, note aperte.", "other": "A settimana in {count} prughjetti : cunsegne, decisioni, note aperte." },
+  "weekly.preview": {
+    "one": "A settimana in {count} prughjettu : cunsegne, decisioni, note aperte.",
+    "other": "A settimana in {count} prughjetti : cunsegne, decisioni, note aperte."
+  },
 
   "smtp.test.subject": "ReView — prova SMTP",
   "smtp.test.title": "Prova SMTP",
@@ -52,13 +58,19 @@
   "notification.reviewAssigned": "A review di a version {version} vi hè stata assignata",
   "notification.reviewNoteUpdated": "L'istruzzione hè cambiata nant'à una review chì v'hè stata affidata : {version}",
   "notification.clientDecision": "{name} hà rispostu « {status} » nant'à a version {version} da un ligame spartutu",
-  "chat.system.joined": { "one": "{names} hè entrutu in a cunversazione", "other": "{names} sò entruti in a cunversazione" },
+  "chat.system.joined": {
+    "one": "{names} hè entrutu in a cunversazione",
+    "other": "{names} sò entruti in a cunversazione"
+  },
   "chat.system.left": "{name} hà lasciatu a cunversazione",
   "chat.system.removed": "{name} hè statu ritiratu",
   "chat.system.renamed": "U gruppu si chjama avà « {title} »",
   "chat.mediaPublished": "🎬 Novu media pubblicatu : {name}",
   "chat.decision": "{icon} Decisione « {status} » nant'à a version {version}",
-  "chat.decisionBulk": { "one": "{icon} Decisione « {status} » nant'à {count} version", "other": "{icon} Decisione « {status} » nant'à {count} versions" },
+  "chat.decisionBulk": {
+    "one": "{icon} Decisione « {status} » nant'à {count} version",
+    "other": "{icon} Decisione « {status} » nant'à {count} versions"
+  },
   "chat.newComment": "💬 Novu cumentu nant'à un media (prughjettu #{project})",
   "chat.montageComment": "🎬 Novu ritornu nant'à un muntagiu (prughjettu #{project})",
   "share.mail.subject": "Accessu à {project}",
@@ -72,7 +84,10 @@
   "share.mail.cta": "Apre u ligame",
   "share.mail.expiry": "Stu ligame scade u {date}.",
   "share.mail.noExpiry": "Stu ligame ùn hà nisuna data di scadenza.",
-  "share.mail.viewLimit": { "one": "Pò esse apertu {count} volta in tuttu.", "other": "Pò esse apertu {count} volte in tuttu." },
+  "share.mail.viewLimit": {
+    "one": "Pò esse apertu {count} volta in tuttu.",
+    "other": "Pò esse apertu {count} volte in tuttu."
+  },
   "share.mail.password": "Hè prutettu da una parola d'ordine, mandata à parte.",
   "share.mail.fallback": "S'è u buttone ùn funziona micca, incollate stu ligame in u vostru navigatore:",
   "notesSheet.title": "Note di review",

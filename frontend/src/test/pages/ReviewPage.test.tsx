@@ -11,11 +11,11 @@ import { httpError, type MockResolver } from '../apiMock';
 import { renderWithProviders } from '../renderWithProviders';
 
 /**
- * Spark charge son module WebAssembly au premier montage du viewer splat, en allant le
- * chercher par `fetch` : sous happy-dom il reçoit la réponse du bouchon HTTP et se rejette
- * hors de tout test. Le module est donc remplacé — c'est un moteur de rendu, il n'a rien à
- * dire sur *quel* viewer la page choisit, qui est ce que ce fichier vérifie. Les tests du
- * splat lui-même (SPZ, sélection, effets) restent à côté de leur code.
+ * Spark loads its WebAssembly module on the first mount of the splat viewer, by fetching it
+ * via `fetch`: under happy-dom it receives the response of the HTTP double and rejects
+ * outside any test. The module is therefore replaced: it is a rendering engine, with nothing to
+ * say about *which* viewer the page picks, which is what this file checks. The tests of the
+ * splat itself (SPZ, selection, effects) stay next to their code.
  */
 vi.mock('@sparkjsdev/spark', () => ({
   SplatMesh: class {},
@@ -27,10 +27,10 @@ vi.mock('@sparkjsdev/spark', () => ({
 }));
 
 /**
- * La review monte quatre viewers très différents derrière une seule URL. La régression qui
- * coûte le plus cher n'est pas visuelle : c'est le mauvais viewer, ou aucun. On vérifie donc
- * pour chaque `kind` que la page monte l'outillage de ce type-là *et pas* celui d'un autre,
- * puis que le fil de commentaires vit à côté, quel que soit le média.
+ * The review mounts four very different viewers behind a single URL. The regression that
+ * costs the most is not visual: it is the wrong viewer, or none. We therefore check, for
+ * each `kind`, that the page mounts the tooling of that type *and not* that of another,
+ * and then that the comment thread lives alongside, whatever the media.
  */
 
 const MEDIA_ID = 9;
@@ -65,7 +65,7 @@ const mediaResp = (kind: MediaKind, patch: Partial<MediaResp> = {}): MediaResp =
   splatPresentation: null,
   projectDefaultLighting: null,
   projectColor: null,
-  // Ratio du cadre de review servi par le serveur (réglages pipeline hérités) — 16:9 ici.
+  // Frame ratio of the review served by the server (inherited pipeline settings): 16:9 here.
   deliveryAspect: 16 / 9,
   trim: null,
   trimProxyReady: false,
@@ -75,8 +75,8 @@ const mediaResp = (kind: MediaKind, patch: Partial<MediaResp> = {}): MediaResp =
   references: [],
   reviewers: [],
   reviewRequest: { requireNote: false, minNoteLength: 5 },
-  // Droits rendus par le serveur : le viewer 3D n'offre le mode « Nettoyer » que si
-  // l'écriture de la transformation est accordée (cf. `lib/versionPermissions`).
+  // Rights returned by the server: the 3D viewer offers the "Clean" mode only if
+  // write access to the transform is granted (cf. `lib/versionPermissions`).
   permissions: { editTransform: true },
   ...patch,
 });
@@ -112,41 +112,41 @@ const mount = (kind: MediaKind, extra: Record<string, MockResolver> = {}, patch:
     },
   });
 
-describe('ReviewPage — viewer monté selon le type de média', () => {
+describe('ReviewPage — viewer mounted according to media type', () => {
   /**
-   * Ces trois tests se reconnaissaient au panneau « Lecture » du dock vidéo. Il a disparu en
-   * Phase 50, avec les quatre autres onglets des médias plats : le dock plat est désormais
-   * Infos + Export, et c'est lui qu'on affirme. Le viewer, lui, se reconnaît toujours à ce
-   * qu'il monte et aux outils qu'il offre.
+   * These three tests were recognized by the "Playback" panel of the video dock. It disappeared in
+   * Phase 50, along with the four other tabs of flat media: the flat dock is now
+   * Info + Export, and that is what we assert. The viewer, for its part, is still recognized by what
+   * it mounts and the tools it offers.
    */
-  it('monte le lecteur vidéo et le dock plat pour une vidéo', async () => {
+  it('mounts the video player and the flat dock for a video', async () => {
     const { container } = mount('VIDEO');
 
     await waitFor(() => expect(container.querySelector('video')).not.toBeNull());
     expect(screen.getByRole('button', { name: t('panel.info') })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: t('panel.export') })).toBeInTheDocument();
-    // Outils et panneaux propres au spatial : absents. L'outil « Zoom » ne figure plus dans
-    // cette liste — il a été SUPPRIMÉ en Phase 50, faute d'implémentation : le zoom des deux
-    // viewers plats est un geste permanent (molette, glissement, `+`/`-`, `F`, `H`).
+    // Tools and panels specific to spatial media: absent. The "Zoom" tool is no longer in
+    // this list: it was REMOVED in Phase 50, for lack of implementation: the zoom of the two
+    // flat viewers is a permanent gesture (wheel, drag, `+`/`-`, `F`, `H`).
     expect(screen.queryByRole('button', { name: t('tool.poi') })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: t('panel.lighting') })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: t('panel.camera') })).not.toBeInTheDocument();
   });
 
-  it('monte le viewer image et le rail plat pour une image', async () => {
+  it('mounts the image viewer and the flat rail for an image', async () => {
     const { container } = mount('IMAGE');
 
     await waitFor(() => expect(container.querySelector('img')).not.toBeNull());
-    // Le rail plat est au repos : l'outil de navigation, et rien d'autre. Ce test attendait
-    // l'outil « Zoom », supprimé en Phase 50 — il était visible ici et n'armait rien.
+    // The flat rail is at rest: the navigation tool, and nothing else. This test was waiting for
+    // the "Zoom" tool, removed in Phase 50: it was visible here and armed nothing.
     expect(screen.getByRole('button', { name: t('tool.nav') })).toBeInTheDocument();
     expect(container.querySelector('video')).toBeNull();
-    // Même dock que la vidéo, aux mêmes deux onglets.
+    // Same dock as the video, with the same two tabs.
     expect(screen.getByRole('button', { name: t('panel.info') })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: t('panel.camera') })).not.toBeInTheDocument();
   });
 
-  it('monte le viewer 3D, son éclairage et sa scène pour un modèle', async () => {
+  it('mounts the 3D viewer, its lighting and its scene for a model', async () => {
     const { container } = mount('MODEL_3D');
 
     expect(await screen.findByRole('button', { name: t('panel.lighting') })).toBeInTheDocument();
@@ -155,27 +155,27 @@ describe('ReviewPage — viewer monté selon le type de média', () => {
     expect(container.querySelector('video')).toBeNull();
   });
 
-  it('monte le viewer splat, qui a une mise au point mais pas d’éclairage', async () => {
+  it('mounts the splat viewer, which has a focus but no lighting', async () => {
     const { container } = mount('SPLAT');
 
     expect(await screen.findByRole('button', { name: t('tool.focus') })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: t('panel.scene') })).toBeInTheDocument();
-    // Un nuage de splats porte sa propre couleur : pas de panneau d'éclairage.
+    // A splat cloud carries its own color: no lighting panel.
     expect(screen.queryByRole('button', { name: t('panel.lighting') })).not.toBeInTheDocument();
     expect(container.querySelector('video')).toBeNull();
   });
 });
 
 /**
- * Chrome du viewer splat (Phase 50, lot 12), sur l'écran réel.
+ * Splat viewer chrome (Phase 50, batch 12), on the real screen.
  *
- * Deux segments quittent l'en-tête — « Mise en scène », qui doublait l'interrupteur du panneau
- * Caméra, et « Nettoyer », dont les outils passent sur le viewer. Rien n'est supprimé pour
- * autant : la mise en scène garde son interrupteur, et les réglages de rendu sont au coin
- * haut-gauche du viewer, là où le modèle 3D a les siens depuis le lot 6.
+ * Two segments leave the header: "Staging", which duplicated the switch of the Camera panel,
+ * and "Clean", whose tools move onto the viewer. Nothing is deleted for
+ * all that: staging keeps its switch, and the render settings are in the top-left corner
+ * of the viewer, where the 3D model has had its own since batch 6.
  */
-describe('ReviewPage — chrome du viewer splat', () => {
-  it('n’offre ni segment « Mise en scène » ni segment « Nettoyer »', async () => {
+describe('ReviewPage — splat viewer chrome', () => {
+  it('offers neither the "Staging" segment nor the "Clean" segment', async () => {
     mount('SPLAT');
 
     expect(await screen.findByRole('button', { name: t('tool.focus') })).toBeInTheDocument();
@@ -183,63 +183,63 @@ describe('ReviewPage — chrome du viewer splat', () => {
     expect(screen.queryByRole('button', { name: t('mode.clean') })).not.toBeInTheDocument();
   });
 
-  it('pose les réglages de rendu dans le viewer, teinte d’inspection comprise', async () => {
+  it('sets the render settings in the viewer, inspection tint included', async () => {
     const { user } = mount('SPLAT');
 
     await user.click(await screen.findByRole('button', { name: t('viewer.render.title') }));
     expect(screen.getByText(t('viewer.inspectionTint'))).toBeInTheDocument();
   });
 
-  it('garde la mise en scène joignable : son interrupteur est au panneau Caméra', async () => {
+  it('keeps staging reachable: its switch is in the Camera panel', async () => {
     const { container, user } = mount('SPLAT');
 
-    // Requête bornée au dock : la piste du transport porte aussi le libellé « Camera ».
+    // Query bounded to the dock: the transport track also carries the label "Camera".
     await screen.findByRole('button', { name: t('panel.info') });
     const dock = within(container.querySelector('.rv-dock') as HTMLElement);
     await user.click(dock.getByRole('button', { name: t('panel.camera') }));
-    // Nommé par le mode qu'il arme, et non par la fenêtre PiP qu'il ouvre.
+    // Named by the mode it arms, not by the PiP window it opens.
     expect(dock.getByText(t('mode.stage'))).toBeInTheDocument();
     expect(dock.getByRole('switch', { name: t('viewer.pip.hint') })).toBeInTheDocument();
   });
 });
 
 /**
- * Bascule de mode et réglages de rendu du viewer 3D (Phase 50, lot 6).
+ * Mode switch and render settings of the 3D viewer (Phase 50, batch 6).
  *
- * Trois retraits à constater sur l'écran réel, parce que chacun visait un geste qui ne menait
- * nulle part : le segment « Mise en scène » (deux commandes pour un seul état), le segment
- * « Nettoyer » sans le droit d'enregistrer (bouton refusé en 403), et l'onglet « Affichage »
- * (réglages à traverser l'écran). Et trois présences : l'interrupteur de mise en scène dans le
- * panneau Caméra, le mode « Nettoyer » quand le serveur l'accorde, et les réglages de rendu au
- * coin haut-gauche du viewer.
+ * Three removals to be observed on the real screen, because each one targeted a gesture that led
+ * nowhere: the "Staging" segment (two commands for a single state), the
+ * "Clean" segment without the right to save (button refused with a 403), and the "Display" tab
+ * (settings to traverse the screen). And three presences: the staging switch in the
+ * Camera panel, the "Clean" mode when the server grants it, and the render settings in the
+ * top-left corner of the viewer.
  */
-describe('ReviewPage — chrome du viewer 3D', () => {
-  it('n’offre pas de segment « Mise en scène »', async () => {
+describe('ReviewPage — 3D viewer chrome', () => {
+  it('does not offer a "Staging" segment', async () => {
     mount('MODEL_3D');
 
     expect(await screen.findByRole('button', { name: t('mode.explore') })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: t('mode.stage') })).not.toBeInTheDocument();
-    // L'onglet « Affichage » ne s'affirme plus par son libellé : la clé a été retirée des
-    // catalogues quand le splat a suivi le 3D (lot 12) et que plus aucun dock ne le porte.
-    // C'est `panelsFor` qui l'atteste (`chrome/chromeState.test`), seule autorité des onglets.
+    // The "Display" tab is no longer asserted by its label: the key was removed from the
+    // catalogs when the splat followed the 3D (batch 12), and no dock carries it any more.
+    // It is `panelsFor` that attests to it (`chrome/chromeState.test`), the sole authority on tabs.
   });
 
-  it('offre « Nettoyer » quand le serveur accorde l’écriture de la transformation', async () => {
+  it('offers "Clean" when the server grants write access to the transform', async () => {
     mount('MODEL_3D', {}, { permissions: { editTransform: true } });
 
     expect(await screen.findByRole('button', { name: t('mode.clean') })).toBeInTheDocument();
   });
 
-  it('retire « Nettoyer » quand le serveur la refuse — plus de bouton mort', async () => {
-    // C'est le cas d'un ARTIST membre du projet qui n'est pas l'auteur de la version : le
-    // mode ne lui proposait qu'un « Enregistrer » que `VersionService.update` refuse en 403.
+  it('removes "Clean" when the server refuses it: no dead button', async () => {
+    // This is the case of an ARTIST who is a project member but not the author of the version: the
+    // mode only offered them a "Save" that `VersionService.update` refuses with a 403.
     mount('MODEL_3D', {}, { permissions: { editTransform: false } });
 
     expect(await screen.findByRole('button', { name: t('tool.poi') })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: t('mode.clean') })).not.toBeInTheDocument();
   });
 
-  it('pose les réglages de rendu dans le viewer, et le mode de rendu dedans', async () => {
+  it('sets the render settings in the viewer, and the render mode in it', async () => {
     const { user } = mount('MODEL_3D');
 
     await user.click(await screen.findByRole('button', { name: t('viewer.render.title') }));
@@ -247,21 +247,21 @@ describe('ReviewPage — chrome du viewer 3D', () => {
     expect(screen.getByRole('button', { name: t('viewer.mode.wireframe') })).toBeInTheDocument();
   });
 
-  it('garde la mise en scène joignable : son interrupteur est au panneau Caméra', async () => {
+  it('keeps staging reachable: its switch is in the Camera panel', async () => {
     const { container, user } = mount('MODEL_3D');
 
-    // Requête bornée au dock : la piste du transport porte aussi le libellé « Camera ».
+    // Query bounded to the dock: the transport track also carries the label "Camera".
     await screen.findByRole('button', { name: t('panel.info') });
     const dock = within(container.querySelector('.rv-dock') as HTMLElement);
     await user.click(dock.getByRole('button', { name: t('panel.camera') }));
-    // Nommé par le mode qu'il arme, et non par la fenêtre PiP qu'il ouvre.
+    // Named by the mode it arms, not by the PiP window it opens.
     expect(dock.getByText(t('mode.stage'))).toBeInTheDocument();
     expect(dock.getByRole('switch')).toBeInTheDocument();
   });
 });
 
-describe('ReviewPage — panneau de commentaires', () => {
-  it('affiche le fil du média et se replie à la demande', async () => {
+describe('ReviewPage — comment panel', () => {
+  it('shows the media thread and collapses on demand', async () => {
     const { user } = mount('VIDEO', { 'GET /api/comments': { items: [comment()] } });
 
     expect(await screen.findByText(comment().content)).toBeInTheDocument();
@@ -271,7 +271,7 @@ describe('ReviewPage — panneau de commentaires', () => {
     await waitFor(() => expect(screen.queryByText(comment().content)).not.toBeInTheDocument());
   });
 
-  it('demande le fil du média affiché, et de lui seul', async () => {
+  it('requests the thread of the displayed media, and of it alone', async () => {
     const { api } = mount('VIDEO', { 'GET /api/comments': { items: [] } });
 
     expect(await screen.findByText(t('comments.empty'))).toBeInTheDocument();
@@ -279,7 +279,7 @@ describe('ReviewPage — panneau de commentaires', () => {
     expect(call.url.searchParams.get('mediaObjectId')).toBe(String(MEDIA_ID));
   });
 
-  it('dit pourquoi l’écran est vide quand le média est introuvable', async () => {
+  it('says why the screen is empty when the media cannot be found', async () => {
     renderWithProviders(<ReviewPage />, {
       route: `/review/${MEDIA_ID}`,
       path: '/review/:mediaId',
@@ -289,23 +289,23 @@ describe('ReviewPage — panneau de commentaires', () => {
       },
     });
 
-    // Le message du serveur remplace le squelette — et aucun viewer n'est monté à vide.
+    // The server message replaces the skeleton, and no viewer is mounted empty.
     expect(await screen.findByText('Media not found')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: t('panel.info') })).toBeNull();
   });
 });
 
 /**
- * Sortie de la lecture d'un commentaire annoté (Phase 50, lot 13).
+ * Exiting the playback of an annotated comment (Phase 50, batch 13).
  *
- * La pilule se posait dans la section de review, dont le premier enfant est l'en-tête unifié du
- * chrome : elle tombait sur la bascule de mode — centrée, elle aussi — ou sur la bande de
- * consigne. Elle vit désormais dans la zone média, au même bord pour l'image, le modèle 3D et le
- * nuage de points. On l'affirme donc *à l'intérieur* de `[data-viewer-zone]`, pas seulement à
- * l'écran : c'est la position qui était en cause.
+ * The pill was placed in the review section, whose first child is the unified header of the
+ * chrome: it fell on the mode switch (also centred) or on the instruction strip.
+ * It now lives in the media zone, on the same edge for the image, the 3D model and the
+ * point cloud. We therefore assert it *inside* `[data-viewer-zone]`, not merely on
+ * the screen: it was the position that was at issue.
  */
-describe('ReviewPage — quitter la lecture d’un commentaire annoté', () => {
-  /** Commentaire porteur d'une annotation : c'est ce qui rend la carte sélectionnable. */
+describe('ReviewPage — leaving the playback of an annotated comment', () => {
+  /** Comment carrying an annotation: this is what makes the card selectable. */
   const annotated = comment({
     annotation: [{ id: 'a1', type: 'arrow', color: '#ffffff', width: 3, x1: 0.2, y1: 0.2, x2: 0.6, y2: 0.6 }],
   });
@@ -322,28 +322,28 @@ describe('ReviewPage — quitter la lecture d’un commentaire annoté', () => {
       name: t('ctx.hideAnnotation'),
     });
 
-  it('pose le bouton dans le viewer image', async () => {
+  it('places the button in the image viewer', async () => {
     const { container } = await openAnnotation('IMAGE');
     expect(exitButton(container)).toBeInTheDocument();
   });
 
-  it('pose le même bouton dans le viewer 3D', async () => {
+  it('places the same button in the 3D viewer', async () => {
     const { container } = await openAnnotation('MODEL_3D');
     expect(exitButton(container)).toBeInTheDocument();
   });
 
-  it('pose le même bouton dans le viewer splat', async () => {
+  it('places the same button in the splat viewer', async () => {
     const { container } = await openAnnotation('SPLAT');
     expect(exitButton(container)).toBeInTheDocument();
   });
 
-  it('rend la main à la rédaction : le bouton disparaît avec la lecture', async () => {
+  it('hands control back to the writing: the button disappears with the playback', async () => {
     const { container, user } = await openAnnotation('IMAGE');
     await user.click(exitButton(container));
     await waitFor(() =>
       expect(screen.queryByRole('button', { name: t('ctx.hideAnnotation') })).not.toBeInTheDocument(),
     );
-    // Le composer reste sous la main : l'annotation lue partie, on écrit la suivante.
+    // The composer stays at hand: the annotation read, we write the next one.
     expect(screen.getByPlaceholderText(t('comments.placeholder'))).toBeInTheDocument();
   });
 });

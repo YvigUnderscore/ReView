@@ -12,29 +12,29 @@ const situation = (over: Partial<Parameters<typeof shouldBlockNativeMenu>[0]> = 
 });
 
 describe('shouldBlockNativeMenu', () => {
-  it('bloque le menu natif dans le cas courant', () => {
+  it('blocks the native menu in the usual case', () => {
     expect(shouldBlockNativeMenu(situation())).toBe(true);
   });
 
-  it('laisse la main au composant qui a déjà servi son menu', () => {
+  it('hands control to the component that has already served its menu', () => {
     expect(shouldBlockNativeMenu(situation({ defaultPrevented: true }))).toBe(false);
   });
 
-  it('rend le menu natif sur Shift+clic droit', () => {
+  it('returns the native menu on Shift+right click', () => {
     expect(shouldBlockNativeMenu(situation({ shiftKey: true }))).toBe(false);
   });
 
-  it('rend le menu natif dans un champ de saisie', () => {
+  it('returns the native menu in a text input', () => {
     expect(shouldBlockNativeMenu(situation({ inNativeZone: true }))).toBe(false);
   });
 
-  it('donne la priorité au menu métier sur toutes les autres exceptions', () => {
+  it('gives priority to the domain menu over all other exceptions', () => {
     expect(shouldBlockNativeMenu({ defaultPrevented: true, shiftKey: true, inNativeZone: true })).toBe(false);
   });
 });
 
 describe('situationOf', () => {
-  it('détecte une zone de saisie depuis la cible', () => {
+  it('detects a text input area from the target', () => {
     const input = document.createElement('input');
     document.body.append(input);
     const event = { target: input, defaultPrevented: false, shiftKey: false } as unknown as MouseEvent;
@@ -42,7 +42,7 @@ describe('situationOf', () => {
     input.remove();
   });
 
-  it('détecte une zone de saisie depuis un descendant', () => {
+  it('detects a text input area from a descendant', () => {
     const editable = document.createElement('div');
     editable.setAttribute('contenteditable', 'true');
     const span = document.createElement('span');
@@ -53,7 +53,7 @@ describe('situationOf', () => {
     editable.remove();
   });
 
-  it('ne signale rien sur un élément ordinaire', () => {
+  it('reports nothing on an ordinary element', () => {
     const div = document.createElement('div');
     document.body.append(div);
     const event = { target: div, defaultPrevented: true, shiftKey: true } as unknown as MouseEvent;
@@ -65,12 +65,12 @@ describe('situationOf', () => {
     div.remove();
   });
 
-  it('supporte une cible sans closest (document, window)', () => {
+  it('supports a target without closest (document, window)', () => {
     const event = { target: null, defaultPrevented: false, shiftKey: false } as unknown as MouseEvent;
     expect(situationOf(event).inNativeZone).toBe(false);
   });
 
-  it('couvre les quatre familles de zones natives', () => {
+  it('covers the four families of native areas', () => {
     expect(NATIVE_ZONES).toContain('input');
     expect(NATIVE_ZONES).toContain('textarea');
     expect(NATIVE_ZONES).toContain('select');

@@ -3,7 +3,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// `vi.mock` est remonté en tête de fichier : les doublures doivent l'être aussi.
+// `vi.mock` is hoisted to the top of the file: the doubles must be too.
 const { playlist, playlistItem, links, touch } = vi.hoisted(() => ({
   playlist: { findUnique: vi.fn(), update: vi.fn(), create: vi.fn() },
   playlistItem: { deleteMany: vi.fn(), createMany: vi.fn() },
@@ -60,11 +60,10 @@ beforeEach(() => {
 });
 
 /**
- * Comme les notes, les playlists n'étaient jamais importées : l'événement était accepté
- * puis traité par une passe qui ne les lisait pas.
+ * As with notes, playlists were never imported: the event was accepted, then processed by a pass that did not read them.
  */
 describe('pullPlaylists', () => {
-  it('cumule le filtre d’identifiants avec le filtre de projet', async () => {
+  it('combines the identifier filter with the project filter', async () => {
     const { ctx, search } = contextWith([]);
     await pullPlaylists(ctx, { onlySgIds: [88] });
 
@@ -76,7 +75,7 @@ describe('pullPlaylists', () => {
     expect(args.maxRecords).toBe(1);
   });
 
-  it('balaie le projet quand aucune playlist n’est désignée', async () => {
+  it('sweeps the project when no playlist is designated', async () => {
     const { ctx, search } = contextWith([]);
     await pullPlaylists(ctx);
 
@@ -85,7 +84,7 @@ describe('pullPlaylists', () => {
     expect(args.maxRecords).toBe(200);
   });
 
-  it('écarte une playlist venue d’un autre projet du site', async () => {
+  it('discards a playlist coming from another project of the site', async () => {
     const { ctx, journal } = contextWith([sgPlaylist(88, 78)]);
     await pullPlaylists(ctx, { onlySgIds: [88] });
 
@@ -93,7 +92,7 @@ describe('pullPlaylists', () => {
     expect(playlist.create).not.toHaveBeenCalled();
   });
 
-  it('crée la séance et la compte dans le résumé de fin de passe', async () => {
+  it('creates the session and counts it in the end-of-pass summary', async () => {
     const { ctx, journal } = contextWith([sgPlaylist(88)]);
     await pullPlaylists(ctx, { onlySgIds: [88] });
 
@@ -107,11 +106,10 @@ describe('pullPlaylists', () => {
   });
 
   /**
-   * Le lien survit à la playlist qu'il désigne : quelqu'un l'a supprimée ici, ShotGrid la
-   * renvoie, et la création butait alors sur la contrainte `(projectId, name)` — la passe
-   * entière s'arrêtait sur une séance effacée des mois plus tôt.
+   * The link survives the playlist it designates: someone deleted it here, ShotGrid returns it, and creation then hit the `(projectId, name)` constraint: the whole
+   * pass stopped on a session erased months earlier.
    */
-  it('retombe sur le nom quand le lien désigne une séance supprimée', async () => {
+  it('falls back to the name when the link designates a deleted session', async () => {
     links.mapSgToLocal.mockImplementation(async (_c: number, type: string) =>
       type === 'version' ? new Map([[900, { localId: 31 }]]) : new Map([[88, { localId: 55 }]]),
     );
@@ -128,10 +126,9 @@ describe('pullPlaylists', () => {
   });
 
   /**
-   * Renommage vers un nom déjà pris localement : on garde le nom actuel et on signale le
-   * conflit. Fusionner deux séances ou en écraser une ne se décide pas tout seul.
+   * Renaming to a name already taken locally: we keep the current name and flag the conflict. Merging two sessions or overwriting one is not decided on its own.
    */
-  it('ne renomme pas vers un nom déjà porté par une autre séance', async () => {
+  it('does not rename to a name already held by another session', async () => {
     links.mapSgToLocal.mockImplementation(async (_c: number, type: string) =>
       type === 'version' ? new Map([[900, { localId: 31 }]]) : new Map([[88, { localId: 55 }]]),
     );

@@ -4,14 +4,14 @@
 /**
  * Invariants des scripts d'exploitation (install, update, backup, restore).
  *
- * Ces quatre scripts sont ce qu'un studio tiers exécute sans nous, sur des données qu'on ne
- * reverra jamais. Aucun compilateur ne les relit : les contrôles ci-dessous verrouillent
- * les propriétés dont la disparition ne se voit qu'un jour de panne — un secret par défaut
- * qui survit à l'installation, une mise à jour qui bascule sans sauvegarde, une sauvegarde
- * redevenue une archive intégrale, un retour arrière silencieux sur la base.
+ * These four scripts are what a third-party studio runs without us, on data we
+ * will never see again. No compiler reads them: the checks below lock down
+ * the properties whose loss only shows on a day of failure — a default secret
+ * that survives installation, an update that switches over without a backup, a backup
+ * turned back into a full archive, a silent rollback of the database.
  *
- * Lecture textuelle assumée : le dépôt n'embarque aucun analyseur shell, et en ajouter un
- * pour vérifier une poignée d'invariants serait disproportionné.
+ * Deliberately textual reading: the repository ships no shell parser, and adding one
+ * to check a handful of invariants would be disproportionate.
  */
 
 import { readFileSync } from 'node:fs';
@@ -23,9 +23,9 @@ const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const read = (rel) => readFileSync(path.join(ROOT, rel), 'utf8');
 
 /**
- * Retire commentaires, lignes d'affichage et corps de heredoc : on inspecte ce qui
- * S'EXÉCUTE, pas la prose — un message qui *décrit* une commande de restauration ne doit
- * pas passer pour une restauration lancée dans le dos de l'opérateur.
+ * Removes comments, display lines and heredoc bodies: we inspect what
+ * IS EXECUTED, not the prose — a message that *describes* a restore command must not
+ * pass for a restore launched behind the operator's back.
  */
 export function commandsOf(script) {
   const out = [];
@@ -57,11 +57,11 @@ describe('les quatre scripts d’exploitation', () => {
     });
 
     /**
-     * Piège classique et silencieux : sous `set -e`, une instruction `[ test ] && action`
-     * dont le test est FAUX rend un code non nul et **fait sortir le script**. Écrite
-     * telle quelle, la sauvegarde de l'ancien .env arrêtait l'installateur à la première
-     * installation — celle où .env n'existe justement pas encore. Un `if`, ou un
-     * `|| autre-chose` final, retire le piège.
+     * Classic and silent trap: under `set -e`, a statement `[ test ] && action`
+     * whose test is FALSE returns a non-zero code and **exits the script**. Written
+     * as is, the backup of the old .env stopped the installer at the first
+     * installation — the very one where .env does not exist yet. An `if`, or a
+     * final `|| something-else`, removes the trap.
      */
     it(`n'enchaîne aucune action sur un test nu (piège set -e) (${name})`, () => {
       const offenders = commandsOf(script)
@@ -77,12 +77,12 @@ describe('scripts/install.sh', () => {
 
   it('tire chaque secret au hasard — aucun mot de passe par défaut ne survit', () => {
     expect(INSTALL).toMatch(/openssl rand -hex 32/);
-    // Repli sans openssl : un NAS minimal n'en a pas toujours.
+    // Fallback without openssl: a minimal NAS does not always have it.
     expect(INSTALL).toMatch(/\/dev\/urandom/);
     for (const key of ['JWT_SECRET', 'POSTGRES_PASSWORD', 'MINIO_ROOT_PASSWORD', 'APP_ENCRYPTION_KEY']) {
       expect(commands, key).toMatch(new RegExp(`${key}="?\\$\\(gen_secret\\)`));
     }
-    // Les défauts du dépôt de développement ne doivent jamais atterrir dans un .env produit.
+    // The defaults of the development repository must never land in a produced .env.
     expect(commands).not.toMatch(/minioadmin/);
     expect(commands).not.toMatch(/change_me/);
   });
@@ -97,15 +97,15 @@ describe('scripts/install.sh', () => {
   it('fige la pile dans COMPOSE_FILE (le piège du second -f oublié)', () => {
     expect(INSTALL).toMatch(/COMPOSE_FILE=\$COMPOSE_FILES/);
     expect(INSTALL).toMatch(/docker-compose\.prod\.yml/);
-    // Sans séparateur explicite, la liste ne se lit qu'avec le séparateur du système
-    // (« ; » sous Windows) : le même .env cesserait d'être compris d'un poste à l'autre.
+    // Without an explicit separator, the list is only readable with the system separator
+    // (";" under Windows): the same .env would stop being understood from one workstation to another.
     expect(INSTALL).toMatch(/COMPOSE_PATH_SEPARATOR=:/);
   });
 
   it('ne modifie aucun fichier versionné : la configuration du site est rendue dans deploy/', () => {
     expect(commands).toMatch(/nginx\/nginx\.conf > deploy\/nginx\.conf/);
     expect(commands).toContain('deploy/compose.site.yml');
-    // Une réécriture en place de nginx/nginx.conf ferait échouer toute mise à jour par git.
+    // An in-place rewrite of nginx/nginx.conf would make every git update fail.
     expect(commands).not.toMatch(/sed -i[^\n]*nginx\/nginx\.conf/);
   });
 
@@ -149,7 +149,7 @@ describe('scripts/update.sh', () => {
 
   it('n’efface jamais la base en silence : le retour arrière de données reste manuel', () => {
     expect(commands).not.toMatch(/restore\.sh (db|all)/);
-    // …mais la commande exacte est écrite à l'opérateur.
+    // …but the exact command is written out for the operator.
     expect(UPDATE).toMatch(/scripts\/restore\.sh db backups\//);
   });
 
@@ -164,17 +164,17 @@ describe('scripts/update.sh', () => {
     expect(setAt).toBeLessThan(upAt);
   });
 
-  // ── Quatre pannes constatées, et refermées ────────────────────────────────
+  // ── Four observed failures, and closed ────────────────────────────────
   //
-  // Elles étaient toutes invisibles tant que la mise à jour se lançait à la main, devant un
-  // terminal, sur une instance qui remontait bien. Elles cessent de l'être le jour où c'est
-  // l'administration qui commande, sans terminal et sans personne pour relire le journal.
+  // They were all invisible as long as the update was launched by hand, in front of a
+  // terminal, on an instance that came back up fine. They stop being so the day it is
+  // the administration that orders it, without a terminal and without anyone to read the log.
 
   it('n’obéit jamais à un « up -d » nu : sinon le retour arrière est inatteignable', () => {
-    // `worker` ET `frontend` dépendent de `backend: condition: service_healthy`. Un backend
-    // qui ne devient pas sain — une migration Prisma en échec, la panne la plus courante
-    // d'une mise à jour — fait sortir `up -d` en erreur ; sous `set -e`, un appel nu tue le
-    // script AVANT la section 4, c'est-à-dire précisément dans le cas où elle sert.
+    // `worker` AND `frontend` depend on `backend: condition: service_healthy`. A backend
+    // that does not become healthy — a failed Prisma migration, the most common failure
+    // of an update — makes `up -d` exit with an error; under `set -e`, a bare call kills the
+    // script BEFORE section 4, that is, precisely in the case where it is needed.
     const bare = commands
       .split('\n')
       .filter((line) => line.includes('docker compose up -d'))
@@ -183,8 +183,8 @@ describe('scripts/update.sh', () => {
   });
 
   it('valide « --timeout » comme un nombre avant de le faire entrer dans une arithmétique', () => {
-    // `$(( SECONDS + READY_TIMEOUT ))` ré-évalue le CONTENU de la variable : « x[$(cmd)] »
-    // s'y exécute. Ce champ vient désormais d'un ordre déposé par l'application.
+    // `$(( SECONDS + READY_TIMEOUT ))` re-evaluates the CONTENT of the variable: "x[$(cmd)]"
+    // runs there. This field now comes from an order dropped by the application.
     expect(UPDATE).toMatch(/case "\$READY_TIMEOUT" in\s*\n\s*''\|\*\[!0-9\]\*\)/);
   });
 
@@ -194,8 +194,8 @@ describe('scripts/update.sh', () => {
   });
 
   it('repose l’étiquette qui tourne quand la récupération des images échoue', () => {
-    // Sinon `.env` reste sur une étiquette inexistante et TOUTE commande docker compose
-    // ultérieure échoue — y compris celle par laquelle l'exploitant essaierait de s'en tirer.
+    // Otherwise `.env` stays on a non-existent label and EVERY later docker compose
+    // command fails — including the one the operator would use to get out of it.
     expect(commands).toMatch(
       /if ! docker compose pull; then[\s\S]{0,300}?env_set REVIEW_IMAGE_TAG "\$PREVIOUS_TAG"/,
     );
@@ -215,20 +215,20 @@ describe('scripts/backup.sh', () => {
   it('sauvegarde les objets de façon incrémentale par défaut', () => {
     expect(commands).toMatch(/MODE="\$\{BACKUP_MODE:-mirror\}"/);
     expect(commands).toMatch(/mirror --overwrite --remove/);
-    // L'instantané est fait de liens durs : sept rétentions ne coûtent pas sept copies.
+    // The snapshot is made of hard links: seven retentions do not cost seven copies.
     expect(commands).toMatch(/cp -al/);
   });
 
   it("prend `mc` dans l'image du conteneur MinIO en marche, sans registre", () => {
-    // Par ID d'image : la sauvegarde nocturne ne dépend d'aucun dépôt joignable, et le
-    // client est celui du serveur. Une image client à part (`minio/mc`) a cessé d'exister.
+    // By image ID: the nightly backup depends on no reachable repository, and the
+    // client is the server's. A separate client image (`minio/mc`) has ceased to exist.
     for (const [name, script] of [
       ['backup.sh', commands],
       ['restore.sh', commandsOf(RESTORE)],
     ]) {
       expect(script, name).toMatch(/docker inspect -f '\{\{\.Image\}\}' "\$MINIO"/);
       const runs = script
-        .replace(/\\\n\s*/g, ' ') // une commande continuée par `\` se lit d'un tenant
+        .replace(/\\\n\s*/g, ' ') // a command continued with `\` is read as one line
         .split('\n')
         .filter((l) => /--network "container:\$MINIO"/.test(l));
       expect(runs.length, name).toBeGreaterThan(0);
@@ -252,7 +252,20 @@ describe('scripts/backup.sh', () => {
   });
 
   it('ne purge jamais le miroir vivant', () => {
-    expect(commands).toMatch(/grep -Ev '\/minio-current\/\$'/);
+    // Only <YYYYMMDD-HHMMSS> directories are rotation candidates: `minio-current` never matches.
+    expect(commands).toMatch(/grep -E '\/\[0-9\]\{8\}-\[0-9\]\{6\}\$'/);
+    expect(commands).not.toMatch(/rm -rf "\$dir"/);
+  });
+
+  it('refuse un BACKUP_KEEP invalide (0 purgerait toutes les sauvegardes)', () => {
+    expect(BACKUP).toMatch(/BACKUP_KEEP must be a positive integer >= 1/);
+    expect(commands).toMatch(/\*\[!0-9\]\*\|0\|0\[0-9\]\*/);
+  });
+
+  it('ne passe aucun identifiant MinIO en ligne de commande ni par repli minioadmin', () => {
+    expect(commands).not.toMatch(/minioadmin/);
+    expect(commands).not.toMatch(/-e "MC_HOST_/);
+    expect(commands).toMatch(/--env-file "\$MC_ENVFILE"/);
   });
 
   it('écrit un manifeste qui date la sauvegarde et nomme la version', () => {
@@ -277,7 +290,7 @@ describe('scripts/restore.sh', () => {
   it('vérifie sur une base jetable, puis la supprime', () => {
     expect(commands).toMatch(/createdb .*\$CHECK_DB/);
     expect(commands).toMatch(/dropdb .*\$CHECK_DB/);
-    // Un dump qui ne rend qu'une poignée de tables n'est pas une sauvegarde utilisable.
+    // A dump that yields only a handful of tables is not a usable backup.
     expect(commands).toMatch(/TABLES:-0.*-gt 10|-gt 10/);
   });
 });

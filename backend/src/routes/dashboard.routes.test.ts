@@ -5,12 +5,12 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { NextFunction, Request, Response } from 'express';
 
 /**
- * Les deux vues transverses servies sous `/api/dashboard` : « mes tâches » et le fil des
- * commentaires. Ce sont les destinations des compteurs de l'Accueil — un compteur qui ouvre
- * une route absente ou refusée ne valait pas mieux que l'ancienne ancre morte.
+ * The two cross-cutting views served under `/api/dashboard`: "my tasks" and the comments feed. They
+ * are the destinations of the Home counters: a counter that opens a missing or refused route was no
+ * better than the former dead anchor.
  *
- * Le routeur est monté sur `/api/dashboard` et non sur `/api` : son `router.use(authenticate)`
- * ne traverse donc aucune route publique.
+ * The router is mounted on `/api/dashboard` and not on `/api`: its `router.use(authenticate)` therefore
+ * does not cross any public route.
  */
 const { caller } = vi.hoisted(() => ({
   caller: { user: { id: 3, email: 'artist@studio.com', role: 'ARTIST' as const } },
@@ -22,7 +22,8 @@ const { listMyTasks, listMyComments, getDashboard } = vi.hoisted(() => ({
   getDashboard: vi.fn(),
 }));
 
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: Request, _res: Response, next: NextFunction) => {
     req.user = caller.user;
     next();
@@ -48,11 +49,11 @@ beforeEach(() => {
 });
 
 describe('GET /api/dashboard/tasks', () => {
-  it('sert toutes mes tâches quand aucun périmètre n’est demandé', async () => {
+  it('serves all my tasks when no scope is requested', async () => {
     const res = await request(app).get('/api/dashboard/tasks');
     expect(res.status).toBe(200);
-    // Le quatrième argument est le filtre de projet (lot 10) : absent, la liste reste
-    // transverse — c'est ce que déplient les compteurs de l'Accueil.
+    // The fourth argument is the project filter (batch 10): when absent, the list stays cross-project,
+    // which is what the Home counters unfold.
     expect(listMyTasks).toHaveBeenCalledWith(
       expect.objectContaining({ id: 3 }),
       'all',
@@ -61,31 +62,31 @@ describe('GET /api/dashboard/tasks', () => {
     );
   });
 
-  it('restreint la liste à un projet pour le bloc de la vue d’ensemble', async () => {
+  it('restricts the list to one project for the overview block', async () => {
     const res = await request(app).get('/api/dashboard/tasks?projectId=12');
     expect(res.status).toBe(200);
     expect(listMyTasks.mock.calls[0]![3]).toBe(12);
   });
 
-  it('refuse un projet qui n’est pas un identifiant', async () => {
+  it('rejects a project that is not an identifier', async () => {
     const res = await request(app).get('/api/dashboard/tasks?projectId=zero');
     expect(res.status).toBe(400);
     expect(listMyTasks).not.toHaveBeenCalled();
   });
 
-  it('déplie le compteur de retakes sur scope=blocked', async () => {
+  it('unfolds the retake counter on scope=blocked', async () => {
     const res = await request(app).get('/api/dashboard/tasks?scope=blocked');
     expect(res.status).toBe(200);
     expect(listMyTasks.mock.calls[0]![1]).toBe('blocked');
   });
 
-  it('refuse un périmètre inventé plutôt que de l’interpréter', async () => {
+  it('rejects an invented scope rather than interpreting it', async () => {
     const res = await request(app).get('/api/dashboard/tasks?scope=everything');
     expect(res.status).toBe(400);
     expect(listMyTasks).not.toHaveBeenCalled();
   });
 
-  it('refuse une page plus grande que le plafond des listes', async () => {
+  it('rejects a page larger than the list ceiling', async () => {
     const res = await request(app).get('/api/dashboard/tasks?pageSize=5000');
     expect(res.status).toBe(400);
     expect(listMyTasks).not.toHaveBeenCalled();
@@ -93,7 +94,7 @@ describe('GET /api/dashboard/tasks', () => {
 });
 
 describe('GET /api/dashboard/comments', () => {
-  it('sert le fil, paginé comme les autres listes', async () => {
+  it('serves the feed, paginated like the other lists', async () => {
     const res = await request(app).get('/api/dashboard/comments?pageSize=10');
     expect(res.status).toBe(200);
     expect(listMyComments).toHaveBeenCalledWith(

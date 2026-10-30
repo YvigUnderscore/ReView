@@ -6,9 +6,9 @@ import * as PopoverPrimitive from '@radix-ui/react-popover';
 import { cn } from '../../lib/utils';
 
 /**
- * Popover accessible (Radix) : portal, positionnement automatique, fermeture
- * Échap/clic extérieur, focus géré. Toute liste flottante ancrée à un déclencheur
- * (cloche de notifications…) DOIT passer par cette primitive (pas d'overlay artisanal).
+ * Accessible Popover (Radix): portal, automatic positioning, close on Escape/outside click,
+ * focus managed. Any floating list anchored to a trigger (notifications bell…) MUST go
+ * through this primitive (no hand-made overlay).
  */
 const Popover = PopoverPrimitive.Root;
 const PopoverTrigger = PopoverPrimitive.Trigger;
@@ -26,11 +26,10 @@ const PopoverContent = forwardRef<
       sideOffset={sideOffset}
       className={cn(
         'z-50 w-80 rounded-lg border border-border bg-card p-1 text-card-foreground shadow-xl outline-none',
-        // Un menu ne peut pas déborder hors de l'écran sans recours : il était en
-        // `max-height: none; overflow: visible`, donc tout ce qui dépassait le bas de la
-        // fenêtre était inatteignable — ni molette, ni clavier. Radix mesure la place
-        // réellement disponible sous (ou sur) le déclencheur et la publie dans cette
-        // variable ; on s'y borne et on défile à l'intérieur.
+        // A menu must not overflow off-screen without a fallback: it used to be
+        // `max-height: none; overflow: visible`, so anything below the bottom of the window was
+        // unreachable — no wheel, no keyboard. Radix measures the space really available below
+        // (or above) the trigger and publishes it in this variable; we bound to it and scroll inside.
         'max-h-[var(--radix-popover-content-available-height)] overflow-y-auto',
         'data-[state=open]:animate-in data-[state=open]:fade-in-0 data-[state=open]:zoom-in-95 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95',
         className,

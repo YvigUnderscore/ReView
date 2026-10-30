@@ -1,20 +1,19 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { MediaKind } from '../../../types/api';
-import type { MessageKey } from '../../../i18n';
+import type { MediaKind } from '@/v2/types/api';
+import type { MessageKey } from '@/v2/i18n';
 import type { InfoRow } from './InfoPanel';
 import type { MediaResp } from '../reviewTypes';
 
-/** Traducteur injecté : la fiche est une fonction pure, testable sans monter de React. */
+/** Injected translator: the sheet is a pure function, testable without mounting React. */
 type Tr = (key: MessageKey) => string;
 
-/** Fiche technique du média, telle que l'API la renseigne. */
+/** Technical sheet of the media, as the API provides it. */
 export function sheetRows(t: Tr, data: MediaResp, kind: MediaKind, fps: number): InfoRow[] {
   const rows: InfoRow[] = [{ label: t('review.file'), value: data.media.originalName }];
-  // Le média importé de ShotGrid porte le code de la Version — le nom du fichier livré
-  // reste ici : la convention d'un studio y porte souvent une information (espace
-  // colorimétrique, encodage) que le code du site ne reprend pas.
+  // The media imported from ShotGrid carries the Version code; the delivered file name remains here:
+  // a studio's convention often carries information (colour space, encoding) that the site code does not repeat.
   if (data.sourceFilename && data.sourceFilename !== data.media.originalName)
     rows.push({ label: t('review.sourceFile'), value: data.sourceFilename });
   if (kind === 'VIDEO') {

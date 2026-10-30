@@ -5,24 +5,22 @@ import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { FileText, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { Textarea } from '../../components/ui/textarea';
 import { useT } from '../../i18n';
 
 /**
- * Consigne d'une tâche (Phase 50) : ce qu'il y a à faire.
+ * A task's brief (Phase 50): what there is to do.
  *
- * Le modèle n'avait aucun champ de description — nulle part dans la chaîne. L'artiste lisait
- * le nom de l'étape et devinait le reste, ou allait chercher un retour de review qui en
- * parlait peut-être.
+ * The model had no description field anywhere in the chain. The artist read the step's name and
+ * guessed the rest, or went looking for a review comment that might have mentioned it.
  *
- * Éditable sur place, sans quitter la page ni ouvrir de panneau : le texte lui-même est la
- * zone cliquable. Seule la production écrit — c'est elle qui donne le travail ; l'assigné,
- * lui, ne peut changer que son statut et sa checklist, exactement comme le serveur
- * l'autorise. Vide et sans droit d'écrire, l'encart n'apparaît pas : un cadre vide n'apprend
- * rien à personne.
+ * Editable in place, without leaving the page or opening a panel: the text itself is the clickable
+ * area. Only production writes — it is production that hands out the work; the assignee can only
+ * change their status and checklist, exactly as the server allows. Empty and without write rights,
+ * the panel does not appear: an empty frame teaches nobody anything.
  */
 export default function TaskDescription({
   taskId,
@@ -108,8 +106,8 @@ export default function TaskDescription({
           {t('task.descriptionEmpty')}
         </button>
       ) : canEdit ? (
-        /* Le texte est sa propre zone d'édition : un clic ouvre la saisie là où l'œil est
-           déjà. `text-left` parce qu'un bouton centre son contenu par défaut. */
+        /* The text is its own editing area: a click opens the input where the eye already is.
+           `text-left` because a button centres its content by default. */
         <button
           type="button"
           onClick={startEditing}

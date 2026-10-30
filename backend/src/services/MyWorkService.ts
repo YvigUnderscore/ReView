@@ -13,20 +13,18 @@ import {
 } from '../lib/homeScope';
 
 /**
- * Les vues transverses de « ce qui m'attend » : mes tâches et les derniers commentaires
- * de mon périmètre.
+ * Cross-cutting views of "what awaits me": my tasks and the latest comments of my scope.
  *
- * Elles existent parce que les compteurs de l'Accueil ne menaient nulle part. Deux cartes
- * pointaient une ancre (`#my-tasks`) qui disparaissait avec le bloc « mes tâches » dès
- * qu'on le retirait de son accueil — le clic ne faisait alors rien — et la carte des
- * commentaires ouvrait une page qui n'en montre aucun. Un chiffre qu'on ne peut pas
- * déplier n'est pas vérifiable : il faut pouvoir en voir les lignes.
+ * They exist because the Home page counters led nowhere. Two cards pointed to an anchor (`#my-tasks`) that
+ * disappeared along with the "my tasks" block as soon as it was removed from
+ * the home page — the click then did nothing — and the comments card opened a page that showed none of them.
+ * A figure that cannot be unfolded is not verifiable: one must be able to see its rows.
  *
- * Chaque liste lit le périmètre du compteur qui l'ouvre (`lib/homeScope`), jamais une
- * copie : c'est ce qui garantit que la page montre autant de lignes que la carte annonce.
+ * Each list reads the scope of the counter that opens it (`lib/homeScope`), never a copy: this is what
+ * guarantees that the page shows as many rows as the card announces.
  */
 
-/** Ce que la liste sert à un appelant qui veut agir sur ses tâches. */
+/** What the list serves a caller who wants to act on their tasks. */
 export interface MyTaskRow {
   id: number;
   name: string;
@@ -38,7 +36,7 @@ export interface MyTaskRow {
   dueDate: Date | null;
 }
 
-/** Une note du fil : de quoi la lire et l'ouvrir au bon endroit du média. */
+/** A comment of the thread: what is needed to read it and open it at the right spot of the media. */
 export interface CommentFeedRow {
   id: number;
   mediaId: number;
@@ -52,7 +50,7 @@ export interface CommentFeedRow {
   author: string | null;
 }
 
-/** Localisation lisible (SQ010 · SH020, ou nom d'asset) — même forme qu'à l'Accueil. */
+/** Readable location (SQ010 · SH020, or asset name) — same form as on the Home page. */
 function place(
   holder: {
     shot?: { code: string; sequence?: { code: string } | null } | null;
@@ -67,16 +65,15 @@ function place(
 }
 
 /**
- * Mes tâches, tous projets confondus.
+ * My tasks, across all projects.
  *
- * `scope` dit laquelle des deux cartes personnelles a été cliquée : tout ce qui m'est
- * assigné et vivant, ou seulement ce qui m'est revenu (retake, rejet). Le tri place
- * l'échéance la plus proche d'abord et les tâches sans date à la fin — un `id` départage,
- * sans quoi deux tâches sans échéance pourraient changer de page d'une requête à l'autre.
+ * `scope` says which of the two personal cards was clicked: everything assigned to me and alive, or only what
+ * came back to me (retake, rejection). The sort places the nearest deadline first and tasks without a date at
+ * the end — an `id` breaks ties, otherwise two tasks without a deadline could change page from one request to
+ * the next.
  *
- * `projectId` restreint la même liste à un projet : c'est ce que montre le bloc « mes
- * tâches » de la vue d'ensemble. Le périmètre reste celui du compteur — le filtre ne fait
- * que le rétrécir, il ne l'ouvre jamais.
+ * `projectId` restricts the same list to one project: this is what the "my tasks" block of the overview
+ * shows. The scope remains that of the counter — the filter only narrows it, it never widens it.
  */
 export async function listMyTasks(
   user: SessionUser,
@@ -120,12 +117,11 @@ export async function listMyTasks(
 }
 
 /**
- * Les derniers commentaires de mon périmètre, du plus récent au plus ancien.
+ * The latest comments of my scope, from most recent to oldest.
  *
- * Le fil rend un commentaire par ligne — et non un média par ligne comme « dernières
- * reviews » : c'est le chiffre de la carte « commentaires » qu'il déplie. Les colonnes
- * lourdes (tracé d'annotation, viewpoint 3D, pièces jointes) restent en base : rien de ce
- * qui ne s'affiche pas ne traverse le réseau.
+ * The thread returns one comment per row — and not one media per row as "latest reviews" does: it is the
+ * figure of the "comments" card that it unfolds. The heavy columns (annotation trace,
+ * 3D viewpoint, attachments) remain in the database: nothing that is not displayed crosses the network.
  */
 export async function listMyComments(
   user: SessionUser,

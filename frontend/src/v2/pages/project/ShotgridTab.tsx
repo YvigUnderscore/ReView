@@ -15,9 +15,9 @@ import SgDiffPanel from '../../components/shotgrid/SgDiffPanel';
 import SgVersionsPanel from '../../components/shotgrid/SgVersionsPanel';
 
 /**
- * Onglet ShotGrid d'un projet : état de la connexion, synchronisations, comparaison,
- * publishes et réglages de l'échange. Tout ce qui concerne le lien avec le registre de
- * production se pilote depuis cet écran.
+ * A project's ShotGrid tab: connection status, synchronizations, comparison, publishes and
+ * exchange settings. Everything concerning the link with the production register is driven from
+ * this screen.
  */
 type Section = 'sync' | 'diff' | 'versions' | 'settings';
 
@@ -119,11 +119,11 @@ export default function ShotgridTab({ projectId, canManage }: { projectId: numbe
       {section === 'settings' && (
         <div className="space-y-6">
           <SgSettingsPanel connection={connection} canManage={canManage} />
-          {/* Les étapes retenues vivent avec les réglages : c'est une décision de projet,
-              prise une fois, pas un geste de synchronisation. */}
+          {/* The retained steps live with the settings: it is a project decision, taken once, not a
+              synchronization gesture. */}
           <SgStepsPanel connection={connection} canManage={canManage} />
-          {/* Même nature : ce que le projet retient du vocabulaire du site. Les étapes
-              disent qui travaille, les statuts disent où en est le travail. */}
+          {/* Same nature: what the project retains from the site's vocabulary. Steps say who works,
+              statuses say where the work stands. */}
           <SgStatusesPanel connection={connection} canManage={canManage} />
         </div>
       )}

@@ -2,25 +2,25 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Invariants du modèle de données.
+ * Invariants of the data model.
  *
- * Deux familles de garanties vivent hors de portée du compilateur, et se sont donc perdues
+ * Two families of guarantees live out of the compiler's reach, and were therefore lost
  * en silence :
  *
- *  1. **Les index de clés étrangères.** Postgres indexe la colonne RÉFÉRENCÉE, jamais celle
- *     qui référence. Trente-quatre colonnes de rattachement s'étaient accumulées sans index
- *     de tête — dont `MediaObject.uploaderId`, balayé intégralement à chaque demande
- *     d'upload. Rien ne le signalait : un `@@index` oublié ne casse aucun test, il rend la
- *     requête lente. Le contrôle ci-dessous relit le schéma et refuse toute nouvelle
- *     relation dont la clé n'ouvre pas un index.
+ *  1. **Foreign-key indexes.** Postgres indexes the REFERENCED column, never the one
+ *     that references. Thirty-four link columns had piled up without a leading index
+ *     — including `MediaObject.uploaderId`, fully scanned on every upload
+ *     request. Nothing flagged it: a forgotten `@@index` breaks no test, it makes the
+ *     query slow. The check below re-reads the schema and refuses any new
+ *     relation whose key does not open an index.
  *
- *  2. **Ce que Prisma ne sait pas exprimer.** Index partiels (portées nullables) et
- *     contraintes CHECK n'existent que dans le SQL des migrations : `schema.prisma` les
- *     ignore, `prisma validate` aussi. Une migration ultérieure peut les faire disparaître
- *     sans que rien ne proteste. On vérifie donc leur présence par leur nom.
+ *  2. **What Prisma cannot express.** Partial indexes (nullable scopes) and
+ *     CHECK constraints only exist in the SQL of the migrations: `schema.prisma`
+ *     ignores them, and so does `prisma validate`. A later migration can make them vanish
+ *     without anything complaining. Their presence is therefore checked by name.
  *
- * Volontairement textuel : le but n'est pas de réimplémenter l'analyseur de Prisma, mais
- * d'empêcher la disparition silencieuse de garde-fous que personne ne relit.
+ * Deliberately textual: the aim is not to reimplement Prisma's parser, but
+ * to prevent the silent disappearance of guardrails that nobody re-reads.
  */
 
 import { readFileSync, readdirSync } from 'node:fs';
@@ -32,7 +32,7 @@ const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const SCHEMA_PATH = join(ROOT, 'backend', 'prisma', 'schema.prisma');
 const MIGRATIONS_DIR = join(ROOT, 'backend', 'prisma', 'migrations');
 
-/** Corps de chaque `model X { … }` du schéma, indexé par nom. */
+/** Body of each `model X { … }` of the schema, indexed by name. */
 export function parseModels(schema) {
   const models = new Map();
   for (const [, name, body] of schema.matchAll(/^model\s+(\w+)\s*\{([\s\S]*?)^\}/gm)) {
@@ -41,7 +41,7 @@ export function parseModels(schema) {
   return models;
 }
 
-/** Colonnes portant une clé étrangère (`@relation(fields: [...])`) dans un corps de modèle. */
+/** Columns carrying a foreign key (`@relation(fields: [...])`) in a model body. */
 export function foreignKeyColumns(body) {
   const columns = [];
   for (const [, list] of body.matchAll(/@relation\([^)]*fields:\s*\[([^\]]+)\][^)]*\)/g)) {
@@ -51,8 +51,8 @@ export function foreignKeyColumns(body) {
 }
 
 /**
- * Colonnes qui ouvrent un index. Seule la PREMIÈRE colonne d'un index composite compte :
- * un index `(userId, projectId)` ne sert à rien pour une recherche par `projectId`.
+ * Columns that open an index. Only the FIRST column of a composite index counts:
+ * an index `(userId, projectId)` is useless for a search by `projectId`.
  */
 export function indexedHeadColumns(body) {
   const heads = new Set();
@@ -89,9 +89,9 @@ describe('index de clés étrangères', () => {
 });
 
 describe('unicités métier des chemins « chercher puis créer »', () => {
-  // `PipelineEnsureService` rattrape la violation d'unicité (P2002) pour converger vers
-  // l'entité gagnante. Sans contrainte en face, ce rattrapage ne se déclenche jamais et
-  // deux publications simultanées créent deux jumelles.
+  // `PipelineEnsureService` catches the uniqueness violation (P2002) to converge on
+  // the winning entity. Without a constraint facing it, this catch never fires and
+  // two simultaneous publications create two twins.
   const expected = [
     ['Task', '@@unique([shotId, departmentId, name])'],
     ['Task', '@@unique([assetId, departmentId, name])'],
@@ -106,8 +106,8 @@ describe('unicités métier des chemins « chercher puis créer »', () => {
 });
 
 describe('garde-fous SQL invisibles de Prisma', () => {
-  // Index partiels : Postgres tient les NULL pour distincts, un `@@unique` ordinaire ne
-  // couvre donc pas les portées nullables (référentiel de studio, plan sans séquence,
+  // Partial indexes: Postgres treats NULLs as distinct, so a plain `@@unique` does not
+  // cover nullable scopes (studio reference, shot without sequence,
   // montage de projet).
   const partialIndexes = [
     'Department_studio_key_unique',
@@ -123,8 +123,8 @@ describe('garde-fous SQL invisibles de Prisma', () => {
     });
   }
 
-  // CHECK : les trois XOR du modèle. Une ligne rattachée aux deux parents — ou à aucun —
-  // n'apparaît dans AUCUN listing sans être fausse pour autant : elle est invisible.
+  // CHECK: the three XORs of the model. A row attached to both parents — or to neither —
+  // appears in NO listing without being wrong for all that: it is invisible.
   const checks = [
     'Task_parent_xor',
     'Version_parent_xor',

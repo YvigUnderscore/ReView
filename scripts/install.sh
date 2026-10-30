@@ -170,10 +170,11 @@ JWT_SECRET="$(gen_secret)"
 APP_ENCRYPTION_KEY="$(gen_secret)"
 POSTGRES_PASSWORD="$(gen_secret)"
 MINIO_ROOT_PASSWORD="$(gen_secret)"
+REDIS_PASSWORD="$(gen_secret)"
 METRICS_TOKEN="$(gen_secret)"
 GRAFANA_ADMIN_PASSWORD="$(gen_secret)"
 MINIO_ROOT_USER="review-$(printf '%s' "$(gen_secret)" | cut -c1-12)"
-ok "6 random secrets generated (no default password survives this step)"
+ok "7 random secrets generated (no default password survives this step)"
 
 # `if`, not `[ … ] && …`: under `set -e`, an AND list whose test fails exits the script —
 # here, on the very first install, when .env does not exist yet.
@@ -238,6 +239,7 @@ POSTGRES_PASSWORD=$POSTGRES_PASSWORD
 POSTGRES_DB=review
 MINIO_ROOT_USER=$MINIO_ROOT_USER
 MINIO_ROOT_PASSWORD=$MINIO_ROOT_PASSWORD
+REDIS_PASSWORD=$REDIS_PASSWORD
 S3_BUCKET=review
 METRICS_TOKEN=$METRICS_TOKEN
 GRAFANA_ADMIN_PASSWORD=$GRAFANA_ADMIN_PASSWORD

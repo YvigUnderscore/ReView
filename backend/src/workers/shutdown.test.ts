@@ -21,7 +21,7 @@ describe('registerWorkerShutdown', () => {
     __resetShutdownState();
   });
 
-  it('enregistre une tâche en phase « cesser d’accepter du travail »', () => {
+  it('registers a task in the phase "stop accepting work"', () => {
     registerWorkerShutdown('ffmpeg.worker', { close: () => Promise.resolve() });
     const [task] = __shutdownTasks();
     expect(task?.name).toBe('ffmpeg.worker');
@@ -29,7 +29,7 @@ describe('registerWorkerShutdown', () => {
     expect(SHUTDOWN_PHASE.STOP_INTAKE).toBeLessThan(SHUTDOWN_PHASE.DISCONNECT);
   });
 
-  it('ferme le worker en douceur : les jobs actifs vont au bout', async () => {
+  it('closes the worker gracefully: active jobs run to completion', async () => {
     const close = vi.fn(() => Promise.resolve());
     registerWorkerShutdown('ffmpeg.worker', { close });
     await runShutdownTasks(__shutdownTasks(), 1000);
@@ -37,7 +37,7 @@ describe('registerWorkerShutdown', () => {
     expect(close).toHaveBeenCalledWith();
   });
 
-  it('un encodage qui dépasse le délai de grâce est forcé', async () => {
+  it('an encode that exceeds the grace period is forced', async () => {
     vi.useFakeTimers();
     const close = vi.fn((force?: boolean) =>
       force === true ? Promise.resolve() : new Promise<void>(() => undefined),
@@ -51,7 +51,7 @@ describe('registerWorkerShutdown', () => {
     vi.useRealTimers();
   });
 
-  it('un échec de fermeture forcée est absorbé, l’extinction continue', async () => {
+  it('a forced-close failure is absorbed, shutdown continues', async () => {
     vi.useFakeTimers();
     const close = vi.fn((force?: boolean) =>
       force === true ? Promise.reject(new Error('redis gone')) : new Promise<void>(() => undefined),
@@ -63,7 +63,7 @@ describe('registerWorkerShutdown', () => {
     vi.useRealTimers();
   });
 
-  it('les cinq consommateurs de file s’enregistrent tous', () => {
+  it('all five queue consumers register', () => {
     for (const name of [
       'ffmpeg.worker',
       'storageCleanup.worker',

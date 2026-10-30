@@ -6,11 +6,11 @@ import * as REAL from 'three';
 import { createModelScene, disposeSceneTree, type ModelSceneModules } from './createModelScene';
 
 /**
- * Libération des ressources GPU du modèle (F9). La grandeur mesurée est le **nombre d'objets
- * WebGL libérés** : Three signale chaque libération par un événement `dispose` (c'est cet
- * événement que `WebGLRenderer` écoute pour effacer buffers et textures), on le compte donc
- * directement. `WebGLRenderer` est remplacé par un double : aucun contexte WebGL n'est requis,
- * mais la scène, les matériaux et les textures sont les vrais objets Three.
+ * Freeing the GPU resources of the model (F9). The quantity measured is the **number of WebGL
+ * objects freed**: Three signals each release with a `dispose` event (the event that `WebGLRenderer`
+ * listens to in order to clear buffers and textures), so we count it directly. `WebGLRenderer` is
+ * replaced by a double: no WebGL context is required, but the scene, the materials and the textures
+ * are the real Three objects.
  */
 
 class FakeRenderer {
@@ -55,12 +55,12 @@ function makeScene() {
 }
 
 /**
- * Compte les libérations d'une liste d'objets Three (géométrie, matériau ou texture).
+ * Counts the releases of a list of Three objects (geometry, material or texture).
  *
- * Les trois classes émettent bien un événement `dispose`, mais chacune type `addEventListener`
- * avec SA propre union littérale de noms d'événements : aucune signature structurelle commune
- * ne les accepte toutes. On les prend donc par leur type réel et on pose l'écouteur derrière un
- * seul point de conversion, plutôt que d'élargir le type de chaque appelant.
+ * The three classes do emit a `dispose` event, but each types `addEventListener` with ITS OWN literal
+ * union of event names: no common structural signature accepts all of them. We therefore take them
+ * by their real type and attach the listener behind a single conversion point, rather than widening
+ * each caller's type.
  */
 type Disposable = REAL.BufferGeometry | REAL.Material | REAL.Texture;
 
@@ -77,8 +77,8 @@ function countDisposals(objects: Disposable[]) {
   };
 }
 
-describe('disposeSceneTree — libération des ressources GPU du modèle (F9)', () => {
-  it('libère géométries, matériaux et textures de tout le sous-arbre', () => {
+describe('disposeSceneTree — release of the model GPU resources (F9)', () => {
+  it('frees geometries, materials and textures of the whole subtree', () => {
     const geoA = new REAL.BufferGeometry();
     const geoB = new REAL.BufferGeometry();
     const tex = new REAL.Texture();
@@ -88,11 +88,11 @@ describe('disposeSceneTree — libération des ressources GPU du modèle (F9)', 
     root.add(new REAL.Mesh(geoA, mat), new REAL.Mesh(geoB, mat));
 
     const counts = disposeSceneTree(root);
-    // Le matériau et ses deux textures sont partagés par les deux maillages : une seule fois.
+    // The material and its two textures are shared by the two meshes: released once only.
     expect(counts).toEqual({ geometries: 2, materials: 1, textures: 2 });
   });
 
-  it('ne libère jamais deux fois une ressource partagée', () => {
+  it('never frees a shared resource twice', () => {
     const tex = new REAL.Texture();
     const matA = new REAL.MeshBasicMaterial({ map: tex });
     const matB = new REAL.MeshBasicMaterial({ map: tex });
@@ -102,11 +102,11 @@ describe('disposeSceneTree — libération des ressources GPU du modèle (F9)', 
     root.add(new REAL.Mesh(new REAL.BufferGeometry(), matB));
 
     disposeSceneTree(root);
-    expect(suivi.of(0)).toBe(1); // la texture partagée : une libération, pas deux
+    expect(suivi.of(0)).toBe(1); // the shared texture: one release, not two
     expect(suivi.total()).toBe(3);
   });
 
-  it('épargne les ressources déposées dans `seen` (encore utilisées ailleurs)', () => {
+  it('spares the resources placed in `seen` (still used elsewhere)', () => {
     const partagee = new REAL.Texture();
     const suivi = countDisposals([partagee]);
     const mat = new REAL.MeshBasicMaterial({ map: partagee });
@@ -119,7 +119,7 @@ describe('disposeSceneTree — libération des ressources GPU du modèle (F9)', 
     expect(counts.materials).toBe(1);
   });
 
-  it('libère les tableaux de matériaux et les textures d’un ShaderMaterial', () => {
+  it('frees the material arrays and the textures of a ShaderMaterial', () => {
     const a = new REAL.MeshBasicMaterial({ map: new REAL.Texture() });
     const b = new REAL.ShaderMaterial({ uniforms: { uMap: { value: new REAL.Texture() } } });
     const root = new REAL.Group();
@@ -129,8 +129,8 @@ describe('disposeSceneTree — libération des ressources GPU du modèle (F9)', 
   });
 });
 
-describe('createModelScene.dispose — nettoyage complet du viewer (F9)', () => {
-  it('parcourt la scène : le modèle chargé rend ses géométries, matériaux et textures', () => {
+describe('createModelScene.dispose — complete cleanup of the viewer (F9)', () => {
+  it('traverses the scene: the loaded model releases its geometries, materials and textures', () => {
     const { scene, renderer } = makeScene();
     const geo = new REAL.BufferGeometry();
     const tex = new REAL.Texture();
@@ -140,16 +140,16 @@ describe('createModelScene.dispose — nettoyage complet du viewer (F9)', () => 
 
     scene.dispose();
 
-    // Sans le parcours, `renderer.dispose()` ne libère que des caches JS : ces trois
-    // compteurs restaient à zéro et la mémoire GPU ne redescendait jamais.
+    // Without the traversal, `renderer.dispose()` only frees JS caches: these three
+    // counters stayed at zero and the GPU memory never went back down.
     expect(suivi.total()).toBe(3);
     expect(renderer.disposed).toBe(1);
-    // Le contexte WebGL lui-même est rendu : Chrome plafonne le nombre de contextes.
+    // The WebGL context itself is released: Chrome caps the number of contexts.
     expect(renderer.contextLost).toBe(1);
     expect(scene.renderer.domElement.isConnected).toBe(false);
   });
 
-  it("n'emporte pas l'environnement HDRI, qui appartient au hook d'éclairage", () => {
+  it('does not take away the HDRI environment, which belongs to the lighting hook', () => {
     const { scene } = makeScene();
     const env = new REAL.Texture();
     const suivi = countDisposals([env]);
@@ -160,7 +160,7 @@ describe('createModelScene.dispose — nettoyage complet du viewer (F9)', () => 
     expect(suivi.of(0)).toBe(0);
   });
 
-  it('est idempotent : un second appel ne relibère rien', () => {
+  it('is idempotent: a second call releases nothing', () => {
     const { scene, renderer } = makeScene();
     const geo = new REAL.BufferGeometry();
     const suivi = countDisposals([geo]);

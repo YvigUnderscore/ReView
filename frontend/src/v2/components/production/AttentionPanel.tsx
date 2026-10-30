@@ -7,10 +7,10 @@ import type { ProductionOverview, ProductionTask } from '../../types/production'
 import { intlLocale, useT, type MessageKey } from '../../i18n';
 
 /**
- * Ce qui demande une décision (C6) : en retard, sans assigné, en attente de review.
+ * What calls for a decision (C6): overdue, unassigned, awaiting review.
  *
- * Trois listes courtes plutôt qu'un indicateur agrégé : « 12 tâches en retard » ne dit pas
- * lesquelles, et c'est précisément ce qu'on vient chercher. Chaque ligne mène à la tâche.
+ * Three short lists rather than one aggregate indicator: "12 tasks overdue" does not say which ones, and that is precisely
+ * what one came to find. Each row leads to the task.
  */
 
 function TaskList({

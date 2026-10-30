@@ -5,13 +5,13 @@ import { io, type Socket } from 'socket.io-client';
 import { getToken } from './apiClient';
 
 /**
- * Client Socket.io partagé (singleton). Authentifié par le JWT courant.
- * Réutilisé par la présence, le temps réel des commentaires, etc.
+ * Shared Socket.io client (singleton). Authenticated with the current JWT.
+ * Reused by presence, real-time comments, etc.
  *
- * Le jeton voyage dans le `auth` du handshake et non dans la query string : la query
- * string est journalisée par le frontal (nginx) et par tout proxy intermédiaire, le
- * `auth` non. Sous forme de rappel, socket.io le relit à **chaque** (re)connexion : un
- * jeton renouvelé entre-temps est donc pris en compte sans intervention.
+ * The token travels in the `auth` of the handshake, not in the query string: the query
+ * string is logged by the front end (nginx) and by any intermediate proxy, the
+ * `auth` is not. As a callback, socket.io rereads it on **each** (re)connection: a
+ * token renewed in the meantime is therefore taken into account without intervention.
  */
 let socket: Socket | null = null;
 
@@ -26,19 +26,19 @@ export function getSocket(): Socket {
 }
 
 /**
- * Ferme le canal temps réel et oublie l'instance.
+ * Closes the real-time channel and forgets the instance.
  *
- * Appelé à chaque changement de compte : sur un poste de salle de review partagé, un
- * socket laissé ouvert continuerait de servir les notifications et les messages privés du
- * précédent utilisateur (le serveur n'authentifie qu'au handshake). La prochaine demande
- * de socket en ouvre un neuf, avec le jeton du nouvel arrivant.
+ * Called on each account change: on a shared review-room machine, a
+ * socket left open would keep serving the notifications and private messages of the
+ * previous user (the server only authenticates at the handshake). The next socket
+ * request opens a new one, with the token of the new arrival.
  */
 export function disconnectSocket(): void {
   socket?.disconnect();
   socket = null;
 }
 
-/** Signale une activité utilisateur au serveur (met à jour lastSeenAt). */
+/** Signals user activity to the server (updates lastSeenAt). */
 export function emitActivity(): void {
   socket?.emit('activity');
 }

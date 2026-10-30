@@ -4,18 +4,17 @@
 import { ChevronsLeft, ChevronsRight, type LucideIcon } from 'lucide-react';
 import type { ModeId } from './modes';
 import type { RailSection, ToolId, ViewAction } from './tools';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
- * Rail d'outils — colonne de gauche. Il ne contient que les outils de pointage exclusifs du
- * mode actif (un seul armé à la fois) puis, après un séparateur, les deux actions de vue.
- * Remplace les piles de groupes flottants de l'ancien `ViewerHud` : plus rien ne recouvre
- * l'image qu'on demande de juger.
+ * Tool rail — left column. It only holds the pointing tools exclusive to the active mode (one armed
+ * at a time), then, after a separator, the two view actions. Replaces the stacks of floating groups
+ * of the old `ViewerHud`: nothing covers the image being judged any more.
  *
- * Le rail porte **un ou plusieurs groupes** (`RailSection`) : le premier est celui du mode
- * courant, les suivants ceux des modes qui ne figurent pas dans la bascule d'en-tête — c'est
- * ainsi que l'édition du nuage revient au rail sans rendre son segment (Phase 50, lot 13).
- * Cliquer un outil arme le couple mode + outil de son groupe, exactement comme sa lettre.
+ * The rail carries **one or more groups** (`RailSection`): the first is the current mode's, the
+ * following ones those of the modes absent from the header toggle — this is how cloud editing
+ * returns to the rail without rendering its segment (Phase 50, batch 13). Clicking a tool arms the
+ * mode + tool pair of its group, exactly like its key letter.
  */
 export function RailButton({
   icon: Icon,
@@ -29,14 +28,14 @@ export function RailButton({
   className,
 }: {
   icon: LucideIcon;
-  /** Nom accessible et infobulle — la phrase complète. */
+  /** Accessible name and tooltip — the full sentence. */
   label: string;
-  /** Texte affiché rail déplié, quand il doit être plus court que `label`. */
+  /** Text shown with the rail expanded, when it must be shorter than `label`. */
   text?: string;
   shortcut?: string;
   hint?: string;
   active?: boolean;
-  /** Rail déplié : le libellé et le raccourci s'affichent à côté de l'icône. */
+  /** Rail expanded: the label and shortcut are shown next to the icon. */
   labels?: boolean;
   onClick: () => void;
   className?: string;
@@ -72,10 +71,10 @@ export default function ToolRail({
   labels,
   onLabels,
 }: {
-  /** Groupes du rail, dans l'ordre : le mode courant d'abord. */
+  /** Rail groups, in order: the current mode first. */
   sections: RailSection[];
   actions: ViewAction[];
-  /** Mode courant — un outil n'est actif que dans le groupe qui l'arme. */
+  /** Current mode — a tool is only active in the group that arms it. */
   mode: ModeId;
   tool: ToolId;
   onTool: (tool: ToolId, mode: ModeId) => void;
@@ -88,8 +87,8 @@ export default function ToolRail({
     <div className={`rv-rail${labels ? ' rv-rail--labels' : ''}`}>
       {sections.map((section, index) => (
         <div key={section.mode} className="contents">
-          {/* Séparateur entre groupes : rail replié, c'est le seul indice qu'on change de
-              famille d'outils — le titre, lui, n'existe que déplié. */}
+          {/* Separator between groups: with the rail folded, it is the only hint that the tool
+              family changes — the title only exists when expanded. */}
           {index > 0 && <div className="rv-rail__sep" />}
           {labels && <span className="rv-rail__title">{t(section.titleKey)}</span>}
           {section.tools.map((item) => (

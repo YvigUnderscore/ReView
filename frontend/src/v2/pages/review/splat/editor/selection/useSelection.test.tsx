@@ -9,14 +9,13 @@ import type { SplatSceneHandle, SplatViewer } from '../../useSplat';
 import { useSelection } from './useSelection';
 
 /**
- * Les **sélections de masque** entrent dans l'historique (Phase 50, lot 12) : un lasso, un
- * trait de pinceau ou un « tout désélectionner » se défont au Ctrl+Z comme la suppression
- * qu'ils préparent. Ce fichier vérifie les trois points qui font qu'un historique se laisse
- * utiliser : le cran existe, le trait entier n'en fait qu'un, et un geste qui ne change rien
- * n'en fait aucun.
+ * **Mask selections** enter the history (Phase 50, lot 12): a lasso, a brush stroke or a
+ * "deselect all" is undone with Ctrl+Z like the deletion it prepares. This file checks the three
+ * points that make a history usable: the step exists, the whole stroke makes only one, and a
+ * gesture that changes nothing makes none.
  *
- * La géométrie est hors sujet ici — la projection écran et la brosse de surface ont leurs
- * propres tests, purs. Elles sont donc remplacées : ce qu'on vérifie est le chaînage.
+ * Geometry is out of scope here: screen projection and the surface brush have their own pure
+ * tests. They are therefore replaced: what is checked is the chaining.
  */
 
 const stub = vi.hoisted(() => ({
@@ -47,8 +46,8 @@ function setup() {
   });
 }
 
-describe('useSelection — la sélection est annulable', () => {
-  it('fait un cran d’une forme tracée, et le rend dans les deux sens', () => {
+describe('useSelection — the selection is undoable', () => {
+  it('makes one step of a drawn shape, and restores it in both directions', () => {
     const { result } = setup();
 
     act(() => result.current.selection.commitShape(RECT, 'replace', VIEWPORT));
@@ -62,7 +61,7 @@ describe('useSelection — la sélection est annulable', () => {
     expect([...result.current.selection.selected]).toEqual([1, 2, 3]);
   });
 
-  it('fait un cran du « tout désélectionner »', () => {
+  it('makes one step of "deselect all"', () => {
     const { result } = setup();
 
     act(() => result.current.selection.commitShape(RECT, 'replace', VIEWPORT));
@@ -73,32 +72,32 @@ describe('useSelection — la sélection est annulable', () => {
     expect([...result.current.selection.selected]).toEqual([1, 2, 3]);
   });
 
-  it('ne pousse rien quand le geste reprend exactement les mêmes splats', () => {
+  it('pushes nothing when the gesture re-selects exactly the same splats', () => {
     const { result } = setup();
 
     act(() => result.current.selection.commitShape(RECT, 'replace', VIEWPORT));
     act(() => result.current.selection.commitShape(RECT, 'replace', VIEWPORT));
 
-    // Un seul cran pour deux tracés identiques : le second n'a rien changé.
+    // One step for two identical shapes: the second changed nothing.
     act(() => result.current.history.undo());
     expect(result.current.history.canUndo).toBe(false);
     expect(result.current.selection.selected.size).toBe(0);
   });
 });
 
-describe('useSelection — un trait de pinceau tient en un seul cran', () => {
+describe('useSelection — a brush stroke stays in a single step', () => {
   const stamp = (result: { current: ReturnType<typeof setup>['result']['current'] }, at: number[]) => {
     stub.brush = new Set(at);
     act(() => result.current.selection.commitBrush({ x: 4, y: 4 }, 40, 'add', VIEWPORT));
   };
 
-  it('n’inscrit rien tant que le trait dure, puis rend le trait entier', () => {
+  it('records nothing while the stroke lasts, then restores the whole stroke', () => {
     const { result } = setup();
 
     stamp(result, [1]);
     stamp(result, [1, 2]);
     stamp(result, [1, 2, 3]);
-    // Cent stamps, cent crans : Ctrl+Z deviendrait inutilisable. Le cran attend le lâcher.
+    // A hundred stamps, a hundred steps: Ctrl+Z would become unusable. The step waits for the release.
     expect(result.current.history.canUndo).toBe(false);
     expect([...result.current.selection.selected]).toEqual([1, 2, 3]);
 
@@ -110,7 +109,7 @@ describe('useSelection — un trait de pinceau tient en un seul cran', () => {
     expect(result.current.history.canUndo).toBe(false);
   });
 
-  it('ne laisse pas un trait ouvert avaler le suivant', () => {
+  it('does not let an open stroke swallow the next one', () => {
     const { result } = setup();
 
     stamp(result, [1]);
@@ -118,12 +117,12 @@ describe('useSelection — un trait de pinceau tient en un seul cran', () => {
     stamp(result, [1, 2]);
     act(() => result.current.selection.endBrush());
 
-    // Deux traits, deux crans : le premier Ctrl+Z ne rend que le second.
+    // Two strokes, two steps: the first Ctrl+Z only restores the second.
     act(() => result.current.history.undo());
     expect([...result.current.selection.selected]).toEqual([1]);
   });
 
-  it('ignore un lâcher sans trait — rien à inscrire', () => {
+  it('ignores a release without a stroke: nothing to record', () => {
     const { result } = setup();
 
     act(() => result.current.selection.endBrush());
@@ -132,13 +131,13 @@ describe('useSelection — un trait de pinceau tient en un seul cran', () => {
 });
 
 /**
- * La frappe réelle, par le chemin de production : `useEditorShortcuts` inscrit l'historique de
- * l'éditeur au registre partagé (`lib/undoScope`, lot 9), qui porte Ctrl+Z / Ctrl+Y /
- * Ctrl+Maj+Z pour toute l'application. Le lot 12 n'ajoute pas un gestionnaire — c'est
- * précisément ce qu'il ne faut pas faire — il fait entrer la sélection dans la pile que ce
- * registre sert déjà. Ce test vérifie que la touche y arrive.
+ * Real keypresses, through the production path: `useEditorShortcuts` registers the editor's
+ * history in the shared registry (`lib/undoScope`, lot 9), which handles Ctrl+Z / Ctrl+Y /
+ * Ctrl+Shift+Z for the whole application. Lot 12 adds no handler (which is exactly what must
+ * not be done): it makes the selection enter the stack this registry already serves.
+ * This test checks that the keystroke reaches it.
  */
-describe('Ctrl+Z sur une sélection de masque, par le registre partagé', () => {
+describe('Ctrl+Z on a mask selection, through the shared registry', () => {
   const press = (key: string, shiftKey = false) =>
     act(() => {
       document.dispatchEvent(
@@ -162,7 +161,7 @@ describe('Ctrl+Z sur une sélection de masque, par le registre partagé', () => 
     });
   }
 
-  it('défait puis refait la sélection à la frappe', () => {
+  it('undoes then redoes the selection on keypress', () => {
     const { result } = armed();
 
     act(() => result.current.selection.commitShape(RECT, 'replace', VIEWPORT));
@@ -171,7 +170,7 @@ describe('Ctrl+Z sur une sélection de masque, par le registre partagé', () => 
     press('z');
     expect(result.current.selection.selected.size).toBe(0);
 
-    // Les deux rétablissements de la review : Ctrl+Y (Windows) et Ctrl+Maj+Z.
+    // The two redo bindings of the review: Ctrl+Y (Windows) and Ctrl+Shift+Z.
     press('y');
     expect([...result.current.selection.selected]).toEqual([1, 2, 3]);
     press('z');

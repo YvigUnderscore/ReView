@@ -20,6 +20,6 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
 );
 Button.displayName = 'Button';
 
-// `buttonVariants` reste dans `./button.variants` : ce module n'exporte que le composant
-// (règle `react-refresh/only-export-components`), et les variantes s'y testent sans rendu.
+// `buttonVariants` stays in `./button.variants`: this module only exports the component
+// (rule `react-refresh/only-export-components`), and the variants are tested there without rendering.
 export { Button };

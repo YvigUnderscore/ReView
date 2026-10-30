@@ -4,21 +4,20 @@
 import type { EditOp } from '../operations/history';
 
 /**
- * Crans d'historique des **sélections de masque** (Phase 50, lot 12).
+ * History steps for **mask selection** changes (Phase 50, lot 12).
  *
- * Seules les suppressions, les volumes et les transformations étaient annulables : un lasso
- * mal tracé, un coup de pinceau de trop, un « tout désélectionner » malheureux effaçaient un
- * travail de plusieurs minutes que rien ne rendait — alors même que Ctrl+Z répondait juste à
- * côté, pour l'opération d'après. La sélection entre donc dans le **même** historique que les
- * éditions (`operations/history`), au même rang de préséance (`UNDO_PRIORITY.editor`) : une
- * seule pile, un seul ordre, et l'annulation d'une suppression rend aussi la sélection qui
- * l'avait produite.
+ * Only deletions, volumes and transforms were undoable: a badly drawn lasso, one brush stroke
+ * too many, or an unlucky "deselect all" erased several minutes of work that nothing could
+ * restore, even though Ctrl+Z was answering right beside it for the next operation. Selection
+ * therefore joins the **same** history as edits (`operations/history`), at the same precedence
+ * rank (`UNDO_PRIORITY.editor`): one stack, one order, and undoing a deletion also restores the
+ * selection that produced it.
  *
- * Le cœur est pur : ce fichier ne sait ni ce qu'est un splat, ni comment la sélection
- * s'applique — il compare deux ensembles et fabrique l'opération.
+ * The core is pure: this file knows neither what a splat is nor how the selection is applied;
+ * it compares two sets and builds the operation.
  */
 
-/** Deux sélections portent-elles exactement les mêmes splats ? */
+/** Do two selections contain exactly the same splats? */
 export function sameSelection(a: ReadonlySet<number>, b: ReadonlySet<number>): boolean {
   if (a === b) return true;
   if (a.size !== b.size) return false;
@@ -27,9 +26,9 @@ export function sameSelection(a: ReadonlySet<number>, b: ReadonlySet<number>): b
 }
 
 /**
- * Cran d'historique d'un changement de sélection, ou `null` quand le geste n'a rien changé :
- * un clic dans le vide, un lasso qui reprend exactement les mêmes splats, un « désélectionner »
- * sur une sélection déjà vide ne doivent pas consommer un Ctrl+Z pour rien.
+ * History step of a selection change, or `null` when the gesture changed nothing: a click in
+ * the void, a lasso that re-selects exactly the same splats, or a "deselect" on an already empty
+ * selection must not consume a Ctrl+Z for nothing.
  */
 export function selectionOp(
   label: string,

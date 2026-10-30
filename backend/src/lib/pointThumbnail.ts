@@ -6,40 +6,38 @@ import { deflateSync } from 'node:zlib';
 import type { PointCloud } from './splatPoints';
 
 /**
- * Rasteriseur de nuage de points → PNG RGBA, sans aucune dépendance.
+ * Point-cloud rasteriser → RGBA PNG, with no dependency at all.
  *
- * Il ne s'agit pas de rendre des gaussiennes : une vignette de liste fait 200 px de côté à
- * l'écran, projeter les centres coloriés en disques d'un ou deux pixels donne exactement la
- * même silhouette. Le fond reste **transparent** — la tuile prend la couleur du thème, quel
- * que soit le thème.
+ * It does not aim to render Gaussians: a list thumbnail is 200 px square on screen, and projecting the coloured centres as
+ * one- or two-pixel discs gives exactly the same silhouette. The background stays **transparent** — the tile takes the colour
+ * of the theme, whatever the theme.
  *
- * Occlusion par tampon de profondeur (le point le plus proche gagne le pixel) plutôt que par
- * tri : c'est linéaire, et un tri de plusieurs centaines de milliers d'index coûterait plus
- * cher que tout le reste du rendu.
+ * Occlusion by depth buffer (the nearest point wins the pixel) rather than by sorting: it is linear, and sorting several
+ * hundred thousand indices would cost more than the rest of the rendering.
  */
 
 export interface PointThumbnailOptions {
-  /** Côté de l'image carrée produite. */
+  /** Side of the square image produced. */
   size?: number;
-  /** Rotation autour de l'axe vertical, en degrés (vue de trois quarts par défaut). */
+  /** Rotation around the vertical axis, in degrees (three-quarter view by default). */
   azimuthDeg?: number;
-  /** Élévation de la caméra au-dessus de l'horizon, en degrés. */
+  /** Camera elevation above the horizon, in degrees. */
   elevationDeg?: number;
-  /** Rayon des disques en pixels ; déduit de la densité du nuage si absent. */
+  /** Disc radius in pixels; inferred from the density of the cloud if absent. */
   radiusPx?: number;
 }
 
 export const DEFAULT_THUMB_SIZE = 512;
 const DEFAULT_AZIMUTH = 35;
 const DEFAULT_ELEVATION = 22;
-/** Part du côté occupée par le nuage : le reste est la marge autour du sujet. */
+/** Share of the side occupied by the cloud: the rest is the margin around the subject. */
 const FILL_RATIO = 0.86;
-/** Quantile de recadrage : quelques splats aberrants ne doivent pas dézoomer toute la vue. */
+/** Framing quantile: a few outlier splats must not zoom out the whole view. */
 const TRIM_QUANTILE = 0.005;
-/** Échantillon suffisant pour estimer un quantile — inutile de trier tout le nuage. */
+/** Sample large enough to estimate a quantile — no need to sort the whole cloud. */
 const QUANTILE_SAMPLE = 20_000;
 
-/** Quantile bas/haut d'une série, estimé sur un échantillon régulier. */
+/** Low/high quantile of a series, estimated on a regular sample. */
 export function robustRange(values: Float32Array, count: number, quantile = TRIM_QUANTILE): [number, number] {
   if (count <= 0) return [0, 0];
   const step = Math.max(1, Math.ceil(count / QUANTILE_SAMPLE));
@@ -58,17 +56,17 @@ interface Projection {
   depth: Float32Array;
 }
 
-/** Projette le nuage sur le plan caméra (projection orthographique : aucune déformation). */
+/** Projects the cloud onto the camera plane (orthographic projection: no distortion). */
 export function project(cloud: PointCloud, azimuthDeg: number, elevationDeg: number): Projection {
   const az = (azimuthDeg * Math.PI) / 180;
   const el = (elevationDeg * Math.PI) / 180;
-  // Direction caméra → sujet, et repère écran associé (Y monde vers le haut).
+  // Camera → subject direction, and the associated screen frame (world Y up).
   const dx = Math.sin(az) * Math.cos(el);
   const dy = Math.sin(el);
   const dz = Math.cos(az) * Math.cos(el);
   const rx = Math.cos(az);
   const rz = -Math.sin(az);
-  // up = d × r, unitaire par construction (d et r le sont et sont orthogonaux).
+  // up = d × r, unit by construction (d and r are, and are orthogonal).
   const ux = dy * rz;
   const uy = dz * rx - dx * rz;
   const uz = -dy * rx;
@@ -88,7 +86,7 @@ export function project(cloud: PointCloud, azimuthDeg: number, elevationDeg: num
   return { u, v, depth };
 }
 
-/** Rayon de disque qui referme le nuage sans l'empâter, d'après sa densité à l'écran. */
+/** Disc radius that closes the cloud without clogging it, according to its density on screen. */
 export function autoRadius(size: number, count: number): number {
   if (count <= 0) return 1;
   const perPoint = (size * size) / count;
@@ -96,8 +94,8 @@ export function autoRadius(size: number, count: number): number {
 }
 
 /**
- * Rend le nuage en PNG RGBA carré, fond transparent. Renvoie `null` si le nuage est vide ou
- * dégénéré (tous les points confondus) : il n'y a alors rien à montrer.
+ * Renders the cloud as a square RGBA PNG, transparent background. Returns `null` if the cloud is empty or degenerate
+ * (all points coincide): there is then nothing to show.
  */
 export function renderPointCloudPng(cloud: PointCloud, opts: PointThumbnailOptions = {}): Buffer | null {
   const size = Math.max(32, Math.round(opts.size ?? DEFAULT_THUMB_SIZE));
@@ -129,7 +127,7 @@ export function renderPointCloudPng(cloud: PointCloud, opts: PointThumbnailOptio
     const py = Math.round(size / 2 - (v[i]! - cv) * scale);
     if (px < -radius || py < -radius || px > size + radius || py > size + radius) continue;
     const d = depth[i]!;
-    // Ombrage de profondeur : sans lui, un nuage monochrome ressort en aplat illisible.
+    // Depth shading: without it, a monochrome cloud comes out as an unreadable flat fill.
     const shade = 0.72 + 0.28 * Math.min(1, Math.max(0, (d - dLo) / dSpan));
     const cr = Math.min(255, cloud.colors[i * 3]! * shade);
     const cg = Math.min(255, cloud.colors[i * 3 + 1]! * shade);
@@ -183,19 +181,19 @@ function chunk(type: string, data: Buffer): Buffer {
   return Buffer.concat([head, data, crc]);
 }
 
-/** Encode une image RGBA 8 bits en PNG (filtre 0, une passe zlib) — aucune dépendance. */
+/** Encodes an 8-bit RGBA image as PNG (filter 0, a single zlib pass) — no dependency. */
 export function encodePng(rgba: Uint8Array, width: number, height: number): Buffer {
   const stride = width * 4;
   const raw = Buffer.alloc((stride + 1) * height);
   for (let y = 0; y < height; y += 1) {
-    raw[y * (stride + 1)] = 0; // type de filtre « None »
+    raw[y * (stride + 1)] = 0; // filter type "None"
     Buffer.from(rgba.buffer, rgba.byteOffset + y * stride, stride).copy(raw, y * (stride + 1) + 1);
   }
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(width, 0);
   ihdr.writeUInt32BE(height, 4);
-  ihdr[8] = 8; // profondeur
-  ihdr[9] = 6; // couleur : RGBA
+  ihdr[8] = 8; // bit depth
+  ihdr[9] = 6; // colour type: RGBA
   return Buffer.concat([
     Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
     chunk('IHDR', ihdr),

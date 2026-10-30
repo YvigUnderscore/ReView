@@ -12,13 +12,13 @@ const snap = (shapes: Shape[], refs: AnnotationSnapshot['refs'] = []): Annotatio
 });
 const ref = (x: number) => ({ key: 'k', dataUrl: 'data:image/png;base64,AA', x, y: 0.1, width: 0.3 });
 
-describe('historique d’annotation', () => {
-  it('ne défait rien quand rien n’a été fait', () => {
+describe('annotation history', () => {
+  it('undoes nothing when nothing was done', () => {
     expect(undoStep(EMPTY_HISTORY, snap([]))).toBeNull();
     expect(redoStep(EMPTY_HISTORY, snap([]))).toBeNull();
   });
 
-  it('rend l’état précédent, puis le refait', () => {
+  it('returns the previous state, then redoes it', () => {
     const h = pushStep(EMPTY_HISTORY, snap([shape('a')]));
     const undone = undoStep(h, snap([shape('a'), shape('b')]));
     expect(undone?.snapshot.shapes).toHaveLength(1);
@@ -26,7 +26,7 @@ describe('historique d’annotation', () => {
     expect(redone?.snapshot.shapes).toHaveLength(2);
   });
 
-  it('couvre les formes et les références collées d’un seul cran', () => {
+  it('covers shapes and pasted references in a single step', () => {
     const before = snap([], [ref(0.06)]);
     const h = pushStep(EMPTY_HISTORY, before);
     const undone = undoStep(h, snap([shape('a')], [ref(0.4)]));
@@ -34,7 +34,7 @@ describe('historique d’annotation', () => {
     expect(undone?.snapshot.shapes).toHaveLength(0);
   });
 
-  it('rend le futur inatteignable dès qu’on repart d’un état défait', () => {
+  it('makes the future unreachable as soon as we branch off an undone state', () => {
     const h = pushStep(EMPTY_HISTORY, snap([shape('a')]));
     const undone = undoStep(h, snap([shape('a'), shape('b')]))!;
     expect(undone.history.future).toHaveLength(1);

@@ -14,11 +14,10 @@ import type { Model3DThreeState } from './useModel3DThree';
 import type * as THREE from 'three';
 
 /**
- * Inspection du modèle 3D (Phase 39, 39.C) : modes d'affichage (shaded/wireframe/normales/matcap/
- * UV) appliqués en override **non destructif** sur la scène, et fiche technique (géométrie,
- * matériaux, UV, textures, extensions glTF) collectée à l'ouverture. Consomme `useModel3DThree`
- * via `getSceneHandle` (comme `useModel3DLighting`). Les ressources d'override sont construites
- * paresseusement et libérées au démontage.
+ * Inspection of the 3D model (Phase 39, 39.C): display modes (shaded/wireframe/normals/matcap/UV)
+ * applied as a **non-destructive** override on the scene, and tech sheet (geometry, materials, UV,
+ * textures, glTF extensions) collected on opening. Consumes `useModel3DThree` via `getSceneHandle`
+ * (like `useModel3DLighting`). Override resources are built lazily and freed on unmount.
  */
 export function useModel3DInspect(model3d: Model3DThreeState) {
   const { ready, getSceneHandle, extensions } = model3d;
@@ -27,22 +26,22 @@ export function useModel3DInspect(model3d: Model3DThreeState) {
   const resRef = useRef<DisplayResources | null>(null);
   const skelRef = useRef<THREE.SkeletonHelper | null>(null);
 
-  // Fiche technique : collectée une fois le modèle chargé (parcours lecture seule du root normalisé).
-  // Mémoïsée sur `ready` — `setReady(true)` n'est émis qu'après l'affectation de la scène runtime.
+  // Tech sheet: collected once the model is loaded (read-only walk of the normalized root).
+  // Memoized on `ready` — `setReady(true)` is only emitted after the runtime scene is assigned.
   const stats = useMemo<ModelStats | null>(() => {
     if (!ready) return null;
     const handle = getSceneHandle();
     return handle?.mesh ? collectModelStats(handle.mesh) : null;
   }, [ready, getSceneHandle]);
 
-  // Présence d'un rig (SkinnedMesh) → active le toggle debug squelette (40.B).
+  // Presence of a rig (SkinnedMesh) → enables the skeleton debug toggle (40.B).
   const hasSkeleton = useMemo<boolean>(() => {
     if (!ready) return false;
     const handle = getSceneHandle();
     return handle?.mesh ? hasSkinnedMesh(handle.mesh) : false;
   }, [ready, getSceneHandle]);
 
-  // Applique le mode courant (et le ré-applique quand le modèle vient d'être chargé).
+  // Applies the current mode (and re-applies it when the model has just loaded).
   useEffect(() => {
     if (!ready) return;
     const handle = getSceneHandle();
@@ -51,8 +50,8 @@ export function useModel3DInspect(model3d: Model3DThreeState) {
     applyDisplayMode(handle.mesh, mode, resRef.current);
   }, [ready, getSceneHandle, mode]);
 
-  // Overlay squelette (40.B) : ajouté/retiré de la scène selon le toggle ; se met à jour tout seul
-  // dans la boucle de rendu (dans le graphe de scène) donc suit l'animation du rig.
+  // Skeleton overlay (40.B): added to / removed from the scene according to the toggle; it updates
+  // itself in the render loop (it is part of the scene graph), so it follows the rig's animation.
   useEffect(() => {
     const handle = getSceneHandle();
     if (!ready || !handle?.mesh) return;
@@ -67,7 +66,7 @@ export function useModel3DInspect(model3d: Model3DThreeState) {
     }
   }, [ready, getSceneHandle, showSkeleton]);
 
-  // Libération des matériaux/textures d'override + overlay squelette au démontage.
+  // Release of the override materials/textures and of the skeleton overlay on unmount.
   useEffect(
     () => () => {
       resRef.current?.dispose();

@@ -19,17 +19,16 @@ import {
 import { useT, type MessageKey } from '../../i18n';
 
 /**
- * Cadre commun d'un bloc composable — en-tête, poignée, réglages, menu contextuel.
+ * Common frame of a composable block — header, handle, settings, context menu.
  *
- * Il est né à l'Accueil (C2), où chaque widget rendait lui-même son cadre : il n'existait
- * alors aucun endroit où accrocher une poignée ou un réglage. La vue d'ensemble d'un projet
- * demande le même cadre ; il ne lit donc plus le registre de l'accueil mais reçoit ce qu'il
- * affiche — titre, largeurs et variantes proposées.
+ * It was born on the Home page (C2), where each widget rendered its own frame: there was then
+ * no place to hang a handle or a setting. The project overview needs the same frame; so it no
+ * longer reads the home registry but receives what it displays — title, widths and proposed
+ * variants.
  *
- * Les libellés restent sous le préfixe `home.widget.*` : ce sont mot pour mot les mêmes
- * messages (« Masquer », « Largeur », « Déplacer avant »…), et une clé ne se renomme pas
- * pour faire joli — elle se renommerait dans quatorze catalogues, sans qu'un seul mot
- * change à l'écran.
+ * The labels stay under the `home.widget.*` prefix: they are word for word the same messages
+ * ("Hide", "Width", "Move before"…), and a key is not renamed for the sake of tidiness — it
+ * would be renamed in fourteen catalogues without a single word changing on screen.
  */
 
 const HEIGHT_LABEL: Record<WidgetHeight, MessageKey> = {
@@ -50,46 +49,46 @@ const DENSITY_LABEL: Record<WidgetDensity, MessageKey> = {
 };
 
 /**
- * Ce que le mode réagencement fournit au cadre — et rien de plus.
+ * What the rearrange mode provides to the frame — and nothing more.
  *
- * Le cadre appelait lui-même `useSortable`, ce qui plaçait @dnd-kit (16,8 ko gzip) dans le
- * premier chargement de tout le monde, pour un geste que l'immense majorité des sessions ne
- * fait jamais (F5). Le glisser-déposer vit dans `WidgetSortable`, chargé à l'entrée en
- * édition ; hors édition, `drag` vaut `undefined` et le rendu est identique à ce que
- * produisait `useSortable({ disabled: true })` : ni transform, ni transition.
+ * The frame used to call `useSortable` itself, which put @dnd-kit (16.8 kB gzip) in everyone's
+ * first load, for a gesture the vast majority of sessions never make (F5). Drag and drop now
+ * lives in `WidgetSortable`, loaded when entering edit mode; outside edit mode, `drag` is
+ * `undefined` and the rendering is identical to what `useSortable({ disabled: true })` used to
+ * produce: no transform, no transition.
  */
 export interface WidgetDragHandle {
   ref: (node: HTMLElement | null) => void;
   style: CSSProperties;
   dragging: boolean;
-  /** Attributs ARIA et écouteurs de la poignée, fournis tels quels par dnd-kit. */
+  /** ARIA attributes and listeners of the handle, passed as-is by dnd-kit. */
   handleProps: ButtonHTMLAttributes<HTMLButtonElement>;
 }
 
 /**
- * Ce qu'apporte une page dont la grille est en **rangées** — la vue d'ensemble d'un projet
- * (lot 12), puis l'accueil (lot 13), qui demandait « les mêmes réglages ».
+ * What a page provides whose grid is made of **rows** — the project overview (batch 12), then
+ * the home page (batch 13), which asked for "the same settings".
  *
- * Le cadre ne connaît ni la rampe de hauteurs, ni le geste qui la parcourt : il reçoit la
- * classe de grille à poser, le réglage à montrer dans le panneau à la place de l'échelle
- * historique, et la poignée à placer au coin. Absent, le cadre retombe sur la largeur seule
- * et l'échelle `short`/`normal`/`tall` : c'est le rendu d'avant les rangées, que plus aucune
- * page ne demande aujourd'hui.
+ * The frame knows neither the height scale nor the gesture that walks it: it receives the grid
+ * class to apply, the setting to show in the panel in place of the historical scale, and the
+ * handle to place in the corner. Absent, the frame falls back to width alone and the
+ * `short`/`normal`/`tall` scale: that is the rendering from before the rows, which no page
+ * requests today.
  */
 export interface WidgetRowSizing {
-  /** Classe portant l'emprise verticale (`row-span-N`), écrite en toutes lettres. */
+  /** Class carrying the vertical footprint (`row-span-N`), written out in full. */
   className: string;
-  /** Réglage de hauteur du panneau — remplace l'échelle historique. */
+  /** Height setting of the panel — replaces the historical scale. */
   control: ReactNode;
-  /** Poignée de coin : rendue par la page, positionnée par le cadre. */
+  /** Corner handle: rendered by the page, positioned by the frame. */
   handle: ReactNode;
 }
 
 export interface WidgetShellProps {
-  /** Identifiant du bloc : sert à nommer les entrées de menu et le `data-widget`. */
+  /** Block identifier: used to name the menu entries and the `data-widget`. */
   id: string;
   title: string;
-  /** Largeurs proposées au réglage ; une seule = pas de choix. */
+  /** Widths offered to the setting; a single one = no choice. */
   spans: WidgetSpan[];
   variants: [WidgetVariant, ...WidgetVariant[]];
   settings: ResolvedWidgetSettings;
@@ -97,13 +96,13 @@ export interface WidgetShellProps {
   onSettings: (patch: WidgetSettings) => void;
   onHide: () => void;
   onEdit: () => void;
-  /** Déplacement d'une place, au clavier comme à la souris — le glisser n'est pas le seul chemin. */
+  /** Moving one place, by keyboard as by mouse — dragging is not the only way. */
   onMove: (direction: -1 | 1) => void;
   canMoveBefore: boolean;
   canMoveAfter: boolean;
-  /** Fourni par le seul mode réagencement ; absent, le cadre ne connaît pas dnd-kit. */
+  /** Provided only by the rearrange mode; absent, the frame knows nothing of dnd-kit. */
   drag?: WidgetDragHandle;
-  /** Fourni par les seules pages dont la grille a des rangées. */
+  /** Provided only by the pages whose grid has rows. */
   rowSizing?: WidgetRowSizing;
   children: ReactNode;
 }
@@ -181,11 +180,10 @@ export default function WidgetShell({
     <section
       ref={drag?.ref}
       style={drag?.style}
-      // `grid grid-rows-1` n'est pas décoratif : entre ce cadre et la carte, le menu
-      // contextuel pose son propre conteneur, sans hauteur. Le `h-full` de la carte s'y
-      // résoudrait en « hauteur du contenu », et l'emprise réglée ne réserverait qu'un
-      // vide sous elle. Une rangée unique en `1fr` fait descendre la hauteur jusqu'à la
-      // carte ; la poignée, absolue, reste hors flux.
+      // `grid grid-rows-1` is not decorative: between this frame and the card, the context menu
+      // adds its own container, without height. The card's `h-full` would resolve there to
+      // "content height", and the set footprint would only reserve an empty space beneath it.
+      // A single row in `1fr` brings the height down to the card; the absolute handle stays out of flow.
       className={`col-span-12 ${spanClass(settings.span)} ${
         rowSizing ? `relative grid grid-rows-1 ${rowSizing.className}` : ''
       } ${drag?.dragging ? 'z-10 opacity-60' : ''}`}
@@ -287,9 +285,8 @@ export default function WidgetShell({
               )}
             </header>
           )}
-          {/* Grille en rangées : la carte a une hauteur imposée, donc c'est le contenu qui
-              défile — jamais la carte qui grandit, sinon l'emprise réglée ne voudrait plus
-              rien dire. */}
+          {/* Row grid: the card has an imposed height, so it is the content that scrolls —
+              never the card growing, otherwise the set footprint would no longer mean anything. */}
           <div className={`min-h-0 flex-1 ${rowSizing ? 'overflow-y-auto' : heightClass(settings.height)}`}>
             {children}
           </div>

@@ -2,18 +2,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * L'adresse publique du stockage est-elle une adresse de bouclage ?
+ * Is the public storage address a loopback address?
  *
- * `S3_PUBLIC_ENDPOINT` ne sert pas au serveur : il sert à fabriquer les URL présignées que
- * le NAVIGATEUR appellera. Une adresse de bouclage y désigne donc le poste du visiteur, pas
- * l'hôte — et tout envoi de média part dans le vide dès qu'on ouvre ReView depuis une autre
- * machine. La panne est muette : la requête d'upload ne quitte jamais le poste, aucun log
- * serveur ne s'écrit, et rien ne la relie à un réglage.
+ * `S3_PUBLIC_ENDPOINT` is not used by the server: it is used to build the presigned URLs that the BROWSER will call. A loopback
+ * address therefore designates the visitor's machine, not the host — and every media upload goes into the void as soon as ReView
+ * is opened from another machine. The failure is silent: the upload request never leaves the machine, no server log is written,
+ * and nothing links it to a setting.
  *
- * Ce contrôle est volontairement syntaxique — pas de résolution DNS. Il tourne au démarrage,
- * il ne doit ni bloquer ni dépendre du réseau ; et il ne cherche pas à décider si l'adresse
- * est *joignable*, seulement si elle ne peut structurellement pas l'être depuis ailleurs.
- * `ssrfGuard`, lui, résout vraiment : ce sont deux questions différentes.
+ * This check is deliberately syntactic — no DNS resolution. It runs at start-up, it must neither block nor depend on the network;
+ * and it does not try to decide whether the address is *reachable*, only whether it structurally cannot be from elsewhere.
+ * `ssrfGuard`, for its part, really resolves: these are two different questions.
  */
 export function isLoopbackEndpoint(endpoint: string | undefined | null): boolean {
   if (!endpoint) return false;
@@ -22,27 +20,25 @@ export function isLoopbackEndpoint(endpoint: string | undefined | null): boolean
   try {
     host = new URL(endpoint).hostname;
   } catch {
-    // Une valeur illisible n'est pas notre affaire : la configuration échouera ailleurs,
-    // avec un message qui parle d'elle. Mieux vaut se taire que crier à côté.
+    // An unreadable value is not our concern: the configuration will fail elsewhere, with a message about it. Better to stay silent
+    // than to shout beside the point.
     return false;
   }
 
-  // `new URL` conserve les crochets d'une IPv6 littérale ; les ôter avant de comparer.
+  // `new URL` keeps the brackets of a literal IPv6; remove them before comparing.
   const bare = host.startsWith('[') && host.endsWith(']') ? host.slice(1, -1) : host;
   const lower = bare.toLowerCase();
 
   if (lower === 'localhost' || lower.endsWith('.localhost')) return true;
-  // `0.0.0.0` n'est pas du bouclage à proprement parler, mais « toutes les interfaces »
-  // n'est pas davantage une adresse qu'un navigateur puisse appeler.
+  // `0.0.0.0` is not loopback as such, but "all interfaces" is not an address a browser can call either.
   if (lower === '0.0.0.0' || lower === '::') return true;
 
-  // `new URL` NORMALISE les IPv6 : `0:0:0:0:0:0:0:1` arrive en `::1`, et une IPv4 mappée
-  // s'écrit en hexadécimal — `::ffff:127.0.0.1` devient `::ffff:7f00:1`. Chercher la forme
-  // décimale ici ne trouverait jamais rien.
+  // `new URL` NORMALISES IPv6: `0:0:0:0:0:0:0:1` becomes `::1`, and a mapped IPv4 is written in hexadecimal — `::ffff:127.0.0.1`
+  // becomes `::ffff:7f00:1`. Looking for the decimal form here would never find anything.
   if (lower === '::1') return true;
   const mappe = /^::ffff:([0-9a-f]{1,4}):[0-9a-f]{1,4}$/.exec(lower);
   if (mappe) return Number.parseInt(mappe[1] as string, 16) >>> 8 === 0x7f;
 
-  // Tout le /8 est du bouclage, pas seulement 127.0.0.1.
+  // The whole /8 is loopback, not just 127.0.0.1.
   return /^127\.\d{1,3}\.\d{1,3}\.\d{1,3}$/.test(lower);
 }

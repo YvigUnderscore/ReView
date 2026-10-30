@@ -2,21 +2,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Camera, FileDown, LayoutGrid, Scissors } from 'lucide-react';
-import { Button } from '../../../components/ui/button';
-import type { MediaKind } from '../../../types/api';
+import { Button } from '@/v2/components/ui/button';
+import type { MediaKind } from '@/v2/types/api';
 import type { PanelId } from '../chrome/panels';
 import { sheetRows } from './mediaSheet';
 import InfoPanel from './InfoPanel';
 import ExportPanel from './ExportPanel';
 import type { MediaResp } from '../reviewTypes';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
- * Contenu du dock inspecteur pour les viewers plats : la fiche technique et l'export.
+ * Inspector dock content for flat viewers: the technical sheet and the export.
  *
- * Les autres onglets sont partis en Phase 50 — `chrome/panels.ts` dit lequel et pourquoi. Ce
- * qu'ils réglaient vit maintenant là où l'on regarde : la comparaison A/B dans la barre
- * d'options du mode « Compare », les repères de composition au clic droit du viewer.
+ * The other tabs left in Phase 50: `chrome/panels.ts` says which and why. What they used to adjust now
+ * lives where one looks: the A/B comparison in the options bar of the "Compare" mode, and the
+ * composition guides on the viewer's right-click.
  */
 export default function MediaPanels({
   panel,
@@ -57,9 +57,9 @@ export default function MediaPanels({
                 {t('ctx.contactSheet')}
               </Button>
             )}
-            {/* Le proxy déjà découpé ne se refait plus (la découpe a disparu en Phase 50),
-                mais le dire reste dû : le fichier d'origine exporté ici est plus long que ce
-                que le lecteur montre. */}
+            {/* The already-cut proxy is no longer regenerated (the cutting disappeared in Phase 50),
+                but saying so is still due: the original file exported here is longer than what the
+                reader shows. */}
             {kind === 'VIDEO' && data.trim && (
               <span className="rv-optbar__hint whitespace-normal">
                 <Scissors size={12} /> {t('review.trimmedProxy')}

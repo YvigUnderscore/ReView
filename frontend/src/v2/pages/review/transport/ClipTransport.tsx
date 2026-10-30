@@ -3,18 +3,18 @@
 
 import type { ReactNode } from 'react';
 import { Gauge, Pause, Play, Repeat } from 'lucide-react';
-import { IconButton } from '../../../components/ui/icon-button';
-import { NumberField } from '../../../components/ui/number-field';
-import { Select } from '../../../components/ui/select';
+import { IconButton } from '@/v2/components/ui/icon-button';
+import { NumberField } from '@/v2/components/ui/number-field';
+import { Select } from '@/v2/components/ui/select';
 import type { Model3DThreeState } from '../three/useModel3DThree';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 const fmt = (ms: number) => (ms / 1000).toFixed(2);
 
 /**
- * Transport des clips d'animation portés par le fichier glTF — remplace
- * `Model3DAnimationsBar`, qui flottait sous la scène. Même piste que l'animation caméra :
- * clic pour se placer, tête de lecture, temps, vitesse, boucle.
+ * Transport of the animation clips carried by the glTF file — replaces `Model3DAnimationsBar`, which
+ * floated under the scene. Same track as the camera animation: click to position, playhead, time,
+ * speed, loop.
  */
 export default function ClipTransport({ m, trackSwitch }: { m: Model3DThreeState; trackSwitch?: ReactNode }) {
   const t = useT();
@@ -45,7 +45,7 @@ export default function ClipTransport({ m, trackSwitch }: { m: Model3DThreeState
               m.scrub(Math.max(0, ((e.clientX - r.left) / r.width) * duration));
             }}
             onKeyDown={(e) => {
-              // Équivalent clavier du clic : les flèches déplacent la tête de lecture de 5 %.
+              // Keyboard equivalent of the click: the arrow keys move the playhead by 5 %.
               if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return;
               e.preventDefault();
               const delta = (e.key === 'ArrowRight' ? 1 : -1) * duration * 0.05;

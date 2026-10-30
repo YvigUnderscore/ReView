@@ -2,33 +2,33 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Projet de la page courante — la seule notion qui décide du temps réel et des raccourcis.
+ * Project of the current page — the only notion that decides real-time updates and shortcuts.
  *
- * Deux sources : l'URL quand elle porte le projet (`/projects/:id…`), et le contexte résolu
- * par le fil d'Ariane sur les pages d'entité, dont l'URL ne le porte pas.
+ * Two sources: the URL when it carries the project (`/projects/:id…`), and the context resolved
+ * by the breadcrumb on entity pages, whose URL does not carry it.
  *
- * La liste des familles d'entité est le point sensible. Elle omettait `shots`, `sequences` et
- * `episodes` : sur ces pages le projet courant restait `null`, donc `useSocketInvalidation`
- * n'émettait jamais `join_project` (aucun rafraîchissement temps réel) et `useGlobalShortcuts`
- * ignorait `g k` / `g b`. La barre latérale, elle, continuait d'afficher « Kanban » et
- * « Board » du projet, parce qu'elle consomme le projet **collant** — d'où une incohérence
- * visible : les liens étaient là, les raccourcis équivalents ne faisaient rien.
+ * The list of entity families is the sensitive point. It omitted `shots`, `sequences` and
+ * `episodes`: on those pages the current project stayed `null`, so `useSocketInvalidation` never
+ * emitted `join_project` (no real-time refresh) and `useGlobalShortcuts` ignored `g k` / `g b`.
+ * The sidebar, for its part, kept showing "Kanban" and "Board" for the project, because it consumes
+ * the **sticky** project — hence a visible inconsistency: the links were there, the equivalent
+ * shortcuts did nothing.
  *
- * Toute nouvelle page d'entité doit être ajoutée ici, et le test ci-contre la protège.
+ * Any new entity page must be added here, and the test next to it protects it.
  */
 const ENTITY_PAGE_RE = /^\/(tasks|assets|shots|sequences|episodes|review)\//;
 
-/** Vrai si la page tient son projet du fil d'Ariane plutôt que de son URL. */
+/** True if the page takes its project from the breadcrumb rather than its URL. */
 export function isEntityPage(pathname: string): boolean {
   return ENTITY_PAGE_RE.test(pathname);
 }
 
 /**
- * Projet courant, ou `null` hors de tout projet (accueil, liste des projets, réglages).
+ * Current project, or `null` outside any project (home, project list, settings).
  *
- * @param pathname       chemin de la route courante
- * @param routeProjectId identifiant lu dans l'URL `/projects/:id`, sinon `null`
- * @param ctxProjectId   identifiant résolu par le fil d'Ariane, sinon `null`
+ * @param pathname       path of the current route
+ * @param routeProjectId identifier read from the `/projects/:id` URL, otherwise `null`
+ * @param ctxProjectId   identifier resolved by the breadcrumb, otherwise `null`
  */
 export function resolveCurrentProjectId(
   pathname: string,

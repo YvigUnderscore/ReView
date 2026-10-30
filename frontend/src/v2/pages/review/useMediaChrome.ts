@@ -9,11 +9,11 @@ import type { ToolId } from './chrome/tools';
 import type { Annotations } from './useAnnotations';
 
 /**
- * Les deux listes d'outils masqués ont disparu (Phase 50) : elles ne filtraient que le rail —
- * la lettre armait quand même l'outil — et ne contenaient plus que l'outil « Zoom », supprimé
- * faute d'implémentation. Le zoom des viewers plats est un geste permanent, pas un outil.
+ * The two lists of hidden tools have disappeared (Phase 50): they only filtered the rail — the letter
+ * still armed the tool anyway — and only contained the "Zoom" tool, removed for lack of an
+ * implementation. Zoom on flat viewers is a permanent gesture, not a tool.
  *
- * Traduction rail → outil du canvas d'annotation.
+ * Translation rail → annotation canvas tool.
  */
 const ANNOTATION_TOOL: Partial<Record<ToolId, Tool>> = {
   draw: 'draw',
@@ -27,9 +27,9 @@ const ANNOTATION_TOOL: Partial<Record<ToolId, Tool>> = {
 };
 
 /**
- * Fait suivre l'annotation au rail : entrer en mode « Annoter » arme le canvas, en sortir le
- * désarme, et l'outil choisi devient l'outil de tracé. Les tracés eux-mêmes restent gérés par
- * `useAnnotations` — seule la barre de palette disparaît, remplacée par le rail et les options.
+ * Makes the annotation follow the rail: entering "Annotate" mode arms the canvas, leaving it disarms
+ * it, and the chosen tool becomes the drawing tool. The strokes themselves remain managed by
+ * `useAnnotations` — only the palette bar disappears, replaced by the rail and the options.
  */
 export function useMediaChrome({
   state,
@@ -48,11 +48,11 @@ export function useMediaChrome({
     setAnnotating(annotateMode);
   }, [annotateMode, setAnnotating]);
 
-  // Le bouton « Annoter » du composer (et le clic droit) arment l'annotation sans passer par
-  // la bascule — le chrome suit, dans les deux sens : entrer montre les outils de tracé au
-  // rail, sortir ramène au repos. Déclenché par la **bascule** d'`annotating` seulement, pour
-  // ne pas ré-imposer le mode quand l'utilisateur en choisit un autre (ce choix désarme
-  // l'annotation via l'effet ci-dessus, pas l'inverse).
+  // The composer's "Annotate" button (and the right click) arm the annotation without going through
+  // the toggle — the chrome follows, in both directions: entering shows the drawing tools on the rail,
+  // leaving returns to idle. Triggered by the **toggle** of `annotating` only, so as not to re-impose
+  // the mode when the user picks another one (that choice disarms the annotation via the effect above,
+  // not the reverse).
   const wasAnnotating = useRef(annotating);
   useEffect(() => {
     if (annotating === wasAnnotating.current) return;

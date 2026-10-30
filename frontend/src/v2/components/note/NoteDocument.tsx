@@ -7,16 +7,15 @@ import { NoteImageProvider, useNoteImageUrls } from './noteImages';
 import NoteView from './NoteView';
 
 /**
- * Une fiche affichée, images comprises.
+ * A displayed note, images included.
  *
- * `NoteView` se contente de poser des blocs — il ne connaît ni le réseau ni le cache, ce
- * qui le rend testable sans rien monter autour. C'est ici que les clés enregistrées dans la
- * fiche redeviennent des URL de lecture, en un seul appel pour toute la fiche, et que le
- * résultat est mis à disposition de l'arbre.
+ * `NoteView` merely places blocks: it knows neither the network nor the cache, which makes it testable without
+ * mounting anything around it. This is where the keys stored in the note turn back into read URLs, in a single call
+ * for the whole note, and where the result is made available to the tree.
  */
 export default function NoteDocument({
   source,
-  /** Images déjà connues (celles qu'on vient de déposer) : évite un aller-retour. */
+  /** Images already known (the ones just dropped): avoids a round trip. */
   extraUrls,
 }: {
   source: string;

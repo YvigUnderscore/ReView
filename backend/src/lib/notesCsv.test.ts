@@ -5,9 +5,8 @@ import { describe, it, expect } from 'vitest';
 import { NOTES_CSV_COLUMNS, csvField, flattenNoteText, toNotesCsv, type NoteCsvRow } from './notesCsv';
 
 /**
- * Ce que le tableur reçoit. Deux choses comptent : que les colonnes ne bougent pas (un
- * studio branche des scripts dessus) et qu'un texte de note ne puisse pas s'exécuter à
- * l'ouverture du fichier.
+ * What the spreadsheet receives. Two things matter: that the columns do not move (a studio hooks scripts onto them)
+ * and that note text cannot execute when the file is opened.
  */
 
 const row = (over: Partial<NoteCsvRow> = {}): NoteCsvRow => {
@@ -16,17 +15,17 @@ const row = (over: Partial<NoteCsvRow> = {}): NoteCsvRow => {
 };
 
 describe('csvField', () => {
-  it('laisse un champ ordinaire intact', () => {
+  it('leaves an ordinary field intact', () => {
     expect(csvField('SH010')).toBe('SH010');
   });
 
-  it('entoure de guillemets un champ qui porte le séparateur, un guillemet ou un saut de ligne', () => {
+  it('wraps in quotes a field carrying the separator, a quote or a line break', () => {
     expect(csvField('a,b')).toBe('"a,b"');
     expect(csvField('dit "non"')).toBe('"dit ""non"""');
     expect(csvField('deux\nlignes')).toBe('"deux\nlignes"');
   });
 
-  it('neutralise une formule tableur', () => {
+  it('neutralises a spreadsheet formula', () => {
     expect(csvField('=1+1')).toBe("'=1+1");
     expect(csvField('@SUM(A1)')).toBe("'@SUM(A1)");
     expect(csvField('-2')).toBe("'-2");
@@ -34,21 +33,21 @@ describe('csvField', () => {
 });
 
 describe('flattenNoteText', () => {
-  it('ramène un texte multi-lignes sur une seule ligne lisible', () => {
+  it('brings a multi-line text back onto one readable line', () => {
     expect(flattenNoteText('premier\n\n  second  \ntroisième')).toBe('premier ⏎ second ⏎ troisième');
   });
 
-  it('rend une chaîne vide quand la note ne porte que des blancs', () => {
+  it('returns an empty string when the note carries only blanks', () => {
     expect(flattenNoteText('   \n\n ')).toBe('');
   });
 });
 
 describe('toNotesCsv', () => {
-  it('écrit l’en-tête même sans note', () => {
+  it('writes the header even without a note', () => {
     expect(toNotesCsv([])).toBe(NOTES_CSV_COLUMNS.join(','));
   });
 
-  it('écrit une ligne par note, colonnes dans l’ordre déclaré', () => {
+  it('writes one line per note, columns in the declared order', () => {
     const csv = toNotesCsv([
       row({
         note_id: '12',
@@ -69,7 +68,7 @@ describe('toNotesCsv', () => {
     expect(lines[2]?.startsWith('13,12,')).toBe(true);
   });
 
-  it('échappe le texte d’une note qui contient une virgule', () => {
+  it('escapes the text of a note containing a comma', () => {
     const csv = toNotesCsv([row({ note_id: '1', content: 'trop sombre, trop lent' })]);
     expect(csv.split('\n')[1]).toContain('"trop sombre, trop lent"');
   });

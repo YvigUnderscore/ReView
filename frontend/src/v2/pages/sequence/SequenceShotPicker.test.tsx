@@ -4,15 +4,15 @@
 import { describe, expect, it } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
 import SequenceShotPicker from './SequenceShotPicker';
-import type { MockRequest } from '../../../test/apiMock';
-import { renderWithProviders } from '../../../test/renderWithProviders';
+import type { MockRequest } from '@/test/apiMock';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import { t } from '../../i18n';
 
 /**
- * Rattacher un plan à une séquence suppose de voir **tous** les plans du projet. Tant que
- * les pages s'enchaînent, ce que l'écran affiche est faux par construction : les plans déjà
- * rangés dans la séquence ouverte sont écartés de la liste, si bien qu'une première page
- * qui ne contiendrait qu'eux ferait dire à l'écran « aucun plan à rattacher ».
+ * Attaching a shot to a sequence requires seeing **all** the shots of the project. As long as
+ * the pages are still chaining, what the screen shows is wrong by construction: the shots already
+ * in the open sequence are filtered out of the list, so a first page containing only those would
+ * make the screen say "no shot to attach".
  */
 
 const shot = (id: number, sequenceId: number | null) => ({
@@ -24,7 +24,7 @@ const shot = (id: number, sequenceId: number | null) => ({
   status: 'PENDING',
 });
 
-/** Page 1 : rien de rattachable (tout est déjà dans la séquence). Page 2 : un plan libre. */
+/** Page 1: nothing attachable (everything is already in the sequence). Page 2: one free shot. */
 function shotsInTwoPages(second: () => Promise<void> | undefined) {
   return async (req: MockRequest) => {
     const cursor = req.url.searchParams.get('cursor');
@@ -39,7 +39,7 @@ const picker = () => (
 );
 
 describe('SequenceShotPicker', () => {
-  it('attend la liste entière avant de conclure qu’il n’y a rien à rattacher', async () => {
+  it('waits for the whole list before concluding there is nothing to attach', async () => {
     let release: () => void = () => undefined;
     const held = new Promise<void>((resolve) => {
       release = resolve;
@@ -49,8 +49,8 @@ describe('SequenceShotPicker', () => {
     });
 
     await waitFor(() => expect(api.called('GET /api/shots')).toHaveLength(2));
-    // La page 1 ne contient que le plan déjà rangé ici : sans attendre la suite, l'écran
-    // annoncerait qu'il n'y a rien à rattacher alors que SH022 est libre.
+    // Page 1 only contains the shot already filed here: without waiting for the rest, the screen
+    // would announce there is nothing to attach while SH022 is free.
     expect(screen.queryByText(t('sequenceShots.noneToAttach'))).not.toBeInTheDocument();
     release();
     expect(await screen.findAllByText('SH022')).not.toHaveLength(0);

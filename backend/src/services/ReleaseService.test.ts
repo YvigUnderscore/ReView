@@ -26,7 +26,7 @@ vi.mock('../lib/logger', () => ({ logger: { warn: vi.fn(), info: vi.fn(), error:
 
 import { catalog, invalidate, isPublishedTag, latestOf, newerThan } from './ReleaseService';
 
-/** Une release telle que l'API GitHub la rend. */
+/** A release as returned by the GitHub API. */
 const release = (tag: string, extra: Record<string, unknown> = {}) => ({
   tag_name: tag,
   name: `ReView ${tag}`,
@@ -46,7 +46,7 @@ beforeEach(() => {
 });
 
 describe('catalog', () => {
-  it('ordonne par version, ignore brouillons et étiquettes qui n’en sont pas', async () => {
+  it('sorts by version, ignores drafts and tags that are not versions', async () => {
     safeFetch.mockResolvedValue(
       ok([
         release('v2.9.0'),
@@ -56,31 +56,31 @@ describe('catalog', () => {
       ]),
     );
     const result = await catalog();
-    // Ordre numérique : « v2.10.0 » suit « v2.9.0 », ce que l'ordre du texte inverserait.
+    // Numeric ordering: "v2.10.0" comes after "v2.9.0", which plain text ordering would invert.
     expect(result.releases.map((r) => r.tag)).toEqual(['v2.10.0', 'v2.9.0']);
     expect(result.error).toBeNull();
     expect(result.checkedAt).not.toBeNull();
   });
 
-  it('ne demande rien quand la vérification est coupée', async () => {
+  it('requests nothing when the check is switched off', async () => {
     config.enabled = false;
     await expect(catalog()).resolves.toEqual({ releases: [], checkedAt: null, error: 'DISABLED' });
     expect(safeFetch).not.toHaveBeenCalled();
   });
 
-  it('traduit un quota épuisé en donnée, pas en incident', async () => {
+  it('turns an exhausted quota into data, not an incident', async () => {
     safeFetch.mockResolvedValue({ status: 403, ok: false, json: () => Promise.resolve({}) });
     await expect(catalog()).resolves.toMatchObject({ error: 'RATE_LIMITED', releases: [] });
   });
 
-  it('traduit une panne réseau en « injoignable » sans jeter', async () => {
-    // Un studio dont le pare-feu ferme le sortant doit voir un écran qui explique, pas une
-    // page d'administration en erreur.
+  it('turns a network failure into "unreachable" without throwing', async () => {
+    // A studio whose firewall blocks outbound traffic must see a screen that explains, not an
+    // error page from the admin area.
     safeFetch.mockRejectedValue(new Error('getaddrinfo ENOTFOUND'));
     await expect(catalog()).resolves.toEqual({ releases: [], checkedAt: null, error: 'UNREACHABLE' });
   });
 
-  it('sert le cache, et le rafraîchit sur demande explicite', async () => {
+  it('serves the cache, and refreshes it on explicit request', async () => {
     safeFetch.mockResolvedValue(ok([release('v2.9.0')]));
     await catalog();
     await catalog();
@@ -89,7 +89,7 @@ describe('catalog', () => {
     expect(safeFetch).toHaveBeenCalledTimes(2);
   });
 
-  it('garde ce qu’il sait quand une vérification ultérieure échoue', async () => {
+  it('keeps what it knows when a later check fails', async () => {
     safeFetch.mockResolvedValue(ok([release('v2.9.0')]));
     await catalog();
     safeFetch.mockRejectedValue(new Error('coupure'));
@@ -98,7 +98,7 @@ describe('catalog', () => {
     expect(result.error).toBe('UNREACHABLE');
   });
 
-  it('joint le jeton quand il y en a un, et jamais autrement', async () => {
+  it('attaches the token when there is one, and never otherwise', async () => {
     const headersOf = (index: number): Record<string, string> => {
       const init = safeFetch.mock.calls[index]?.[1] as { headers?: Record<string, string> } | undefined;
       return init?.headers ?? {};
@@ -111,26 +111,25 @@ describe('catalog', () => {
     expect(headersOf(1).authorization).toBe('Bearer ghp_secret');
   });
 
-  it('ne suit pas une réponse qui n’a pas la forme attendue', async () => {
+  it('does not follow a response that does not have the expected shape', async () => {
     safeFetch.mockResolvedValue(ok({ message: 'Not Found' }));
     await expect(catalog()).resolves.toMatchObject({ error: 'UNREACHABLE' });
   });
 });
 
-describe('choix de la version', () => {
+describe('choice of version', () => {
   const releases = [
     { tag: 'v2.5.0-rc.1', name: '', publishedAt: null, notesMd: '', htmlUrl: '', prerelease: true },
     { tag: 'v2.4.0', name: '', publishedAt: null, notesMd: '', htmlUrl: '', prerelease: false },
     { tag: 'v2.3.0', name: '', publishedAt: null, notesMd: '', htmlUrl: '', prerelease: false },
   ];
 
-  it('ne propose jamais une pré-version d’un bouton', () => {
+  it('never offers a pre-release through a button', () => {
     expect(latestOf(releases)?.tag).toBe('v2.4.0');
   });
 
-  it('énumère ce qui est paru depuis la version en service', () => {
-    // C'est la réponse à « qu'est-ce que ça change ? » : toutes les versions sautées, pas
-    // seulement la dernière.
+  it('lists what has been published since the version in service', () => {
+    // This answers "what changes?": all skipped versions, not just the latest one.
     expect(newerThan(releases, '2.3.0').map((r) => r.tag)).toEqual(['v2.5.0-rc.1', 'v2.4.0']);
     expect(newerThan(releases, '2.4.0').map((r) => r.tag)).toEqual(['v2.5.0-rc.1']);
     expect(newerThan(releases, '2.5.0')).toEqual([]);
@@ -138,14 +137,14 @@ describe('choix de la version', () => {
 });
 
 describe('isPublishedTag', () => {
-  it('refuse ce qui n’a pas la forme d’une étiquette, sans rien demander', async () => {
+  it('refuses what does not have the shape of a tag, without requesting anything', async () => {
     await expect(isPublishedTag('v2.4.0; rm -rf /')).resolves.toBe(false);
     await expect(isPublishedTag('../../etc/passwd')).resolves.toBe(false);
     await expect(isPublishedTag('latest')).resolves.toBe(false);
     expect(safeFetch).not.toHaveBeenCalled();
   });
 
-  it('refuse une étiquette bien formée mais jamais publiée', async () => {
+  it('refuses a well-formed tag that was never published', async () => {
     safeFetch.mockResolvedValue(ok([release('v2.4.0')]));
     await expect(isPublishedTag('v2.4.0')).resolves.toBe(true);
     await expect(isPublishedTag('v9.9.9')).resolves.toBe(false);

@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Image transformée, superposée à l'originale **dans le plan zoomé** de la visionneuse : elle
- * occupe exactement la boîte de l'image, suit donc le zoom, le pan et le plein écran sans que
- * la visionneuse ait à savoir qu'une gestion de couleur existe.
+ * Transformed image, overlaid on the original **in the zoomed plane** of the viewer: it occupies
+ * exactly the image box, so it follows zoom, pan and fullscreen without the viewer having to know
+ * that color management exists.
  *
- * Purement décorative pour l'accessibilité (`alt=""`) : elle montre la même image que celle
- * qui est déjà annoncée en dessous, avec une autre transformée d'affichage.
+ * Purely decorative for accessibility (`alt=""`): it shows the same image as the one already
+ * announced underneath, with another display transform.
  */
 export default function DisplayTransformOverlay({ url }: { url: string | null }) {
   if (!url) return null;

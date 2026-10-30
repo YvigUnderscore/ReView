@@ -5,31 +5,31 @@ import { describe, it, expect } from 'vitest';
 import { slugify, slugifyFilename } from './slug';
 
 describe('slugify', () => {
-  it('met en minuscules et remplace les espaces par des tirets', () => {
+  it('lowercases and replaces spaces with dashes', () => {
     expect(slugify('Mon Plan Final')).toBe('mon-plan-final');
   });
-  it('retire les accents/diacritiques', () => {
+  it('removes accents and diacritics', () => {
     expect(slugify('Éléphant àça')).toBe('elephant-aca');
   });
-  it('compacte les symboles et trim les tirets de bord', () => {
+  it('compacts symbols and trims the edge dashes', () => {
     expect(slugify('  --Hello, World!--  ')).toBe('hello-world');
   });
-  it('renvoie une chaîne vide si aucun caractère alphanumérique', () => {
+  it('returns an empty string when there is no alphanumeric character', () => {
     expect(slugify('___!!!')).toBe('');
   });
 });
 
 describe('slugifyFilename', () => {
-  it("préserve l'extension en la mettant en minuscules", () => {
+  it('preserves the extension by lowercasing it', () => {
     expect(slugifyFilename('Mon Plan Final.MOV')).toBe('mon-plan-final.mov');
   });
-  it('slugifie un nom sans extension', () => {
+  it('slugifies a name without an extension', () => {
     expect(slugifyFilename('Sans Extension')).toBe('sans-extension');
   });
-  it('retombe sur « fichier » quand le nom de base est vide', () => {
+  it('falls back on "fichier" when the base name is empty', () => {
     expect(slugifyFilename('???.png')).toBe('fichier.png');
   });
-  it('ignore une extension non alphanumérique', () => {
+  it('ignores a non-alphanumeric extension', () => {
     expect(slugifyFilename('image.@@@')).toBe('image');
   });
 });

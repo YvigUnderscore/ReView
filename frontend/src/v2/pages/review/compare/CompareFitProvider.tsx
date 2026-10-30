@@ -5,15 +5,15 @@ import { useCallback, useMemo, useState, type ReactNode } from 'react';
 import { PublishContext, ZoneContext, commonZone, type PublishZone, type Size } from './compareFit';
 
 /**
- * Ajustement **partagé** des panes d'une comparaison (côte-à-côte comme grille 2×2).
+ * **Shared** fitting of the comparison panes (side by side or as a 2×2 grid).
  *
- * Chaque pane mesure sa zone et l'inscrit ici ; tous ajustent ensuite leur média dans la zone
- * commune. Conséquence voulue : deux médias de résolutions différentes s'affichent à la **même
- * taille**, et l'aspect de chacun reste le sien — l'ajustement est un « contain », il ne
- * déforme rien, et le cadre de livraison comme les annotations normalisées suivent la boîte
- * sans changer de proportions.
+ * Each pane measures its area and registers it here; all of them then fit their media into
+ * the common area. Intended consequence: two media of different resolutions are displayed at
+ * the **same size**, and each keeps its own aspect ratio. The fit is a "contain": it distorts
+ * nothing, and the delivery frame and normalized annotations follow the box without changing
+ * proportions.
  *
- * Hors comparaison, un seul pane est inscrit : la zone commune est la sienne, rien ne change.
+ * Outside a comparison, a single pane is registered: the common area is its own, nothing changes.
  */
 export function CompareFitProvider({ children }: { children: ReactNode }) {
   const [zones, setZones] = useState<Record<string, Size>>({});
@@ -27,8 +27,8 @@ export function CompareFitProvider({ children }: { children: ReactNode }) {
         delete next[id];
         return next;
       }
-      // Même mesure : on rend l'objet d'origine, sinon chaque impulsion de l'observateur
-      // relancerait un rendu de tous les panes pour rien.
+      // Same measurement: return the original object, otherwise every observer tick would
+      // re-render all panes for nothing.
       if (known && known.w === size.w && known.h === size.h) return prev;
       return { ...prev, [id]: size };
     });

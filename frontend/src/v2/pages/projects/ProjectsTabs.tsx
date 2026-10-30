@@ -5,7 +5,7 @@ import { useT } from '../../i18n';
 
 export type ProjectsTab = 'active' | 'archived';
 
-/** Bascule Actifs / Archivés de la page Projets (38.B, réservée aux gestionnaires). */
+/** Active / Archived toggle on the Projects page (38.B, managers only). */
 export default function ProjectsTabs({
   tab,
   onChange,

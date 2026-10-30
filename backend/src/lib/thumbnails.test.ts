@@ -6,7 +6,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 vi.mock('./prisma', () => ({
   prisma: { mediaObject: { findMany: vi.fn(), findFirst: vi.fn() }, $queryRaw: vi.fn() },
 }));
-vi.mock('../services/StorageService', () => ({
+vi.mock('./storage', () => ({
   storage: { getPresignedGetUrl: vi.fn((key: string) => Promise.resolve(`https://minio/${key}`)) },
 }));
 
@@ -20,15 +20,15 @@ import {
   firstMediaThumbKeysForProjects,
 } from './thumbnails';
 import { prisma } from './prisma';
-import { storage } from '../services/StorageService';
+import { storage } from './storage';
 
 const findMany = vi.mocked(prisma.mediaObject.findMany);
 const queryRaw = vi.mocked(prisma.$queryRaw);
 
 /**
- * Reconstitue la requête réellement envoyée : le texte SQL (espaces normalisés) et les
- * paramètres liés. C'est ce qui permet de vérifier la règle d'élection ET le fait que les
- * identifiants de la page voyagent en paramètres, jamais concaténés dans le texte.
+ * Rebuilds the request actually sent: the SQL text (whitespace normalized) and the bound
+ * parameters. This is what allows checking the election rule AND the fact that the page's
+ * identifiers travel as parameters, never concatenated into the text.
  */
 function sqlOf(call: number): { text: string; values: unknown[] } {
   const args = queryRaw.mock.calls[call] as unknown as [TemplateStringsArray, ...Prisma.Sql[]];
@@ -39,40 +39,40 @@ function sqlOf(call: number): { text: string; values: unknown[] } {
 beforeEach(() => vi.clearAllMocks());
 
 /**
- * La miniature « effective » d'une carte : celle choisie à la main si elle existe, sinon
- * celle du premier média publié. C'est le seul point qui présigne les vignettes de liste —
- * une centaine d'appels par ouverture de projet.
+ * The "effective" thumbnail of a card: the one chosen by hand if it exists, otherwise the
+ * one of the first published media. This is the only point that presigns list thumbnails:
+ * about a hundred calls per project opening.
  */
 describe('effectiveThumbnailUrl', () => {
-  it('préfère la vignette explicite au repli', async () => {
+  it('prefers the explicit thumbnail over the fallback', async () => {
     await expect(effectiveThumbnailUrl('entity-thumbs/shot/1.jpg', 'derived/9/thumbnail.jpg')).resolves.toBe(
       'https://minio/entity-thumbs/shot/1.jpg',
     );
   });
 
-  it('retombe sur le premier média publié', async () => {
+  it('falls back to the first published media', async () => {
     await expect(effectiveThumbnailUrl(null, 'derived/9/thumbnail.jpg')).resolves.toBe(
       'https://minio/derived/9/thumbnail.jpg',
     );
   });
 
-  it('ne signe rien quand l’entité n’a aucune image', async () => {
+  it('signs nothing when the entity has no image', async () => {
     await expect(effectiveThumbnailUrl(null, null)).resolves.toBeNull();
     expect(storage.getPresignedGetUrl).not.toHaveBeenCalled();
   });
 });
 
 /**
- * Variantes groupées : une requête pour toute une page de cartes. La règle d'élection
- * (le média publié le plus ancien gagne) est celle de la variante unitaire — la vérifier
- * ici évite qu'une page ne change de vignette selon le chemin de code emprunté.
+ * Grouped variants: one query for a whole page of cards. The election rule (the oldest
+ * published media wins) is that of the single variant; checking it here prevents a page
+ * from changing thumbnail depending on the code path taken.
  *
- * L'élection se fait en base (`DISTINCT ON`) et non plus en mémoire : c'est le correctif
- * PERF-02. Le `findMany` d'avant rapatriait TOUS les médias publiés des cent plans de la
- * page (2 009 lignes mesurées à dix versions par plan) pour n'en garder que cent.
+ * The election is done in the database (`DISTINCT ON`) and no longer in memory: this is
+ * the PERF-02 fix. The previous `findMany` pulled back ALL published media of the hundred
+ * shots on the page (2,009 rows measured at ten versions per shot) to keep only a hundred.
  */
-describe('miniatures groupées', () => {
-  it('élit le média le plus ancien de chaque plan, en une requête', async () => {
+describe('grouped thumbnails', () => {
+  it('elects the oldest media of each shot, in one query', async () => {
     queryRaw.mockResolvedValue([
       { parentId: 1, thumbnailKey: 'a.jpg' },
       { parentId: 2, thumbnailKey: 'c.jpg' },
@@ -85,27 +85,27 @@ describe('miniatures groupées', () => {
     );
     expect(queryRaw).toHaveBeenCalledTimes(1);
     const { text, values } = sqlOf(0);
-    // Une ligne par plan, la plus ancienne ; `m.id` départage deux médias créés à la même
-    // milliseconde, que l'élection en mémoire laissait au hasard du plan d'exécution.
+    // One row per shot, the oldest; `m.id` breaks ties between two media created in the same
+    // millisecond, which the in-memory election used to leave to chance.
     expect(text).toContain('DISTINCT ON (t."shotId")');
     expect(text).toContain('ORDER BY t."shotId", m."createdAt" ASC, m.id ASC');
     expect(text).toContain('t."shotId" IN ($1,$2)');
     expect(values).toEqual([1, 2]);
   });
 
-  it('ne rapatrie plus toute la page pour n’en garder qu’une ligne par parent', async () => {
+  it('no longer pulls back the whole page to keep one row per parent', async () => {
     queryRaw.mockResolvedValue([] as never);
     await firstMediaThumbKeysForShots([1, 2]);
     await firstMediaThumbKeysForAssets([5]);
     await firstMediaThumbKeysForSequences([3]);
     await firstMediaThumbKeysForEpisodes([7]);
-    // La lecture large (tous les médias candidats, élection dans Node) n'existe plus.
+    // The wide read (all candidate media, election in Node) no longer exists.
     expect(findMany).not.toHaveBeenCalled();
     expect(queryRaw).toHaveBeenCalledTimes(4);
     for (let i = 0; i < 4; i += 1) expect(sqlOf(i).text).toContain('DISTINCT ON');
   });
 
-  it('garde le filtre d’origine : publié, non supprimé, doté d’une vignette', async () => {
+  it('keeps the original filter: published, not deleted, with a thumbnail', async () => {
     queryRaw.mockResolvedValue([] as never);
     await firstMediaThumbKeysForShots([1]);
     const { text } = sqlOf(0);
@@ -114,7 +114,7 @@ describe('miniatures groupées', () => {
     expect(text).toContain('m."thumbnailKey" IS NOT NULL');
   });
 
-  it('rattache l’asset porté par la version comme celui porté par la tâche', async () => {
+  it('attaches the asset carried by the version the same way as the one carried by the task', async () => {
     queryRaw.mockResolvedValue([
       { parentId: 5, thumbnailKey: 'direct.jpg' },
       { parentId: 6, thumbnailKey: 'viaTask.jpg' },
@@ -127,11 +127,11 @@ describe('miniatures groupées', () => {
     );
     const { text, values } = sqlOf(0);
     expect(text).toContain('DISTINCT ON (COALESCE(v."assetId", t."assetId"))');
-    // Les deux chemins de rattachement, donc les identifiants passés deux fois.
+    // Both attachment paths, hence the identifiers passed twice.
     expect(values).toEqual([5, 6, 5, 6]);
   });
 
-  it('n’interroge pas la base pour une page vide', async () => {
+  it('does not query the database for an empty page', async () => {
     await expect(firstMediaThumbKeysForShots([])).resolves.toEqual(new Map());
     await expect(firstMediaThumbKeysForAssets([])).resolves.toEqual(new Map());
     await expect(firstMediaThumbKeysForSequences([])).resolves.toEqual(new Map());
@@ -142,13 +142,13 @@ describe('miniatures groupées', () => {
 });
 
 /**
- * Le repli d'un projet est élu par une seule requête SQL (`DISTINCT ON`) : la variante
- * unitaire dans un `.map` faisait cent `findFirst` à triple OR par ouverture de la barre
- * latérale. La liste des projets ET l'accueil s'en servent — les deux doivent montrer la
- * même image du même projet.
+ * The fallback of a project is elected by a single SQL query (`DISTINCT ON`): the single
+ * variant inside a `.map` ran a hundred `findFirst` with a triple OR per opening of the
+ * sidebar. The project list AND the home page both use it: both must show the same image
+ * of the same project.
  */
-describe('miniatures de projet', () => {
-  it('associe chaque clé au projet qu’elle vient de, en une requête', async () => {
+describe('project thumbnails', () => {
+  it('maps each key to the project it comes from, in one query', async () => {
     queryRaw.mockResolvedValue([
       { projectId: 3, thumbnailKey: 'thumbs/c.jpg' },
       { projectId: 1, thumbnailKey: 'thumbs/a.jpg' },
@@ -162,19 +162,19 @@ describe('miniatures de projet', () => {
     expect(queryRaw).toHaveBeenCalledTimes(1);
   });
 
-  it('n’interroge rien quand la page est vide', async () => {
+  it('queries nothing when the page is empty', async () => {
     await expect(firstMediaThumbKeysForProjects([])).resolves.toEqual(new Map());
     expect(queryRaw).not.toHaveBeenCalled();
   });
 });
 
 /**
- * Séquences et épisodes n'avaient aucune image de repli : leurs cartes restaient vides même
- * une fois le travail livré, faute de règle. Ils héritent de celle des plans — le premier
- * média publié — en la remontant d'un cran (plan → séquence) ou de deux (→ épisode).
+ * Sequences and episodes had no fallback image: their cards stayed empty even once the
+ * work was delivered, for lack of a rule. They inherit the one of the shots (the first
+ * published media), walking it up one level (shot → sequence) or two (→ episode).
  */
-describe('miniatures de séquence et d’épisode', () => {
-  it('remonte au plan pour élire l’image d’une séquence', async () => {
+describe('sequence and episode thumbnails', () => {
+  it('walks up to the shot to elect the image of a sequence', async () => {
     queryRaw.mockResolvedValue([
       { parentId: 3, thumbnailKey: 'a.jpg' },
       { parentId: 4, thumbnailKey: 'c.jpg' },
@@ -188,7 +188,7 @@ describe('miniatures de séquence et d’épisode', () => {
     expect(sqlOf(0).text).toContain('DISTINCT ON (sh."sequenceId")');
   });
 
-  it('écarte les plans supprimés ou masqués — une séquence ne porte pas l’image d’un plan qu’on n’y voit plus', async () => {
+  it('drops deleted or hidden shots: a sequence does not carry the image of a shot no longer visible in it', async () => {
     queryRaw.mockResolvedValue([] as never);
     await firstMediaThumbKeysForSequences([3]);
     const { text, values } = sqlOf(0);
@@ -198,7 +198,7 @@ describe('miniatures de séquence et d’épisode', () => {
     expect(values).toEqual([3]);
   });
 
-  it('remonte jusqu’à l’épisode à travers la séquence du plan, séquence supprimée exclue', async () => {
+  it("walks up to the episode through the shot's sequence, excluding a deleted sequence", async () => {
     queryRaw.mockResolvedValue([{ parentId: 7, thumbnailKey: 'ep.jpg' }] as never);
     await expect(firstMediaThumbKeysForEpisodes([7])).resolves.toEqual(new Map([[7, 'ep.jpg']]));
     const { text, values } = sqlOf(0);
@@ -209,10 +209,10 @@ describe('miniatures de séquence et d’épisode', () => {
     expect(values).toEqual([7]);
   });
 
-  it('ignore un média dont la chaîne de rattachement est rompue', async () => {
-    // Une version rattachée à un asset n'a pas de tâche, donc pas de plan : elle ne dit
-    // rien d'une séquence et ne doit pas s'y afficher. Ce sont les jointures fermées
-    // (`JOIN`, pas `LEFT JOIN`) qui l'écartent en base.
+  it('ignores a media whose attachment chain is broken', async () => {
+    // A version attached to an asset has no task, hence no shot: it says nothing about a
+    // sequence and must not show up there. The closed joins (`JOIN`, not `LEFT JOIN`) exclude
+    // it in the database.
     queryRaw.mockResolvedValue([] as never);
     await firstMediaThumbKeysForSequences([3]);
     const { text } = sqlOf(0);

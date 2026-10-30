@@ -5,7 +5,7 @@ import { useCallback, useState, type ReactNode } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { Pencil, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import { Button } from '../../components/ui/button';
@@ -19,20 +19,20 @@ import { useAuth } from '../../stores/useAuth';
 import type { StatusChoice } from '../../lib/statusMenu';
 import type { BoardTask } from './kanbanTypes';
 import { useT } from '../../i18n';
+import { useKeyedValue } from '../../lib/useKeyedValue';
 
 /**
- * Le menu d'une carte de kanban : statut, assignation, étape, renommage, suppression.
+ * The menu of a kanban card: status, assignment, step, renaming, deletion.
  *
- * Aucune de ces actions n'existait à l'écran : le board ne savait que déplacer une carte
- * d'une colonne à l'autre. Renommer et supprimer une tâche née d'un retour de review
- * demandait un aller-retour par le site ShotGrid — impossible sur un projet autonome.
+ * None of these actions existed on screen: the board could only move a card from one column to
+ * another. Renaming and deleting a task born from a review feedback required a round trip to the
+ * ShotGrid site, which was impossible on a standalone project.
  *
- * **Mémoïsation.** Les cartes sont mémoïsées sur `(task, menuFor)` : c'est ce qui permet à
- * une frappe dans la recherche de ne pas rejouer mille cartes. `menuFor` ne peut donc pas
- * dépendre des constructeurs d'entrées, qui sont neufs à chaque rendu ; il dépend d'une
- * *signature* de ce qu'ils lisent (`epoch`). Toute entrée nouvelle doit entrer dans cette
- * signature, sans quoi le menu se figera sur des données périmées — ou le board se rendra
- * en entier à chaque lettre tapée.
+ * **Memoization.** The cards are memoized on `(task, menuFor)`: this is what allows a keystroke in
+ * the search not to replay a thousand cards. `menuFor` therefore cannot depend on the entry
+ * builders, which are new on each render; it depends on a *signature* of what they read (`epoch`).
+ * Any new entry must enter this signature, otherwise the menu freezes on stale data, or the board
+ * renders in full at every letter typed.
  */
 export function useKanbanCardMenu(
   projectId: number,
@@ -57,7 +57,7 @@ export function useKanbanCardMenu(
     setRenaming(task);
   }, []);
 
-  /** L'écriture nue du nom : elle laisse remonter son échec (l'annulation la rejoue). */
+  /** The bare name write: it lets its failure propagate (the undo replays it). */
   const writeName = async (taskId: number, name: string): Promise<void> => {
     await api.patch(`/api/tasks/${taskId}`, { name });
     refresh();
@@ -65,11 +65,11 @@ export function useKanbanCardMenu(
   };
 
   /**
-   * Renomme, et propose de remettre l'ancien nom dans le toast.
+   * Renames, and offers to put the old name back in the toast.
    *
-   * Le champ de saisie a bien le Ctrl+Z du navigateur, mais il ne sert plus à rien une fois le
-   * dialogue refermé : le nom est parti au serveur. L'inverse, lui, est tenu exactement — c'est
-   * la même route avec la chaîne d'avant.
+   * The input field does have the browser's Ctrl+Z, but it is useless once the dialog is closed:
+   * the name has already gone to the server. The reverse, however, is held exactly: it is the same
+   * route with the previous string.
    */
   const rename = async () => {
     const name = draft.trim();
@@ -88,15 +88,15 @@ export function useKanbanCardMenu(
   };
 
   /**
-   * Supprimer une tâche emporte ses versions (`onDelete: Cascade`). Le serveur refuse donc
-   * une tâche qui en porte, avec un message qui dit combien : c'est cette réponse qu'on
-   * affiche, plutôt que de recompter ici ce que le board ne sait pas de source sûre.
+   * Deleting a task takes its versions with it (`onDelete: Cascade`). The server therefore refuses
+   * a task that carries some, with a message saying how many: that answer is what gets displayed,
+   * rather than recounting here what the board does not know from a reliable source.
    *
-   * **Aucune annulation offerte, et c'est voulu.** Rien ne restaure une tâche : il n'existe pas
-   * de corbeille de tâches côté serveur, et la recréer donnerait une AUTRE tâche — identifiant
-   * neuf, historique perdu, liens de commentaires et de retours rompus, ligne ShotGrid déjà
-   * supprimée du site. Un « Annuler » promettrait ce qu'on ne peut pas tenir ; le garde-fou
-   * reste la confirmation, en amont, où il est honnête.
+   * **No undo is offered, and that is deliberate.** Nothing restores a task: there is no task
+   * trash on the server side, and recreating it would yield a DIFFERENT task (new identifier, lost
+   * history, broken comment and review links, ShotGrid line already deleted from the site). An
+   * "Undo" would promise what cannot be delivered. The safeguard remains the confirmation, upstream,
+   * where it is honest.
    */
   const remove = async () => {
     if (!deleting) return;
@@ -113,7 +113,7 @@ export function useKanbanCardMenu(
     }
   };
 
-  /** Ce dont le menu dépend réellement — cf. l'encart de mémoïsation ci-dessus. */
+  /** What the menu actually depends on: see the memoization note above. */
   const epoch = [
     projectId,
     canManage,
@@ -123,11 +123,14 @@ export function useKanbanCardMenu(
     ...choices.map((c) => `${c.value}:${c.label}:${c.color ?? ''}`),
   ].join('|');
 
+  // The builders as they were when `epoch` last changed: see the memoization note above.
+  const built = useKeyedValue({ t, myId, canManage, statusEntry, assignEntry, departmentEntry }, epoch);
   const menuFor = useCallback(
-    (task: BoardTask): MenuEntry[] =>
-      entriesOf(
-        // L'assigné change son propre statut : c'est exactement ce que le serveur accepte
-        // de lui, et le geste le plus utile de l'écran pour un artiste.
+    (task: BoardTask): MenuEntry[] => {
+      const { t, myId, canManage, statusEntry, assignEntry, departmentEntry } = built;
+      return entriesOf(
+        // The assignee changes their own status: exactly what the server accepts from them, and
+        // the most useful gesture on the screen for an artist.
         statusEntry(task, {
           canEdit: canManage || task.assignee?.id === myId,
           onOptimistic: (choice) => applyOptimisticStatus(task.id, choice),
@@ -152,9 +155,9 @@ export function useKanbanCardMenu(
               onSelect: () => setDeleting(task),
             }
           : null,
-      ),
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- gouverné par `epoch`, cf. ci-dessus
-    [epoch, applyOptimisticStatus, openRename],
+      );
+    },
+    [built, applyOptimisticStatus, openRename],
   );
 
   const dialogs = (

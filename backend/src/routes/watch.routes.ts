@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { WatchTargetType } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import {
@@ -18,12 +18,12 @@ import * as WatchService from '../services/WatchService';
 const router = Router();
 router.use(authenticate);
 
-// GET /api/watch — tous les suivis de l'utilisateur (état des menus clic droit)
+// GET /api/watch: all of the user's watches (state of the context menus)
 router.get('/', async (req, res) => {
-  res.json({ watches: await WatchService.listForUser(req.user!.id) });
+  res.json({ watches: await WatchService.listForUser(requireUser(req).id) });
 });
 
-// PUT /api/watch — active/désactive le suivi d'un shot/asset/version (32.G)
+// PUT /api/watch: enable/disable watching a shot/asset/version (32.G)
 router.put(
   '/',
   validate({
@@ -47,7 +47,7 @@ router.put(
           : await resolveProjectIdForVersion(targetId);
     if (!projectId) throw notFound('Target not found');
     await assertProjectAccess(req, projectId);
-    res.json({ watching: await WatchService.setWatch(req.user!.id, targetType, targetId, watching) });
+    res.json({ watching: await WatchService.setWatch(requireUser(req).id, targetType, targetId, watching) });
   },
 );
 

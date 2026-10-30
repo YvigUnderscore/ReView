@@ -3,24 +3,24 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Mocks des dépendances externes (aucune connexion réelle DB/Redis/MinIO dans ce test unitaire).
+// Mocks of external dependencies (no real DB/Redis/MinIO connection in this unit test).
 vi.mock('./prisma', () => ({
   prisma: {
     mediaObject: { findUnique: vi.fn(), delete: vi.fn() },
     project: { findUnique: vi.fn(), delete: vi.fn() },
   },
 }));
-vi.mock('../services/StorageService', () => ({
+vi.mock('./storage', () => ({
   storage: { deleteObject: vi.fn(), deleteObjects: vi.fn(), deletePrefix: vi.fn() },
 }));
-vi.mock('../services/JobService', () => ({
+vi.mock('./queues', () => ({
   enqueueStorageCleanup: vi.fn(),
 }));
 
 import { purgeMedia, purgeProject } from './trash';
 import { prisma } from './prisma';
-import { storage } from '../services/StorageService';
-import { enqueueStorageCleanup } from '../services/JobService';
+import { storage } from './storage';
+import { enqueueStorageCleanup } from './queues';
 
 const findUnique = vi.mocked(prisma.mediaObject.findUnique);
 const deleteMedia = vi.mocked(prisma.mediaObject.delete);
@@ -30,10 +30,10 @@ const projectFind = vi.mocked(prisma.project.findUnique);
 const projectDelete = vi.mocked(prisma.project.delete);
 const enqueue = vi.mocked(enqueueStorageCleanup);
 
-describe('purge — invariant 10.D7 (DB d’abord, storage après, orphelins retentés)', () => {
+describe('purge: invariant 10.D7 (DB first, storage after, orphans retried)', () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it('purgeMedia : supprime la ligne DB puis, si MinIO échoue, enfile un retry sans lever', async () => {
+  it('purgeMedia: deletes the DB row, then, if MinIO fails, queues a retry without throwing', async () => {
     findUnique.mockResolvedValue({ id: 1, storageKey: 'k/a.mp4', thumbnailKey: 'k/a.jpg' } as never);
     deleteMedia.mockResolvedValue({} as never);
     deleteObjects.mockRejectedValue(new Error('MinIO down'));
@@ -42,16 +42,16 @@ describe('purge — invariant 10.D7 (DB d’abord, storage après, orphelins ret
 
     await expect(purgeMedia(1)).resolves.toBeUndefined();
 
-    // La suppression DB a bien eu lieu (état cohérent malgré l'échec storage).
+    // The DB deletion did take place (consistent state despite the storage failure).
     expect(deleteMedia).toHaveBeenCalledWith({ where: { id: 1 } });
-    // Clés ET préfixe de dérivés en échec sont enfilés pour retry (journal des orphelins).
+    // Keys AND the derivatives prefix that failed are queued for retry (orphan log).
     expect(enqueue).toHaveBeenCalledWith({
       keys: ['k/a.mp4', 'k/a.jpg'],
       prefixes: ['derived/1/'],
     });
   });
 
-  it('purgeMedia : supprime aussi les objets storage quand MinIO répond (pas de retry)', async () => {
+  it('purgeMedia: also deletes the storage objects when MinIO responds (no retry)', async () => {
     findUnique.mockResolvedValue({ id: 2, storageKey: 'k/b.mp4', thumbnailKey: null } as never);
     deleteMedia.mockResolvedValue({} as never);
     deleteObjects.mockResolvedValue([]);
@@ -64,13 +64,13 @@ describe('purge — invariant 10.D7 (DB d’abord, storage après, orphelins ret
   });
 
   /**
-   * Le défaut réparé ici : la purge ne connaissait que `storageKey` et `thumbnailKey`.
-   * Or tout ce que les workers fabriquent vit sous `derived/{mediaId}/` (HLS, proxy,
-   * dérivé client, sprite, GLB, vignettes spatiales) — et pour une vidéo, `storageKey`
-   * pointe déjà sur le proxy. Supprimer un média ne libérait donc quasiment rien : le
-   * bucket de démonstration montrait 801 Ko d'originaux pour 3,56 Go de dérivés.
+   * The defect fixed here: the purge only knew `storageKey` and `thumbnailKey`. Yet everything
+   * the workers produce lives under `derived/{mediaId}/` (HLS, proxy, client derivative, sprite,
+   * GLB, spatial thumbnails), and for a video `storageKey` already points to the proxy. Deleting
+   * a media therefore freed almost nothing: the demo bucket showed 801 KB of originals for
+   * 3.56 GB of derivatives.
    */
-  it('purgeMedia : libère aussi les dérivés du média', async () => {
+  it("purgeMedia: also frees the media's derivatives", async () => {
     findUnique.mockResolvedValue({ id: 42, storageKey: 'k/c.mp4', thumbnailKey: null } as never);
     deleteMedia.mockResolvedValue({} as never);
     deleteObjects.mockResolvedValue([]);
@@ -81,7 +81,7 @@ describe('purge — invariant 10.D7 (DB d’abord, storage après, orphelins ret
     expect(deletePrefix).toHaveBeenCalledWith('derived/42/');
   });
 
-  it('purgeProject : commit DB avant suppression des préfixes ; préfixes en échec retentés', async () => {
+  it('purgeProject: DB commit before deleting the prefixes; failed prefixes retried', async () => {
     projectFind.mockResolvedValue({ slug: 'demo' } as never);
     projectDelete.mockResolvedValue({} as never);
     deletePrefix.mockRejectedValue(new Error('MinIO down'));

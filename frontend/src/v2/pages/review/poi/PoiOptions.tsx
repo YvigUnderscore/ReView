@@ -2,22 +2,21 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Trash2 } from 'lucide-react';
-import { Badge } from '../../../components/ui/badge';
-import { IconButton } from '../../../components/ui/icon-button';
+import { Badge } from '@/v2/components/ui/badge';
+import { IconButton } from '@/v2/components/ui/icon-button';
 import type { PoiDraftState } from './usePoiDraft';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
- * Barre d'options de l'outil « Point d'intérêt » — **la même dans les deux viewers**.
+ * Options bar of the "Point of interest" tool: **the same in both viewers**.
  *
- * Le bouton « Poser au centre » a été RETIRÉ : armer l'outil, c'est être en placement, et le
- * clic suivant dans la vue pose le point. Le bouton était l'étape de trop que l'utilisateur
- * signalait, et sur le splat il était même le seul chemin — sans rien à l'écran pour dire que
- * le viewer attendait un clic.
+ * The "Place at centre" button was REMOVED: arming the tool means being in placement mode, and the next
+ * click in the view places the point. The button was the extra step users reported, and on the splat it
+ * was even the only route, with nothing on screen saying that the viewer awaited a click.
  *
- * Il ne reste ici que ce qui renseigne : la consigne du geste, le nombre de points posés, et de
- * quoi tout effacer. Le texte et les images de chaque point se règlent dans le composeur, où on
- * lit ce qui va partir.
+ * Only what informs remains here: the instruction for the gesture, the number of points placed, and what
+ * clears everything. The text and images of each point are set in the composer, where one reads what is
+ * about to leave.
  */
 export default function PoiOptions({ poi }: { poi: PoiDraftState }) {
   const t = useT();

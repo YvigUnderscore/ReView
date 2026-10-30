@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import PipelineFields from '../../pages/project/PipelineFields';
 import { applyOverride, type PipelineForm } from '../../pages/project/pipelineForm';
@@ -10,16 +10,14 @@ import type { PipelineOverride, PipelineSettings } from '../../types/api';
 import type { ProjectSettings } from '../../pages/project/projectTypes';
 
 /**
- * Réglages pipeline propres d'une séquence ou d'un plan (résolution, cadence), dans le
- * panneau de réglages unifié (C3/C4).
+ * Own pipeline settings of a sequence or shot (resolution, frame rate), in the unified settings panel (C3/C4).
  *
- * Ils vivaient dans deux boîtes d'édition séparées, qui recevaient le socle hérité de la
- * page projet. Le panneau s'ouvre désormais depuis n'importe où — une liste, une page
- * d'entité, la palette — et va donc chercher lui-même le socle du projet : sans lui, le
- * mode « hériter » afficherait 1920×1080 à 24 i/s quel que soit le projet.
+ * They used to live in two separate edit boxes, which received the inherited base from the project page. The
+ * panel now opens from anywhere (a list, an entity page, the palette), so it fetches the project's base itself:
+ * without it, the "inherit" mode would show 1920×1080 at 24 fps whatever the project.
  *
- * L'héritage d'un plan passe par sa séquence, quand il en a une : c'est la règle du
- * pipe (studio → projet → séquence → plan).
+ * A shot's inheritance goes through its sequence when it has one: this is the pipe's rule (studio → project →
+ * sequence → shot).
  */
 export default function EntityPipelineField({
   projectId,
@@ -29,7 +27,7 @@ export default function EntityPipelineField({
   idPrefix,
 }: {
   projectId: number;
-  /** Override de la séquence porteuse, pour un plan. */
+  /** Override of the owning sequence, for a shot. */
   sequenceOverride?: PipelineOverride;
   form: PipelineForm;
   onChange: (next: PipelineForm) => void;

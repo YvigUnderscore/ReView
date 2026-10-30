@@ -3,7 +3,7 @@
 
 import { useCallback, useMemo, useReducer, useRef } from 'react';
 
-/** Opération d'édition annulable (déjà appliquée quand elle est poussée dans l'historique). */
+/** Undoable edit operation (already applied when pushed onto the history). */
 export interface EditOp {
   label: string;
   undo(): void;
@@ -11,10 +11,9 @@ export interface EditOp {
 }
 
 /**
- * Historique undo/redo de l'éditeur de splat (10.G) — pile classique : `push` après
- * application d'une opération (vide le futur), `undo`/`redo` dépilent en appelant les
- * callbacks. Cœur pur (testable sans React) ; le hook `useEditHistory` l'expose avec
- * re-rendu après chaque action.
+ * Undo/redo history of the splat editor (10.G): classic stack. `push` after applying an operation (empties
+ * the future); `undo` / `redo` pop by calling the callbacks. Pure core (testable without React); the
+ * `useEditHistory` hook exposes it with a re-render after each action.
  */
 export function createHistory() {
   const past: EditOp[] = [];
@@ -38,10 +37,10 @@ export function createHistory() {
       past.push(op);
       return true;
     },
-    /** Annule toutes les opérations (réinitialisation complète de l'éditeur). */
+    /** Cancels all operations (complete reset of the editor). */
     undoAll(): void {
       while (this.undo()) {
-        /* dépile jusqu'au vide */
+        /* pops until empty */
       }
     },
     clear(): void {
@@ -60,8 +59,8 @@ export function createHistory() {
 export type EditHistory = ReturnType<typeof createHistory>;
 
 /**
- * Wrapper React : mêmes actions (identités stables), avec re-rendu après chaque mutation.
- * L'objet renvoyé ne change que lorsque canUndo/canRedo changent.
+ * React wrapper: same actions (stable identities), with a re-render after each mutation. The returned
+ * object only changes when canUndo / canRedo change.
  */
 export function useEditHistory() {
   const historyRef = useRef<EditHistory | null>(null);

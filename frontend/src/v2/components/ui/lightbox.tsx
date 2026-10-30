@@ -28,9 +28,9 @@ interface LightboxProps {
 }
 
 /**
- * Lightbox plein écran : zoom (molette/boutons), pan (glisser zoomé), carrousel
- * (flèches + ←/→), fermeture croix/Échap (focus-trap via Dialog). Réutilisée par
- * les commentaires et la review image.
+ * Full-screen lightbox: zoom (wheel/buttons), pan (drag when zoomed), carousel
+ * (arrows + ←/→), close via X/Escape (focus trap via Dialog). Reused by
+ * comments and image review.
  */
 export function Lightbox({ images, index, open, onOpenChange, onIndexChange }: LightboxProps) {
   const t = useT();
@@ -45,8 +45,8 @@ export function Lightbox({ images, index, open, onOpenChange, onIndexChange }: L
     setPan({ x: 0, y: 0 });
   }, []);
 
-  // Remet zoom/pan à zéro quand l'image ou l'ouverture change (ajustement au render,
-  // pattern React recommandé — évite un effet qui appelle setState).
+  // Resets zoom/pan when the image or the opening changes (adjustment during render, the
+  // React-recommended pattern — avoids an effect that calls setState).
   const [track, setTrack] = useState({ index, open });
   if (track.index !== index || track.open !== open) {
     setTrack({ index, open });

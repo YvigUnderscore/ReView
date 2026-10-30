@@ -4,9 +4,9 @@
 import { useT } from '../../i18n';
 
 /**
- * Ce qu'un invité doit lire quand un média ne s'ouvre pas. Les messages internes
- * (« relancer la conversion », « re-téléverser un GLB ») s'adressent à un artiste et n'ont
- * aucun sens pour le client : on lui dit ce qu'il peut faire, c'est-à-dire écrire au studio.
+ * What a guest must read when a media fails to open. Internal messages ("re-run the
+ * conversion", "re-upload a GLB") address an artist and mean nothing to the client, so we
+ * tell them what they can do instead: write to the studio.
  */
 export default function ClientUnavailable() {
   const t = useT();

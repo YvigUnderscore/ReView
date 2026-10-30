@@ -10,9 +10,9 @@ import {
 } from './gizmoSettings';
 
 /**
- * État React des réglages du gizmo par type de cible (11.G) : chargés du localStorage au
- * montage, persistés à chaque mise à jour. `kind` désigne la cible courante (splat entier ou
- * volume SDF actif) — les deux jeux de réglages coexistent et se mémorisent séparément.
+ * React state for the gizmo settings per target kind (11.G): loaded from localStorage on
+ * mount, persisted on every update. `kind` designates the current target (the whole splat or
+ * the active SDF volume) — both sets of settings coexist and are remembered separately.
  */
 export function useGizmoSettings(kind: GizmoTargetKind): {
   kind: GizmoTargetKind;

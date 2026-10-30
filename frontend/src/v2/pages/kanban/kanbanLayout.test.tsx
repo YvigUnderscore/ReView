@@ -10,19 +10,17 @@ import type { FamilyGroup } from './kanbanColumns';
 import type { BoardTask } from './kanbanTypes';
 
 /**
- * Le contrat de mise en page du tableau plein écran (Phase 50).
+ * The layout contract of the full-screen board (Phase 50).
  *
- * Trois fautes précises sont fermées ici, et ce sont des classes qui les portaient :
- *  - la colonne était haute de 68 % de la FENÊTRE, si bien que cinq familles empilées
- *    débordaient de trois écrans ;
- *  - chaque famille portait sa PROPRE bande horizontale, donc deux colonnes de deux
- *    familles ne se retrouvaient jamais l'une sous l'autre et chaque bande défilait seule ;
- *  - `overscroll-contain` coupait le chaînage de la molette : prise sur une colonne dense,
- *    elle ne faisait plus rien du tout une fois la pile au bout.
+ * Three precise defects are closed here, and they were carried by classes:
+ *  - the column was 68% of the WINDOW high, so five stacked families overflowed by three screens;
+ *  - each family had its OWN horizontal strip, so two columns from two families never ended up
+ *    one beneath the other, and each strip scrolled on its own;
+ *  - `overscroll-contain` cut the wheel chaining: on a dense column it did nothing at all once
+ *    the stack was at its end.
  *
- * Un test de classes est un test de contrat : il ne dit pas que l'écran est beau, il dit que
- * ces trois fautes n'ont pas été réintroduites — ce qu'aucune capture ne garantirait dans six
- * mois.
+ * A class test is a contract test: it does not say the screen is beautiful, it says that these
+ * three defects were not reintroduced, which no screenshot would guarantee six months later.
  */
 
 const group: FamilyGroup = {
@@ -66,13 +64,13 @@ const mount = (collapsed = false) =>
 
 afterEach(cleanup);
 
-describe('mise en page du tableau', () => {
-  it('ne porte aucune bande horizontale : c’est la page qui en tient une seule', () => {
+describe('board layout', () => {
+  it('carries no horizontal strip: it is the page that keeps a single one', () => {
     const view = mount();
     expect(view.container.querySelectorAll('[class*="overflow-x-auto"]')).toHaveLength(0);
   });
 
-  it('borne la pile de cartes sur la hauteur reçue, jamais sur celle de la fenêtre', () => {
+  it('bounds the card stack on the height received, never on the window height', () => {
     const view = mount();
     const scrollers = [...view.container.querySelectorAll('[class*="overflow-y-auto"]')];
     expect(scrollers).toHaveLength(2);
@@ -84,7 +82,7 @@ describe('mise en page du tableau', () => {
     }
   });
 
-  it('repliée, la famille ne montre plus aucune colonne mais compte encore ses cartes', () => {
+  it('when folded, the family no longer shows any column but still counts its cards', () => {
     const view = mount(true);
     expect(view.container.querySelectorAll('[class*="overflow-y-auto"]')).toHaveLength(0);
     expect(view.container.textContent).toContain('2');

@@ -1,41 +1,41 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { UsdModelInfo } from '../../../types/api';
+import type { UsdModelInfo } from '@/v2/types/api';
 import { clonePath, clonesOf, type SceneOverride } from '../three/sceneOverride';
 import type { PrimNode } from '../three/usdScenegraph';
 
 /**
- * Aplatissement du scenegraph USD en **rangées** — arithmétique pure du panneau virtualisé.
+ * Flattening of the USD scenegraph into **rows**: pure arithmetic of the virtualised panel.
  *
- * Virtualiser un arbre n'est pas virtualiser une liste : le virtualiseur ne sait compter que
- * des rangées. On aplatit donc l'arbre **tel qu'il est déplié** (les enfants d'un nœud replié
- * n'existent pas comme rangée), une fois par changement d'arbre ou de dépliage, au lieu de
- * laisser la récursion JSX monter des milliers de composants dont vingt sont visibles.
+ * Virtualising a tree is not virtualising a list: the virtualizer can only count rows. The tree is
+ * therefore flattened **as it is expanded** (the children of a collapsed node do not exist as a row),
+ * once per change of tree or expansion, instead of letting JSX recursion mount thousands of components
+ * of which twenty are visible.
  *
- * Isolé ici pour être vérifiable sans navigateur — et pour tenir le budget de lignes du panneau.
+ * Isolated here so that it can be verified without a browser, and to keep the panel within its line budget.
  */
 
-/** Hauteur estimée d'une rangée avant mesure réelle (`text-xs` + `py-0.5`). */
+/** Estimated row height before real measurement (`text-xs` + `py-0.5`). */
 export const ROW_ESTIMATE = 20;
 
-/** Rangées montées de part et d'autre de la fenêtre : le défilement ne montre pas de vide. */
+/** Rows mounted on each side of the window: scrolling does not show any gap. */
 export const ROW_OVERSCAN = 8;
 
-/** Rangée d'un prim de la scène. */
+/** Row of a scene prim. */
 export interface PrimRowItem {
   kind: 'prim';
   path: string;
   node: PrimNode;
   depth: number;
-  /** Nœud déplié **et** porteur d'enfants — c'est ce que dessine le chevron. */
+  /** Node expanded **and** carrying children: this is what the chevron draws. */
   open: boolean;
 }
 
-/** Rangée d'un clone de mise en scène (C1), fille de la rangée du prim source. */
+/** Row of a staging clone (C1), child of the source prim's row. */
 export interface CloneRowItem {
   kind: 'clone';
-  /** Pseudo-chemin `/prim#id` : l'identité du clone pour la sélection. */
+  /** Pseudo-path `/prim#id`: the clone's identity for selection. */
   path: string;
   name: string;
   depth: number;
@@ -43,14 +43,14 @@ export interface CloneRowItem {
 
 export type ScenegraphRowItem = PrimRowItem | CloneRowItem;
 
-/** Rien à déplier de force : instance partagée, pour ne pas invalider la mémoïsation. */
+/** Nothing to force-expand: shared instance, so as not to invalidate memoization. */
 const NONE: ReadonlySet<string> = new Set<string>();
 
 /**
- * Rangées visibles, dans l'ordre d'affichage : prim, ses clones, puis ses enfants s'il est
- * déplié. `forceOpen` couvre la recherche : ce sont les nœuds du chemin menant à une
- * correspondance (`searchPrimTree`), et eux seuls — l'ancien dépliage total de l'arbre filtré
- * déroulait toute la descendance d'un résultat, ce que personne n'avait demandé.
+ * Visible rows, in display order: the prim, its clones, then its children if it is expanded. `forceOpen`
+ * covers the search: these are the nodes of the path leading to a match (`searchPrimTree`), and them only.
+ * The former total expansion of the filtered tree unrolled the whole descendance of a result, which nobody
+ * had asked for.
  */
 export function buildRows(
   tree: readonly PrimNode[],
@@ -78,10 +78,10 @@ export function buildRows(
 }
 
 /**
- * Position d'un chemin dans les rangées, `-1` s'il n'en a pas (branche repliée, filtré).
+ * Position of a path among the rows, `-1` if it has none (collapsed branch, filtered out).
  *
- * C'est la contrepartie de la virtualisation : faire défiler jusqu'à un prim sélectionné
- * depuis le viewer demande un **index**, plus un nœud du DOM — la rangée peut ne pas exister.
+ * This is the counterpart of virtualisation: scrolling to a prim selected in the viewer requires an
+ * **index**, not a DOM node: the row may not exist.
  */
 export function rowIndexOf(rows: readonly ScenegraphRowItem[], path: string | null): number {
   if (!path) return -1;
@@ -89,10 +89,10 @@ export function rowIndexOf(rows: readonly ScenegraphRowItem[], path: string | nu
 }
 
 /**
- * Libellé des jeux de variantes d'un prim, indexé une fois par scène.
+ * Label of a prim's variant sets, indexed once per scene.
  *
- * L'ancien `variantSetsOf` refiltrait la liste complète des variantSets pour **chaque** rangée
- * (F18) : sur une scène qui en porte des centaines, l'arbre coûtait un produit de deux tailles.
+ * The former `variantSetsOf` re-filtered the complete list of variantSets for **each** row (F18): on a
+ * scene carrying hundreds of them, the tree cost a product of two sizes.
  */
 export function variantTitleIndex(usd: UsdModelInfo | null): ReadonlyMap<string, string> {
   const index = new Map<string, string>();
@@ -104,11 +104,11 @@ export function variantTitleIndex(usd: UsdModelInfo | null): ReadonlyMap<string,
 }
 
 /**
- * Prim visé par un clic droit, d'après la cible de l'événement.
+ * Prim targeted by a right-click, from the event's target.
  *
- * Le panneau ne monte plus qu'**un** menu contextuel (au lieu d'un par rangée) : c'est donc
- * lui qui doit retrouver la rangée visée, au moment du clic, en remontant le DOM. Les rangées
- * de clones n'en portent pas — elles n'ont jamais eu de menu dans l'arbre.
+ * The panel now mounts only **one** context menu (instead of one per row): it is therefore up to it to
+ * find the targeted row at the moment of the click, by climbing the DOM. Clone rows carry none: they
+ * never had a menu in the tree.
  */
 export function aimedPrimPath(target: EventTarget | null): string | null {
   if (!(target instanceof Element)) return null;

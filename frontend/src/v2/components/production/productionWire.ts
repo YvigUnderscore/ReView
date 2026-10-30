@@ -5,44 +5,41 @@ import type { ProductionOverview, ProductionTask } from '../../types/production'
 import type { ProjectStats, ScheduleTask, ShotStat } from '../../types/api';
 
 /**
- * Le contrat de la route de pilotage, lu en un seul endroit.
+ * The contract of the control route, read in one place.
  *
- * Trois défauts corrigés côté serveur dans ce lot changent la forme de la réponse : les
- * listes d'attention sont accompagnées de leurs **totaux** (les tuiles affichaient la
- * longueur de listes plafonnées à cinquante, donc « 50 » pour trois cents tâches en
- * retard), la cadence se dédouble en deux séries d'**unités déclarées** (la projection
- * divisait un reste-à-faire en tâches par un rythme en médias publiés et annonçait une fin
- * en décembre 2028), et le planning porte le **statut du studio** plutôt que l'enum figé.
+ * Three defects fixed server-side in this batch change the shape of the response: the attention lists come with their
+ * **totals** (the tiles displayed the length of lists capped at fifty, hence "50" for three hundred overdue tasks), the pace
+ * splits into two series of **declared units** (the projection divided a remaining-work figure in tasks by a rate in
+ * published media, and announced an end in December 2028), and the schedule carries the **studio's status** rather than the
+ * frozen enum.
  *
- * Les miroirs de `types/production.ts`, `types/schedule.ts` et `types/stats.ts` décrivent
- * encore la réponse d'avant ; ils seront reprisés avec l'écran de la grille. D'ici là tout
- * le décalage est concentré ici — une conversion, commentée, plutôt qu'un `as` dispersé
- * dans chaque composant — et les lectures retombent sur l'ancienne forme quand le serveur
- * en face est encore l'ancien.
+ * The mirrors of `types/production.ts`, `types/schedule.ts` and `types/stats.ts` still describe the earlier response; they
+ * will be patched along with the grid screen. Until then, all the mismatch is concentrated here, in one commented conversion
+ * rather than a scattered `as` in each component, and the readers fall back on the old shape when the server on the other
+ * end is still the old one.
  */
 
-/** Familles de statut du serveur (`lib/statusFamily`), `inactive` comprise. */
+/** Server status families (`lib/statusFamily`), `inactive` included. */
 export type StatusFamily = 'todo' | 'progress' | 'review' | 'done' | 'blocked' | 'inactive';
 
-/** Le statut du studio, tel qu'une barre le colore. */
+/** The studio's status, as a bar colours it. */
 export interface PipelineStatusRef {
   id: number;
   code: string;
   name: string;
-  /** Couleur hexadécimale réglée par le studio — posée en style, jamais en classe. */
+  /** Hex colour set by the studio: applied as style, never as a class. */
   color: string;
 }
 
-/** Tâche de planning : le miroir partagé, plus ce que le serveur ajoute dans ce lot. */
+/** Schedule task: the shared mirror, plus what the server adds in this batch. */
 export type GanttTask = ScheduleTask & {
   pipelineStatus?: PipelineStatusRef | null;
   family?: StatusFamily;
 };
 
 /**
- * Couleur de barre par famille — le repli d'un studio qui n'a posé aucun référentiel.
- * Mêmes teintes que la matrice d'avancement, `inactive` en plus : un statut « omis » n'est
- * ni à faire ni fait, et se lit comme du gris.
+ * Bar colour per family: the fallback for a studio that has set no reference data. Same tints as the progress matrix,
+ * with `inactive` added: an "omitted" status is neither to do nor done, and reads as grey.
  */
 export const FAMILY_BAR: Record<StatusFamily, string> = {
   todo: 'bg-muted-foreground/40',
@@ -53,7 +50,7 @@ export const FAMILY_BAR: Record<StatusFamily, string> = {
   inactive: 'bg-muted-foreground/20',
 };
 
-/** Traduction de l'enum figé, identique à `FAMILY_OF_ENUM` du serveur. */
+/** Translation of the frozen enum, identical to the server's `FAMILY_OF_ENUM`. */
 export function familyOfTaskStatus(status: string): StatusFamily {
   switch (status) {
     case 'IN_PROGRESS':
@@ -70,22 +67,22 @@ export function familyOfTaskStatus(status: string): StatusFamily {
   }
 }
 
-/** La famille d'une barre : celle du serveur, à défaut celle de l'enum. */
+/** The family of a bar: the server's, failing that the enum's. */
 export const familyOfTask = (task: GanttTask): StatusFamily => task.family ?? familyOfTaskStatus(task.status);
 
-// -- Attention : les totaux, pas la longueur des listes -----------------------
+// -- Attention: the totals, not the length of the lists -----------------------
 
 export interface AttentionReading {
   overdue: number;
   unassigned: number;
   waitingReview: number;
-  /** Tâches DISTINCTES concernées : en retard **et** non assignée ne compte qu'une fois. */
+  /** DISTINCT tasks concerned: overdue **and** unassigned counts only once. */
   blocking: number;
-  /** Nombre de lignes que les listes nominatives montrent effectivement. */
+  /** Number of rows the named lists actually show. */
   shown: number;
-  /** Plafond des listes, `null` si le serveur ne l'annonce pas. */
+  /** Ceiling of the lists, `null` if the server does not announce it. */
   limit: number | null;
-  /** Vrai dès qu'un total dépasse ce que sa liste montre. */
+  /** True as soon as a total exceeds what its list shows. */
   capped: boolean;
 }
 
@@ -94,7 +91,7 @@ interface AttentionWire {
   limit?: number;
 }
 
-/** Les trois listes réunies — l'union dédoublonnée sert de repli au badge « ce qui bloque ». */
+/** The three lists combined: the de-duplicated union serves as the fallback for the "what is blocking" badge. */
 export function distinctBlocking(attention: {
   overdue: ProductionTask[];
   unassigned: ProductionTask[];
@@ -124,9 +121,9 @@ export function readAttention(data: ProductionOverview): AttentionReading {
   return { ...totals, shown, limit: wire.limit ?? null, capped };
 }
 
-// -- Cadence : deux séries, deux unités, aucune division entre elles ----------
+// -- Pace: two series, two units, no division between them ----------------
 
-/** Unité d'une série hebdomadaire. L'écran ne la devine pas : le serveur la déclare. */
+/** Unit of a weekly series. The screen does not guess it: the server declares it. */
 export type PaceUnit = 'tasks' | 'media';
 
 export interface WeekPoint {
@@ -134,18 +131,18 @@ export interface WeekPoint {
   count: number;
 }
 
-/** Pourquoi il n'y a pas de date projetée — une date absurde serait pire que rien. */
+/** Why there is no projected date: an absurd date would be worse than nothing. */
 export type ProjectionUnavailable = 'nothing-left' | 'no-velocity' | 'nothing-counted';
 
 export interface PaceReading {
-  /** La série à tracer, et ce qu'elle compte. */
+  /** The series to plot, and what it counts. */
   series: WeekPoint[];
   unit: PaceUnit | null;
   done: number;
   total: number;
   percent: number;
   perWeek: number;
-  /** Unité de `perWeek` — la même que `done`/`total` depuis la correction serveur. */
+  /** Unit of `perWeek`: the same as `done`/`total` since the server fix. */
   perWeekUnit: PaceUnit | null;
   projectedEnd: string | null;
   unavailable: ProjectionUnavailable | null;
@@ -161,10 +158,9 @@ const normalize = (points: { weekStart: string; count?: number; delivered?: numb
   points.map((p) => ({ weekStart: p.weekStart, count: p.count ?? p.delivered ?? 0 }));
 
 /**
- * La cadence telle qu'elle se lit. La série tracée est le débit de sortie (`delivery`,
- * en médias) dès que le serveur le sépare de la vélocité ; sinon la seule série qu'il
- * connaisse, dont l'unité reste alors indéterminée — et une unité indéterminée s'affiche
- * sans nom d'unité plutôt qu'avec un nom faux.
+ * The pace as it is read. The plotted series is the output rate (`delivery`, in media) as soon as the server separates
+ * it from velocity; otherwise it is the only series the server knows, whose unit then remains undetermined. An undetermined
+ * unit is displayed without a unit name rather than with a wrong one.
  */
 export function readPace(data: ProductionOverview): PaceReading {
   const wire = data as unknown as OverviewWire;
@@ -194,7 +190,7 @@ export function readPace(data: ProductionOverview): PaceReading {
   };
 }
 
-// -- Retakes : ce qui tourne en rond -----------------------------------------
+// -- Retakes: what goes round in circles -----------------------------------
 
 export interface RetakeRow {
   shotId: number;
@@ -218,7 +214,7 @@ export interface RetakeReading {
   avgReviewDays: number | null;
   firstTimeRightRate: number | null;
   buckets: RetakeBucket[];
-  /** Les plans les plus repris, le pire d'abord. */
+  /** The most retaken shots, the worst first. */
   worst: RetakeRow[];
 }
 
@@ -228,7 +224,7 @@ interface StatsWire {
   totals?: { avgReviewRoundsPerShot?: number; firstTimeRightRate?: number };
 }
 
-/** Classe les plans les plus repris : retakes, puis notes ouvertes, puis code. */
+/** Ranks the most retaken shots: retakes, then open notes, then code. */
 export function rankRetakes(shots: (ShotStat & { reviewRounds?: number })[], limit = 8): RetakeRow[] {
   return shots
     .filter((s) => s.retakes > 0)
@@ -246,9 +242,8 @@ export function rankRetakes(shots: (ShotStat & { reviewRounds?: number })[], lim
 }
 
 /**
- * Les retakes d'un projet. Le classement vient de `mostRetakenShots` quand le serveur le
- * rend ; sinon on classe les plans les plus lents, les seuls que l'ancienne réponse
- * nommait — un classement partiel, mais jamais faux sur les plans qu'il cite.
+ * A project's retakes. The ranking comes from `mostRetakenShots` when the server returns it; otherwise the slowest shots
+ * are ranked, the only ones the old response named: a partial ranking, but never wrong about the shots it cites.
  */
 export function readRetakes(stats: ProjectStats, limit = 8): RetakeReading {
   const wire = stats as StatsWire;

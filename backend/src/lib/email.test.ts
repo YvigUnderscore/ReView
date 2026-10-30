@@ -5,20 +5,19 @@ import { describe, it, expect } from 'vitest';
 import { normalizeEmail } from './email';
 
 describe('normalizeEmail', () => {
-  it('met en minuscules et retire les espaces de bord', () => {
+  it('lowercases and trims surrounding spaces', () => {
     expect(normalizeEmail('Alice@Studio.com')).toBe('alice@studio.com');
     expect(normalizeEmail('  BOB@studio.com \n')).toBe('bob@studio.com');
   });
 
-  // Le SSO OIDC rapproche les comptes sur un email déjà mis en minuscules par le
-  // fournisseur : sans cette normalisation à l'écriture, `Alice@…` et `alice@…` sont deux
-  // comptes que la contrainte d'unicité ne rapproche pas.
-  it('rend les variantes de casse d’une même adresse identiques', () => {
+  // OIDC SSO matches accounts on an email already lowercased by the provider: without this normalisation
+  // on write, `Alice@…` and `alice@…` would be two accounts the uniqueness constraint does not match.
+  it('makes case variants of the same address identical', () => {
     expect(normalizeEmail('CEO@studio.com')).toBe(normalizeEmail('ceo@studio.com'));
   });
 
-  it('ne fusionne pas des adresses légitimement distinctes', () => {
-    // Points et sous-adressage sont propres à certains fournisseurs : on n'y touche pas.
+  it('does not merge legitimately distinct addresses', () => {
+    // Dots and sub-addressing are specific to some providers: we do not touch them.
     expect(normalizeEmail('a.b@studio.com')).not.toBe(normalizeEmail('ab@studio.com'));
     expect(normalizeEmail('a+vfx@studio.com')).not.toBe(normalizeEmail('a@studio.com'));
   });

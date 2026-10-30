@@ -4,16 +4,16 @@
 import type * as THREE from 'three';
 import type { ModelCameraState } from './modelCamera';
 
-/** Point de vue dérivé d'une caméra embarquée du glTF (nommé) — compatible `restoreModelCamera`. */
+/** Viewpoint derived from an embedded glTF camera (named): compatible with `restoreModelCamera`. */
 export interface EmbeddedCameraView extends ModelCameraState {
   name: string;
 }
 
 /**
- * Adopte les caméras embarquées d'un glTF (`gltf.cameras`) comme **points de vue** (Phase 40, 40.C)
- * : position/cible/fov dans l'espace monde de la scène (la caméra étant un nœud du modèle, ses
- * coordonnées incluent la normalisation). La cible est placée devant la caméra à `distance` le long
- * de son axe de regard. Les caméras doivent être attachées à la scène (matrices monde à jour).
+ * Adopts the embedded cameras of a glTF (`gltf.cameras`) as **viewpoints** (Phase 40, 40.C):
+ * position, target and fov in the scene's world space (the camera being a node of the model, its
+ * coordinates include the normalisation). The target is placed in front of the camera at `distance`
+ * along its viewing axis. The cameras must be attached to the scene (world matrices up to date).
  */
 export function collectEmbeddedCameras(
   three: typeof import('three'),

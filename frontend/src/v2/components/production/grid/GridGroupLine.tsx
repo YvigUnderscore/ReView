@@ -5,17 +5,16 @@ import { ChevronRight } from 'lucide-react';
 import { FAMILY_BAR } from '../productionWire';
 import { HEAD_W, lineWidth } from './gridLayout';
 import { FAMILIES, familyTally, type SequenceGroup } from './gridWire';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
- * La ligne d'une sequence : son nom, et l'avancement de tous ses plans.
+ * The row of a sequence: its name, and the progress of all its shots.
  *
- * C'est ici que la maille séquence survit à la disparition de la matrice d'avancement —
- * elle devient l'état replié de la grille. Replier une sequence rend exactement le résumé
- * d'avant ; la déplier montre quel plan attend quoi, ce que le résumé ne disait pas.
+ * This is where the sequence level survives the disappearance of the progress matrix: it becomes the collapsed state of the
+ * grid. Collapsing a sequence renders exactly the summary of before; expanding it shows which shot waits for what, which the
+ * summary did not say.
  *
- * Les couleurs de la barre sont celles que la légende nomme, juste au-dessus de la table :
- * aucune information n'est réservée au survol.
+ * The colours of the bar are those the legend names, just above the table: no information is reserved for hover.
  */
 export default function GridGroupLine({
   group,
@@ -25,9 +24,9 @@ export default function GridGroupLine({
   onToggle,
 }: {
   group: SequenceGroup;
-  /** Nombre de colonnes visibles — la ligne doit faire la largeur de la table. */
+  /** Number of visible columns: the row must span the width of the table. */
   columns: number;
-  /** Largeur d'une colonne de département, réglée par la table. */
+  /** Width of a department column, set by the table. */
   colWidth: number;
   collapsed: boolean;
   onToggle: () => void;

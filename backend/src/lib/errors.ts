@@ -2,15 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Erreur applicative avec code HTTP — captée par le middleware d'erreur global.
+ * Application error with an HTTP code — caught by the global error middleware.
  */
 export class AppError extends Error {
   statusCode: number;
   code?: string;
   /**
-   * Données que le client doit recevoir pour proposer une suite à l'utilisateur —
-   * par exemple le lien de création côté ShotGrid quand la création locale est
-   * verrouillée. Un message seul obligerait l'interface à le réanalyser.
+   * Data the client needs in order to offer the user a next step — for example the creation link on the
+   * ShotGrid side when local creation is locked. A message alone would force the interface to parse it.
    */
   details?: Record<string, unknown>;
 
@@ -24,15 +23,14 @@ export class AppError extends Error {
 }
 
 /**
- * Fabrique d'erreur à message et code de repli.
+ * Error factory with a message and a fallback code.
  *
- * Le code voyage jusqu'au client (`middleware/error`), qui traduit par lui : c'est la
- * seule façon pour une interface en quatorze langues d'afficher une erreur d'API dans la
- * langue du lecteur, le message anglais restant une trace. Le code de repli n'est posé
- * **que** lorsque le message l'est aussi : un appelant qui rédige « Media not found » dit
- * quelque chose de plus précis que « not found », et lui coller le code générique ferait
- * afficher la traduction générique à sa place. Sans code, le client affiche le message
- * du serveur — dégradé, mais jamais faux.
+ * The code travels to the client (`middleware/error`), which translates with it: it is the only way for an
+ * interface in fourteen languages to display an API error in the reader's language, the English message
+ * remaining a trace. The fallback code is set **only** when the message is too: a caller who writes "Media not
+ * found" says something more precise than "not found", and attaching the generic code would display the
+ * generic translation in its place. Without a code, the client shows the server's message — degraded, but
+ * never wrong.
  */
 const withFallback =
   (statusCode: number, fallbackMessage: string, fallbackCode: string) => (msg?: string, code?: string) =>

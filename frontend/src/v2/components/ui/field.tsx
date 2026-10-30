@@ -6,17 +6,17 @@ import { cn } from '../../lib/utils';
 import { Label } from './label';
 
 /**
- * Un libellé et son contrôle, réellement liés.
+ * A label and its control, really linked.
  *
- * `Label` est une primitive générique : elle pose un `<label>` et attend que l'appelant
- * fournisse `htmlFor`. Presque personne ne le faisait — le libellé était simplement posé
- * à côté du champ, visuellement correct et programmatiquement muet. Relevé sur les
- * dialogues de l'administration : **31 champs sur 48 sans nom accessible**, dont les seize
- * du dialogue « Nouveau token de service », c'est-à-dire les cases qui décident des droits
- * d'une identité machine. Au lecteur d'écran, on y cochait des droits anonymes.
+ * `Label` is a generic primitive: it renders a `<label>` and expects the caller to supply
+ * `htmlFor`. Almost nobody did — the label was simply placed next to the field, visually
+ * correct and programmatically mute. Audit of the admin dialogs: **31 of 48 fields had no
+ * accessible name**, including the sixteen in the "New service token" dialog, that is, the
+ * checkboxes that decide the rights of a machine identity. To a screen reader, one was
+ * ticking anonymous rights.
  *
- * `Field` fabrique l'identifiant et le pose des deux côtés : il n'y a plus rien à ne pas
- * oublier. Le contrôle garde son `id` s'il en a déjà un.
+ * `Field` creates the identifier and sets it on both sides: there is nothing left to forget.
+ * The control keeps its `id` if it already has one.
  *
  * ```tsx
  * <Field label={t('user.email')}>
@@ -27,9 +27,9 @@ import { Label } from './label';
 
 interface FieldProps {
   label: ReactNode;
-  /** Texte d'aide sous le champ, relié par `aria-describedby`. */
+  /** Help text under the field, linked by `aria-describedby`. */
   hint?: ReactNode;
-  /** Message d'erreur, annoncé et relié comme l'aide. */
+  /** Error message, announced and linked like the help text. */
   error?: ReactNode;
   className?: string;
   children: ReactElement<{ id?: string; 'aria-describedby'?: string; 'aria-invalid'?: boolean }>;

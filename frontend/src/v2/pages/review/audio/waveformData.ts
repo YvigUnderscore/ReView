@@ -2,18 +2,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Forme d'onde audio du média, telle que le worker la range dans ses métadonnées :
- * une crête par barre, un octet, encodée en base64 (cf. `backend/src/lib/audioWaveform`).
- * Le lecteur n'analyse donc rien à l'ouverture — il déplie quelques centaines d'octets.
+ * Audio waveform of the media, as the worker stores it in its metadata: one peak per bar, one
+ * byte, base64-encoded (see `backend/src/lib/audioWaveform`). The player therefore analyzes
+ * nothing on open — it unfolds a few hundred bytes.
  */
 export interface WaveformMeta {
   version?: number;
   bins: number;
-  /** Crêtes 0..255 en base64, une par barre. */
+  /** Peaks 0..255 in base64, one per bar. */
   peaks: string;
 }
 
-/** Déplie les crêtes ; `null` si la forme d'onde est absente ou illisible. */
+/** Unfolds the peaks; `null` if the waveform is absent or unreadable. */
 export function decodeWaveformPeaks(meta: WaveformMeta | null | undefined): Uint8Array | null {
   if (!meta || typeof meta.peaks !== 'string' || meta.peaks.length === 0) return null;
   try {
@@ -23,18 +23,18 @@ export function decodeWaveformPeaks(meta: WaveformMeta | null | undefined): Uint
     for (let i = 0; i < binary.length; i++) out[i] = binary.charCodeAt(i);
     return out;
   } catch {
-    // Métadonnée corrompue : pas de forme d'onde, le lecteur reste utilisable.
+    // Corrupted metadata: no waveform, the player stays usable.
     return null;
   }
 }
 
 /**
- * Rééchantillonne les crêtes pour l'affichage, en hauteurs 0..1.
+ * Resamples the peaks for display, as heights 0..1.
  *
- * Moins de barres que de crêtes : on garde le **maximum** de l'intervalle, jamais la
- * moyenne — un transitoire d'une frame (claquette, coupure de dialogue) est précisément
- * ce que l'on cherche à voir, et une moyenne l'efface. Plus de barres que de crêtes :
- * on répète la crête la plus proche plutôt que de laisser des trous.
+ * Fewer bars than peaks: we keep the **maximum** of the interval, never the average — a
+ * one-frame transient (clapperboard, dialogue cut) is exactly what we want to see, and an
+ * average would erase it. More bars than peaks: we repeat the nearest peak rather than leave
+ * gaps.
  */
 export function waveformBars(peaks: Uint8Array, count: number): number[] {
   const n = Math.max(1, Math.floor(count));

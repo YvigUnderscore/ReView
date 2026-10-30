@@ -3,15 +3,15 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { stubLayoutMetrics } from '../../../../test/layoutMetrics';
-import { t } from '../../../i18n';
+import { stubLayoutMetrics } from '@/test/layoutMetrics';
+import { t } from '@/v2/i18n';
 import PoiCommentPoints from './PoiCommentPoints';
 import type { PoiPoint } from './poiPoints';
 
 /**
- * Le fil de commentaires est la surface LARGE — une quarantaine de caractères par ligne,
- * mesurés en navigateur. Le repliage d'une remarque s'y décide sur ce que les trois lignes
- * masquent vraiment, et happy-dom ne met rien en page : on lui prête donc cette largeur.
+ * The comment thread is the WIDE surface: about forty characters per line, measured in a browser.
+ * Whether a remark is folded is decided by what the three visible lines really hide, and happy-dom
+ * lays nothing out, so we lend it that width.
  */
 let restore: (() => void) | null = null;
 
@@ -34,14 +34,14 @@ const attachments = [
   { key: 'k9', name: 'autre.png', contentType: 'image/png', url: 'blob:autre' },
 ];
 
-describe('PoiCommentPoints — cliquer un numéro ramène la caméra sur son point', () => {
-  it('rend une rangée numérotée par point, avec sa remarque', () => {
+describe('PoiCommentPoints — clicking a number brings the camera back to its point', () => {
+  it('renders a numbered row per point, with its remark', () => {
     render(<PoiCommentPoints points={points} attachments={attachments} stop={() => undefined} />);
     expect(screen.getByText('la soudure')).toBeInTheDocument();
     expect(screen.getByText('le boulon')).toBeInTheDocument();
   });
 
-  it('appelle le retour caméra avec le point et son rang', () => {
+  it('calls the camera return with the point and its rank', () => {
     const onFocus = vi.fn();
     render(
       <PoiCommentPoints points={points} attachments={attachments} onFocus={onFocus} stop={() => undefined} />,
@@ -50,21 +50,21 @@ describe('PoiCommentPoints — cliquer un numéro ramène la caméra sur son poi
     expect(onFocus).toHaveBeenCalledWith(points[1], 1);
   });
 
-  it('sans viewer sous la main, les numéros restent du texte', () => {
+  it('without a viewer at hand, the numbers remain plain text', () => {
     render(<PoiCommentPoints points={points} attachments={attachments} stop={() => undefined} />);
     expect(screen.queryByRole('button', { name: t('poi.focus', { n: 1 }) })).not.toBeInTheDocument();
   });
 
-  it('n’affiche d’un point que SES images, reconnues par leur clé', () => {
+  it('shows for a point only ITS images, recognised by their key', () => {
     render(<PoiCommentPoints points={points} attachments={attachments} stop={() => undefined} />);
     const thumbs = screen.getAllByRole('img');
     expect(thumbs).toHaveLength(1);
     expect(thumbs[0]).toHaveAttribute('alt', 'defaut.png');
   });
 
-  it('replie une remarque trop longue au lieu de la faire défiler en largeur', () => {
-    // Assez longue pour dépasser trois lignes DANS LE FIL : une remarque qui y tient déjà n'a
-    // rien à faire replier, et c'est précisément ce que le comptage de caractères ignorait.
+  it('folds a remark that is too long instead of scrolling it sideways', () => {
+    // Long enough to exceed three lines IN THE THREAD: a remark that already fits there has nothing
+    // to fold, and that is precisely what the character count ignored.
     const long =
       '/mnt/prod/seq010/sh0420/comp/v012/sh0420_comp_v012_beauty_linear_exr_sequence' +
       ' et la meme chose sur sh0430 ou la soudure ressort encore plus franchement au raccord';
@@ -83,14 +83,14 @@ describe('PoiCommentPoints — cliquer un numéro ramène la caméra sur son poi
     expect(container.querySelector('.line-clamp-3')).toBeNull();
   });
 
-  it('pose la miniature du point à côté de sa remarque, pas dessous', () => {
+  it('places the point thumbnail beside its remark, not below', () => {
     render(<PoiCommentPoints points={points} attachments={attachments} stop={() => undefined} />);
     const strip = screen.getByRole('img').closest('div');
     expect(strip?.parentElement?.firstElementChild?.textContent).toContain('la soudure');
     expect(strip?.className).toContain('shrink-0');
   });
 
-  it('ne rend rien quand le commentaire ne porte aucun point', () => {
+  it('renders nothing when the comment carries no point', () => {
     const { container } = render(<PoiCommentPoints points={[]} stop={() => undefined} />);
     expect(container).toBeEmptyDOMElement();
   });

@@ -8,16 +8,16 @@ import { cardVariants, type CardVariants } from './card.variants';
 
 export interface CardProps extends HTMLAttributes<HTMLDivElement>, CardVariants {
   /**
-   * Rendre la carte sur l'élément enfant plutôt que sur un `<div>` : indispensable quand
-   * la surface est aussi un lien (`<Link>`) ou un bouton, la carte ne pouvant alors pas
-   * envelopper l'élément sans changer la zone cliquable.
+   * Render the card on the child element rather than a `<div>`: essential when the surface
+   * is also a link (`<Link>`) or a button, since the card cannot then wrap the element
+   * without changing the clickable area.
    */
   asChild?: boolean;
 }
 
 /**
- * La surface posée sur le fond de page : panneau de réglages, bloc de statistiques,
- * ligne de liste, tuile cliquable. Voir `card.variants.ts` pour l'échelle retenue.
+ * The surface laid on the page background: settings panel, statistics block, list row,
+ * clickable tile. See `card.variants.ts` for the scale chosen.
  */
 const Card = forwardRef<HTMLDivElement, CardProps>(
   ({ className, variant, padding, interactive, asChild = false, ...props }, ref) => {
@@ -30,8 +30,8 @@ const Card = forwardRef<HTMLDivElement, CardProps>(
 Card.displayName = 'Card';
 
 /**
- * En-tête et pied portent l'espacement quand la carte est en `padding="none"` — c'est le
- * découpage de shadcn, ramené au `p-4` de l'application.
+ * Header and footer carry the spacing when the card is `padding="none"`: this is shadcn's
+ * layout, brought down to the app's `p-4`.
  */
 const CardHeader = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
   ({ className, ...props }, ref) => (
@@ -41,22 +41,21 @@ const CardHeader = forwardRef<HTMLDivElement, HTMLAttributes<HTMLDivElement>>(
 CardHeader.displayName = 'CardHeader';
 
 /**
- * Titre de carte. `text-sm font-medium` et non le `text-lg` de shadcn : c'est la graisse
- * qu'emploient tous les panneaux existants, et un titre de panneau n'a pas à peser plus
- * lourd que le contenu qu'il annonce. Sans espacement propre, donc utilisable tel quel
- * dans une carte déjà rembourrée.
+ * Card title. `text-sm font-medium` rather than shadcn's `text-lg`: that is the weight all
+ * existing panels use, and a panel title should not weigh more than the content it
+ * announces. It has no spacing of its own, so it can be used as is in an already padded card.
  */
 const CardTitle = forwardRef<HTMLParagraphElement, HTMLAttributes<HTMLHeadingElement>>(
   ({ className, ...props }, ref) => (
-    // Primitive générique : le contenu du titre arrive de l'appelant par `{...props}`
-    // (`children`), la règle ne peut pas le voir à cet endroit.
+    // Generic primitive: the heading content comes from the caller through `{...props}`
+    // (`children`), which the rule cannot see at this point.
     // eslint-disable-next-line jsx-a11y/heading-has-content
     <h3 ref={ref} className={cn('text-sm font-medium', className)} {...props} />
   ),
 );
 CardTitle.displayName = 'CardTitle';
 
-/** La phrase d'intention sous le titre — `text-xs`, comme partout dans les réglages. */
+/** The intent sentence under the title: `text-xs`, as in all the settings. */
 const CardDescription = forwardRef<HTMLParagraphElement, HTMLAttributes<HTMLParagraphElement>>(
   ({ className, ...props }, ref) => (
     <p ref={ref} className={cn('text-xs text-muted-foreground', className)} {...props} />

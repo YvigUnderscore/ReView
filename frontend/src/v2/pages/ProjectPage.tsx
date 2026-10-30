@@ -40,9 +40,9 @@ import EntityUnavailable from '../components/EntityUnavailable';
 import { isBadId, isMissingOrForbidden } from '../components/entityAvailability';
 
 /**
- * Un seul onglet est monté à la fois (le `?tab=` de l'URL) : les onze autres n'ont aucune
- * raison d'être téléchargés (F4). « Vue d'ensemble » reste statique — c'est l'onglet par
- * défaut, il voyage donc avec la page plutôt que dans un aller-retour supplémentaire.
+ * Only one tab is mounted at a time (the URL's `?tab=`): the other eleven have no
+ * reason to be downloaded (F4). "Overview" stays static: it is the default tab,
+ * so it travels with the page rather than in an extra round trip.
  */
 const ProjectSettingsTab = lazy(() => import('../components/ProjectSettingsTab'));
 const ShotsTab = lazy(() => import('./project/ShotsTab'));
@@ -56,7 +56,7 @@ const SharesTab = lazy(() => import('./project/SharesTab'));
 const TrashTab = lazy(() => import('./project/TrashTab'));
 const ShotgridTab = lazy(() => import('./project/ShotgridTab'));
 
-/** Page projet — orchestrateur des onglets (découpage 10.C1, sous-composants dans pages/project/). */
+/** Project page: tab orchestrator (split 10.C1, sub-components in pages/project/). */
 export default function ProjectPage() {
   const t = useT();
   const { id } = useParams();
@@ -64,8 +64,8 @@ export default function ProjectPage() {
   const role = useAuth((s) => s.user?.role);
   const canManage = role === 'ADMIN' || role === 'SUPERVISOR';
   const [searchParams, setSearchParams] = useSearchParams();
-  // Le tab vit dans l'URL (deep-links sidebar/favoris/breadcrumb : ?tab=sequences&seq=ID)
-  // — back/forward navigateur cohérents (10.A6).
+  // The tab lives in the URL (sidebar/bookmark/breadcrumb deep links: ?tab=sequences&seq=ID)
+  // so that browser back/forward stay consistent (10.A6).
   const tab = searchParams.get('tab') ?? 'overview';
   const setTab = (t: string) => setSearchParams(t === 'overview' ? {} : { tab: t });
 
@@ -76,7 +76,7 @@ export default function ProjectPage() {
   });
   const projData = projQ.data;
   const name = projData?.project.name ?? '';
-  // URL parlante : remplace `/projects/390` par `/projects/le-projet-390` une fois le nom connu.
+  // Readable URL: replaces `/projects/390` with `/projects/the-project-390` once the name is known.
   useCanonicalSlug(id, name ? entitySlug(name, projectId) : null);
   const { data: settingsData } = useQuery({
     queryKey: qk.projectSettings(projectId),
@@ -106,30 +106,30 @@ export default function ProjectPage() {
     padding: 3,
     step: 10,
   };
-  // Une connexion ShotGrid change ce que la page propose : onglet dédié, liens vers le
-  // site, verrou de création. Sans elle, rien de tout cela n'apparaît.
+  // A ShotGrid connection changes what the page offers: a dedicated tab, links to the
+  // site, a creation lock. Without it, none of this appears.
   const { data: sgConnection } = useSgConnection(projectId);
-  // Niveau Épisode : facultatif, éteint par défaut. Tant que le serveur ne l'a pas
-  // confirmé actif, l'onglet n'existe pas — un long-métrage n'en voit aucune trace.
+  // Episode level: optional, off by default. Until the server confirms it is active, the
+  // tab does not exist: a feature film sees no trace of it.
   const episodesEnabled = useEpisodesEnabled(projectId);
 
   const tabs = [
     { key: 'overview', label: t('project.tab.overview'), icon: <LayoutDashboard size={16} /> },
-    // L'ordre suit la hiérarchie du pipe, de l'ensemble vers le détail : une séquence
-    // contient des plans, pas l'inverse.
+    // The order follows the pipe hierarchy, from the whole to the detail: a sequence
+    // contains shots, not the other way round.
     ...(episodesEnabled
       ? [{ key: 'episodes', label: t('episodes.title'), icon: <Clapperboard size={16} /> }]
       : []),
     { key: 'sequences', label: t('sequences.title'), icon: <Film size={16} />, badge: sequences.length },
-    // Le badge annonce le total du projet, pas ce qui est chargé : les listes sont
-    // désormais infinies, `shots.length` ne vaudrait que la première page.
+    // The badge shows the project total, not what is loaded: lists are now
+    // infinite, so `shots.length` would only be the first page.
     { key: 'shots', label: t('shots.title'), icon: <Clapperboard size={16} />, badge: shotsQ.total },
     { key: 'assets', label: 'Assets', icon: <Box size={16} />, badge: assetsQ.total },
     { key: 'playlists', label: 'Playlists', icon: <ListVideo size={16} /> },
-    // Le suivi de production expose la charge nominative de l'équipe, les retards et les
-    // tâches non assignées : depuis la phase 50 ses lectures sont réservées côté serveur à
-    // qui gère le projet. Sans ce garde, un artiste verrait l'onglet et n'y trouverait que
-    // des erreurs.
+    // Production tracking exposes each member's workload, late items and
+    // unassigned tasks: since phase 50 its reads are restricted server-side to
+    // those who manage the project. Without this guard, an artist would see the tab and find only
+    // errors there.
     ...(canManage
       ? [{ key: 'production', label: t('project.tab.production'), icon: <BarChart3 size={16} /> }]
       : []),
@@ -137,16 +137,16 @@ export default function ProjectPage() {
     ...(canManage ? [{ key: 'shares', label: t('project.tab.shares'), icon: <Share2 size={16} /> }] : []),
     ...(canManage ? [{ key: 'settings', label: t('admin.tab.settings'), icon: <Settings size={16} /> }] : []),
     ...(canManage ? [{ key: 'trash', label: t('admin.tab.trash'), icon: <Trash2 size={16} /> }] : []),
-    // ShotGrid (48) : l'onglet n'existe que sur un projet relié. Un studio sans ShotGrid
-    // ne doit pas voir l'intégration du tout ; la liaison se fait depuis les réglages du
-    // projet, qui est l'endroit où l'on décide de relier.
+    // ShotGrid (48): the tab exists only on a linked project. A studio without ShotGrid
+    // must not see the integration at all; the link is made from the project
+    // settings, which is where one decides to link.
     ...(canManage && sgConnection?.active
       ? [{ key: 'shotgrid', label: t('shotgrid.tab.label'), icon: <Workflow size={16} /> }]
       : []),
   ];
 
-  // Projet inconnu, supprimé ou fermé : la page montait ses douze onglets sur un projet
-  // vide, et chaque onglet lançait ses propres requêtes vouées à échouer.
+  // Unknown, deleted or closed project: the page mounted its twelve tabs on an
+  // empty project, and each tab fired its own requests doomed to fail.
   if (isBadId(projectId) || (projQ.isError && isMissingOrForbidden(projQ.error)))
     return <EntityUnavailable kind="project" error={isBadId(projectId) ? undefined : projQ.error} />;
   if (projQ.isError)
@@ -186,16 +186,16 @@ export default function ProjectPage() {
 
       <Tabs tabs={tabs} active={tab} onChange={setTab} />
 
-      {/* Frontière des onglets différés : l'en-tête et la barre d'onglets restent en place
-          pendant le téléchargement, seule la zone de contenu attend — même contrat que la
-          coquille pour les pages (D3).
+      {/* Boundary for deferred tabs: the header and tab bar stay in place
+          while downloading, only the content area waits, same contract as
+          the shell for pages (D3).
 
-          `key={tab}` n'est pas cosmétique. Le routeur enveloppe ses navigations dans une
-          transition React ; une frontière **déjà montée** qui se met à attendre ne montre
-          alors pas son repli : React préfère garder l'écran précédent, et le clic sur
-          l'onglet semble ne rien faire jusqu'à l'arrivée du module. Une clé par onglet crée
-          une frontière neuve — sans contenu à préserver, elle affiche son repli tout de
-          suite, et l'URL est écrite sans attendre le téléchargement. */}
+          `key={tab}` is not cosmetic. The router wraps its navigations in a
+          React transition; a boundary **already mounted** that starts to wait
+          then does not show its fallback: React prefers to keep the previous screen, and the click on
+          the tab seems to do nothing until the module arrives. One key per tab creates
+          a fresh boundary, with no content to preserve, it shows its fallback
+          right away, and the URL is written without waiting for the download. */}
       <Suspense
         key={tab}
         fallback={<div className="p-6 text-sm text-muted-foreground">{t('common.loading')}</div>}
@@ -218,8 +218,8 @@ export default function ProjectPage() {
             nomenclature={nomenclature}
           />
         )}
-        {/* Le garde est double : l'onglet n'existe pas, et le contenu ne se monte pas —
-          un `?tab=episodes` recopié ne fait donc rien apparaître. */}
+        {/* The guard is double: the tab does not exist, and the content is not mounted,
+          so a copied `?tab=episodes` makes nothing appear. */}
         {tab === 'episodes' && episodesEnabled && <EpisodesTab projectId={projectId} canManage={canManage} />}
         {tab === 'sequences' && (
           <SequencesTab

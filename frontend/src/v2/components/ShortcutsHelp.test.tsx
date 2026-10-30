@@ -9,13 +9,13 @@ import { t } from '../i18n';
 import { reviewShortcutGroups } from '../pages/review/chrome/shortcuts';
 
 /**
- * L'aide des raccourcis **se déduit** du registre (`pages/review/chrome/shortcuts`), celui que
- * les gestionnaires eux-mêmes consultent. Ce test est le verrou : il n'énumère aucun raccourci,
- * il compare l'écran au registre. Tant qu'il passe, les deux listes ne peuvent plus diverger —
- * ajouter un raccourci au registre l'ajoute à l'aide, le retirer l'en retire.
+ * The shortcuts help is **derived** from the registry (`pages/review/chrome/shortcuts`), the one that
+ * the handlers themselves consult. This test is the lock: it enumerates no shortcut,
+ * it compares the screen with the registry. As long as it passes, the two lists can no longer diverge:
+ * adding a shortcut to the registry adds it to the help, removing it removes it from there.
  *
- * L'ancienne aide tenait sa propre copie : dix raccourcis actifs y manquaient, un outil
- * « Zoom » inerte y figurait, et les noms de touches y étaient codés en dur en français.
+ * The former help kept its own copy: ten active shortcuts were missing from it, an inert
+ * "Zoom" tool appeared there, and the key names were hard-coded in French.
  */
 vi.mock('../../lib/apiClient', () => ({ api: { get: vi.fn(() => new Promise(() => {})), patch: vi.fn() } }));
 
@@ -30,8 +30,8 @@ const mount = () => {
 
 afterEach(cleanup);
 
-describe('ShortcutsHelp — dérivée du registre', () => {
-  it('affiche chaque groupe et chaque raccourci du registre', () => {
+describe('ShortcutsHelp — derived from the registry', () => {
+  it('shows each group and each shortcut of the registry', () => {
     mount();
     for (const group of reviewShortcutGroups()) {
       expect(screen.getByText(t(group.titleKey))).toBeInTheDocument();
@@ -40,7 +40,7 @@ describe('ShortcutsHelp — dérivée du registre', () => {
     }
   });
 
-  it('rend les noms de touches traduits, jamais la clé de traduction', () => {
+  it('renders the translated key names, never the translation key', () => {
     mount();
     const named = reviewShortcutGroups()
       .flatMap((g) => g.shortcuts)
@@ -54,7 +54,7 @@ describe('ShortcutsHelp — dérivée du registre', () => {
     }
   });
 
-  it('ne promet plus l’outil « Zoom », supprimé faute d’implémentation', () => {
+  it('no longer promises the "Zoom" tool, removed for lack of implementation', () => {
     mount();
     const labels = reviewShortcutGroups()
       .flatMap((g) => g.shortcuts)

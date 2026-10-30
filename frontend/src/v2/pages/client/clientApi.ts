@@ -2,9 +2,8 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Mini-client HTTP de la page client publique (35.D) : pas de JWT utilisateur, mais une
- * session de partage (`X-Share-Auth`, émise par le GET initial ou l'unlock) conservée en
- * sessionStorage par token.
+ * Minimal HTTP client of the public client page (35.D): no user JWT, but a share session
+ * (`X-Share-Auth`, issued by the initial GET or the unlock), kept in sessionStorage per token.
  */
 
 import { t } from '../../i18n';

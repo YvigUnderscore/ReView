@@ -4,7 +4,7 @@
 import { Badge } from '../../components/ui/badge';
 import { useT, type MessageKey } from '../../i18n';
 
-/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+/** Translator passed to the label tables, recomputed on every render. */
 type Tr = (key: MessageKey) => string;
 
 const statusLabel = (t: Tr): Record<string, string> => ({
@@ -14,7 +14,7 @@ const statusLabel = (t: Tr): Record<string, string> => ({
   ARCHIVED: t('project.status.archived'),
 });
 
-/** Pastille de statut d'un projet (couleur dérivée du statut). */
+/** Status dot for a project (color derived from the status). */
 export default function ProjectStatusBadge({ status }: { status: string }) {
   const t = useT();
   const variant =

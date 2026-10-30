@@ -2,28 +2,28 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Socle des tests **de rendu** (Testing Library).
+ * Base of the **rendering** tests (Testing Library).
  *
- * Il complète `vitest.setup.ts` — qui, lui, corrige une incompatibilité WebAssembly et n'a
- * rien à voir avec le DOM. Ici on installe ce sans quoi un composant réel refuse de monter
- * sous happy-dom : les matchers `jest-dom`, le démontage entre deux tests, et les quelques
- * API navigateur que happy-dom n'implémente pas mais dont l'application se sert sans
- * précaution (observateurs, `matchMedia`, lecture média).
+ * It complements `vitest.setup.ts`, which fixes a WebAssembly incompatibility and has
+ * nothing to do with the DOM. Here we install what a real component needs in order to mount
+ * under happy-dom: the `jest-dom` matchers, the teardown between two tests, and the few
+ * browser APIs that happy-dom does not implement but the application uses without
+ * caution (observers, `matchMedia`, media playback).
  *
- * Règle : **on ne stub que ce qui manque**. Un `if (!(x in window))` protège chaque ajout,
- * pour qu'une version ultérieure de happy-dom reprenne la main d'elle-même et qu'aucun test
- * ne se retrouve à vérifier notre bouchon plutôt que le navigateur.
+ * Rule: **we only stub what is missing**. An `if (!(x in window))` guards each addition,
+ * so that a later version of happy-dom takes over by itself and no test
+ * ends up checking our stub rather than the browser.
  */
 
 import '@testing-library/jest-dom/vitest';
 import { cleanup } from '@testing-library/react';
 import { afterEach } from 'vitest';
 
-// Démontage systématique : sans lui, deux tests d'un même fichier partagent le DOM et
-// `getByRole` remonte l'écran précédent — l'erreur la plus coûteuse à diagnostiquer.
+// Systematic teardown: without it, two tests of the same file share the DOM and
+// `getByRole` picks up the previous screen, the most costly error to diagnose.
 afterEach(cleanup);
 
-/** Observateur inerte : ne déclenche jamais, ce qui est le comportement attendu hors navigateur. */
+/** Inert observer: never fires, which is the expected behaviour outside a browser. */
 class InertObserver {
   observe(): void {}
   unobserve(): void {}
@@ -35,10 +35,10 @@ class InertObserver {
 
 const w = globalThis as unknown as Record<string, unknown>;
 
-// `IntersectionObserver` : sentinelles de pagination, lazy-loading des vignettes. Sans lui,
-// `ListSentinel` lève à la première liste rendue.
+// `IntersectionObserver`: pagination sentinels, lazy loading of thumbnails. Without it,
+// `ListSentinel` throws on the first list rendered.
 if (!('IntersectionObserver' in w)) w.IntersectionObserver = InertObserver;
-// `ResizeObserver` : rails d'onglets, panneaux redimensionnables, virtualisation.
+// `ResizeObserver`: tab rails, resizable panels, virtualization.
 if (!('ResizeObserver' in w)) w.ResizeObserver = InertObserver;
 
 if (typeof window !== 'undefined') {
@@ -54,10 +54,10 @@ if (typeof window !== 'undefined') {
       dispatchEvent: () => false,
     });
   }
-  // Radix (dialogs, menus) et le fil de commentaires appellent `scrollIntoView` au montage.
+  // Radix (dialogs, menus) and the comment thread call `scrollIntoView` on mount.
   if (!Element.prototype.scrollIntoView) Element.prototype.scrollIntoView = function () {};
-  // happy-dom ne joue rien : `play()` doit néanmoins rendre une promesse résolue, sinon
-  // chaque `void v.play().catch(...)` du lecteur devient un rejet non capturé.
+  // happy-dom plays nothing: `play()` must nevertheless return a resolved promise, otherwise
+  // every `void v.play().catch(...)` of the player becomes an uncaught rejection.
   if (typeof HTMLMediaElement !== 'undefined') {
     HTMLMediaElement.prototype.play = function () {
       return Promise.resolve();
@@ -65,9 +65,9 @@ if (typeof window !== 'undefined') {
     HTMLMediaElement.prototype.pause = function () {};
     HTMLMediaElement.prototype.load = function () {};
   }
-  // Aucun test de rendu ne doit atteindre le réseau : `renderWithProviders` installe un
-  // routeur de bouchons, et un composant oublié doit échouer bruyamment plutôt que
-  // pendre jusqu'au timeout.
+  // No rendering test may reach the network: `renderWithProviders` installs a
+  // router of stubs, and a forgotten component must fail loudly rather than
+  // hang until the timeout.
   if (!globalThis.fetch) {
     globalThis.fetch = () => Promise.reject(new Error('fetch is not mocked in this test'));
   }

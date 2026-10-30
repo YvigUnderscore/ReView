@@ -10,16 +10,16 @@ import { isClickGesture, toNdc } from './usdPicking';
 import type { Model3DThreeState } from './useModel3DThree';
 
 /**
- * Outil de mesure point-à-point du viewer 3D (39.G) et dimensions de la boîte englobante.
+ * Point-to-point measurement tool of the 3D viewer (39.G) and dimensions of the bounding box.
  *
- * On clique deux points sur la surface : le repère les relie et la longueur s'affiche dans le
- * panneau Infos, exprimée en mètres via le `metersPerUnit` de la scène USD. Un troisième clic
- * repart d'un nouveau segment. L'échelle réellement appliquée est **lue sur la matrice monde**
- * du modèle (normalisation × transformation utilisateur) : mesurer en taille réelle ou en
- * taille normalisée donne donc le même résultat, comme il se doit.
+ * Two points are clicked on the surface: the marker joins them and the length is displayed in the
+ * Info panel, expressed in meters via the `metersPerUnit` of the USD scene. A third click starts a
+ * new segment. The scale actually applied is **read from the world matrix** of the model
+ * (normalization × user transform): measuring at real size or at normalized size therefore gives the
+ * same result, as it should.
  *
- * L'outil n'installe ses écouteurs que lorsqu'il est armé : hors mesure, le clic garde son
- * rôle habituel (sélection de prim).
+ * The tool only installs its listeners while armed: outside measurement, the click keeps its usual
+ * role (prim selection).
  */
 export function useModelMeasure(model3d: Model3DThreeState, metersPerUnit = 1) {
   const { ready, getSceneHandle, modelSize } = model3d;
@@ -27,8 +27,8 @@ export function useModelMeasure(model3d: Model3DThreeState, metersPerUnit = 1) {
   const [points, setPoints] = useState(0);
   const [metres, setMetres] = useState<number | null>(null);
   const gizmoRef = useRef<MeasureGizmo | null>(null);
-  // `metersPerUnit` change avec le média, pas pendant une mesure : une ref évite de réinstaller
-  // les écouteurs (et donc d'effacer la mesure en cours) à chaque rendu de la review.
+  // `metersPerUnit` changes with the media, not during a measurement: a ref avoids reinstalling
+  // the listeners (and thus erasing the ongoing measurement) on every review render.
   const mpuRef = useRef(metersPerUnit);
   useEffect(() => {
     mpuRef.current = metersPerUnit;
@@ -61,7 +61,7 @@ export function useModelMeasure(model3d: Model3DThreeState, metersPerUnit = 1) {
     const onUp = (e: PointerEvent) => {
       const start = down;
       down = null;
-      // Même garde que la sélection de prim : un clic gauche qui a glissé est une orbite.
+      // Same guard as prim selection: a left click that slid is an orbit.
       if (e.button !== 0 || !start || !isClickGesture(e.clientX - start.x, e.clientY - start.y)) return;
       const ndc = toNdc(e.clientX, e.clientY, dom.getBoundingClientRect());
       const hit = raycastSurface(three, handle.camera, root, ndc);
@@ -93,11 +93,11 @@ export function useModelMeasure(model3d: Model3DThreeState, metersPerUnit = 1) {
     active,
     toggle,
     clear,
-    /** Nombre de points posés (0, 1 ou 2) — le panneau invite à poser le second. */
+    /** Number of points placed (0, 1 or 2) — the panel prompts to place the second. */
     points,
-    /** Longueur mesurée, `null` tant que les deux points ne sont pas posés. */
+    /** Measured length, `null` until both points are placed. */
     length: metres == null ? null : formatLength(metres),
-    /** Dimensions de la boîte englobante du fichier, en longueurs lisibles. */
+    /** Dimensions of the file's bounding box, in readable lengths. */
     dimensions: modelSize ? boxLengths(modelSize, metersPerUnit) : null,
   };
 }

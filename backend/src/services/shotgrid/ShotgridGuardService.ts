@@ -6,17 +6,13 @@ import { AppError } from '../../lib/errors';
 import { parseSettings, sgCreateLink } from './shotgridSettings';
 
 /**
- * Verrou de création locale.
+ * Local creation lock.
  *
- * Quand un projet est piloté depuis ShotGrid, y créer un plan côté ReView produit une
- * entité orpheline : elle n'existe pas dans le registre de production, personne ne la
- * verra dans les rapports, et la prochaine synchronisation ne saura pas quoi en faire.
- * Plutôt que de la laisser naître pour la signaler ensuite comme un écart, on refuse
- * la création et on renvoie vers le formulaire ShotGrid correspondant — pré-rempli sur
- * le bon projet.
+ * When a project is driven from ShotGrid, creating a shot on the ReView side produces an orphan entity: it does not exist in the production registry, nobody
+ * will see it in the reports, and the next synchronization will not know what to do with it. Rather than let it be born only to flag it later as a gap, we refuse
+ * the creation and point to the matching ShotGrid form, pre-filled on the right project.
  *
- * Le verrou se lève dans les réglages du projet : certains studios préfèrent créer
- * depuis ReView (la création miroir écrit alors d'abord dans ShotGrid).
+ * The lock is lifted in the project settings: some studios prefer to create from ReView (the mirror creation then writes to ShotGrid first).
  */
 
 export type CreatableKind = 'sequence' | 'shot' | 'asset';
@@ -27,7 +23,7 @@ const SG_ENTITY: Record<CreatableKind, string> = {
   asset: 'Asset',
 };
 
-/** Erreur porteuse du lien de création distant — le client en fait un bouton. */
+/** Error carrying the remote creation link: the client turns it into a button. */
 export class ShotgridLockedError extends AppError {
   constructor(
     message: string,
@@ -61,32 +57,31 @@ export async function creationLockState(projectId: number, kind: CreatableKind):
 }
 
 /**
- * Refuse la création si le projet est piloté depuis ShotGrid.
- * Appelée par les routes de création de séquences, plans et assets.
+ * Refuses creation if the project is driven from ShotGrid.
+ * Called by the creation routes of sequences, shots and assets.
  */
 export async function assertLocalCreationAllowed(projectId: number, kind: CreatableKind): Promise<void> {
   const state = await creationLockState(projectId, kind);
   if (!state.locked) return;
   throw new ShotgridLockedError(
-    `Ce projet est piloté depuis ShotGrid (« ${state.sgProjectName} ») — créer l'élément dans ShotGrid, il reviendra à la synchronisation suivante`,
+    `This project is driven from ShotGrid ("${state.sgProjectName}") — create the item in ShotGrid, it will come back with the next sync`,
     state.sgCreateUrl!,
     state.sgProjectName!,
   );
 }
 
 /**
- * La description de ce projet est-elle éditable dans ReView ?
+ * Is this project's description editable in ReView?
  *
- * Non, par défaut, dès que le projet est relié : la description vient du site, et la
- * modifier ici produirait une divergence que la synchronisation suivante écraserait sans
- * le dire. Le studio ouvre l'édition en choisissant `descriptions.source = 'review'`, ou
- * en activant le renvoi vers le site (`writeBack`) — c'est alors un aller-retour assumé.
+ * No, by default, as soon as the project is linked: the description comes from the site, and editing it here would produce a divergence that the next
+ * synchronization would overwrite without saying so. The studio opens editing by choosing `descriptions.source = 'review'`, or by enabling the push back to
+ * the site (`writeBack`): it is then a deliberate round trip.
  */
 export interface DescriptionPolicy {
   editable: boolean;
-  /** Où la modifier quand elle est verrouillée : le lien direct vers la fiche du site. */
+  /** Where to edit it when it is locked: the direct link to the site's record. */
   sgProjectName?: string;
-  /** `true` quand une modification locale repart vers le site. */
+  /** `true` when a local change is pushed back to the site. */
   writeBack: boolean;
 }
 
@@ -102,12 +97,12 @@ export async function descriptionPolicy(projectId: number): Promise<DescriptionP
   };
 }
 
-/** Refuse une écriture de description quand le site fait foi. */
+/** Refuses a description write when the site is authoritative. */
 export async function assertDescriptionWritable(projectId: number): Promise<void> {
   const policy = await descriptionPolicy(projectId);
   if (policy.editable) return;
   throw new AppError(
-    `La description est tenue par ShotGrid (« ${policy.sgProjectName} ») — la modifier là-bas, ou ouvrir l'édition dans les réglages du projet`,
+    `The description is owned by ShotGrid ("${policy.sgProjectName}") — edit it there, or unlock editing in the project settings`,
     409,
     'SHOTGRID_DESCRIPTION_LOCKED',
     { sgProjectName: policy.sgProjectName },

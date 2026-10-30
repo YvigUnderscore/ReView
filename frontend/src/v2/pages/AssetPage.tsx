@@ -7,7 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ListPlus, Plus, Users } from 'lucide-react';
 import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
-import { deliverFiles } from '../../stores/deliverFiles';
+import { deliverFiles } from '../stores/deliverFiles';
 import EntityWorkPage from '../components/entity/EntityWorkPage';
 import { useAssignMenu, useDepartmentMenu } from '../lib/useAssignMenu';
 import { entriesOf } from '../lib/menuSpec';
@@ -30,16 +30,16 @@ import EntityUnavailable from '../components/EntityUnavailable';
 import { isBadId, isMissingOrForbidden } from '../components/entityAvailability';
 
 /**
- * L'asset, comme page — même coquille qu'un plan et qu'une séquence (C3).
+ * The asset, as a page: same shell as a shot and a sequence (C3).
  *
- * Le statut et la pastille de synchronisation ShotGrid manquaient ici alors qu'un plan les
- * portait : le même asset se lisait autrement selon la page où on l'ouvrait.
+ * The ShotGrid status and sync badge were missing here although a shot carried them: the
+ * same asset read differently depending on the page it was opened from.
  */
 export default function AssetPage() {
   const t = useT();
   const { id } = useParams();
   const assetId = Number(id);
-  // Ouvrir, c'est consulter : la lueur « non consulté » s'éteint ici (lot 9).
+  // Opening is consulting: the "not consulted" glow switches off here (batch 9).
   useMarkVisited('ASSET', assetId);
   const qc = useQueryClient();
   const navigate = useNavigate();
@@ -69,8 +69,8 @@ export default function AssetPage() {
     removeMedia,
   } = useVersions({ assetId });
 
-  // L'arbre du pipe : c'est lui qui montre les versions publiées SOUS une tâche, que la
-  // timeline ci-dessous (versions rattachées directement à l'asset) ne voit pas.
+  // The pipe tree: it is what shows the versions published UNDER a task, which the
+  // timeline below (versions attached directly to the asset) does not see.
   const treeQ = useQuery({
     queryKey: qk.assetTree(assetId),
     queryFn: () => api.get<AssetOverview>(`/api/assets/${assetId}/tree`),
@@ -78,8 +78,8 @@ export default function AssetPage() {
   const overview = treeQ.data ?? null;
 
   /**
-   * Tâches auxquelles une version peut appartenir, telles que l'arbre les a déjà
-   * chargées. Sur un projet relié, ce sont exactement celles de ShotGrid.
+   * Tasks a version can belong to, as the tree has already
+   * loaded them. On a linked project, these are exactly those of ShotGrid.
    */
   const pickableTasks = useMemo(
     () =>
@@ -97,32 +97,32 @@ export default function AssetPage() {
   );
 
   /**
-   * Déposer crée la version suivante et l'emplit (Phase 46) : c'est le geste par défaut,
-   * celui qu'on attend en lâchant un rendu sur un asset. Quand l'asset a des tâches, on
-   * demande d'abord laquelle : ranger un rendu de texturing « sur l'asset » perd l'étape
-   * qui l'a produit, et prive la version poussée vers ShotGrid de son `sg_task`.
+   * Dropping creates the next version and fills it (Phase 46): this is the default gesture,
+   * the one expected when dropping a render onto an asset. When the asset has tasks, one
+   * is asked first: filing a texturing render "on the asset" loses the step
+   * that produced it, and deprives the version pushed to ShotGrid of its `sg_task`.
    */
   const fill = async (taskId: number | null, send?: (versionId: number) => void) => {
     const created = await createVersion(taskId ? { taskId } : undefined);
     if (!created) return;
     send?.(created.id);
-    // La timeline de cette page ne montre que les versions rattachées à l'asset : une
-    // version rangée sous une tâche y serait invisible, et l'on n'aurait nulle part où
-    // déposer son média.
+    // This page's timeline only shows versions attached to the asset: a version filed
+    // under a task would be invisible there, and there would be nowhere to
+    // drop its media.
     if (taskId) void navigate(`/tasks/${taskId}`);
   };
 
   const withTask = (files: File[] | 'empty', taskId: number | null) => {
-    // Regroupement et consigne se décident AVANT de créer la version : un dépôt abandonné
-    // ne doit pas laisser derrière lui une version vide (Phase 50). Créer une version à vide, elle,
-    // n'est pas un dépôt et n'a rien à justifier.
+    // Grouping and instruction are decided BEFORE creating the version: an abandoned drop
+    // must not leave an empty version behind (Phase 50). Creating an empty version, however,
+    // is not a drop and has nothing to justify.
     if (files === 'empty') return fill(taskId);
     return deliverFiles(projectId, files, (send) => fill(taskId, send));
   };
 
   const menuExtras: MenuEntry[] = [
-    // Assigner quelqu'un et déclarer les étapes traversées : les deux gestes tenaient
-    // dans un panneau de réglages, ils sont désormais à portée de clic droit.
+    // Assigning someone and declaring the steps traversed: both gestures lived
+    // in a settings panel, they are now within reach of a right click.
     ...entriesOf(
       asset ? assignEntry(asset, canManage) : null,
       departmentEntry(asset?.departments, canManage),
@@ -137,8 +137,8 @@ export default function AssetPage() {
           },
         ]
       : []),
-    // Poser une étape sur l'asset : le geste n'existait que par ricochet — en demandant
-    // une version, ou en assignant quelqu'un — et pas du tout sans ShotGrid.
+    // Setting a step on the asset: the gesture only existed indirectly — by requesting
+    // a version, or by assigning someone — and not at all without ShotGrid.
     ...(canManage
       ? [
           {
@@ -157,8 +157,8 @@ export default function AssetPage() {
       : []),
   ];
 
-  // Un identifiant inexploitable ou une entité absente rendaient jusqu'ici la coquille
-  // complète, avec des actions actives sur un sujet qui n'existe pas.
+  // An unusable identifier or a missing entity used to render the full
+  // shell, with active actions on a subject that does not exist.
   if (isBadId(assetId) || (assetQ.isError && isMissingOrForbidden(assetQ.error)))
     return <EntityUnavailable kind="asset" error={isBadId(assetId) ? undefined : assetQ.error} />;
   if (assetQ.isError)

@@ -7,16 +7,16 @@ vi.mock('../lib/prisma', () => ({
   prisma: { mediaObject: { findUnique: vi.fn(), update: vi.fn() } },
 }));
 vi.mock('./MediaService', () => ({ assertMediaManage: vi.fn() }));
-vi.mock('./JobService', () => ({ enqueueMediaJob: vi.fn() }));
+vi.mock('../lib/queues', () => ({ enqueueMediaJob: vi.fn() }));
 vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
 
 import { recomposeUsd } from './UsdRecomposeService';
 import { prisma } from '../lib/prisma';
-import { enqueueMediaJob } from './JobService';
+import { enqueueMediaJob } from '../lib/queues';
 
 const USER = { id: 5, role: 'ADMIN' as never };
 
-/** Média 3D USD prêt, exposant un variantSet à deux options. */
+/** Ready USD 3D media, exposing a variantSet with two options. */
 const usdMedia = (over: Record<string, unknown> = {}) => ({
   id: 1,
   kind: 'MODEL_3D',
@@ -42,7 +42,7 @@ beforeEach(() => {
 });
 
 describe('recomposeUsd (45.E)', () => {
-  it('mémorise la sélection filtrée et enfile une conversion', async () => {
+  it('records the filtered selection and queues a conversion', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(usdMedia() as never);
 
     const res = await recomposeUsd(USER, 1, {
@@ -54,14 +54,14 @@ describe('recomposeUsd (45.E)', () => {
       variants: { '/World/Asset': { modelingVariant: 'lo' } },
       purpose: 'proxy',
     });
-    // La demande vit dans les métadonnées : elle survit aux retries BullMQ et aux reprocess.
+    // The request lives in the metadata: it survives BullMQ retries and reprocess runs.
     const update = vi.mocked(prisma.mediaObject.update).mock.calls[0]![0];
     expect((update.data.metadata as Record<string, unknown>).usdRequest).toEqual(res.selection);
     expect(update.data.status).toBe('PROCESSING');
     expect(enqueueMediaJob).toHaveBeenCalledWith({ mediaObjectId: 1, kind: 'convert3d' });
   });
 
-  it('ignore une variante inventée par le client', async () => {
+  it('ignores a variant invented by the client', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(usdMedia() as never);
 
     const res = await recomposeUsd(USER, 1, {
@@ -73,12 +73,10 @@ describe('recomposeUsd (45.E)', () => {
   });
 
   /**
-   * Ce test attendait un 403 (verrou Phase 11). La règle a changé sciemment en Phase 50 : la
-   * recomposition ne remplace pas le fichier livré, elle en dérive une représentation lisible
-   * — et le média étant publié dès l'upload, la refuser après publication revenait à la
-   * refuser tout court, alors que c'est le geste qui rend une scène USD regardable.
+   * This test expected a 403 (Phase 11 lock). The rule changed deliberately in Phase 50: recomposition does not replace the delivered file, it derives a readable representation from it —
+   * and since the media is published from upload, refusing it after publication amounted to refusing it outright, whereas it is the gesture that makes a USD scene viewable.
    */
-  it('accepte un média publié : recomposer dérive une représentation, sans toucher au fichier', async () => {
+  it('accepts a published media: recomposing derives a representation, without touching the file', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(usdMedia({ published: true }) as never);
 
     const res = await recomposeUsd(USER, 1, { variants: {}, purpose: 'render' });
@@ -87,7 +85,7 @@ describe('recomposeUsd (45.E)', () => {
     expect(enqueueMediaJob).toHaveBeenCalledWith({ mediaObjectId: 1, kind: 'convert3d' });
   });
 
-  it('refuse un média non 3D et un média sans description USD', async () => {
+  it('refuses a non-3D media and a media without a USD description', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(usdMedia({ kind: 'VIDEO' }) as never);
     await expect(recomposeUsd(USER, 1, { variants: {}, purpose: 'render' })).rejects.toMatchObject({
       code: 'NOT_3D',
@@ -99,7 +97,7 @@ describe('recomposeUsd (45.E)', () => {
     });
   });
 
-  it('refuse un upload non finalisé', async () => {
+  it('refuses an unfinalized upload', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(usdMedia({ status: 'UPLOADING' }) as never);
     await expect(recomposeUsd(USER, 1, { variants: {}, purpose: 'render' })).rejects.toMatchObject({
       code: 'NOT_FINALIZED',

@@ -9,7 +9,7 @@ import { useReviewShortcuts } from './useReviewShortcuts';
 
 vi.mock('sonner', () => ({ toast: { info: vi.fn(), success: vi.fn(), error: vi.fn() } }));
 
-/** Lecteur minimal : le hook n'appelle que `pause`, `play` et lit `paused`. */
+/** Minimal player: the hook only calls `pause`, `play` and reads `paused`. */
 const fakeVideo = () =>
   ({
     paused: true,
@@ -36,14 +36,14 @@ const press = (init: KeyboardEventInit) =>
 
 beforeEach(() => useCompareOffset.getState().reset());
 afterEach(() => {
-  // `globals` n'est pas activé dans la config vitest : le démontage n'est pas automatique,
-  // et les écouteurs clavier d'un test survivraient au suivant.
+  // `globals` is not enabled in the vitest config: teardown is not automatic, and the keyboard
+  // listeners of one test would survive the next.
   cleanup();
   vi.clearAllMocks();
 });
 
-describe('touche M — le transport tranche contre le rail d’outils', () => {
-  it('met en pause et ouvre le composer à la frame courante', () => {
+describe('M key — the transport wins over the tool rail', () => {
+  it('pauses and opens the composer at the current frame', () => {
     const video = fakeVideo();
     const { onMarker } = mount(video);
     press({ key: 'm' });
@@ -51,9 +51,9 @@ describe('touche M — le transport tranche contre le rail d’outils', () => {
     expect(onMarker).toHaveBeenCalledTimes(1);
   });
 
-  it('n’atteint plus le rail : la frappe ne bascule pas en mode Annoter', () => {
-    // Le rail écoute sur `window` ; ce hook, sur `document`. La remontée traverse le second
-    // en premier, et s'y arrête — c'est ce qui règle la collision avec l'outil `shape-move`.
+  it('no longer reaches the rail: the keystroke does not switch to Annotate mode', () => {
+    // The rail listens on `window`; this hook, on `document`. Bubbling reaches the second first,
+    // and stops there — that is what settles the collision with the `shape-move` tool.
     const railHeard: string[] = [];
     const rail = (e: KeyboardEvent) => railHeard.push(e.key);
     window.addEventListener('keydown', rail);
@@ -61,15 +61,15 @@ describe('touche M — le transport tranche contre le rail d’outils', () => {
     mount(video);
     press({ key: 'm' });
     expect(railHeard).toEqual([]);
-    // Les autres lettres continuent d'arriver au rail : seul M lui est retiré.
+    // The other letters still reach the rail: only M is removed from it.
     press({ key: 'd' });
     expect(railHeard).toEqual(['d']);
     window.removeEventListener('keydown', rail);
   });
 });
 
-describe('crochets — décalage de la comparaison A/B', () => {
-  it('décale d’une frame à chaque frappe, dans les deux sens', () => {
+describe('brackets — offset of the A/B comparison', () => {
+  it('offsets by one frame per keystroke, in both directions', () => {
     mount(fakeVideo());
     press({ code: 'BracketRight', key: ']' });
     expect(useCompareOffset.getState().frames).toBe(1);
@@ -79,13 +79,13 @@ describe('crochets — décalage de la comparaison A/B', () => {
     expect(useCompareOffset.getState().frames).toBe(1);
   });
 
-  it('convertit en secondes à la cadence du média', () => {
+  it('converts to seconds at the frame rate of the media', () => {
     mount(fakeVideo(), vi.fn(), 25);
     press({ code: 'BracketRight', key: ']' });
     expect(useCompareOffset.getState().seconds).toBeCloseTo(0.04, 6);
   });
 
-  it('avance de dix frames avec Maj, et se recale à zéro avec Maj+\\', () => {
+  it('advances by ten frames with Shift, and resets to zero with Shift+\\', () => {
     mount(fakeVideo());
     press({ code: 'BracketRight', key: '}', shiftKey: true });
     expect(useCompareOffset.getState().frames).toBe(10);
@@ -93,14 +93,14 @@ describe('crochets — décalage de la comparaison A/B', () => {
     expect(useCompareOffset.getState().frames).toBe(0);
   });
 
-  it('répond à la position de la touche, même quand le clavier produit autre chose', () => {
-    // Clavier AZERTY : la position « BracketRight » porte le caractère « $ ».
+  it('responds to the key position, even when the keyboard produces something else', () => {
+    // AZERTY keyboard: the "BracketRight" position carries the "$" character.
     mount(fakeVideo());
     press({ code: 'BracketRight', key: '$' });
     expect(useCompareOffset.getState().frames).toBe(1);
   });
 
-  it('oublie le décalage en quittant le média : le conform suivant repart aligné', () => {
+  it('forgets the offset when leaving the media: the next conform starts aligned', () => {
     const view = mount(fakeVideo());
     press({ code: 'BracketRight', key: ']' });
     expect(useCompareOffset.getState().frames).toBe(1);
@@ -108,7 +108,7 @@ describe('crochets — décalage de la comparaison A/B', () => {
     expect(useCompareOffset.getState().frames).toBe(0);
   });
 
-  it('reste inerte dans un champ de saisie', () => {
+  it('stays inert in an input field', () => {
     mount(fakeVideo());
     const input = document.createElement('input');
     document.body.appendChild(input);

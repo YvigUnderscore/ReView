@@ -13,19 +13,16 @@ import type { ReviewRequestRule } from '../../types/api';
 import { useT } from '../../i18n';
 
 /**
- * Une personne confiée, et la consigne écrite POUR ELLE.
+ * A person entrusted, and the brief written FOR THEM.
  *
- * La consigne est par personne, pas par version : « la lumière » au lead lighting et « le
- * raccord au 1042 » au monteur sont deux demandes différentes, et les entasser dans un
- * champ commun n'en rend aucune lisible.
+ * The brief is per person, not per version: "the lighting" for the lead lighting and "the match at 1042" for the editor are
+ * two different requests, and piling them into a shared field makes neither legible.
  *
- * Enregistrement en quittant le champ, jamais à chaque frappe : une consigne se réfléchit,
- * et prévenir la personne à chaque lettre tapée serait insupportable pour elle. Échap
- * remet ce qui était là — c'est ce qui rend le champ essayable.
+ * Saved on leaving the field, never on each keystroke: a brief is thought over, and notifying the person at every letter
+ * typed would be unbearable for them. Escape restores what was there, which is what makes the field safe to try.
  *
- * Le même composant sert la personne DÉJÀ confiée et celle qu'on met en attente le temps
- * d'écrire sa consigne obligatoire (`staged`) : le second cas n'a rien à enregistrer tant
- * que la consigne ne convient pas, d'où la coche explicite.
+ * The same component serves the person ALREADY entrusted and the one placed on hold while their mandatory brief is being
+ * written (`staged`): the second case has nothing to save as long as the brief is not right, hence the explicit tick.
  */
 export default function ReviewerNoteField({
   person,
@@ -35,19 +32,19 @@ export default function ReviewerNoteField({
   onSave,
   onCancel,
 }: {
-  /** La personne, et sa consigne. `Partial` : une personne mise en attente n'a encore
-   *  que son identifiant et son nom, pas la fiche complète que rend le serveur. */
+  /** The person, and their brief. `Partial`: a person placed on hold only has their identifier and name so far,
+   *  not the full record the server returns. */
   person: Partial<AssigneeRef> & { id: number; note: string | null };
   rule: ReviewRequestRule;
   busy?: boolean;
-  /** Personne pas encore confiée : rien n'est écrit tant que la consigne ne convient pas. */
+  /** Person not yet entrusted: nothing is written as long as the brief is not right. */
   staged?: boolean;
   onSave: (note: string | null) => void;
   onCancel?: () => void;
 }) {
   const t = useT();
   const [draft, setDraft] = useState(person.note ?? '');
-  // `assigneeName` attend la fiche complète ; les champs absents valent `null` pour lui.
+  // `assigneeName` expects the full record; absent fields are `null` for it.
   const name = assigneeName({
     id: person.id,
     name: person.name ?? null,
@@ -114,8 +111,8 @@ export default function ReviewerNoteField({
         aria-label={t('reviewers.noteLabel', { name })}
         aria-invalid={issue !== null}
       />
-      {/* Ce qui manque, dit avec le chiffre du projet — « trop courte » sans le plancher
-          oblige à deviner combien il en faut. */}
+      {/* What is missing, stated with the project's figure: "too short" without the floor forces one to guess how many
+          are needed. */}
       {issue && (
         <p className="mt-1 text-2xs text-destructive">
           {issue === 'missing'

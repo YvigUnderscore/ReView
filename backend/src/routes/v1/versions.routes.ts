@@ -13,11 +13,12 @@ import * as VersionService from '../../services/VersionService';
 import * as ReviewDecisionService from '../../services/ReviewDecisionService';
 import * as ApiEventService from '../../services/ApiEventService';
 import { idParam, requireVersionProject } from './helpers';
+import { requireUser } from '../../middleware/auth';
 
 /**
- * Versions de l'API v1 : la version elle-même, ses médias, et la décision de review qui
- * la clôt. Les règles de publication vivent dans VersionService — cette route ne fait que
- * les appeler, pour qu'un client d'API et l'interface web obéissent au même verrou.
+ * Versions in API v1: the version itself, its media, and the review decision that closes it.
+ * Publication rules live in VersionService: this route only calls them, so that an API client and
+ * the web UI obey the same lock.
  */
 const router = Router();
 
@@ -37,7 +38,7 @@ router.get(
   },
 );
 
-// PATCH /api/v1/versions/:id — renommage et statut (publication : superviseur+)
+// PATCH /api/v1/versions/:id: rename and status (publication: supervisor+)
 router.patch(
   '/versions/:id',
   requireScope('versions:write'),
@@ -51,15 +52,15 @@ router.patch(
   async (req, res) => {
     const id = Number(req.params.id);
     const projectId = await requireVersionProject(req, id);
-    // Le service porte les règles de publication (verrou, rôle) : on ne les redéfinit pas.
+    // The service carries the publication rules (lock, role): they are not redefined here.
     const body = req.body as VersionService.UpdateVersionInput;
-    const version = await VersionService.update(req.user!, projectId, id, body);
+    const version = await VersionService.update(requireUser(req), projectId, id, body);
     if (body.status === VersionStatus.PUBLISHED) {
       ApiEventService.publish('version.published', {
         projectId,
         entityType: 'version',
         entityId: id,
-        actorId: req.user!.id,
+        actorId: requireUser(req).id,
         payload: { versionId: id, name: version.name },
       });
     }
@@ -83,7 +84,7 @@ router.get(
   },
 );
 
-// POST /api/v1/versions/:id/decision — décision de review (superviseur+)
+// POST /api/v1/versions/:id/decision: review decision (supervisor+)
 router.post(
   '/versions/:id/decision',
   requireScope('versions:write'),
@@ -97,11 +98,11 @@ router.post(
   async (req, res) => {
     const id = Number(req.params.id);
     const projectId = await requireVersionProject(req, id);
-    if (req.user!.role !== Role.ADMIN && req.user!.role !== Role.SUPERVISOR) {
+    if (requireUser(req).role !== Role.ADMIN && requireUser(req).role !== Role.SUPERVISOR) {
       throw forbidden('Supervisors only');
     }
     const { statusId, comment } = req.body as { statusId: number; comment?: string };
-    const decision = await ReviewDecisionService.decide(req.user!, projectId, id, statusId, comment);
+    const decision = await ReviewDecisionService.decide(requireUser(req), projectId, id, statusId, comment);
     res.status(201).json({ decision });
   },
 );

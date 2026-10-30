@@ -5,14 +5,13 @@ import { useState } from 'react';
 import { Heading2, Heading3, Image, Images, Minus, Percent, Plus, Type } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '../../ui/popover';
 import type { EditorBlockKind } from '../noteEditorModel';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
- * Ajouter un bloc, à l'endroit exact où on est.
+ * Add a block, at the exact place where one is.
  *
- * Une barre d'outils en haut de l'éditeur aurait obligé à insérer en bas puis à remonter le
- * bloc ; le bouton vit donc **entre** les blocs, et ne se montre qu'au survol de
- * l'interstice — la fiche reste une fiche, pas un tableau de bord.
+ * A toolbar at the top of the editor would have forced inserting at the bottom and then moving the block up; the button
+ * therefore lives **between** the blocks and only appears on hovering the gap: the note stays a note, not a dashboard.
  */
 
 const KINDS: { kind: EditorBlockKind; icon: typeof Type; labelKey: `note.block.${EditorBlockKind}` }[] = [
@@ -31,7 +30,7 @@ export default function NoteBlockInserter({
   always,
 }: {
   onInsert: (kind: EditorBlockKind) => void;
-  /** Toujours visible — c'est le cas du bouton de fin, qui n'a pas d'interstice à survoler. */
+  /** Always visible: this is the case of the end button, which has no gap to hover over. */
   always?: boolean;
 }) {
   const t = useT();

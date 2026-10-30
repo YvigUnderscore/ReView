@@ -3,7 +3,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// `vi.mock` est remonté en tête de fichier : les doublures doivent l'être aussi.
+// `vi.mock` is hoisted to the top of the file: the doubles must be too.
 const { emitToProject } = vi.hoisted(() => ({ emitToProject: vi.fn() }));
 
 vi.mock('../../lib/prisma', () => ({ prisma: {} }));
@@ -27,12 +27,11 @@ function context(touched?: TouchedEntities): PullContext {
 beforeEach(() => vi.clearAllMocks());
 
 /**
- * Le collecteur est optionnel : une passe orchestrée l'apporte et vide l'accumulateur en
- * fin de course, un appelant isolé (import manuel de versions) n'a personne pour le
- * faire — il doit donc continuer d'émettre tout de suite.
+ * The collector is optional: an orchestrated pass supplies it and empties the accumulator at the end of the run; an isolated caller (manual import of versions)
+ * has nobody to do it — so it must go on emitting right away.
  */
 describe('touch', () => {
-  it('accumule au lieu d’émettre quand la passe est orchestrée', () => {
+  it('accumulates instead of emitting when the pass is orchestrated', () => {
     const touched = new TouchedEntities();
     touch(context(touched), 'shot', 12);
 
@@ -40,7 +39,7 @@ describe('touch', () => {
     expect(touched.detail()).toEqual([{ kind: 'shot', id: 12 }]);
   });
 
-  it('émet tout de suite sans collecteur', () => {
+  it('emits right away without a collector', () => {
     touch(context(), 'task', 5, { shotId: 12, assetId: null });
 
     expect(emitToProject).toHaveBeenCalledWith(7, 'task:update', {
@@ -51,7 +50,7 @@ describe('touch', () => {
     });
   });
 
-  it('n’invente pas d’événement pour les familles que le client n’écoute pas', () => {
+  it('does not invent an event for the families the client does not listen to', () => {
     touch(context(), 'comment', 555);
     touch(context(), 'playlist', 60);
     expect(emitToProject).not.toHaveBeenCalled();

@@ -4,7 +4,7 @@
 import { createHash } from 'node:crypto';
 import { createReadStream } from 'node:fs';
 
-/** sha256 hex d'un fichier, en flux (37.B — vérification du checksum client). */
+/** Hex sha256 of a file, streamed (37.B: client checksum verification). */
 export function sha256File(path: string): Promise<string> {
   return new Promise((resolve, reject) => {
     const hash = createHash('sha256');

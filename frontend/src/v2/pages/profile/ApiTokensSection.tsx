@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { KeyRound, Plus, Trash2, X } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { useProjectsQuery } from '../../lib/queries';
 import { Badge } from '../../components/ui/badge';
@@ -22,16 +22,14 @@ import {
   scopeLevel,
   type ScopeLevel,
 } from '../../components/tokens/tokenScopes';
-import { useT, intlLocale, type MessageKey } from '../../i18n';
+import { useT, type MessageKey } from '../../i18n';
 import { SettingsCard } from '../../components/settings/SettingsCard';
 import { SETTINGS_KEYWORDS } from '../../components/settings/settingsKeywords';
 import { Hint } from '../../components/ui/hint';
+import TokenMeta from '@/v2/components/tokens/TokenMeta';
 
-/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+/** Translator passed to the label tables, recomputed on each render. */
 type Tr = (key: MessageKey, params?: Record<string, string | number>) => string;
-
-const fmt = (iso: string) =>
-  new Date(iso).toLocaleDateString(intlLocale(), { day: '2-digit', month: 'short', year: 'numeric' });
 
 const LEVEL_KEY: Record<ScopeLevel, MessageKey> = {
   admin: 'tokens.scope.adminBadge',
@@ -43,11 +41,11 @@ const expiryLabel = (t: Tr, choice: string): string =>
   choice === '' ? t('common.never') : t('tokens.expiry.days', { count: Number(choice) });
 
 /**
- * Tokens d'API personnels (36.C) : création (secret montré une fois), liste, révocation.
+ * Personal API tokens (36.C): creation (secret shown once), listing, revocation.
  *
- * Le formulaire porte désormais tout ce que le serveur accepte — scopes fins,
- * cantonnement à un projet, expiration — et le mot de passe courant qu'il exige : sans
- * lui, la création répondait 403 et l'écran ne savait pas pourquoi.
+ * The form now carries everything the server accepts (fine-grained scopes, scoping to a project,
+ * expiry), along with the current password it requires. Without it, creation answered 403 and the
+ * screen did not know why.
  */
 export default function ApiTokensSection() {
   const t = useT();
@@ -208,16 +206,7 @@ export default function ApiTokensSection() {
                     {t(LEVEL_KEY[scopeLevel(tok.scopes)])}
                   </Badge>
                 </div>
-                <p className="text-xs text-muted-foreground">
-                  {t('tokens.createdOn', { date: fmt(tok.createdAt) })}
-                  {tok.lastUsedAt
-                    ? ` · ${t('tokens.usedOn', { date: fmt(tok.lastUsedAt) })}`
-                    : ` · ${t('common.neverUsed')}`}
-                  {tok.expiresAt ? ` · ${t('tokens.expiresOn', { date: fmt(tok.expiresAt) })}` : ''}
-                </p>
-                <p className="truncate text-2xs text-muted-foreground">
-                  <code>{tok.scopes.join(' ')}</code>
-                </p>
+                <TokenMeta tok={tok} />
               </div>
             </div>
           </EntityContextMenu>

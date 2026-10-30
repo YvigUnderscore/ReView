@@ -22,12 +22,12 @@ import {
 } from '../lib/projectInheritance';
 
 /**
- * Panneau « Héritage du studio » des réglages projet.
+ * "Studio inheritance" panel of the project settings.
  *
- * Rien ne disait à l'écran ce que le projet possède en propre et ce qu'il ne fait
- * qu'hériter : les deux se lisaient dans les mêmes champs. Une section est ici soit héritée
- * du studio — et elle suivra ses évolutions — soit surchargée ici, auquel cas on peut la
- * rendre d'un geste.
+ * Nothing on screen said what the project owns itself and what it merely
+ * inherits: both were read in the same fields. A section is here either inherited
+ * from the studio (and it will follow its changes), or overridden here, in which case it can be
+ * hand back in a single gesture.
  */
 
 export default function ProjectSettingsInheritance({
@@ -36,8 +36,8 @@ export default function ProjectSettingsInheritance({
 }: {
   projectId: number;
   /**
-   * Le brouillon de l'onglet part des réglages effectifs : rendre une section au studio les
-   * change, on lui repasse donc ceux que le serveur vient de recalculer.
+   * The tab's draft starts from the effective settings: handing a section back to the studio
+   * changes them, so we pass back those the server has just recomputed.
    */
   onReverted: (settings: ProjectSettings) => void;
 }) {
@@ -57,7 +57,7 @@ export default function ProjectSettingsInheritance({
     onSuccess: async (data) => {
       setError(null);
       setMessage(t('inheritance.reverted'));
-      // `qk.project` couvre les réglages effectifs ET cette vue d'override.
+      // `qk.project` covers the effective settings AND this override view.
       await qc.invalidateQueries({ queryKey: qk.project(projectId) });
       onReverted(data.settings);
     },

@@ -4,7 +4,7 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
@@ -52,13 +52,13 @@ function AggBars({
 }
 
 /**
- * Limites de téléversement et quotas — la contrepartie réglable de la carte ci-dessous.
+ * Upload limits and quotas — the adjustable counterpart of the card below.
  *
- * Taille maximale d'un fichier, quota par compte et nombre d'envois simultanés se
- * réglaient dans la section fourre-tout, à trois écrans de la page qui montre ce que le
- * bucket contient. C'est ici qu'on vient quand le stockage déborde, donc c'est ici qu'on
- * doit pouvoir le borner. Le quota fait autorité pour tous les comptes ; la fiche d'un
- * compte n'en donne qu'une surcharge individuelle.
+ * Maximum file size, quota per account and number of simultaneous uploads were set
+ * in the catch-all section, three screens away from the page that shows what the
+ * bucket contains. This is where one comes when storage overflows, so this is where it
+ * must be possible to bound it. The quota is authoritative for all accounts; an
+ * account's sheet only gives an individual override.
  */
 function LimitsPanel() {
   const t = useT();
@@ -81,18 +81,18 @@ function LimitsPanel() {
   );
 }
 
-/** Cartographie du stockage MinIO : occupation réelle par convention de clé + guide. */
+/** Mapping of MinIO storage: real usage by key convention, plus a guide. */
 export default function StorageTab() {
   const t = useT();
   const reportQ = useQuery({
     queryKey: qk.adminStorage,
     queryFn: () => api.get<AdminStorageReport>('/api/admin/storage'),
-    // Scan complet du bucket : on ne relance pas en arrière-plan à chaque focus.
+    // Full bucket scan: we do not re-run it in the background on each focus.
     staleTime: 5 * 60_000,
   });
 
-  // Les limites ne dépendent pas du scan du bucket : elles restent réglables même quand il
-  // échoue — c'est précisément le moment où l'on vient baisser un quota.
+  // The limits do not depend on the bucket scan: they stay adjustable even when it
+  // fails — which is precisely the moment one comes to lower a quota.
   if (!reportQ.data) {
     return (
       <div className="space-y-6">

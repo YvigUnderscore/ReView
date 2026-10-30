@@ -13,10 +13,10 @@ import { useT } from '../../i18n';
 const KIND_OPTIONS: readonly MediaKind[] = ['VIDEO', 'IMAGE', 'MODEL_3D', 'SPLAT'];
 
 /**
- * Bandeau de filtres de la page Reviews.
+ * Filter bar of the Reviews page.
  *
- * Sorti de la page pour une raison simple : il en occupait la moitié, et la page devait
- * garder de la place pour ce qu'on y fait — ouvrir, décider, ranger.
+ * Moved out of the page for a simple reason: it took up half of it, and the page had to keep room
+ * for what people do there — open, decide, sort.
  */
 export default function ReviewsFilters({
   value,
@@ -28,8 +28,8 @@ export default function ReviewsFilters({
   const t = useT();
   const kindLabels = mediaKindLabels(t);
   const draftMode = useDraftMode();
-  // Le filtre doit proposer tous les projets, pas les cent premiers : une liste déroulante
-  // ne défile pas jusqu'à une sentinelle.
+  // The filter must offer every project, not the first hundred: a dropdown does not scroll
+  // down to a sentinel.
   const { data: projects } = useProjectsQuery({ all: true });
   const { data: reviewStatuses } = useReviewStatusesQuery();
   const set = (patch: Partial<ReviewsFilterState>) => onChange({ ...value, ...patch });
@@ -62,10 +62,10 @@ export default function ReviewsFilters({
           </option>
         ))}
       </Select>
-      {/* Trier le publié du brouillon ne veut dire quelque chose que dans un studio qui
-          garde le parcours en deux temps (`draftMode`). Ailleurs, tout média est publié dès
-          l'upload : le sélecteur n'offrirait que deux fois la même liste. Il reparaît
-          quand un filtre est posé — une vue enregistrée doit pouvoir se défaire. */}
+      {/* Separating published from draft only means something in a studio that keeps the
+          two-step workflow (`draftMode`). Elsewhere, every media is published on upload: the
+          selector would only offer the same list twice. It reappears when a filter is set —
+          a saved view must be able to undo it. */}
       {(draftMode || value.status !== '') && (
         <Select
           value={value.status}

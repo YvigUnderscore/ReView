@@ -27,7 +27,7 @@ import { __redisTesting } from '../lib/redis';
 
 const app = express().use(express.json()).use('/api/auth/2fa', auth2faRoutes).use(errorHandler);
 
-/** L'anti-rejeu du code TOTP est désormais partagé : la route parle à Redis. */
+/** TOTP replay protection is now shared: the route talks to Redis. */
 const redis = createFakeRedis();
 
 const secret = generateTotpSecret();
@@ -35,10 +35,10 @@ const backup = generateBackupCodes();
 const tmpToken = signTwoFaToken(7);
 
 /**
- * ⚠ Le frein par compte de `/verify` (A5-02) plafonne à dix essais par quart d'heure, et son
- * compteur de test est de process : tous les appels de ce fichier portant le MÊME `tmpToken`
- * partagent ce budget. Un scénario supplémentaire prend son propre jeton (`signTwoFaToken`
- * sur un autre identifiant) plutôt que d'épuiser celui-ci.
+ * ⚠ The per-account brake of `/verify` (A5-02) caps at ten attempts per quarter hour, and its test
+ * counter is per process: all calls in this file carrying the SAME `tmpToken` share that budget. An
+ * additional scenario takes its own token (`signTwoFaToken` on another identifier) rather than
+ * exhausting this one.
  */
 const verify = (code: string, token = tmpToken) =>
   request(app).post('/api/auth/2fa/verify').send({ tmpToken: token, code });
@@ -65,18 +65,20 @@ afterAll(() => {
 });
 
 /**
- * Un code TOTP reste valide pendant tout son pas de temps. Sans mémoire des codes déjà
- * présentés, celui qu'on intercepte se rejoue tant que la fenêtre n'est pas passée : le
- * second facteur ne prouve alors plus la possession du téléphone.
+ * A TOTP code stays valid for its whole time step. Without a memory of the codes already presented,
+ * the one that is intercepted can be replayed for as long as the window lasts: the second factor then
+ * no longer proves possession of the phone.
  */
-describe('POST /api/auth/2fa/verify — anti-rejeu du code TOTP', () => {
-  it('accepte le code une première fois', async () => {
+describe('POST /api/auth/2fa/verify — TOTP code replay protection', () => {
+  it('accepts the code the first time', async () => {
     const res = await verify(await currentTotp(secret));
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('token');
+    expect(res.body).not.toHaveProperty('refreshToken'); // httpOnly cookie instead
+    expect(String(res.headers['set-cookie'])).toMatch(/review_refresh=.*HttpOnly/i);
   });
 
-  it('refuse le même code rejoué, comme un code faux', async () => {
+  it('rejects the same code replayed, like a wrong code', async () => {
     const code = await currentTotp(secret);
     expect((await verify(code)).status).toBe(200);
     const replay = await verify(code);
@@ -84,41 +86,41 @@ describe('POST /api/auth/2fa/verify — anti-rejeu du code TOTP', () => {
     expect((replay.body as { code: string }).code).toBe('TWOFA_BAD_CODE');
   });
 
-  it('refuse un code faux', async () => {
+  it('rejects a wrong code', async () => {
     expect((await verify('000000')).status).toBe(401);
   });
 });
 
 /**
- * A3-09 — la route consommait le code dans une `Map` de process. Deux répliques derrière le
- * même frontal ne partageaient donc rien : le code intercepté repassait en tombant sur la
- * seconde, et un simple redémarrage suffisait à le rendre rejouable. Ces deux scénarios
- * échouent tant que la route appelle la garde locale au lieu de la garde partagée.
+ * A3-09: the route consumed the code in a process `Map`. Two replicas behind the same front end
+ * therefore shared nothing: the intercepted code went through again by landing on the second one, and
+ * a simple restart was enough to make it replayable. These two scenarios fail as long as the route
+ * calls the local guard instead of the shared one.
  */
-describe('POST /api/auth/2fa/verify — anti-rejeu partagé entre répliques (A3-09)', () => {
-  it('refuse le code déjà consommé sur une AUTRE réplique', async () => {
+describe('POST /api/auth/2fa/verify — replay protection shared across replicas (A3-09)', () => {
+  it('rejects a code already consumed on ANOTHER replica', async () => {
     const token = signTwoFaToken(101);
     const code = await currentTotp(secret);
     expect((await verify(code, token)).status).toBe(200);
-    // Ce que voit la seconde réplique : sa mémoire de process est vierge, seul le marqueur
-    // partagé témoigne de la première tentative.
+    // What the second replica sees: its process memory is blank; only the shared marker attests to
+    // the first attempt.
     __testing.usedTotp.clear();
     const replay = await verify(code, token);
     expect(replay.status).toBe(401);
     expect((replay.body as { code: string }).code).toBe('TWOFA_BAD_CODE');
   });
 
-  it('refuse le code quand le marqueur partagé est injoignable (échec fermé)', async () => {
-    // Le refus est le comportement voulu : sans marqueur, la route ne peut pas affirmer que
-    // le code n'a pas déjà servi ailleurs. Elle ne perd rien en disponibilité, les deux
-    // limiteurs qui la précèdent étant eux aussi adossés à Redis.
+  it('rejects the code when the shared marker is unreachable (fail closed)', async () => {
+    // The refusal is the intended behavior: without a marker, the route cannot assert that the code has
+    // not already been used elsewhere. It loses nothing in availability, since the two limiters that
+    // precede it are also backed by Redis.
     redis.failing = true;
     expect((await verify(await currentTotp(secret), signTwoFaToken(102))).status).toBe(401);
   });
 });
 
-describe('POST /api/auth/2fa/verify — codes de secours', () => {
-  it('accepte un code de secours et le retire de la liste', async () => {
+describe('POST /api/auth/2fa/verify — backup codes', () => {
+  it('accepts a backup code and removes it from the list', async () => {
     const res = await verify(backup.plain[2]!);
     expect(res.status).toBe(200);
     const call = db.user.updateMany.mock.calls[0]![0] as {
@@ -127,33 +129,33 @@ describe('POST /api/auth/2fa/verify — codes de secours', () => {
     };
     expect(call.data.backupCodes).toHaveLength(9);
     expect(call.data.backupCodes).not.toContain(backup.hashes[2]);
-    // La suppression est conditionnée au code encore présent : c'est ce qui sérialise
-    // deux requêtes concurrentes portant le même code sur la ligne PostgreSQL.
+    // The deletion is conditional on the code still being present: that is what serializes two
+    // concurrent requests carrying the same code on the PostgreSQL row.
     expect(call.where.backupCodes.has).toBe(backup.hashes[2]);
   });
 
-  it('accepte un code de secours recopié avec sa casse et ses séparateurs libres', async () => {
+  it('accepts a backup code transcribed with free case and separators', async () => {
     const res = await verify(backup.plain[4]!.replace(/-/g, '').toUpperCase());
     expect(res.status).toBe(200);
   });
 
-  // La course : deux requêtes portent le même code, PostgreSQL n'en laisse consommer qu'une.
-  it('refuse quand la ligne ne porte déjà plus le code', async () => {
+  // The race: two requests carry the same code, and PostgreSQL only lets one consume it.
+  it('refuses when the row no longer carries the code', async () => {
     db.user.updateMany.mockResolvedValue({ count: 0 });
     const res = await verify(backup.plain[5]!);
     expect(res.status).toBe(401);
     expect((res.body as { code: string }).code).toBe('TWOFA_BAD_CODE');
   });
 
-  it('refuse un code de secours inconnu sans toucher à la liste', async () => {
+  it('rejects an unknown backup code without touching the list', async () => {
     const res = await verify('deadbeefdeadbeefdeadbeefdeadbeef');
     expect(res.status).toBe(401);
     expect(db.user.updateMany).not.toHaveBeenCalled();
   });
 
-  // 128 bits en hexadécimal groupés par 8 : 35 caractères. Le plafond de validation doit
-  // les laisser passer, sinon le code de secours est refusé le jour où le téléphone manque.
-  it('laisse passer la longueur d’un code de secours à 128 bits', async () => {
+  // 128 bits in hexadecimal grouped by 8: 35 characters. The validation ceiling must let them through,
+  // otherwise the backup code is refused on the day the phone is lost.
+  it('lets through the length of a 128-bit backup code', async () => {
     expect(backup.plain[0]).toHaveLength(35);
     const res = await verify(backup.plain[0]!);
     expect(res.status).toBe(200);
@@ -161,12 +163,12 @@ describe('POST /api/auth/2fa/verify — codes de secours', () => {
 });
 
 /**
- * A1-01 — quatrième porte : le compte peut être désactivé entre le mot de passe et le code.
- * Le second facteur n'est pas une entrée de plus, c'est la même entrée : sans cette garde,
- * la 2FA rendait au partant le jeton que `/login` venait de lui refuser.
+ * A1-01: fourth gate, the account may be deactivated between the password and the code. The second
+ * factor is not one more entry point, it is the same entry point: without this guard, 2FA would hand
+ * the leaver the token that `/login` had just refused them.
  */
-describe('POST /api/auth/2fa/verify — compte désactivé', () => {
-  it('refuse un compte désactivé, code TOTP valide compris', async () => {
+describe('POST /api/auth/2fa/verify — deactivated account', () => {
+  it('rejects a deactivated account, even with a valid TOTP code', async () => {
     db.user.findUnique.mockResolvedValue({
       id: 7,
       email: 'a@b.c',
@@ -183,19 +185,18 @@ describe('POST /api/auth/2fa/verify — compte désactivé', () => {
 });
 
 /**
- * A5-02 — le limiteur de `/verify` était de quinze coups par IP, sans aucun lien avec le
- * compte visé par le `tmpToken`. Deux défauts d'un coup : le seizième arrivant du matin,
- * derrière la sortie NAT du studio, ne pouvait plus valider son code ; et des essais venus
- * de plusieurs machines n'étaient bornés sur aucun compte.
+ * A5-02: the `/verify` limiter was fifteen hits per IP, with no link to the account targeted by the
+ * `tmpToken`. Two defects at once: the sixteenth arrival in the morning, behind the studio's NAT exit,
+ * could no longer validate their code; and attempts coming from several machines were bounded on no account.
  */
-describe('POST /api/auth/2fa/verify — frein par compte (A5-02)', () => {
-  it('borne les essais visant un compte donné, puis refuse en 429', async () => {
+describe('POST /api/auth/2fa/verify — per-account brake (A5-02)', () => {
+  it('bounds the attempts targeting a given account, then refuses with 429', async () => {
     const token = signTwoFaToken(99);
     for (let i = 0; i < 10; i += 1) {
       expect((await verify('000000', token)).status).toBe(401);
     }
     expect((await verify('000000', token)).status).toBe(429);
-    // Un autre compte garde son budget : la clé est le compte, pas la source.
+    // Another account keeps its budget: the key is the account, not the source.
     expect((await verify('000000', signTwoFaToken(100))).status).toBe(401);
   });
 });

@@ -6,15 +6,15 @@ import { eulerDegToQuat, quatToEulerDeg, type EulerDeg } from './transformMath';
 
 const roundtrip = (e: EulerDeg) => quatToEulerDeg(eulerDegToQuat(e));
 
-describe('euler° ↔ quaternion (XYZ, conventions three.js)', () => {
-  it('identité et axes simples', () => {
+describe('euler° ↔ quaternion (XYZ, three.js conventions)', () => {
+  it('identity and simple axes', () => {
     expect(eulerDegToQuat([0, 0, 0])).toEqual([0, 0, 0, 1]);
     const [x, , , w] = eulerDegToQuat([90, 0, 0]);
     expect(x).toBeCloseTo(Math.SQRT1_2);
     expect(w).toBeCloseTo(Math.SQRT1_2);
   });
 
-  it('aller-retour stable sur des angles composés', () => {
+  it('stable round trip on composed angles', () => {
     for (const e of [
       [30, 45, 60],
       [-120, 10, 5],
@@ -27,11 +27,11 @@ describe('euler° ↔ quaternion (XYZ, conventions three.js)', () => {
     }
   });
 
-  it('gimbal lock (pitch ±90°) : conversion sans NaN', () => {
+  it('gimbal lock (pitch ±90°): conversion without NaN', () => {
     const back = roundtrip([25, 90, 0]);
     expect(back.every(Number.isFinite)).toBe(true);
     expect(back[1]).toBeCloseTo(90, 3);
-    // La décomposition n'est pas unique en gimbal : on vérifie l'équivalence par re-conversion.
+    // The decomposition is not unique at gimbal lock: equivalence is checked by converting back.
     const q1 = eulerDegToQuat([25, 90, 0]);
     const q2 = eulerDegToQuat(back);
     const dot = q1[0] * q2[0] + q1[1] * q2[1] + q1[2] * q2[2] + q1[3] * q2[3];

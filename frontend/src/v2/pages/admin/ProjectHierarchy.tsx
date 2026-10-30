@@ -10,9 +10,9 @@ import { useT } from '../../i18n';
 import { Hint } from '../../components/ui/hint';
 
 /**
- * Hiérarchie séquences → shots d'un projet (fiche admin) : à chaque niveau, les
- * réglages pipeline **effectifs** après héritage projet→séquence→shot, avec un badge
- * « override » quand le niveau redéfinit résolution ou framerate.
+ * Sequence → shot hierarchy of a project (admin sheet): at each level, the **effective**
+ * pipeline settings after inheritance project→sequence→shot, with an "override" badge
+ * when the level redefines resolution or framerate.
  */
 
 function SettingsChip({ effective, override }: { effective: PipelineSettings; override: boolean }) {

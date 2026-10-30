@@ -24,7 +24,7 @@ import {
 import { prisma } from './prisma';
 import { publishRedis } from './redis';
 
-/** Les `sid` publiés lors du dernier appel, décodés avec le décodeur de production. */
+/** The `sid`s published during the last call, decoded with the production decoder. */
 const published = (): string[][] =>
   vi
     .mocked(publishRedis)
@@ -39,37 +39,33 @@ beforeEach(() => {
 });
 
 /**
- * A3-02, volet immédiat. Le cache de validité est **par process** et le balayage des sockets
- * tourne à la minute : révoquer une session laissait l'onglet du partant recevoir les
- * commentaires internes du projet pendant une minute, et les autres répliques répondre
- * « session vivante » pendant trente secondes. La révocation doit donc s'annoncer.
+ * A3-02, immediate part. The validity cache is **per process** and the socket sweep runs every minute: revoking a session left the departing user's tab
+ * receiving the project's internal comments for a minute, and the other replicas answering "session alive" for thirty seconds. Revocation must therefore announce itself.
  */
-describe('révocation — publication sur le canal partagé', () => {
-  it('annonce le sid révoqué par `revokeSession`', async () => {
+describe('revocation — publication on the shared channel', () => {
+  it('announces the sid revoked by `revokeSession`', async () => {
     vi.mocked(prisma.userSession.updateMany).mockResolvedValue({ count: 1 });
     await expect(revokeSession('sid-morte')).resolves.toBe(true);
     expect(published()).toEqual([['sid-morte']]);
   });
 
-  // Une session déjà révoquée (ou appartenant à quelqu'un d'autre) ne met rien à jour :
-  // annoncer quand même réveillerait toutes les répliques pour rien.
-  it('n’annonce rien quand la révocation n’a rien changé', async () => {
+  // A session already revoked (or belonging to someone else) updates nothing: announcing anyway would wake every replica for nothing.
+  it('announces nothing when the revocation changed nothing', async () => {
     vi.mocked(prisma.userSession.updateMany).mockResolvedValue({ count: 0 });
     await expect(revokeSession('sid-inconnue')).resolves.toBe(false);
     expect(published()).toEqual([]);
   });
 
-  it('annonce toutes les sessions d’une révocation en masse', async () => {
+  it('announces all the sessions of a mass revocation', async () => {
     await revokeAllSessions(42);
     expect(published()).toEqual([['a', 'b']]);
   });
 
   /**
-   * Le point qui ferait le plus mal s'il était raté : « révoquer toutes mes sessions » ne
-   * doit pas déconnecter l'auteur de l'action. La session épargnée est exclue du `where`,
-   * donc absente de la liste lue — et donc absente de l'annonce.
+   * The point that would hurt most if missed: "revoke all my sessions" must not log out the author of the action. The spared session is excluded from the `where`,
+   * hence absent from the list read — and therefore absent from the announcement.
    */
-  it('n’annonce jamais la session épargnée', async () => {
+  it('never announces the spared session', async () => {
     vi.mocked(prisma.userSession.findMany).mockResolvedValue([{ id: 'a' }] as never);
     await revokeAllSessions(42, 'sid-courante');
     const where = vi.mocked(prisma.userSession.findMany).mock.calls[0]![0]!.where as Record<string, unknown>;
@@ -78,23 +74,22 @@ describe('révocation — publication sur le canal partagé', () => {
     expect(published()[0]).not.toContain('sid-courante');
   });
 
-  // Offboarding / changement de mot de passe passent par là : l'annonce doit suivre.
-  it('annonce aussi lors d’une reprise en main de compte', async () => {
+  // Offboarding / password change go through here: the announcement must follow.
+  it('also announces when an account is taken back in hand', async () => {
     await revokeAllCredentials(42);
     expect(published()).toEqual([['a', 'b']]);
   });
 });
 
-describe('contrat du canal de révocation', () => {
-  it('fait l’aller-retour', () => {
+describe('revocation channel contract', () => {
+  it('round-trips', () => {
     expect(decodeSessionRevocation(encodeSessionRevocation(['x', 'y']))).toEqual(['x', 'y']);
   });
 
   /**
-   * Le canal est partagé et rien ne garantit ce qu'on y lit : un abonné pub/sub qui jette
-   * tue le gestionnaire, pas seulement le message.
+   * The channel is shared and nothing guarantees what is read from it: a pub/sub subscriber that throws kills the handler, not just the message.
    */
-  it('avale ce qui n’est pas lisible plutôt que de jeter', () => {
+  it('swallows what is unreadable rather than throwing', () => {
     expect(decodeSessionRevocation('{pas du json')).toEqual([]);
     expect(decodeSessionRevocation('{"sids":"pas un tableau"}')).toEqual([]);
     expect(decodeSessionRevocation('null')).toEqual([]);
@@ -103,12 +98,11 @@ describe('contrat du canal de révocation', () => {
 });
 
 /**
- * Fermer le socket sans tomber le cache serait cosmétique : `isSessionActive` répondrait
- * encore « vivante » jusqu'à trente secondes, et l'API rouvrirait la porte que le canal
- * temps réel vient de fermer.
+ * Closing the socket without dropping the cache would be cosmetic: `isSessionActive` would still answer "alive" for up to thirty seconds, and the API would
+ * reopen the door that the real-time channel has just closed.
  */
-describe('markSessionsRevoked — le cache de la réplique tombe tout de suite', () => {
-  it('rend la session invalide sans aller en base', async () => {
+describe('markSessionsRevoked — the replica cache drops straight away', () => {
+  it('makes the session invalid without going to the database', async () => {
     markSessionsRevoked(['sid-distante']);
     await expect(isSessionActive('sid-distante')).resolves.toBe(false);
     expect(prisma.userSession.findUnique).not.toHaveBeenCalled();

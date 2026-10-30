@@ -13,13 +13,13 @@ import type { BackupCatalog, BackupEntry, Mechanism } from './ops';
 import { Hint } from '../../components/ui/hint';
 
 /**
- * Les sauvegardes prises par `scripts/backup.sh`, et les deux gestes qu'on peut leur
- * appliquer sans risque : en créer une, en vérifier une.
+ * The backups taken by `scripts/backup.sh`, and the two safe actions one can apply to them:
+ * create one, verify one.
  *
- * **Restaurer n'est pas ici, et c'est délibéré.** `restore.sh db|all` écrase la base sans
- * confirmation et sans terminal ; l'écran en affiche la commande, prête à coller, plutôt
- * que d'en faire un bouton. Le mode `verify`, lui, est non destructif : il remonte le dump
- * dans une base jetable et compte ce qui en sort.
+ * **Restoring is not here, and that is deliberate.** `restore.sh db|all` overwrites the database
+ * without confirmation and without a terminal; the screen shows its command, ready to paste,
+ * rather than making it a button. The `verify` mode, on the other hand, is non-destructive: it loads the dump
+ * into a throwaway database and counts what comes out of it.
  */
 export default function BackupsPanel({
   catalog,
@@ -103,7 +103,7 @@ function BackupRow({
       <code className="font-mono text-xs">{entry.id}</code>
       <span className="text-muted-foreground">{when}</span>
       {entry.dbBytes !== null && (
-        // `value` et non `count` : c'est une taille déjà mise en forme, pas un pluriel.
+        // `value` and not `count`: it is an already formatted size, not a plural.
         <span className="text-xs text-muted-foreground">
           {t('ops.backups.dump', { value: fmtBytes(entry.dbBytes) })}
         </span>
@@ -113,8 +113,8 @@ function BackupRow({
           {t('ops.backups.taken', { tag: entry.fromRelease })}
         </span>
       )}
-      {/* Sans les secrets, les lignes chiffrées d'une restauration ailleurs sont illisibles :
-          l'information vaut d'être portée par la ligne, pas enterrée dans une page d'aide. */}
+      {/* Without the secrets, the encrypted rows of a restore elsewhere are unreadable:
+          the information is worth carrying on the row, not burying in a help page. */}
       <Tooltip label={entry.envIncluded ? t('ops.backups.secrets') : t('ops.backups.noSecrets')}>
         <Badge variant={entry.envIncluded ? 'muted' : 'warning'}>
           <KeyRound size={11} aria-hidden />

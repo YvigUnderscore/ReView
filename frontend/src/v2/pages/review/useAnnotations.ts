@@ -19,29 +19,29 @@ import { usePoiDraft } from './poi/usePoiDraft';
 import type { PoiPoint } from './poi/poiPoints';
 
 /**
- * État de l'annotation du composer (dessin 2D, points d'intérêt 3D, références collées) et de
- * l'annotation d'un commentaire sélectionné, lue seule (`viewed*`).
+ * Annotation state of the composer (2D drawing, 3D points of interest, pasted references) and of the
+ * annotation of a selected comment, read-only (`viewed*`).
  *
- * Un seul historique couvre le dessin et les références, au clavier comme aux boutons.
- * `defaultColor` (couleur attitrée) reste active tant qu'aucune couleur n'est choisie à la main.
+ * A single history covers the drawing and the references, from the keyboard as well as from the buttons.
+ * `defaultColor` (the assigned color) stays active as long as no color is picked by hand.
  */
 export function useAnnotations(opts?: {
   defaultColor?: string;
   onColorChange?: (c: string) => void;
-  /** Formes initiales du composer (initialiseur paresseux — brouillon local 32.C). */
+  /** Initial shapes of the composer (lazy initializer — local draft 32.C). */
   initialShapes?: () => Shape[];
 }) {
   const [tool, setToolState] = useState<Tool>('draw');
-  // Outil de tracé d'avant l'armement de la référence : y revenir est la sortie du mode pose.
+  // Drawing tool from before the reference was armed: going back to it is the exit from placing mode.
   const drawTool = useRef<Tool>('draw');
-  // Identité stable : le rail réarme son outil dans un effet dont `setTool` est une
-  // dépendance — un nouveau `setTool` à chaque render y écraserait `ref` aussitôt posé.
+  // Stable identity: the rail re-arms its tool in an effect that depends on `setTool` — a new
+  // `setTool` on every render would immediately overwrite the just-set `ref`.
   const setTool = useCallback((next: Tool) => {
     if (next !== 'ref') drawTool.current = next;
     setToolState(next);
   }, []);
   const exitRefTool = useCallback(() => setTool(drawTool.current), [setTool]);
-  // Choix manuel prioritaire ; sinon couleur par défaut (préférence/id), rechargée sans effet.
+  // Manual choice takes precedence; otherwise the default color (preference/id), reloaded without an effect.
   const [manualColor, setManualColor] = useState<string | null>(null);
   const color = manualColor ?? opts?.defaultColor ?? '#ef4444';
   const setColor = (c: string) => {
@@ -52,26 +52,26 @@ export function useAnnotations(opts?: {
   const [penWidth, setPenWidth] = useState(3);
   const [annot, setAnnot] = useState<Shape[]>(opts?.initialShapes ?? []);
   const [hist, setHist] = useState<AnnotationHistory>(EMPTY_HISTORY);
-  // Geste en cours : tous les changements qui le portent tiennent dans un seul cran.
+  // Gesture in progress: all the changes that carry it fit in a single step.
   const step = useRef<string | null>(null);
   const [annotating, setAnnotating] = useState(false);
-  // Points d'intérêt du commentaire en cours : posés au clic dans le viewer, numérotés dans
-  // l'ordre de pose, déplaçables et supprimables tant que rien n'est envoyé (Phase 50, lot 12).
+  // Points of interest of the comment in progress: placed by clicking in the viewer, numbered in the
+  // order of placement, movable and removable as long as nothing is sent (Phase 50, batch 12).
   const poi = usePoiDraft();
-  // Images de référence en préparation : posées/déplaçables tant que le commentaire n'est
-  // pas envoyé, puis figées côté serveur (liées au commentaire créé).
+  // Reference images in preparation: placed/movable as long as the comment is not sent, then frozen
+  // server-side (linked to the created comment).
   const [stagedRefs, setStagedRefs] = useState<StagedReference[]>([]);
-  // Bandes libres autour du média, publiées par le calque des références (seul à connaître la
-  // géométrie du viewer). Elles ne servent plus qu'à choisir où tombe un collage — le
-  // déplacement, lui, n'est plus borné. Dans une `ref` : lues au moment du collage, et une
-  // remesure ne doit pas relancer un rendu du composer.
+  // Free bands around the media, published by the references layer (the only one that knows the
+  // viewer's geometry). They are now only used to choose where a paste lands — moving, for its part,
+  // is no longer bounded. In a `ref`: read at paste time, and a re-measurement must not trigger a
+  // render of the composer.
   const refBands = useRef<ViewerBands>(NO_BANDS);
   const setRefBands = useCallback((bands: ViewerBands) => {
     refBands.current = bands;
   }, []);
   const snapshot = (): AnnotationSnapshot => ({ shapes: annot, refs: stagedRefs });
-  // Un geste complet = un cran. Tant que le même `stepKey` revient (un glisser, cent
-  // `pointermove`), l'historique n'en ouvre pas un deuxième.
+  // A complete gesture = one step. As long as the same `stepKey` comes back (a drag, a hundred
+  // `pointermove`s), the history does not open a second one.
   const openStep = (stepKey?: string) => {
     if (stepKey && stepKey === step.current) return;
     step.current = stepKey ?? null;
@@ -87,8 +87,8 @@ export function useAnnotations(opts?: {
         ...pastedRefBox(rs.length, refBands.current),
       },
     ]);
-    // Coller sort du dessin et arme le déplacement de la référence : on vient de la poser,
-    // le geste suivant est de la placer.
+    // Pasting leaves the drawing and arms the reference's move: we have just placed it, the next
+    // gesture is to position it.
     setTool('ref');
   };
   const updateStagedRef = (
@@ -97,8 +97,8 @@ export function useAnnotations(opts?: {
     stepKey?: string,
   ) => {
     openStep(stepKey);
-    // La référence atterrit là où le pointeur la lâche, dedans comme dehors du cadre du média :
-    // aucune bande n'entre ici, seul le plafond partagé avec le serveur borne le geste.
+    // The reference lands where the pointer drops it, inside as well as outside the media's frame: no
+    // band enters here, only the ceiling shared with the server bounds the gesture.
     setStagedRefs((rs) => rs.map((r) => (r.key === key ? { ...r, ...placeRefBox({ ...r, ...patch }) } : r)));
   };
   const removeStagedRef = (key: string) => {
@@ -106,31 +106,31 @@ export function useAnnotations(opts?: {
     setStagedRefs((rs) => rs.filter((r) => r.key !== key));
   };
 
-  // Animation caméra jointe au commentaire en cours (mode layout) — staged avant envoi.
+  // Camera animation attached to the comment in progress (layout mode) — staged before sending.
   const [cameraAnim, setCameraAnim] = useState<SplatLayoutAnim | null>(null);
-  // Annotation d'un commentaire sélectionné (lecture seule)
+  // Annotation of a selected comment (read-only)
   const [viewed, setViewed] = useState<Shape[] | null>(null);
-  // Points d'intérêt du commentaire sélectionné — pastilles numérotées, inertes (lecture seule).
+  // Points of interest of the selected comment — numbered dots, inert (read-only).
   const [viewedPoi, setViewedPoi] = useState<PoiPoint[]>([]);
   const [viewedAspect, setViewedAspect] = useState<number | null>(null);
-  // Animation caméra du commentaire sélectionné — rejouée par le viewer.
+  // Camera animation of the selected comment — replayed by the viewer.
   const [viewedCameraAnim, setViewedCameraAnim] = useState<SplatLayoutAnim | null>(null);
-  // Proposition de scène 3D du commentaire sélectionné (46.D) — jamais globale.
+  // 3D scene proposal of the selected comment (46.D) — never global.
   const [viewedSceneOverride, setViewedSceneOverride] = useState<unknown>(null);
-  // Modifications de scène en cours, jointes au prochain commentaire envoyé (comme les points
-  // d'intérêt et l'animation caméra).
+  // Scene modifications in progress, attached to the next comment sent (like the points of interest
+  // and the camera animation).
   const [sceneOverride, setSceneOverride] = useState<unknown>(null);
-  // Proposition d'édition de nuage du commentaire sélectionné : même mécanique que la scène 3D
-  // ci-dessus, pour l'autre viewer spatial (Phase 50, lot 14).
+  // Point-cloud edit proposal of the selected comment: same mechanism as the 3D scene above, for the
+  // other spatial viewer (Phase 50, batch 14).
   const [viewedSplatEdit, setViewedSplatEdit] = useState<SplatEditProposal | null>(null);
   /**
-   * Celle en cours de rédaction, elle, n'est PAS un état : l'éditeur splat la fournit à la
-   * demande, au moment de l'envoi.
+   * The one being drafted, on the other hand, is NOT a state: the splat editor provides it on demand,
+   * at the moment of sending.
    *
-   * Un masque de suppression pèse jusqu'à quelques centaines de kilo-octets de binaire ;
-   * l'encoder à chaque rendu de l'éditeur pour le poser dans un état — et le comparer pour
-   * éviter la boucle de rendus — coûterait cher pour une valeur qu'un seul appelant lit, une
-   * seule fois. `sent` rend la main à l'éditeur quand le commentaire est parti.
+   * A deletion mask weighs up to a few hundred kilobytes of binary; encoding it on every render of
+   * the editor to put it in a state — and compare it to avoid the render loop — would be costly for a
+   * value that a single caller reads, once. `sent` hands control back to the editor when the comment
+   * has left.
    */
   const splatEditSource = useRef<{ build: () => SplatEditDraft | null; sent: () => void } | null>(null);
   const provideSplatEdit = useCallback((source: typeof splatEditSource.current) => {
@@ -138,7 +138,7 @@ export function useAnnotations(opts?: {
   }, []);
   const takeSplatEdit = useCallback(() => splatEditSource.current?.build() ?? null, []);
 
-  /** `stepKey` : même valeur sur tout un geste (glisser d'une forme) = un seul cran. */
+  /** `stepKey`: same value over a whole gesture (dragging a shape) = a single step. */
   const setShapes = (next: Shape[], stepKey?: string) => {
     openStep(stepKey);
     setAnnot(next);
@@ -155,8 +155,8 @@ export function useAnnotations(opts?: {
   const clear = () => setShapes([]);
   const canUndo = hist.past.length > 0;
   const canRedo = hist.future.length > 0;
-  // Le composer est dans les mains du lecteur dès qu'il annote ou qu'il a collé : c'est là,
-  // et là seulement, que Ctrl+Z vise l'annotation plutôt que l'éditeur du média.
+  // The composer is in the reader's hands as soon as they annotate or have pasted: it is there, and
+  // there only, that Ctrl+Z targets the annotation rather than the media's editor.
   useAnnotationShortcuts({
     enabled: annotating || stagedRefs.length > 0,
     canUndo,
@@ -165,7 +165,7 @@ export function useAnnotations(opts?: {
     redo,
   });
 
-  /** Réinitialise le composer (après envoi du commentaire). */
+  /** Resets the composer (after the comment is sent). */
   const resetComposer = () => {
     setAnnot([]);
     setHist(EMPTY_HISTORY);
@@ -173,26 +173,26 @@ export function useAnnotations(opts?: {
     setTool(drawTool.current);
     poi.clear();
     setCameraAnim(null);
-    // La proposition de scène est partie avec le commentaire : comme les points, elle ne doit
-    // pas se rejoindre d'elle-même au commentaire suivant (46.T).
+    // The scene proposal left with the comment: like the points, it must not re-attach itself to the
+    // next comment (46.T).
     setSceneOverride(null);
-    // L'édition de nuage qui vient de partir quitte l'éditeur : elle vit désormais dans le
-    // commentaire, et ne doit pas se rejoindre d'elle-même au suivant (46.T) — ni y téléverser
-    // son masque une deuxième fois. C'est la mécanique du modèle 3D, à la lettre.
+    // The point-cloud edit that just left the editor now lives in the comment, and must not re-attach
+    // itself to the next one (46.T) — nor upload its mask a second time. It is the 3D model's
+    // mechanism, to the letter.
     splatEditSource.current?.sent();
     setStagedRefs([]);
     setAnnotating(false);
   };
 
   /**
-   * Relâche TOUT ce que le commentaire sélectionné montrait — dessin, points d'intérêt, ratio de
-   * capture, animation caméra, proposition de scène.
+   * Releases EVERYTHING the selected comment showed — drawing, points of interest, capture ratio,
+   * camera animation, scene proposal.
    *
-   * C'est la sortie **explicite** de la lecture (pilule du viewer, Échap, autre commentaire,
-   * entrée en rédaction), et elle seule. Un mouvement de vue ne passe plus par ici : il ne masque
-   * que le dessin 2D, seul à être tracé dans le plan de l'écran — les points d'intérêt, les traits
-   * de brosse et la scène proposée sont ancrés dans la scène et restent affichés pendant qu'on
-   * navigue (d'où la disparition du drapeau `keepScene`, qui ne protégeait que la scène).
+   * This is the **explicit** exit from reading (viewer pill, Escape, another comment, entering
+   * drafting), and only that. A view movement no longer goes through here: it only hides the 2D
+   * drawing, the only thing drawn in the screen's plane — the points of interest, brush strokes and
+   * proposed scene are anchored in the scene and stay displayed while navigating (hence the removal
+   * of the `keepScene` flag, which only protected the scene).
    */
   const clearViewed = () => {
     setViewed(null);

@@ -9,17 +9,17 @@ import type { Annotations } from './useAnnotations';
 import { useT } from '../../i18n';
 
 /**
- * Calque des références **en préparation** : posées au collage, déplaçables et
- * redimensionnables jusqu'à l'envoi du commentaire.
+ * Layer for references **being prepared**: placed on paste, movable and resizable until the
+ * comment is sent.
  *
- * Il passe au-dessus du canvas d'annotation et porte ses propres événements : sous le canvas
- * armé, la référence restait clouée quel que soit l'outil. Un glisser entier ne compte qu'un
- * cran d'annulation (`step`), et le premier geste posé ailleurs rend la main au tracé.
+ * It sits above the annotation canvas and carries its own events: under an armed canvas, the
+ * reference used to be stuck whatever the tool. A whole drag counts as a single undo step
+ * (`step`), and the first gesture made elsewhere hands control back to the drawing.
  *
- * Le geste va **où le pointeur va**, sur tout le canevas du viewer et non dans le seul cadre du
- * média : c'est ici, au contact de la géométrie, qu'on borne au visible — pas dans le composer,
- * qui ne connaît pas le viewer. Sortie du viewer, la référence serait rognée jusqu'au test de
- * survol : ni reprise, ni supprimable.
+ * The gesture goes **wherever the pointer goes**, across the whole viewer canvas and not just
+ * the media frame: it is here, next to the geometry, that we clamp to what is visible — not in
+ * the composer, which does not know the viewer. Outside the viewer, the reference would be
+ * clipped until the hover test: neither resumable nor deletable.
  */
 export default function StagedRefLayer({ ann }: { ann: Annotations }) {
   const t = useT();
@@ -30,7 +30,7 @@ export default function StagedRefLayer({ ann }: { ann: Annotations }) {
     px: number;
     py: number;
     start: { x: number; y: number; width: number };
-    /** Boîte déplacée : sa hauteur rendue borne le geste sans qu'on la devine. */
+    /** Moved box: its rendered height bounds the gesture without guessing it. */
     el: HTMLElement;
     step: string;
   } | null>(null);
@@ -58,7 +58,7 @@ export default function StagedRefLayer({ ann }: { ann: Annotations }) {
       px: e.clientX,
       py: e.clientY,
       start: { x: r.x, y: r.y, width: r.width },
-      // La poignée de taille est fille de la boîte ; le déplacement se prend sur la boîte même.
+      // The size handle is a child of the box; moving is grabbed on the box itself.
       el: mode === 'move' ? target : (target.parentElement ?? target),
       step: Math.random().toString(36).slice(2, 9),
     };
@@ -74,8 +74,8 @@ export default function StagedRefLayer({ ann }: { ann: Annotations }) {
       ann.updateStagedRef(d.key, { width: d.start.width + dx }, d.step);
       return;
     }
-    // Le canevas se remesure à chaque mouvement : le zoom du viewer ne déclenche aucun
-    // observateur, et une zone mémorisée au premier contact aurait déjà vieilli.
+    // The canvas is re-measured on every move: the viewer's zoom triggers no
+    // observer, and an area memorized on first contact would already be stale.
     const canvas = viewerCanvas(root);
     const height = d.el.getBoundingClientRect().height / rect.height;
     const moved = { x: d.start.x + dx, y: d.start.y + dy, width: d.start.width };

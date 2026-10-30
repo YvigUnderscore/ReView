@@ -5,23 +5,24 @@ import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { Panel } from './AdminPrimitives';
 import { useT } from '../../i18n';
 import { Hint } from '../../components/ui/hint';
+import { isWebImage, presignAndUpload } from '@/v2/lib/presignedUpload';
 
 /**
- * Le logo du studio — **un seul**, et un seul endroit pour le déposer.
+ * The studio logo — **a single one**, and a single place to upload it.
  *
- * Il se réglait dans « Diffusion », alors que la page de connexion l'affiche aussi et que
- * les slates et burn-ins le reprennent : trois écrans montraient la même marque, et celui
- * qui la portait n'était pas celui qu'on ouvrait pour la changer. Il vit désormais avec le
- * nom et la couleur du studio ; les autres écrans y renvoient.
+ * It used to be set in "Distribution", although the login page shows it too and
+ * the slates and burn-ins reuse it: three screens showed the same brand, and the one
+ * holding it was not the one one opened to change it. It now lives with the
+ * studio's name and colour; the other screens point to it.
  *
- * Un dépôt de fichier s'enregistre de lui-même : c'est le seul geste de la page qui ne
- * passe pas par sa barre d'action.
+ * A file upload saves on its own: it is the only gesture on the page that does not
+ * go through its action bar.
  */
 export default function StudioLogoPanel() {
   const t = useT();
@@ -42,17 +43,18 @@ export default function StudioLogoPanel() {
     const file = e.target.files?.[0];
     if (fileRef.current) fileRef.current.value = '';
     if (!file) return;
-    if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) {
+    if (!isWebImage(file.type)) {
       toast.error(t('profile.avatar.invalidFormat'));
       return;
     }
     setBusy(true);
     try {
-      const { url, key } = await api.post<{ url: string; key: string }>('/api/studio/logo/presign', {
-        contentType: file.type,
-      });
-      const put = await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-      if (!put.ok) throw new Error(t('profile.avatar.uploadFailed'));
+      const { key } = await presignAndUpload(
+        '/api/studio/logo/presign',
+        { contentType: file.type },
+        file,
+        t('profile.avatar.uploadFailed'),
+      );
       await api.put('/api/studio/settings', { key: 'studio_logo_key', value: key });
       invalidate();
       toast.success(t('distribution.logoUpdated'));

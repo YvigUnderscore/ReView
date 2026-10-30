@@ -4,19 +4,19 @@
 import type { SplatCamera } from '../reviewTypes';
 
 /**
- * Pose caméra à persister dans la présentation (Phase 17) — extrait de la vue capturée les seuls
- * champs enregistrés/rejoués : position, cible, focale et tilt. Centralisé pour que 3D et splat
- * enregistrent exactement les mêmes réglages. Pur/testable.
+ * Camera pose to persist in the presentation (Phase 17) — extracted from the captured view,
+ * keeping only the recorded/replayed fields: position, target, focal length and tilt.
+ * Centralized so that 3D and splat record exactly the same settings. Pure/testable.
  *
- * L'ASPECT N'EST PAS CAPTURÉ. Le ratio du cadre de review appartient aux réglages pipeline
- * (résolution héritée studio → projet → séquence → plan) ; la caméra ne fait que le porter. Le
- * recopier depuis la vue fermait la boucle : `camera.aspect` valait le ratio du cadre, le
- * cadre lisait la présentation, et le premier enregistrement de mise en scène gelait un 16/9
- * que personne n'avait choisi (cf. `reviewAspect.ts`).
+ * THE ASPECT IS NOT CAPTURED. The review frame's ratio belongs to the pipeline settings
+ * (resolution inherited studio → project → sequence → shot); the camera only carries it.
+ * Copying it from the view closed the loop: `camera.aspect` held the frame's ratio, the frame
+ * read the presentation, and the first staging recording froze a 16/9 nobody had chosen (see
+ * `reviewAspect.ts`).
  *
- * Un aspect DÉJÀ enregistré est en revanche reconduit tel quel (`storedAspect`) : le guide
- * letterbox ancre les annotations 2D normalisées, et le laisser tomber à l'enregistrement
- * suivant déplacerait à l'écran des annotations posées sur des reviews déjà validées.
+ * An ALREADY recorded aspect, however, is carried over as is (`storedAspect`): the letterbox
+ * guide anchors the normalized 2D annotations, and dropping it at the next recording would
+ * move annotations already placed on approved reviews on screen.
  */
 export function cameraPoseFromView(view: SplatCamera, storedAspect?: number | null): SplatCamera {
   const pose: SplatCamera = { position: view.position, target: view.target };

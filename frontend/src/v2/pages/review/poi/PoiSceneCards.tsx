@@ -4,7 +4,7 @@
 import { useEffect, useState, type RefObject } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronUp, Images } from 'lucide-react';
-import { Lightbox } from '../../../components/ui/lightbox';
+import { Lightbox } from '@/v2/components/ui/lightbox';
 import PoiNoteBody from './PoiNoteBody';
 import { POI_CARD_ATTR, sameAnchors, subscribePoiAnchors } from './poiAnchor';
 import {
@@ -14,46 +14,45 @@ import {
   type PoiCardSide,
   type PoiSceneCard,
 } from './poiCards';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
- * Le commentaire relu, **dans la scène** : une carte par point, ancrée à sa pastille.
+ * The reviewed comment, **in the scene**: one card per point, anchored to its hotspot.
  *
- * Ce qui a été demandé : « qu'on voie à la fois le commentaire avec le ou les images associées […]
- * réellement affiché dans le viewer 3D, qu'on puisse naviguer dans la scène, s'approcher d'un
- * commentaire, le voir ». La forme retenue est l'**étiquette qui s'ouvre** :
+ * What was requested: "to see at once the comment with its associated image(s) […] actually displayed in
+ * the 3D viewer, to be able to navigate the scene, to approach a comment, to see it". The form chosen is
+ * the **label that opens**:
  *
- *  - la carte du premier point est ouverte d'office — le commentaire se LIT en arrivant, il ne se
- *    déplie pas ; les autres points restent des étiquettes d'une ligne ;
- *  - une seule carte ouverte à la fois : deux cartes ouvertes se recouvrent dès que deux points
- *    sont proches, et c'est précisément le cas qui devait rester lisible ;
- *  - la carte est bornée (largeur fixe, trois lignes de texte, miniature à côté — `PoiNoteBody`) :
- *    un commentaire long ou six images ne masquent pas la scène, on les déroule sur place ;
- *  - les images s'ouvrent en grand dans la Lightbox partagée, celle du fil et de la review image.
+ *  - the card of the first point is open by default: the comment is READ on arrival, it does not unfold;
+ *    the other points remain one-line labels;
+ *  - only one card open at a time: two open cards overlap as soon as two points are close, and that is
+ *    precisely the case that had to remain readable;
+ *  - the card is bounded (fixed width, three lines of text, thumbnail beside it: `PoiNoteBody`): a long
+ *    comment or six images do not hide the scene; they unfold in place;
+ *  - the images open full size in the shared Lightbox, the one of the thread and of the image review.
  *
- * Le coût de rendu est nul côté viewer : le calque ne se projette pas, il s'ancre dans la pastille
- * (`poiAnchor`) et suit sa transformation. La seule mesure — de quel côté la carte ouverte tient
- * sans sortir du viewer — se fait à l'ouverture et à la **fin** d'un geste de navigation, jamais
- * par image.
+ * The rendering cost is nil on the viewer side: the layer does not project, it anchors itself to the
+ * hotspot (`poiAnchor`) and follows its transform. The only measurement, of which side the open card fits
+ * on without leaving the viewer, is taken on opening and at the **end** of a navigation gesture, never per frame.
  */
 
 /**
- * Marque d'une carte : la zone de review s'en sert pour distinguer « je lis un commentaire » de
- * « je navigue dans la scène » (`isPoiCardGesture`), dont les conséquences diffèrent.
+ * Mark of a card: the review area uses it to distinguish "I am reading a comment" from "I am navigating
+ * the scene" (`isPoiCardGesture`), whose consequences differ.
  */
 const CARD_MARK = { [POI_CARD_ATTR]: '' } as const;
 
-/** Placement de la carte autour de sa pastille : un côté, une classe. */
+/** Placement of the card around its hotspot: one side, one class. */
 const SIDE_CLASS: Record<PoiCardSide, string> = {
   center: 'left-1/2 -translate-x-1/2',
   right: 'left-0',
   left: 'right-0',
 };
 
-/** Sous la pastille, ou au-dessus quand le bord bas du viewer écrêterait la carte. */
+/** Under the hotspot, or above it when the bottom edge of the viewer would clip the card. */
 const ROW_CLASS = { below: 'top-6', above: 'bottom-6' } as const;
 
-/** Où la carte OUVERTE se pose : mesuré, jamais deviné (cf. l'effet de mesure plus bas). */
+/** Where the OPEN card sits: measured, never guessed (see the measuring effect below). */
 interface Placement {
   side: PoiCardSide;
   above: boolean;
@@ -82,8 +81,8 @@ function PoiCard({
         aria-label={t('poi.card.open', { n })}
         className="pointer-events-auto flex max-w-[9rem] items-center gap-1 rounded-full border border-border bg-card/90 px-2 py-0.5 text-2xs text-foreground shadow backdrop-blur hover:bg-secondary"
       >
-        {/* `min-w-0` : sans lui, un enfant de flex refuse de rétrécir et l'étiquette ne se
-            coupe jamais — elle pousserait le compteur d'images hors de la pastille. */}
+        {/* `min-w-0`: without it, a flex child refuses to shrink and the label never
+            truncates: it would push the image counter out of the hotspot. */}
         <span className="min-w-0 truncate">{card.text || card.intro}</span>
         {card.images.length > 0 && (
           <span className="flex shrink-0 items-center gap-0.5 text-muted-foreground">
@@ -135,13 +134,13 @@ export default function PoiSceneCards({
   containerRef,
   cards,
 }: {
-  /** Conteneur du viewer : les pastilles y vivent, et leur annonce y passe (`poiAnchor`). */
+  /** Viewer container: the hotspots live there, and their announcement passes through it (`poiAnchor`). */
   containerRef: RefObject<HTMLElement | null>;
   cards: readonly PoiSceneCard[];
 }) {
   const [anchors, setAnchors] = useState<HTMLElement[]>([]);
-  // Le commentaire doit se lire en arrivant : la carte du premier point est ouverte d'office.
-  // L'état repart de zéro à chaque commentaire — le calque est monté avec sa clé.
+  // The comment must be readable on arrival: the card of the first point is open by default.
+  // The state restarts from zero for each comment: the layer is mounted with its key.
   const [open, setOpen] = useState<number | null>(cards[0]?.index ?? null);
   const [place, setPlace] = useState<Placement>({ side: 'center', above: false });
   const [lightbox, setLightbox] = useState<{ images: PoiCardImage[]; at: number } | null>(null);
@@ -170,8 +169,8 @@ export default function PoiSceneCards({
       });
     };
     measure();
-    // Fin de geste seulement. La projection, elle, se refait à chaque image dessinée : mesurer
-    // avec elle réveillerait le viewer en permanence (cf. `viewer/renderScheduler`).
+    // End of gesture only. The projection, for its part, is redone at each drawn frame: measuring
+    // with it would wake the viewer permanently (see `viewer/renderScheduler`).
     box.addEventListener('pointerup', measure);
     box.addEventListener('wheel', measure, { passive: true });
     return () => {

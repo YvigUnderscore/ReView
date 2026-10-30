@@ -8,7 +8,7 @@ import { api } from '../../lib/apiClient';
 import { qk } from '../lib/query';
 import { projectPath } from '../lib/slug';
 import { useAuth } from '../stores/useAuth';
-import { deliverFiles } from '../../stores/deliverFiles';
+import { deliverFiles } from '../stores/deliverFiles';
 import PageShell from '../components/PageShell';
 import EntityBreadcrumb from '../components/EntityBreadcrumb';
 import FullPageDropzone from '../components/FullPageDropzone';
@@ -55,20 +55,20 @@ export default function TaskPage() {
 
   const project = task?.shot?.project ?? task?.asset?.project;
   /**
-   * Droit d'écrire la consigne : rôle EFFECTIF sur le projet (38.E), et non le rôle global
-   * du compte — un superviseur nommé sur ce projet-là rédige le brief de ses tâches. Le
-   * reste de la page garde son contrôle d'origine (`canPublish`), qui relève de la
-   * publication de version et non de cette phase.
+   * Right to write the brief: EFFECTIVE role on the project (38.E), not the account's global role —
+   * a supervisor named on that project writes the brief for its tasks. The
+   * rest of the page keeps its original control (`canPublish`), which belongs to
+   * version publishing and not to this phase.
    */
   const { canManage } = useProjectRole(project?.id ?? 0);
 
   /**
-   * Déposer crée la version suivante et l'emplit (Phase 46) : la zone dédiée vit désormais
-   * en tête de la liste des versions, et chaque version existante est sa propre cible.
+   * Dropping creates the next version and fills it (Phase 46): the dedicated zone now lives
+   * at the head of the version list, and each existing version is its own target.
    *
-   * Le regroupement en séquences et la consigne exigée par le projet se décident AVANT la
-   * création de la version (Phase 50) : un dépôt abandonné ne doit pas laisser derrière lui
-   * une version vide.
+   * Grouping into sequences and the instruction required by the project are decided BEFORE the
+   * creation of the version (Phase 50): an abandoned drop must not leave behind
+   * an empty version.
    */
   const onDropFiles = (files: File[]) =>
     deliverFiles(project?.id, files, async (send) => {
@@ -81,8 +81,8 @@ export default function TaskPage() {
     task ? statusEntry(task, { canEdit: canPublish || task.assignee?.id === userId }) : null,
   );
 
-  // Après tous les hooks : un `/tasks/abc` donnait « Tâche #NaN » avec une zone de dépôt
-  // active, et un identifiant inconnu rendait la page comme si la tâche existait.
+  // After all the hooks: a `/tasks/abc` gave "Task #NaN" with an active drop zone,
+  // and an unknown identifier rendered the page as if the task existed.
   if (isBadId(taskId) || (taskQ.isError && isMissingOrForbidden(taskQ.error)))
     return <EntityUnavailable kind="task" error={isBadId(taskId) ? undefined : taskQ.error} />;
   if (taskQ.isError)
@@ -93,10 +93,10 @@ export default function TaskPage() {
       title={task?.name ?? t('entity.task')}
       breadcrumb={<EntityBreadcrumb entity="task" id={taskId} />}
     >
-      {/* Le statut se change ici au clic droit, comme partout ailleurs. L'assigné en a le
-          droit : le serveur n'accepte de lui que le statut et la checklist. */}
+      {/* The status is changed here by right click, as everywhere else. The assignee has the
+          right: the server only accepts from them the status and the checklist. */}
       <EntityContextMenu entries={menuEntries}>
-        {/* Localisation (projet › shot/asset) */}
+        {/* Location (project › shot/asset) */}
         <div className="mb-1 flex flex-wrap items-center gap-1 text-xs text-muted-foreground">
           {project && (
             <Link to={projectPath(project)} className="hover:text-foreground">
@@ -130,7 +130,7 @@ export default function TaskPage() {
                 {TASK_STATUS_LABEL_KEY[task.status] ? t(TASK_STATUS_LABEL_KEY[task.status]) : task.status}
               </span>
             )}
-            {/* Lien retour (32.D) : la review s'ouvre sur le commentaire d'origine. */}
+            {/* Return link (32.D): the review opens on the original comment. */}
             {task?.sourceComment && (
               <Link
                 to={`/review/${task.sourceComment.mediaObjectId}?comment=${task.sourceComment.id}`}

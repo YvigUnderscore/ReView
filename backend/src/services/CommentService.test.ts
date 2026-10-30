@@ -15,9 +15,9 @@ vi.mock('../lib/prisma', () => ({
     },
     reaction: { upsert: vi.fn(), delete: vi.fn() },
     projectMembership: { findMany: vi.fn() },
-    // Montage visé par un retour (46) : son projet est confronté à celui de la route.
+    // Shot targeted by a feedback (46): its project is checked against that of the route.
     timeline: { findUnique: vi.fn() },
-    // Projet writable par défaut (38.B) : le verrou d’archivage interroge project.findFirst.
+    // Project writable by default (38.B): the archiving lock queries project.findFirst.
     project: { findFirst: vi.fn().mockResolvedValue({ status: 'ACTIVE' }) },
   },
 }));
@@ -25,14 +25,14 @@ vi.mock('./SocketService', () => ({ emitToProject: vi.fn() }));
 vi.mock('./NotificationService', () => ({ notify: vi.fn(), sendDiscord: vi.fn() }));
 vi.mock('./ReviewReferenceService', () => ({ purgeForComment: vi.fn() }));
 vi.mock('./WatchService', () => ({ notifyWatchers: vi.fn().mockResolvedValue([]) }));
-// Assignation : la vraie garde interroge la base ; on la remplace pour observer SES appels.
+// Assignment: the real guard queries the database; we replace it to observe ITS calls.
 vi.mock('./EntityAssigneeService', async (importOriginal) => ({
-  // Le module porte aussi `ASSIGNEE_SELECT`, que d'autres services relisent à l'import :
-  // le remplacer en entier casserait leur chargement. On n'échange que la garde.
+  // The module also exports `ASSIGNEE_SELECT`, which other services re-read at import time: replacing the
+  // whole module would break their loading. Only the guard is swapped.
   ...(await importOriginal<typeof import('./EntityAssigneeService')>()),
   assertAssignable: vi.fn().mockResolvedValue(undefined),
 }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: {
     getPresignedGetUrl: vi.fn().mockResolvedValue('https://minio/url'),
     getPresignedPutUrl: vi.fn().mockResolvedValue('https://minio/put'),
@@ -41,7 +41,7 @@ vi.mock('./StorageService', () => ({
 }));
 vi.mock('../lib/userView', () => ({
   toPublicUser: vi.fn(async (u: unknown) => u),
-  // Même contrat que la vraie : un nom externe efface l'auteur au lieu d'en fabriquer un.
+  // Same contract as the real one: an external name erases the author instead of fabricating one.
   toPublicUserOrDeleted: vi.fn(
     async (u: unknown, externalName?: string | null) =>
       u ?? (externalName ? null : { displayName: 'Compte supprimé' }),
@@ -60,7 +60,7 @@ import {
   update,
 } from './CommentService';
 import { prisma } from '../lib/prisma';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 import { notify } from './NotificationService';
 import { notifyWatchers } from './WatchService';
 import { assertAssignable } from './EntityAssigneeService';
@@ -74,20 +74,20 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(prisma.comment.findUnique).mockResolvedValue({ userId: author.id } as never);
   vi.mocked(prisma.comment.update).mockResolvedValue({ id: 1, author: { id: 5 }, mediaObjectId: 9 } as never);
-  // Par défaut, le montage cité appartient au projet 3 — celui que la route a autorisé.
+  // By default, the cited edit belongs to project 3 — the one the route authorized.
   vi.mocked(prisma.timeline.findUnique).mockResolvedValue({ projectId: 3 } as never);
 });
 
 describe('extractMentionTokens (32.B)', () => {
-  it('extrait les @jetons dédoublonnés en minuscules', () => {
+  it('extracts the @tokens, de-duplicated and lowercased', () => {
     expect(extractMentionTokens('@Yvig regarde avec @jean.dupont et @yvig')).toEqual(['yvig', 'jean.dupont']);
   });
-  it('ignore les emails et les @ collés à un mot', () => {
+  it('ignores emails and @ signs glued to a word', () => {
     expect(extractMentionTokens('contact y@x.fr svp')).toEqual([]);
   });
 });
 
-describe('create — mentions (32.B)', () => {
+describe('create: mentions (32.B)', () => {
   const members = [
     { user: { id: 5, username: 'auteur', email: 'auteur@s.fr' } },
     { user: { id: 7, username: 'Yvig', email: 'y@s.fr' } },
@@ -98,7 +98,7 @@ describe('create — mentions (32.B)', () => {
     vi.mocked(prisma.projectMembership.findMany).mockResolvedValue(members as never);
   });
 
-  it('notifie les membres mentionnés (username insensible à la casse, email local)', async () => {
+  it('notifies mentioned members (username case-insensitive, email local part)', async () => {
     vi.mocked(prisma.comment.create).mockResolvedValue({
       id: 20,
       content: 'vu avec @yvig et @jean.dupont',
@@ -109,7 +109,7 @@ describe('create — mentions (32.B)', () => {
     expect(notify).toHaveBeenCalledWith(expect.objectContaining({ userId: 8, kind: 'mention' }));
   });
 
-  it('ne notifie jamais l’auteur, même auto-mentionné', async () => {
+  it('never notifies the author, even when self-mentioned', async () => {
     vi.mocked(prisma.comment.create).mockResolvedValue({
       id: 21,
       content: 'note pour @auteur',
@@ -119,7 +119,7 @@ describe('create — mentions (32.B)', () => {
     expect(notify).not.toHaveBeenCalled();
   });
 
-  it('réponse : le parent mentionné ne reçoit pas de REPLY en double', async () => {
+  it('reply: the mentioned parent does not receive a duplicate REPLY', async () => {
     vi.mocked(prisma.comment.findUnique).mockResolvedValue({ mediaObjectId: 9, userId: 7 } as never);
     vi.mocked(prisma.comment.create).mockResolvedValue({
       id: 22,
@@ -132,18 +132,18 @@ describe('create — mentions (32.B)', () => {
   });
 });
 
-describe('create — pièces jointes : clés bornées à l’auteur', () => {
+describe('create: attachments: keys bound to the author', () => {
   beforeEach(() => {
     vi.mocked(prisma.projectMembership.findMany).mockResolvedValue([] as never);
     vi.mocked(prisma.comment.create).mockResolvedValue({ id: 30, content: 'x', author: { id: 5 } } as never);
   });
 
-  /** Clés effectivement persistées par le dernier `comment.create`. */
+  /** Keys actually persisted by the last `comment.create`. */
   const persistedAttachments = () =>
     (vi.mocked(prisma.comment.create).mock.calls.at(-1)?.[0] as { data: { attachments?: unknown } }).data
       .attachments as { key: string }[] | undefined;
 
-  it('conserve les pièces jointes du dossier de l’auteur', async () => {
+  it("keeps the attachments from the author's own folder", async () => {
     await create(author, 3, {
       mediaObjectId: 9,
       content: 'planche',
@@ -152,9 +152,9 @@ describe('create — pièces jointes : clés bornées à l’auteur', () => {
     expect(persistedAttachments()).toHaveLength(1);
   });
 
-  // La clé est fournie par le client et sert ensuite à signer une URL de lecture : accepter
-  // le dossier d'un autre utilisateur laisserait lire sa pièce jointe, sur un autre projet.
-  it('écarte la clé située dans le dossier d’un autre utilisateur', async () => {
+  // The key is supplied by the client and later used to sign a read URL: accepting another user's folder
+  // would let them read their attachment, on another project.
+  it("discards a key located in another user's folder", async () => {
     await create(author, 3, {
       mediaObjectId: 9,
       content: 'exfil',
@@ -163,7 +163,7 @@ describe('create — pièces jointes : clés bornées à l’auteur', () => {
     expect(persistedAttachments()).toBeUndefined();
   });
 
-  it('écarte toute clé hors du dossier des pièces jointes', async () => {
+  it('discards any key outside the attachments folder', async () => {
     await create(author, 3, {
       mediaObjectId: 9,
       content: 'exfil',
@@ -178,18 +178,17 @@ describe('create — pièces jointes : clés bornées à l’auteur', () => {
 });
 
 /**
- * A1-02 : la route n'autorise que le projet du MÉDIA. `timelineId` arrive du même corps de
- * requête et désignait, lui, n'importe quel montage du studio — identifiants séquentiels,
- * donc devinables. Un ARTIST écrivait ainsi dans les notes de montage d'un projet voisin,
- * sous son nom, alors que la lecture des mêmes notes lui répond 403.
+ * A1-02: the route only authorizes the MEDIA's project. `timelineId` arrives from the same request body and
+ * designated any edit of the studio — sequential identifiers, hence guessable. An ARTIST thus wrote into the
+ * edit notes of a neighbouring project, under their own name, while reading the same notes gets them a 403.
  */
-describe('create — montage cité : cloisonnement par projet (A1-02)', () => {
+describe('create: cited edit: per-project scoping (A1-02)', () => {
   beforeEach(() => {
     vi.mocked(prisma.projectMembership.findMany).mockResolvedValue([] as never);
     vi.mocked(prisma.comment.create).mockResolvedValue({ id: 50, content: 'x', author: { id: 5 } } as never);
   });
 
-  it('refuse un montage appartenant à un autre projet, sans rien écrire', async () => {
+  it('refuses an edit belonging to another project, writing nothing', async () => {
     vi.mocked(prisma.timeline.findUnique).mockResolvedValue({ projectId: 2 } as never);
     await expect(
       create(author, 7, { mediaObjectId: 34, content: 'coucou', timelineId: 2, timelineTime: 1 }),
@@ -197,7 +196,7 @@ describe('create — montage cité : cloisonnement par projet (A1-02)', () => {
     expect(prisma.comment.create).not.toHaveBeenCalled();
   });
 
-  it('refuse un montage inexistant', async () => {
+  it('refuses a nonexistent edit', async () => {
     vi.mocked(prisma.timeline.findUnique).mockResolvedValue(null);
     await expect(
       create(author, 7, { mediaObjectId: 34, content: 'coucou', timelineId: 99999 }),
@@ -205,15 +204,15 @@ describe('create — montage cité : cloisonnement par projet (A1-02)', () => {
     expect(prisma.comment.create).not.toHaveBeenCalled();
   });
 
-  // Une position dans le film sans film ne désigne rien : valeur orpheline, jamais relue.
-  it('refuse une position de montage sans montage', async () => {
+  // A position in the film without a film designates nothing: an orphan value, never read back.
+  it('refuses an edit position without an edit', async () => {
     await expect(
       create(author, 3, { mediaObjectId: 9, content: 'coucou', timelineTime: 71.5 }),
     ).rejects.toMatchObject({ statusCode: 400 });
     expect(prisma.comment.create).not.toHaveBeenCalled();
   });
 
-  it('accepte le montage du projet autorisé', async () => {
+  it('accepts the edit of the authorized project', async () => {
     vi.mocked(prisma.timeline.findUnique).mockResolvedValue({ projectId: 7 } as never);
     await create(author, 7, { mediaObjectId: 34, content: 'coupe', timelineId: 12, timelineTime: 4 });
     expect(prisma.comment.create).toHaveBeenCalled();
@@ -221,23 +220,23 @@ describe('create — montage cité : cloisonnement par projet (A1-02)', () => {
 });
 
 /**
- * A2-04 : `annotation` et `cameraState` étaient déclarés `z.any()`. Le service les relit
- * désormais lui-même — toutes les entrées ne passent pas par `routes/comments.routes.ts`.
+ * A2-04: `annotation` and `cameraState` were declared `z.any()`. The service now re-reads them itself: not
+ * every input goes through `routes/comments.routes.ts`.
  */
-describe('create — blobs JSON bornés (A2-04)', () => {
+describe('create: bounded JSON blobs (A2-04)', () => {
   beforeEach(() => {
     vi.mocked(prisma.projectMembership.findMany).mockResolvedValue([] as never);
     vi.mocked(prisma.comment.create).mockResolvedValue({ id: 51, content: 'x', author: { id: 5 } } as never);
   });
 
-  it('refuse une annotation de forme libre', async () => {
+  it('refuses a free-form annotation', async () => {
     await expect(
       create(author, 3, { mediaObjectId: 9, content: 'x', annotation: { pad: 'A'.repeat(100) } }),
     ).rejects.toMatchObject({ statusCode: 400 });
     expect(prisma.comment.create).not.toHaveBeenCalled();
   });
 
-  it('refuse une pose caméra portant un champ inconnu', async () => {
+  it('refuses a camera pose carrying an unknown field', async () => {
     await expect(
       create(author, 3, {
         mediaObjectId: 9,
@@ -248,7 +247,7 @@ describe('create — blobs JSON bornés (A2-04)', () => {
     expect(prisma.comment.create).not.toHaveBeenCalled();
   });
 
-  it('laisse passer une annotation et une pose légitimes', async () => {
+  it('lets a legitimate annotation and pose through', async () => {
     await create(author, 3, {
       mediaObjectId: 9,
       content: 'x',
@@ -259,8 +258,8 @@ describe('create — blobs JSON bornés (A2-04)', () => {
   });
 });
 
-describe('update — trace de résolution (32.A)', () => {
-  it('résolution : renseigne resolvedById et resolvedAt', async () => {
+describe('update: resolution trace (32.A)', () => {
+  it('resolution: sets resolvedById and resolvedAt', async () => {
     await update(supervisor, 3, 1, { isResolved: true });
     expect(prisma.comment.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -273,7 +272,7 @@ describe('update — trace de résolution (32.A)', () => {
     );
   });
 
-  it('réouverture : efface la trace', async () => {
+  it('reopening: clears the trace', async () => {
     await update(author, 3, 1, { isResolved: false });
     expect(prisma.comment.update).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -282,12 +281,12 @@ describe('update — trace de résolution (32.A)', () => {
     );
   });
 
-  it('résolution refusée à un tiers non gestionnaire', async () => {
+  it('refuses resolution to a third party who is not a manager', async () => {
     await expect(update(other, 3, 1, { isResolved: true })).rejects.toMatchObject({ statusCode: 403 });
     expect(prisma.comment.update).not.toHaveBeenCalled();
   });
 
-  it('édition du contenu réservée à l’auteur (isEdited posé)', async () => {
+  it('editing the content is reserved to the author (isEdited set)', async () => {
     await expect(update(supervisor, 3, 1, { content: 'hop' })).rejects.toMatchObject({ statusCode: 403 });
     await update(author, 3, 1, { content: 'hop' });
     expect(prisma.comment.update).toHaveBeenCalledWith(
@@ -296,7 +295,7 @@ describe('update — trace de résolution (32.A)', () => {
   });
 });
 
-describe('retours de montage (Phase 46)', () => {
+describe('edit feedback (Phase 46)', () => {
   beforeEach(() => {
     vi.mocked(prisma.projectMembership.findMany).mockResolvedValue([] as never);
     vi.mocked(prisma.comment.create).mockResolvedValue({
@@ -306,11 +305,11 @@ describe('retours de montage (Phase 46)', () => {
     } as never);
   });
 
-  /** Données effectivement persistées par le dernier `comment.create`. */
+  /** Data actually persisted by the last `comment.create`. */
   const persisted = () =>
     (vi.mocked(prisma.comment.create).mock.calls.at(-1)?.[0] as { data: Record<string, unknown> }).data;
 
-  it('garde les deux échelles : la frame dans le plan, la position dans le film', async () => {
+  it('keeps both scales: the frame within the shot, the position within the film', async () => {
     await create(author, 3, {
       mediaObjectId: 9,
       content: 'coupe trop longue',
@@ -326,19 +325,19 @@ describe('retours de montage (Phase 46)', () => {
     });
   });
 
-  // Le retour n'est pas encore dans la review du plan : prévenir ses suiveurs les enverrait
-  // chercher quelque chose qu'ils n'y verraient pas.
-  it('ne prévient pas les suiveurs du plan tant que le retour reste sur le montage', async () => {
+  // The feedback is not yet in the shot's review: alerting its followers would send them to look for
+  // something they would not find there.
+  it("does not alert the shot's followers while the feedback stays on the edit", async () => {
     await create(author, 3, { mediaObjectId: 9, content: 'note de coupe', timelineId: 7, timelineTime: 3 });
     expect(notifyWatchers).not.toHaveBeenCalled();
   });
 
-  it('prévient les suiveurs pour un commentaire de review ordinaire', async () => {
+  it('alerts the followers for an ordinary review comment', async () => {
     await create(author, 3, { mediaObjectId: 9, content: 'retour classique' });
     expect(notifyWatchers).toHaveBeenCalled();
   });
 
-  it('le fil d’un plan masque les retours de montage non renvoyés', async () => {
+  it("the shot's thread hides edit feedback that has not been sent back", async () => {
     vi.mocked(prisma.comment.findMany).mockResolvedValue([] as never);
     vi.mocked(prisma.comment.count).mockResolvedValue(0);
     await listThread(9, { page: 1, pageSize: 20, order: 'desc' });
@@ -350,11 +349,11 @@ describe('retours de montage (Phase 46)', () => {
   });
 
   /**
-   * Le partage public, la recherche et l'export bornaient déjà un CLIENT aux notes qui lui
-   * sont destinées ; la lecture du fil dans l'application, non — un client membre du projet
-   * y lisait donc toutes les notes internes, réponses comprises.
+   * Public sharing, search and export already bounded a CLIENT to the notes meant for them; reading the
+   * thread inside the application did not — a client who was a project member therefore read all internal
+   * notes, replies included.
    */
-  it('un CLIENT ne reçoit que les notes qui lui sont destinées, réponses comprises', async () => {
+  it('a CLIENT receives only the notes meant for them, replies included', async () => {
     vi.mocked(prisma.comment.findMany).mockResolvedValue([] as never);
     vi.mocked(prisma.comment.count).mockResolvedValue(0);
     await listThread(9, { page: 1, pageSize: 20, order: 'desc' }, Role.CLIENT);
@@ -368,7 +367,7 @@ describe('retours de montage (Phase 46)', () => {
     expect(countWhere).toMatchObject({ isVisibleToClient: true });
   });
 
-  it('un ARTIST reçoit le fil entier', async () => {
+  it('an ARTIST receives the whole thread', async () => {
     vi.mocked(prisma.comment.findMany).mockResolvedValue([] as never);
     vi.mocked(prisma.comment.count).mockResolvedValue(0);
     await listThread(9, { page: 1, pageSize: 20, order: 'desc' }, Role.ARTIST);
@@ -377,7 +376,7 @@ describe('retours de montage (Phase 46)', () => {
     expect(where.isVisibleToClient).toBeUndefined();
   });
 
-  it('le fil du montage est ordonné sur la position dans le film', async () => {
+  it("the edit's thread is ordered by position within the film", async () => {
     vi.mocked(prisma.comment.findMany).mockResolvedValue([] as never);
     vi.mocked(prisma.comment.count).mockResolvedValue(0);
     await listMontage(7, { page: 1, pageSize: 20, order: 'desc' });
@@ -389,7 +388,7 @@ describe('retours de montage (Phase 46)', () => {
     expect(args.orderBy).toEqual([{ timelineTime: 'asc' }, { createdAt: 'asc' }]);
   });
 
-  it('renvoyer sur la review lève le rideau sans toucher au timecode', async () => {
+  it('sending back to the review lifts the curtain without touching the timecode', async () => {
     vi.mocked(prisma.comment.findUnique).mockResolvedValue({
       userId: author.id,
       timelineId: 7,
@@ -404,7 +403,7 @@ describe('retours de montage (Phase 46)', () => {
     expect(notifyWatchers).toHaveBeenCalled();
   });
 
-  it('refuse de renvoyer un commentaire qui n’est pas né sur un montage', async () => {
+  it('refuses to send back a comment that was not born on an edit', async () => {
     vi.mocked(prisma.comment.findUnique).mockResolvedValue({
       userId: author.id,
       timelineId: null,
@@ -414,7 +413,7 @@ describe('retours de montage (Phase 46)', () => {
     await expect(share(author, 3, 1)).rejects.toMatchObject({ statusCode: 400 });
   });
 
-  it('refuse le renvoi à un tiers non gestionnaire', async () => {
+  it('refuses the sending-back to a third party who is not a manager', async () => {
     vi.mocked(prisma.comment.findUnique).mockResolvedValue({
       userId: author.id,
       timelineId: 7,
@@ -427,45 +426,45 @@ describe('retours de montage (Phase 46)', () => {
 });
 
 describe('resolutionOf (D1)', () => {
-  it('déduit le booléen de l’état — un fil résolu ne doit pas rester compté ouvert', () => {
+  it('derives the boolean from the state: a resolved thread must not remain counted as open', () => {
     expect(resolutionOf('RESOLVED', undefined)).toEqual({ state: 'RESOLVED', isResolved: true });
     expect(resolutionOf('WIP', undefined)).toEqual({ state: 'WIP', isResolved: false });
     expect(resolutionOf('WONT_FIX', undefined)).toEqual({ state: 'WONT_FIX', isResolved: false });
   });
 
-  it('déduit l’état du booléen, pour l’API v1 et les anciens clients', () => {
+  it('derives the state from the boolean, for the v1 API and older clients', () => {
     expect(resolutionOf(undefined, true)).toEqual({ state: 'RESOLVED', isResolved: true });
     expect(resolutionOf(undefined, false)).toEqual({ state: 'OPEN', isResolved: false });
   });
 
-  it('laisse l’état intact quand ni l’un ni l’autre n’est envoyé', () => {
+  it('leaves the state intact when neither is sent', () => {
     expect(resolutionOf(undefined, undefined)).toEqual({});
   });
 
-  it('fait foi sur l’état quand les deux arrivent — c’est lui que l’écran pilote', () => {
+  it('takes precedence over the state when both arrive: it is the one the screen drives', () => {
     expect(resolutionOf('OPEN', true)).toEqual({ state: 'OPEN', isResolved: false });
   });
 });
 
 /**
- * D5 — éditer les pièces jointes d'un commentaire.
+ * D5: edit a comment's attachments.
  *
- * Le `PATCH` ignorait `attachments` : on ne pouvait ni ajouter ni retirer une image en
- * corrigeant son texte. La garde de propriété de `create` doit être reproduite à
- * l'identique, avec une tolérance explicite pour le dossier des notes venues de ShotGrid —
- * sinon une simple correction effacerait les pièces rapatriées du site distant.
+ * The `PATCH` ignored `attachments`: one could neither add nor remove an image while correcting its text. The
+ * ownership guard of `create` must be reproduced identically, with an explicit tolerance for the folder of
+ * notes coming from ShotGrid — otherwise a simple correction would erase the attachments fetched from the
+ * remote site.
  */
-describe('update — pièces jointes éditables (D5)', () => {
+describe('update: editable attachments (D5)', () => {
   const mine = `comments/attachments/${author.id}/1700-a.png`;
   const theirs = `comments/attachments/${other.id}/1700-secret.png`;
   const fromShotgrid = 'comments/attachments/shotgrid/1/9-note.png';
 
-  /** Pièces jointes effectivement persistées par le dernier `comment.update`. */
+  /** Attachments actually persisted by the last `comment.update`. */
   const persisted = () =>
     (vi.mocked(prisma.comment.update).mock.calls.at(-1)?.[0] as { data: { attachments?: unknown } }).data
       .attachments as { key: string }[] | undefined;
 
-  it('écrit la liste fournie et marque le commentaire édité', async () => {
+  it('writes the supplied list and marks the comment as edited', async () => {
     await update(author, 3, 1, { attachments: [{ key: mine, name: 'a.png' }] });
     expect(persisted()).toEqual([{ key: mine, name: 'a.png' }]);
     expect(
@@ -474,27 +473,27 @@ describe('update — pièces jointes éditables (D5)', () => {
     ).toBe(true);
   });
 
-  it('refuse l’édition des pièces jointes à un gestionnaire non auteur', async () => {
+  it('refuses editing the attachments to a manager who is not the author', async () => {
     await expect(update(supervisor, 3, 1, { attachments: [] })).rejects.toMatchObject({ statusCode: 403 });
     expect(prisma.comment.update).not.toHaveBeenCalled();
   });
 
-  it('écarte la clé d’un autre utilisateur glissée dans l’édition', async () => {
+  it("discards another user's key slipped into the edit", async () => {
     await update(author, 3, 1, { attachments: [{ key: theirs }, { key: mine }] });
     expect(persisted()).toEqual([{ key: mine }]);
   });
 
-  it('conserve la pièce ShotGrid du commentaire édité', async () => {
+  it('keeps the ShotGrid attachment of the edited comment', async () => {
     await update(author, 3, 1, { attachments: [{ key: fromShotgrid }] });
     expect(persisted()).toEqual([{ key: fromShotgrid }]);
   });
 
-  it('refuse le dossier ShotGrid d’un AUTRE commentaire', async () => {
+  it('refuses the ShotGrid folder of ANOTHER comment', async () => {
     await update(author, 3, 1, { attachments: [{ key: 'comments/attachments/shotgrid/2/9-note.png' }] });
     expect(persisted()).toEqual([]);
   });
 
-  it('efface du stockage l’objet que l’édition a retiré', async () => {
+  it('erases from storage the object that the edit removed', async () => {
     vi.mocked(prisma.comment.findUnique).mockResolvedValue({
       userId: author.id,
       attachments: [{ key: mine }, { key: fromShotgrid }],
@@ -503,7 +502,7 @@ describe('update — pièces jointes éditables (D5)', () => {
     expect(storage.deleteObjects).toHaveBeenCalledWith([mine]);
   });
 
-  it('ne touche au stockage pour aucune autre édition', async () => {
+  it('does not touch storage for any other edit', async () => {
     vi.mocked(prisma.comment.findUnique).mockResolvedValue({
       userId: author.id,
       attachments: [{ key: mine }],
@@ -514,36 +513,35 @@ describe('update — pièces jointes éditables (D5)', () => {
 });
 
 /**
- * CP-SEC phase 50 — assigner une note à quelqu'un du projet, et à personne d'autre.
+ * CP-SEC phase 50: assigning a note to someone on the project, and to no one else.
  *
- * `assigneeId` arrive du client et n'était confronté à rien : un gestionnaire pouvait
- * confier une note à n'importe quel compte de la base — étranger au projet, désactivé, ou
- * de service —, qui en recevait la notification. Les tâches, les entités et les reviews
- * passent toutes par `assertAssignable` ; les commentaires l'oubliaient.
+ * `assigneeId` comes from the client and was checked against nothing: a manager could entrust a note to any
+ * account in the database — foreign to the project, disabled, or a service account — which then received the
+ * notification. Tasks, entities and reviews all go through `assertAssignable`; comments had forgotten it.
  */
-describe('update — assignation bornée au projet (CP-SEC 50)', () => {
-  it('confronte l’assigné au projet avant d’écrire', async () => {
+describe('update: assignment bounded to the project (CP-SEC 50)', () => {
+  it('checks the assignee against the project before writing', async () => {
     await update(supervisor, 3, 1, { assigneeId: 42 });
     expect(assertAssignable).toHaveBeenCalledWith(3, [42]);
   });
 
-  it('n’écrit rien quand la personne n’est pas assignable sur ce projet', async () => {
+  it('writes nothing when the person cannot be assigned on this project', async () => {
     vi.mocked(assertAssignable).mockRejectedValueOnce(new Error('NOT_ASSIGNABLE'));
     await expect(update(supervisor, 3, 1, { assigneeId: 42 })).rejects.toThrow('NOT_ASSIGNABLE');
     expect(prisma.comment.update).not.toHaveBeenCalled();
   });
 
-  it('laisse passer le retrait d’assignation sans interroger la garde', async () => {
+  it('lets an assignment removal pass without querying the guard', async () => {
     await update(supervisor, 3, 1, { assigneeId: null });
     expect(assertAssignable).not.toHaveBeenCalled();
   });
 });
 
 /**
- * Supprimer un commentaire laissait ses pièces jointes dans MinIO indéfiniment — y compris
- * celles de ses réponses, qui partent en cascade côté base et n'étaient relevées nulle part.
+ * Deleting a comment used to leave its attachments in MinIO indefinitely — including those of its replies,
+ * which go in cascade on the database side and were not picked up anywhere.
  */
-describe('remove — purge du stockage', () => {
+describe('remove: storage purge', () => {
   beforeEach(() => {
     vi.mocked(prisma.comment.findUnique).mockResolvedValue({
       userId: author.id,
@@ -554,7 +552,7 @@ describe('remove — purge du stockage', () => {
     ] as never);
   });
 
-  it('efface les pièces du commentaire ET de ses réponses', async () => {
+  it('erases the files of the comment AND of its replies', async () => {
     expect(await remove(author, 3, 1)).toBe(true);
     expect(storage.deleteObjects).toHaveBeenCalledWith([
       'comments/attachments/5/1-a.png',
@@ -562,7 +560,7 @@ describe('remove — purge du stockage', () => {
     ]);
   });
 
-  it('n’efface rien avant que la ligne ne soit partie', async () => {
+  it('erases nothing before the row has gone', async () => {
     const order: string[] = [];
     vi.mocked(prisma.comment.delete).mockImplementation(() => {
       order.push('delete');
@@ -576,19 +574,18 @@ describe('remove — purge du stockage', () => {
     expect(order).toEqual(['delete', 'storage']);
   });
 
-  it('laisse la suppression réussir si le stockage refuse', async () => {
+  it('lets the deletion succeed if storage refuses', async () => {
     vi.mocked(storage.deleteObjects).mockRejectedValueOnce(new Error('minio down'));
     await expect(remove(author, 3, 1)).resolves.toBe(true);
   });
 });
 
 /**
- * Portail client : les images jointes par le studio y étaient invisibles. On les rend, mais
- * la clé MinIO ne descend jamais sur une surface publique — elle servirait à en signer
- * d'autres.
+ * Client portal: the images attached by the studio were invisible there. They are now returned, but the MinIO
+ * key never comes down to a public surface — it would be used to sign others.
  */
-describe('publicAttachments — surface publique', () => {
-  it('rend une URL présignée sans la clé', async () => {
+describe('publicAttachments: public surface', () => {
+  it('returns a presigned URL without the key', async () => {
     const out = await publicAttachments([
       { key: 'comments/attachments/5/1-a.png', name: 'a.png', contentType: 'image/png' },
     ]);
@@ -596,7 +593,7 @@ describe('publicAttachments — surface publique', () => {
     expect(JSON.stringify(out)).not.toContain('comments/attachments');
   });
 
-  it('rend une liste vide quand le commentaire n’a rien joint', async () => {
+  it('returns an empty list when the comment attached nothing', async () => {
     expect(await publicAttachments(null)).toEqual([]);
   });
 });

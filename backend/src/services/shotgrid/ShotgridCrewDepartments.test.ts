@@ -15,30 +15,30 @@ import {
 } from './ShotgridCrewDepartments';
 import type { ShotgridClient } from './ShotgridClient';
 
-/** Client réduit au seul appel que ce module fait. */
+/** Client reduced to the only call this module makes. */
 const client = (schema: () => Promise<Set<string>>) =>
   ({ schemaFields: vi.fn(schema) }) as unknown as ShotgridClient;
 
 describe('departmentFields', () => {
-  it('ne retient que les champs que le site déclare', async () => {
-    // Demander un champ inconnu ne renvoie pas « vide » : la requête ENTIÈRE échoue, et
-    // l'équipe ne se charge plus du tout. D'où la sonde préalable.
+  it('keeps only the fields the site declares', async () => {
+    // Requesting an unknown field does not return "empty": the WHOLE request fails, and the
+    // team is no longer loaded at all. Hence the preliminary probe.
     const sg = client(() => Promise.resolve(new Set(['login', 'name', 'sg_department'])));
     expect(await departmentFields(sg)).toEqual(['sg_department']);
   });
 
-  it('rend une liste vide quand aucun des deux noms n’existe', async () => {
+  it('returns an empty list when neither name exists', async () => {
     const sg = client(() => Promise.resolve(new Set(['login', 'name', 'email'])));
     expect(await departmentFields(sg)).toEqual([]);
   });
 
-  it('rend les deux champs quand le site porte les deux', async () => {
+  it('returns both fields when the site has both', async () => {
     const sg = client(() => Promise.resolve(new Set(DEPARTMENT_FIELDS)));
     expect(await departmentFields(sg)).toEqual(['department', 'sg_department']);
   });
 
-  it('avale un schéma illisible plutôt que de faire tomber la passe', async () => {
-    // Un script sans droit sur le schéma répond 403 : c'est un confort, pas une panne.
+  it('swallows an unreadable schema rather than failing the pass', async () => {
+    // A script without rights on the schema gets a 403: that is a convenience, not an outage.
     const sg = client(() => Promise.reject(new Error('403')));
     await expect(departmentFields(sg)).resolves.toEqual([]);
   });
@@ -47,7 +47,7 @@ describe('departmentFields', () => {
 describe('departmentLabel', () => {
   const fields = ['department', 'sg_department'];
 
-  it('lit un lien d’entité, la forme standard', () => {
+  it('reads an entity link, the standard form', () => {
     const record = {
       id: 1,
       type: 'HumanUser',
@@ -56,7 +56,7 @@ describe('departmentLabel', () => {
     expect(departmentLabel(record, fields)).toBe('Compositing');
   });
 
-  it('lit le premier nommé d’une liste de liens', () => {
+  it('reads the first named entry of a list of links', () => {
     const record = {
       id: 1,
       type: 'HumanUser',
@@ -68,11 +68,11 @@ describe('departmentLabel', () => {
     expect(departmentLabel(record, fields)).toBe('Lighting');
   });
 
-  it('accepte un champ maison en texte simple', () => {
+  it('accepts a custom field as plain text', () => {
     expect(departmentLabel({ id: 1, type: 'HumanUser', sg_department: 'Roto' }, fields)).toBe('Roto');
   });
 
-  it('préfère le champ standard quand les deux sont renseignés', () => {
+  it('prefers the standard field when both are filled in', () => {
     const record = {
       id: 1,
       type: 'HumanUser',
@@ -82,7 +82,7 @@ describe('departmentLabel', () => {
     expect(departmentLabel(record, fields)).toBe('FX');
   });
 
-  it('rend null sans champ demandé — le site n’en déclare aucun', () => {
+  it('returns null without a requested field: the site declares none', () => {
     expect(
       departmentLabel(
         { id: 1, type: 'HumanUser', department: { id: 9, type: 'Department', name: 'FX' } },
@@ -91,17 +91,16 @@ describe('departmentLabel', () => {
     ).toBeNull();
   });
 
-  it('rend null sur une valeur vide ou absente', () => {
+  it('returns null on an empty or absent value', () => {
     expect(departmentLabel({ id: 1, type: 'HumanUser', sg_department: '   ' }, fields)).toBeNull();
     expect(departmentLabel({ id: 1, type: 'HumanUser' }, fields)).toBeNull();
   });
 });
 
 describe('matchDepartments', () => {
-  it('ne cherche qu’une fois par libellé distinct et ne crée rien', async () => {
-    // Une équipe de soixante personnes tient en cinq départements : autant d'allers-retours
-    // que de personnes serait du gaspillage. Et `findByKey` ne crée pas — un département
-    // ShotGrid est une unité d'organisation, pas forcément une étape du pipe.
+  it('looks up only once per distinct label and creates nothing', async () => {
+    // A team of sixty people fits in five departments: as many round trips as people would be wasteful.
+    // And `findByKey` does not create: a ShotGrid department is an organizational unit, not necessarily a step of the pipe.
     findByKey.mockReset();
     findByKey.mockImplementation((_projectId: number, key: string) =>
       Promise.resolve(key === 'Compositing' ? { id: 3, name: 'Compositing' } : null),

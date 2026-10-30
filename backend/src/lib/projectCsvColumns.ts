@@ -2,19 +2,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Reconnaissance des colonnes d'un CSV de pipeline.
+ * Recognition of the columns of a pipeline CSV.
  *
- * Un studio n'exporte jamais deux fois le même en-tête : ShotGrid écrit `sg_sequence` et
- * `sg_status_list`, ftrack `Parent`/`Status`, Kitsu `Episode`/`Task type`, un tableur
- * maison « Plan » et « Échéance ». Refuser un fichier parce que son en-tête ne colle pas
- * au nôtre, c'est renvoyer le studio écrire un script — exactement la friction qu'on veut
- * supprimer. On reconnaît donc largement, et ce que l'en-tête ne dit pas, l'utilisateur
- * le corrige à la main (`ColumnOverride`) sans retoucher son fichier.
+ * A studio never exports the same header twice: ShotGrid writes `sg_sequence` and `sg_status_list`, ftrack `Parent`/`Status`,
+ * Kitsu `Episode`/`Task type`, a home-made spreadsheet "Plan" and "Échéance". Refusing a file because its header does not match
+ * ours means sending the studio off to write a script — exactly the friction we want to remove. We therefore recognise broadly,
+ * and what the header does not say, the user corrects by hand (`ColumnOverride`) without touching their file.
  *
- * Module PUR : aucune dépendance, entièrement testable.
+ * PURE module: no dependency, fully testable.
  */
 
-/** Champs que l'import sait écrire. L'ordre est celui du gabarit exporté. */
+/** Fields the import knows how to write. The order is that of the exported template. */
 export const CSV_FIELDS = [
   'episode',
   'sequence',
@@ -36,7 +34,7 @@ export const CSV_FIELDS = [
 
 export type CsvField = (typeof CSV_FIELDS)[number];
 
-/** Champs qui décrivent la tâche portée par la ligne, et non le plan. */
+/** Fields that describe the task carried by the row, not the shot. */
 export const TASK_FIELDS: readonly CsvField[] = [
   'task',
   'department',
@@ -47,8 +45,8 @@ export const TASK_FIELDS: readonly CsvField[] = [
 ];
 
 /**
- * Synonymes acceptés, sous leur forme normalisée (minuscules, sans accent ni séparateur).
- * `sg_status_list` arrive ici en `sgstatuslist`, « Échéance » en `echeance`.
+ * Accepted synonyms, in their normalised form (lowercase, without accent or separator).
+ * `sg_status_list` arrives here as `sgstatuslist`, "Échéance" as `echeance`.
  */
 const ALIASES: Record<CsvField, readonly string[]> = {
   episode: ['episode', 'ep', 'episodecode', 'epcode', 'sgepisode', 'episodename'],
@@ -90,9 +88,8 @@ const ALIASES: Record<CsvField, readonly string[]> = {
 };
 
 /**
- * En-têtes de statut qui ne disent pas de QUOI ils parlent. Un fichier « une ligne par
- * tâche » veut dire le statut de la tâche ; un fichier « une ligne par plan » celui du
- * plan. On tranche à la lecture de l'en-tête complet, jamais au hasard.
+ * Status headers that do not say WHAT they are about. A file "one row per task" means the status of the task; a file "one
+ * row per shot" that of the shot. We decide on reading the complete header, never at random.
  */
 const AMBIGUOUS_STATUS = ['status', 'state', 'statut', 'etat', 'sgstatuslist', 'statuslist'];
 
@@ -100,8 +97,8 @@ const BY_ALIAS = new Map<string, CsvField>();
 for (const field of CSV_FIELDS) for (const alias of ALIASES[field]) BY_ALIAS.set(alias, field);
 
 /**
- * Forme de comparaison d'un en-tête : sans BOM, sans accent, sans casse, sans séparateur.
- * « Cut In », « cut_in » et « CUTIN » désignent la même colonne.
+ * Comparison form of a header: without BOM, accent, case or separator.
+ * "Cut In", "cut_in" and "CUTIN" designate the same column.
  */
 export function normaliseHeader(raw: string): string {
   return raw
@@ -112,30 +109,29 @@ export function normaliseHeader(raw: string): string {
     .replace(/[^a-z0-9]/g, '');
 }
 
-/** Correspondance décidée pour une colonne du fichier. */
+/** Match decided for a column of the file. */
 export interface DetectedColumn {
   index: number;
-  /** En-tête tel qu'écrit dans le fichier — c'est lui qu'on réaffiche. */
+  /** Header as written in the file — it is what is redisplayed. */
   header: string;
-  /** Champ visé, ou `null` si la colonne est ignorée. */
+  /** Targeted field, or `null` if the column is ignored. */
   field: CsvField | null;
-  /** La correspondance vient-elle de l'utilisateur plutôt que de l'en-tête ? */
+  /** Does the match come from the user rather than from the header? */
   manual: boolean;
 }
 
-/** Correspondance imposée par l'utilisateur pour une colonne, par position. */
+/** Match imposed by the user for a column, by position. */
 export interface ColumnOverride {
   index: number;
   field: CsvField | null;
 }
 
 /**
- * Attribue un champ à chaque colonne.
+ * Assigns a field to each column.
  *
- * Trois passes : synonymes exacts, arbitrage des en-têtes de statut ambigus, puis les
- * corrections manuelles — qui priment sur tout et peuvent aussi neutraliser une colonne
- * (`field: null`). Une même cible ne peut être visée qu'une fois : la seconde colonne
- * qui prétend au même champ est ignorée plutôt que d'écraser la première en silence.
+ * Three passes: exact synonyms, arbitration of ambiguous status headers, then the manual corrections — which take precedence
+ * over everything and can also neutralise a column (`field: null`). A given target can only be aimed at once: a second column
+ * claiming the same field is ignored rather than silently overwriting the first.
  */
 export function detectColumns(headers: string[], overrides: ColumnOverride[] = []): DetectedColumn[] {
   const columns: DetectedColumn[] = headers.map((header, index) => ({
@@ -174,7 +170,7 @@ export function detectColumns(headers: string[], overrides: ColumnOverride[] = [
   return columns;
 }
 
-/** Position de chaque champ reconnu, pour lire une ligne sans reparcourir l'en-tête. */
+/** Position of each recognised field, to read a row without rescanning the header. */
 export function indexByField(columns: DetectedColumn[]): Partial<Record<CsvField, number>> {
   const out: Partial<Record<CsvField, number>> = {};
   for (const c of columns) if (c.field) out[c.field] = c.index;

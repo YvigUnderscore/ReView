@@ -11,21 +11,19 @@ import { assertProjectWritable } from '../lib/projectGuard';
 import * as EntityThumbnailService from '../services/EntityThumbnailService';
 
 /**
- * Vignette d'une séquence, d'un plan ou d'un asset (C3) — monté sur `/api`.
+ * Thumbnail of a sequence, a shot or an asset (C3), mounted on `/api`.
  *
- * Deux temps, comme pour un avatar : on demande une URL de dépôt, on téléverse
- * directement vers MinIO, puis on enregistre la clé. La clé est calculée ici et non
- * reçue du client, et l'enregistrement la revérifie : le PATCH d'asset accepte
- * `thumbnailKey` depuis longtemps, et rien n'empêchait d'y écrire la clé d'un média
- * appartenant à un projet auquel on n'a pas accès.
+ * Two steps, as for an avatar: request an upload URL, upload directly to MinIO, then record the key.
+ * The key is computed here and not received from the client, and the recording re-verifies it: the
+ * asset PATCH has long accepted `thumbnailKey`, and nothing prevented writing into it the key of a media
+ * belonging to a project one has no access to.
  */
 const router = Router();
 
 /**
- * ⚠ Ce routeur est monté sur `/api` (il porte plusieurs préfixes) : un `router.use(authenticate)`
- * s'appliquerait à **toute** requête traversant ce point de montage, routes publiques
- * comprises — le partage client répondait 401 au lieu de servir la page. L'authentification
- * est donc posée route par route.
+ * ⚠ This router is mounted on `/api` (it carries several prefixes): a `router.use(authenticate)` would
+ * apply to **every** request crossing this mount point, public routes included: client sharing would
+ * answer 401 instead of serving the page. Authentication is therefore set route by route.
  */
 const auth = authenticate;
 
@@ -48,7 +46,7 @@ for (const [segment, holder] of [
       const id = Number(req.params.id);
       const projectId = await EntityThumbnailService.resolveProject(holder, id);
       await assertProjectAccess(req, projectId);
-      await assertProjectWritable(projectId); // 38.B : projet archivé = lecture seule
+      await assertProjectWritable(projectId); // 38.B: archived project = read-only
       res.json(await EntityThumbnailService.presign(holder, id, req.body.contentType));
     },
   );

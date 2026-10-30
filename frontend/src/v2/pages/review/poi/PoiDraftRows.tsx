@@ -3,36 +3,36 @@
 
 import { useRef } from 'react';
 import { ImagePlus, X } from 'lucide-react';
-import AttachmentDraftList from '../../../components/comments/AttachmentDraftList';
-import { fileIndexOf, toDrafts } from '../../../components/comments/attachmentDrafts';
-import { useObjectUrls } from '../../../components/comments/useObjectUrls';
-import { ATTACHMENT_ACCEPT } from '../../../../lib/commentAttachments';
-import { Textarea } from '../../../components/ui/textarea';
+import AttachmentDraftList from '@/v2/components/comments/AttachmentDraftList';
+import { fileIndexOf, toDrafts } from '@/v2/components/comments/attachmentDrafts';
+import { useObjectUrls } from '@/v2/components/comments/useObjectUrls';
+import { ATTACHMENT_ACCEPT } from '@/v2/lib/commentAttachments';
+import { Textarea } from '@/v2/components/ui/textarea';
 import type { PoiDraft, PoiDraftState } from './usePoiDraft';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
- * Points d'intérêt en préparation, dans le composeur : une rangée par point, numérotée dans
- * l'ordre de pose. On y écrit la remarque du point, on y joint ses images, on l'y supprime —
- * puis **un seul** envoi emporte tout.
+ * Points of interest in preparation, in the composer: one row per point, numbered in placement order.
+ * The point's remark is written there, its images are attached, and it is removed there, then **a single**
+ * send carries everything.
  *
- * Les rangées vivent ici et pas dans le viewer : c'est dans le composeur qu'on lit ce qui va
- * partir, et un champ de texte par point ne tient pas dans une barre d'options.
+ * The rows live here and not in the viewer: it is in the composer that one reads what is about to leave,
+ * and a text field per point does not fit in an options bar.
  *
- * La remarque s'ÉCRIT comme elle se lira (cf. `PoiNoteBody`) : elle revient à la ligne, montre
- * trois lignes au plus, et ses vignettes se posent à côté d'elle. Un champ mono-ligne défilait
- * en largeur par construction — c'est là, en tapant, que le défaut se voyait d'abord.
+ * The remark is WRITTEN as it will be read (see `PoiNoteBody`): it wraps, shows three lines at most, and
+ * its thumbnails sit beside it. A single-line field scrolled sideways by construction: that is where the
+ * defect was first seen, while typing.
  */
 
 /**
- * Trois lignes : ce qu'une remarque montre sans qu'on ait à dérouler, à l'écriture comme à la
- * lecture. Au-delà, le champ défile verticalement plutôt que de manger le composeur.
+ * Three lines: what a remark shows without having to scroll, when writing as well as when reading.
+ * Beyond that, the field scrolls vertically rather than eating the composer.
  */
 const NOTE_ROWS = 3;
 
 /**
- * Largeur de la bande de vignettes : deux d'affilée (`h-14` + l'écart), le reste passe à la
- * ligne. Sans plafond, six images écraseraient le champ de texte — elles sont `shrink-0`.
+ * Width of the thumbnail strip: two in a row (`h-14` + the gap), the rest wraps. Without a cap, six
+ * images would crush the text field: they are `shrink-0`.
  */
 const THUMBS_WIDTH = 'w-[7.5rem]';
 
@@ -49,7 +49,7 @@ export default function PoiDraftRows({ poi }: { poi: PoiDraftState }) {
   );
 }
 
-/** Une rangée : le numéro (qui met le point en avant dans la scène), la remarque, les images. */
+/** A row: the number (which highlights the point in the scene), the remark, the images. */
 function PoiDraftRow({ point, index, poi }: { point: PoiDraft; index: number; poi: PoiDraftState }) {
   const t = useT();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -59,7 +59,7 @@ function PoiDraftRow({ point, index, poi }: { point: PoiDraft; index: number; po
 
   return (
     <div className="rounded-md border border-border bg-secondary/30 p-1.5">
-      {/* `items-start` : le numéro et les actions restent en haut quand la remarque grandit. */}
+      {/* `items-start`: the number and the actions stay at the top when the remark grows. */}
       <div className="flex items-start gap-1.5">
         <button
           type="button"
@@ -75,8 +75,8 @@ function PoiDraftRow({ point, index, poi }: { point: PoiDraft; index: number; po
         >
           {index + 1}
         </button>
-        {/* `min-w-0` : sans lui, un enfant de flex refuse de rétrécir sous la largeur de son
-            contenu, et un chemin de plan repousserait les vignettes hors de la rangée. */}
+        {/* `min-w-0`: without it, a flex child refuses to shrink below the width of its
+            content, and a scene path would push the thumbnails out of the row. */}
         <Textarea
           autoGrow
           minRows={1}
@@ -99,9 +99,9 @@ function PoiDraftRow({ point, index, poi }: { point: PoiDraft; index: number; po
             if (fileRef.current) fileRef.current.value = '';
           }}
         />
-        {/* Vignettes du lot 5, réutilisées telles quelles : un seul rendu de pièce jointe en
-            préparation dans toute l'application. Elles se posent À CÔTÉ de la remarque — leur
-            marge basse de composeur n'a plus de sens dans une rangée. */}
+        {/* Thumbnails from batch 5, reused as they are: a single rendering of an attachment in
+            preparation across the whole application. They sit BESIDE the remark: their composer
+            bottom margin no longer makes sense in a row. */}
         {drafts.length > 0 && (
           <div className={`${THUMBS_WIDTH} shrink-0 [&>ul]:mb-0`}>
             <AttachmentDraftList

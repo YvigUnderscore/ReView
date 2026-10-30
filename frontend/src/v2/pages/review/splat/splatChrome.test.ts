@@ -6,21 +6,21 @@ import { canSwitchMode, modesFor, switcherModesFor } from '../chrome/modes';
 import { reconcileChrome, defaultChromeState } from '../chrome/chromeState';
 import { chromeCommandFor, type ChromeKeyContext } from '../chrome/shortcuts';
 import { DEFAULT_TOOL, toolsFor } from '../chrome/tools';
-import { hasMessage } from '../../../i18n';
+import { hasMessage } from '@/v2/i18n';
 import { splatEditRail, splatEditTools, splatSwitcherModes, splatToolsFor } from './splatChrome';
 
 /**
- * Bascule et rail du splat. « Mise en scène » et « Nettoyer » ont quitté l'en-tête au lot 12 ;
- * au lot 13, les outils d'édition **reviennent au rail** (ils avaient fini dans un popover du
- * viewer, alors que la demande était de retirer le segment, pas de ranger les outils).
+ * Switch and rail of the splat. "Staging" and "Clean up" left the header in lot 12; in lot 13,
+ * the editing tools **return to the rail** (they had ended up in a viewer popover, whereas the
+ * request was to remove the segment, not to tuck the tools away).
  *
- * Ce qui est vérifié ici est exactement ce que ces deux mouvements doivent préserver : les modes
- * restent valides, tous leurs outils restent atteignables à la souris ET au clavier, et aucune
- * lettre ne devient orpheline. C'est le défaut que le lot 4 avait soldé (un outil retiré du rail
- * qui s'armait quand même) ; il ne se rouvre ni par la bascule, ni par le rail.
+ * What is checked here is exactly what these two moves must preserve: the modes remain valid,
+ * all their tools stay reachable by mouse AND keyboard, and no letter becomes orphaned. This is
+ * the defect lot 4 had settled (a tool removed from the rail that still armed); it does not reopen
+ * through the switch or the rail.
  */
 
-/** Contexte de frappe d'un viewer splat : le rail réellement offert, éditeur monté ou non. */
+/** Typing context of a splat viewer: the rail actually offered, editor mounted or not. */
 const ctx = (mode: ChromeKeyContext['mode'] = 'explore', showEdit = true): ChromeKeyContext => ({
   kind: 'SPLAT',
   mode,
@@ -29,23 +29,23 @@ const ctx = (mode: ChromeKeyContext['mode'] = 'explore', showEdit = true): Chrom
   toolsOf: (m) => splatToolsFor(m, showEdit),
 });
 
-describe('splatSwitcherModes — la bascule du splat s’efface', () => {
-  it('ne propose plus « Mise en scène » ni « Nettoyer »', () => {
+describe('splatSwitcherModes — the splat switch is removed', () => {
+  it('no longer offers "Staging" or "Clean up"', () => {
     const values = splatSwitcherModes().map((m) => m.value);
     expect(values).not.toContain('stage');
     expect(values).not.toContain('clean');
-    // Le chrome spatial commun, lui, les connaît toujours : c'est le splat qui s'en écarte.
+    // The common spatial chrome still knows them: it is the splat that departs from it.
     expect(switcherModesFor('SPLAT').map((m) => m.value)).toContain('clean');
   });
 
-  it('n’a plus qu’« Explorer » — un segment unique ne bascule vers rien', () => {
+  it('has only "Explore" left: a single segment switches to nothing', () => {
     expect(splatSwitcherModes().map((m) => m.value)).toEqual(['explore']);
     expect(canSwitchMode('ADMIN', splatSwitcherModes().length)).toBe(false);
   });
 
-  it('laisse les deux modes VALIDES : rien n’est supprimé, seul le chemin change', () => {
-    // `reconcileChrome` juge sur la liste complète : un outil d'édition armé y reste armé,
-    // sinon le retrait du segment aurait emporté l'outil avec lui.
+  it('leaves both modes VALID: nothing is deleted, only the path changes', () => {
+    // `reconcileChrome` judges on the full list: an editing tool armed there stays armed,
+    // otherwise removing the segment would have taken the tool with it.
     expect(modesFor('SPLAT').map((m) => m.value)).toEqual(
       expect.arrayContaining(['stage', 'clean', 'annotate']),
     );
@@ -53,27 +53,27 @@ describe('splatSwitcherModes — la bascule du splat s’efface', () => {
     expect(reconcileChrome(state, 'SPLAT')).toBe(state);
   });
 
-  it('retire les deux segments des touches numériques — un segment absent ne s’arme pas', () => {
+  it('removes both segments from the number keys: an absent segment cannot be armed', () => {
     expect(chromeCommandFor('1', ctx())).toEqual({ action: 'mode', mode: 'explore' });
     expect(chromeCommandFor('2', ctx())).toBeNull();
     expect(chromeCommandFor('3', ctx())).toBeNull();
   });
 });
 
-describe('splatEditTools — les outils d’édition reviennent au rail, pas à la trappe', () => {
-  it('liste les outils du mode « Nettoyer », hors état de repos', () => {
+describe('splatEditTools — the editing tools return to the rail, not through the trapdoor', () => {
+  it('lists the tools of the "Clean up" mode, excluding the rest state', () => {
     const ids = splatEditTools().map((tool) => tool.id);
-    // Sélectionner, supprimer (par le masque), déplacer, mettre à l'échelle : la demande.
+    // Select, delete (via the mask), move, scale: the request.
     expect(ids).toEqual(['sel-rect', 'sel-lasso', 'sel-brush', 'volume', 'translate', 'rotate', 'scale']);
     expect(ids).not.toContain(DEFAULT_TOOL);
     for (const tool of splatEditTools()) expect(hasMessage(tool.labelKey)).toBe(true);
   });
 
-  it('ne recopie rien : c’est la liste de `toolsFor`, moins le repos', () => {
+  it('copies nothing: it is the `toolsFor` list, minus the rest state', () => {
     expect(splatEditTools()).toEqual(toolsFor('clean', 'SPLAT').filter((t) => t.id !== DEFAULT_TOOL));
   });
 
-  it('chacun garde sa lettre, depuis l’exploration comme depuis l’édition', () => {
+  it('each keeps its letter, from exploration as from editing', () => {
     for (const tool of splatEditTools())
       for (const mode of ['explore', 'clean'] as const)
         expect(chromeCommandFor(tool.key, ctx(mode))).toEqual({
@@ -83,18 +83,18 @@ describe('splatEditTools — les outils d’édition reviennent au rail, pas à 
         });
   });
 
-  it('n’oublie aucun outil armable : pas de lettre orpheline hors du rail', () => {
-    // L'inverse du test précédent : tout ce que le clavier peut armer dans « Nettoyer » doit
-    // se trouver à la souris. Un outil au clavier sans bouton est exactement le défaut qu'on
-    // se refuse à rouvrir, dans l'autre sens.
+  it('forgets no armable tool: no orphaned letter outside the rail', () => {
+    // The reverse of the previous test: everything the keyboard can arm in "Clean up" must
+    // be found with the mouse. A tool on the keyboard with no button is exactly the defect we
+    // refuse to reopen, in the other direction.
     const shown = new Set(splatEditTools().map((tool) => tool.id));
     for (const tool of toolsFor('clean', 'SPLAT'))
       if (tool.id !== DEFAULT_TOOL) expect(shown.has(tool.id)).toBe(true);
   });
 });
 
-describe('splatEditRail — le second groupe du rail', () => {
-  it('arme « Nettoyer » et porte le titre qu’avait le popover', () => {
+describe('splatEditRail — the second rail group', () => {
+  it('arms "Clean up" and bears the title the popover had', () => {
     const rail = splatEditRail(true)!;
     expect(rail.mode).toBe('clean');
     expect(rail.titleKey).toBe('viewer.edit.title');
@@ -102,20 +102,20 @@ describe('splatEditRail — le second groupe du rail', () => {
     expect(rail.tools).toEqual(splatEditTools());
   });
 
-  it('n’existe pas sans éditeur monté — ces outils n’écriraient nulle part', () => {
+  it('does not exist without a mounted editor: these tools would write nowhere', () => {
     expect(splatEditRail(false)).toBeUndefined();
   });
 });
 
-describe('splatToolsFor — le rail et le clavier lisent la même liste', () => {
-  it('rend le rail du mode demandé', () => {
+describe('splatToolsFor — the rail and the keyboard read the same list', () => {
+  it('renders the rail of the requested mode', () => {
     expect(splatToolsFor('explore', true)).toEqual(toolsFor('explore', 'SPLAT'));
     expect(splatToolsFor('annotate', false)).toEqual(toolsFor('annotate', 'SPLAT'));
   });
 
-  it('ferme « Nettoyer » au CLAVIER quand le groupe du rail a disparu', () => {
-    // La moitié qui manquait : sans elle, `B`/`L`/`T`… armaient encore des outils que plus rien
-    // ne montrait, et qui n'écrivent nulle part.
+  it('closes "Clean up" on the KEYBOARD when the rail group has disappeared', () => {
+    // The missing half: without it, `B`/`L`/`T`… still armed tools that nothing shows any more,
+    // and which write nowhere.
     expect(splatToolsFor('clean', false)).toEqual([]);
     expect(splatToolsFor('clean', true).length).toBeGreaterThan(1);
     for (const tool of splatEditTools())
@@ -124,7 +124,7 @@ describe('splatToolsFor — le rail et le clavier lisent la même liste', () => 
       );
   });
 
-  it('laisse la brosse de surface intacte sans éditeur : elle annote, elle n’édite pas', () => {
+  it('leaves the surface brush intact without an editor: it annotates, it does not edit', () => {
     expect(chromeCommandFor('p', ctx('explore', false))).toEqual({
       action: 'tool',
       mode: 'annotate',

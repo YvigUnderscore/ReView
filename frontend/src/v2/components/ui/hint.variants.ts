@@ -2,19 +2,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Les classes de l'aide, isolées du composant pour être vérifiables sans rendu — même
- * découpage que `button.variants.ts` et `card.variants.ts`.
+ * Hint classes, isolated from the component so they can be checked without rendering — same
+ * split as `button.variants.ts` and `card.variants.ts`.
  *
- * La règle que ce fichier encode : **une note explicative se réduit, un message d'erreur
- * ou de confirmation jamais**. Une aide qu'on ne lit pas a rempli son office ; une erreur
- * qu'on ne lit pas fait perdre la donnée. Les tons `error` et `success` restent donc à
- * `text-sm` quoi qu'on demande, et `size` ne s'applique qu'aux notes.
+ * The rule this file encodes: **an explanatory note shrinks, an error or confirmation
+ * message never does**. A hint nobody reads has failed its job; an error nobody reads loses
+ * the data. The `error` and `success` tones therefore stay at `text-sm` whatever is asked,
+ * and `size` only applies to notes.
  */
 
-/** `note` : la ligne d'aide d'un réglage. `fine` : la note de bas de panneau, un cran plus bas. */
+/** `note`: the help line of a setting. `fine`: the panel footnote, one step lower. */
 export type HintSize = 'note' | 'fine';
 
-/** `muted` explique ; `error` et `success` rendent compte d'une action. */
+/** `muted` explains; `error` and `success` report on an action. */
 export type HintTone = 'muted' | 'error' | 'success';
 
 export function hintClasses(tone: HintTone = 'muted', size: HintSize = 'note'): string {

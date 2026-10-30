@@ -4,7 +4,7 @@
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { ClipboardCheck, FolderOpen } from 'lucide-react';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { reviewPath } from '../../lib/slug';
 import EntityCard, { EntityContainer } from '../../components/EntityCard';
@@ -14,21 +14,21 @@ import { mediaKindLabels, type ReviewItem } from './reviewsTypes';
 import { useT } from '../../i18n';
 
 /**
- * « Assigned to me » — les reviews qu'on m'a confiées (Phase 49).
+ * "Assigned to me" — the reviews assigned to me (Phase 49).
  *
- * La page Reviews répondait à « qu'est-ce qui est sorti ? » ; elle ne répondait pas à
- * « qu'est-ce qu'on attend de moi ? ». Un artiste ouvrait mille cartes pour retrouver les
- * trois plans qu'un superviseur lui avait demandé de regarder à l'oral. L'encart est cette
- * réponse-là, en tête de page, avant les filtres qu'il faut penser à poser.
+ * The Reviews page answered "what has been published?"; it did not answer "what is expected of
+ * me?". An artist would open a thousand cards to find the three shots a supervisor had asked
+ * them to look at out loud. The panel is that answer, at the top of the page, before the filters
+ * one has to remember to set.
  *
- * Il disparaît quand il est vide : un cadre « rien pour vous » en permanence en haut de la
- * page coûterait à tout le monde le bénéfice qu'il apporte à ceux qui ont une file.
+ * It disappears when empty: a permanent "nothing for you" frame at the top of the page would cost
+ * everyone the benefit it brings to those who do have a queue.
  *
- * Les cartes sont celles de la page, en vue compacte quel que soit le réglage d'affichage :
- * un encart de six grandes vignettes repousserait la liste elle-même hors de l'écran.
+ * The cards are the page's own, in compact view whatever the display setting: a panel of six
+ * large thumbnails would push the list itself off the screen.
  */
 
-/** Assez pour voir sa file d'un coup d'œil, trop peu pour cacher la page. */
+/** Enough to see one's queue at a glance, too few to hide the page. */
 const PREVIEW_SIZE = 6;
 
 export default function AssignedToMeSection({ onSeeAll }: { onSeeAll: () => void }) {
@@ -36,8 +36,8 @@ export default function AssignedToMeSection({ onSeeAll }: { onSeeAll: () => void
   const navigate = useNavigate();
   const kindLabels = mediaKindLabels(t);
   const query = `assigned=me&pageSize=${PREVIEW_SIZE}`;
-  // Même préfixe de clé que la liste (`['reviews', …]`) : les invalidations déjà écrites —
-  // décision posée, média mis à la corbeille — rafraîchissent l'encart avec elle.
+  // Same key prefix as the list (`['reviews', …]`): the invalidations already written — decision
+  // set, media moved to the trash — refresh the panel along with it.
   const { data } = useQuery({
     queryKey: qk.reviews(query),
     queryFn: () => api.get<{ items: ReviewItem[]; total: number }>(`/api/media/reviews?${query}`),
@@ -62,8 +62,8 @@ export default function AssignedToMeSection({ onSeeAll }: { onSeeAll: () => void
             onClick={onSeeAll}
             className="ml-auto rounded-md px-2 py-1 text-xs text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
           >
-            {/* « Tout voir » existe déjà, traduit dans les quatorze langues : une
-                quinzième formulation du même mot coûterait quatorze traductions. */}
+            {/* "See all" already exists, translated into all fourteen languages: a fifteenth
+                wording of the same word would cost fourteen translations. */}
             {t('refs.seeAll')}
           </button>
         )}

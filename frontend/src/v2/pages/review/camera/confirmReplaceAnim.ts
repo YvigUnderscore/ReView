@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { toast } from 'sonner';
-import { t } from '../../../i18n';
+import { t } from '@/v2/i18n';
 
 /**
- * Avertit avant d'écraser une animation caméra existante (Phase 27) : toast non bloquant avec
- * action « Remplacer ». Utilisé par les presets (orbite) qui remplacent toutes les clés.
+ * Warns before overwriting an existing camera animation (Phase 27): a non-blocking toast with a
+ * "Replace" action. Used by the presets (orbit) that replace all keys.
  */
 export function confirmReplaceAnim(onConfirm: () => void): void {
   toast(t('camera.replaceAnim'), {
@@ -15,7 +15,7 @@ export function confirmReplaceAnim(onConfirm: () => void): void {
   });
 }
 
-/** Avertit avant d'effacer la présentation persistée (caméra, animation, mise en scène). */
+/** Warns before erasing the persisted presentation (camera, animation, staging). */
 export function confirmClearPresentation(onConfirm: () => void): void {
   toast(t('camera.clearPresentation'), {
     description: t('camera.clearConfirm'),

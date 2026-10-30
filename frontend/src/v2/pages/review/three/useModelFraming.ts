@@ -9,10 +9,10 @@ import { useFrameShortcuts } from '../viewer/useFrameShortcuts';
 import type { SceneRuntime } from './useModel3DThree';
 
 /**
- * Cadrage F/H du viewer 3D (unifié avec le splat) — extrait de `useModel3DThree` (39.C, budget de
- * lignes) : `F` cadre la **sélection** (prim USD sélectionné, via `frameTargetRef`) ou le modèle
- * entier, en conservant la direction de vue ; `H` rétablit la vue d'origine (face au modèle,
- * cible au centre). Les raccourcis sont désactivés en vol.
+ * F/H framing of the 3D viewer (unified with the splat) — extracted from `useModel3DThree` (39.C,
+ * line budget): `F` frames the **selection** (USD prim selected, via `frameTargetRef`) or the whole
+ * model, keeping the view direction; `H` restores the original view (facing the model, target at
+ * the center). Shortcuts are disabled during flight.
  */
 export function useModelFraming(params: {
   runtimeRef: RefObject<SceneRuntime | null>;
@@ -22,8 +22,8 @@ export function useModelFraming(params: {
 }) {
   const { runtimeRef, threeRef, ready, isFlying } = params;
 
-  // Cible de cadrage `F` (46.I) : fournisseur enregistré par la review (objets du prim USD
-  // sélectionné) — vide ou absent = cadrer le modèle entier, comportement historique.
+  // `F` framing target (46.I): provider registered by the review (objects of the selected USD prim)
+  // — empty or absent = frame the whole model, the historical behavior.
   const frameTargetRef = useRef<(() => THREE.Object3D[]) | null>(null);
   const setFrameTarget = useCallback((provider: (() => THREE.Object3D[]) | null) => {
     frameTargetRef.current = provider;
@@ -45,8 +45,8 @@ export function useModelFraming(params: {
     const { camera, controls } = rt.scene;
     const dist = fitDistance(rt.modelRadius, camera.fov, camera.aspect || 1);
     if (dist <= 0) return;
-    // Le modèle est posé sur la grille (`y = 0`) : la cible est son centre, pas l'origine — c'est
-    // aussi l'axe autour duquel le turntable fait orbiter la caméra.
+    // The model rests on the grid (`y = 0`): the target is its center, not the origin — it is also
+    // the axis around which the turntable orbits the camera.
     const { modelCenter } = rt;
     camera.position.set(modelCenter.x, modelCenter.y, modelCenter.z + dist);
     controls.target.copy(modelCenter);

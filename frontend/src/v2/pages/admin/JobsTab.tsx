@@ -2,11 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { RotateCcw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
-import { qk } from '../../lib/query';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { SkeletonRows } from '../../components/ui/skeleton';
@@ -14,23 +12,15 @@ import { QueryState } from '../../components/ui/query-state';
 import { Panel } from './AdminPrimitives';
 import { t, useT, type MessageKey } from '../../i18n';
 import { Hint } from '../../components/ui/hint';
-
-interface JobRow {
-  id: string | null;
-  name: string;
-  data: Record<string, unknown>;
-  failedReason: string | null;
-  attemptsMade: number;
-  createdAt: string | null;
-}
-
-interface QueueView {
-  key: string;
-  counts: Record<string, number>;
-  failed: JobRow[];
-  active: JobRow[];
-  waiting: JobRow[];
-}
+import {
+  derivedPurgeKey,
+  jobsApi,
+  jobsKey,
+  useDerivedPurgeQuery,
+  useJobsQuery,
+  type JobRow,
+  type PurgeConfig,
+} from './jobsApi';
 
 const QUEUE_LABEL_KEY: Record<string, MessageKey> = {
   media: 'jobs.ffmpeg',
@@ -38,22 +28,18 @@ const QUEUE_LABEL_KEY: Record<string, MessageKey> = {
   webhooks: 'jobs.webhooks',
 };
 
-/** Dashboard BullMQ (37.C) : état des files, jobs échoués (retry), purge. */
+/** BullMQ dashboard (37.C): queue state, failed jobs (retry), purge. */
 export default function JobsTab() {
   const t = useT();
   const qc = useQueryClient();
-  const jobsQ = useQuery({
-    queryKey: qk.admin('jobs'),
-    queryFn: () => api.get<{ queues: QueueView[] }>('/api/admin/jobs').then((d) => d.queues),
-    refetchInterval: 5000,
-  });
+  const jobsQ = useJobsQuery();
   if (!jobsQ.data) return <QueryState query={jobsQ} skeleton={<SkeletonRows count={5} />} />;
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: qk.admin('jobs') });
+  const invalidate = () => qc.invalidateQueries({ queryKey: jobsKey });
 
   const retry = async (queue: string, id: string) => {
     try {
-      await api.post(`/api/admin/jobs/${queue}/${id}/retry`);
+      await jobsApi.retry(queue, id);
       toast.success(t('jobs.retried'));
       void invalidate();
     } catch (err) {
@@ -62,7 +48,7 @@ export default function JobsTab() {
   };
   const clean = async (queue: string) => {
     try {
-      const { removed } = await api.post<{ removed: number }>(`/api/admin/jobs/${queue}/clean-failed`);
+      const { removed } = await jobsApi.cleanFailed(queue);
       toast.success(t('jobs.cleanedFailed', { count: removed }));
       void invalidate();
     } catch (err) {
@@ -139,19 +125,11 @@ function jobLabel(j: JobRow): string {
   return `${j.name}${media}${hook}`;
 }
 
-interface PurgeConfig {
-  enabled: boolean;
-  keepVersions: number;
-}
-
-/** Purge des dérivés obsolètes (37.H) : config + exécution manuelle. */
+/** Purge of obsolete derivatives (37.H): configuration + manual run. */
 function DerivedPurgePanel() {
   const t = useT();
   const qc = useQueryClient();
-  const { data } = useQuery({
-    queryKey: qk.admin('derived-purge'),
-    queryFn: () => api.get<{ config: PurgeConfig }>('/api/admin/derived-purge').then((d) => d.config),
-  });
+  const { data } = useDerivedPurgeQuery();
   const [draft, setDraft] = useState<PurgeConfig | null>(null);
   const [busy, setBusy] = useState(false);
   if (data && !draft) setDraft(data);
@@ -160,8 +138,8 @@ function DerivedPurgePanel() {
   const save = async (next: PurgeConfig) => {
     setDraft(next);
     try {
-      await api.put('/api/admin/derived-purge', next);
-      void qc.invalidateQueries({ queryKey: qk.admin('derived-purge') });
+      await jobsApi.savePurge(next);
+      void qc.invalidateQueries({ queryKey: derivedPurgeKey });
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
     }
@@ -169,7 +147,7 @@ function DerivedPurgePanel() {
   const run = async () => {
     setBusy(true);
     try {
-      const { purged } = await api.post<{ purged: number }>('/api/admin/derived-purge/run');
+      const { purged } = await jobsApi.runPurge();
       toast.success(purged > 0 ? t('jobs.purgedDerived', { count: purged }) : t('jobs.nothingToPurge'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));

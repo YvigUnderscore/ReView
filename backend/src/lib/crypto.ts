@@ -6,9 +6,9 @@ import { env } from '../config/env';
 import { logger } from './logger';
 
 /**
- * Comparaison de deux secrets en temps constant. Les chaînes sont d'abord réduites à un
- * SHA-256 : `timingSafeEqual` exige des buffers de même longueur, et hasher évite en prime
- * de laisser fuir la longueur du secret attendu par le temps de réponse.
+ * Constant-time comparison of two secrets. The strings are first reduced to a SHA-256: `timingSafeEqual`
+ * requires buffers of equal length, and hashing also avoids leaking the length of the expected secret
+ * through response timing.
  */
 export function secretEquals(a: string | undefined | null, b: string | undefined | null): boolean {
   if (typeof a !== 'string' || typeof b !== 'string') return false;
@@ -18,39 +18,38 @@ export function secretEquals(a: string | undefined | null, b: string | undefined
 }
 
 /**
- * Chiffrement symétrique des secrets stockés en base (mot de passe SMTP, secret client
- * OIDC, secret de webhook, identifiants ShotGrid, secret TOTP) — AES-256-GCM.
- * La clé (32 octets) est dérivée par SHA-256 de `APP_ENCRYPTION_KEY` (ou à défaut de
- * `JWT_SECRET`). Format de sortie : `iv.tag.ciphertext.kid` (base64, `kid` en hexa).
+ * Symmetric encryption of secrets stored in the database (SMTP password, OIDC client secret, webhook
+ * secret, ShotGrid credentials, TOTP secret) — AES-256-GCM.
+ * The key (32 bytes) is derived by SHA-256 from `APP_ENCRYPTION_KEY` (or, failing that, `JWT_SECRET`).
+ * Output format: `iv.tag.ciphertext.kid` (base64, `kid` in hex).
  */
 
 /**
- * Empreinte de la clé, écrite EN CLAIR dans l'enveloppe.
+ * Fingerprint of the key, written IN CLEAR in the envelope.
  *
- * Elle ne protège rien — GCM s'en charge — elle diagnostique. Sans elle, un secret chiffré
- * avec une autre clé est indistinguable d'un secret corrompu : les deux sortent en `null`,
- * et l'exploitant ne sait pas s'il doit retrouver sa clé ou ressaisir la valeur. Or le cas
- * arrive par un geste NORMAL : `APP_ENCRYPTION_KEY` étant facultative, la clé dérive par
- * défaut de `JWT_SECRET` — faire tourner ce dernier après une fuite de jeton (la réponse
- * correcte à un incident) rend d'un coup illisibles TOUS les secrets stockés, en silence.
- * 32 bits d'empreinte suffisent à le dire, et ne disent rien de la clé elle-même.
+ * It protects nothing — GCM does that — it diagnoses. Without it, a secret encrypted with another key is
+ * indistinguishable from a corrupted secret: both come out as `null`, and the operator cannot tell whether
+ * to recover the key or re-enter the value. The case arises from a NORMAL action: `APP_ENCRYPTION_KEY`
+ * being optional, the key derives by default from `JWT_SECRET` — rotating the latter after a token leak
+ * (the right response to an incident) makes ALL stored secrets silently unreadable at once.
+ * 32 bits of fingerprint are enough to say so, and reveal nothing about the key itself.
  */
 const KEY_ID_HEX_LENGTH = 8;
 
-/** Fenêtre d'anti-répétition des journaux : une panne de clé touche chaque secret lu. */
+/** Log anti-repeat window: a key failure hits every secret read. */
 const LOG_THROTTLE_MS = 60_000;
 
-const LOG_UNREADABLE = '[crypto] secret stocké illisible';
+const LOG_UNREADABLE = '[crypto] stored secret unreadable';
 const REMEDY_DERIVED =
-  'APP_ENCRYPTION_KEY absente : la clé dérive de JWT_SECRET, qu’une rotation suffit à casser. La poser explicitement découple les deux, puis ressaisir les secrets.';
+  'APP_ENCRYPTION_KEY missing: the key derives from JWT_SECRET, which a rotation is enough to break. Setting it explicitly decouples the two; then re-enter the secrets.';
 const REMEDY_EXPLICIT =
-  'Restaurer APP_ENCRYPTION_KEY à sa valeur précédente, ou ressaisir les secrets concernés (SMTP, OIDC, webhooks, ShotGrid, 2FA).';
+  'Restore APP_ENCRYPTION_KEY to its previous value, or re-enter the affected secrets (SMTP, OIDC, webhooks, ShotGrid, 2FA).';
 const LOG_DERIVED_KEY =
-  '[crypto] APP_ENCRYPTION_KEY absente : les secrets stockés sont chiffrés avec une clé dérivée de JWT_SECRET. Faire tourner JWT_SECRET les rendra tous illisibles.';
+  '[crypto] APP_ENCRYPTION_KEY missing: stored secrets are encrypted with a key derived from JWT_SECRET. Rotating JWT_SECRET will make them all unreadable.';
 
 const keyMaterial = (): string => env.APP_ENCRYPTION_KEY ?? env.JWT_SECRET;
 
-/** Vrai si la clé de chiffrement dérive de `JWT_SECRET`, faute d'`APP_ENCRYPTION_KEY`. */
+/** True if the encryption key derives from `JWT_SECRET`, because `APP_ENCRYPTION_KEY` is missing. */
 export const usesDerivedEncryptionKey = (): boolean => env.APP_ENCRYPTION_KEY === undefined;
 
 function key(): Buffer {
@@ -63,12 +62,11 @@ const lastLogged = new Map<string, number>();
 let derivedKeyWarned = false;
 
 /**
- * Consigne une panne de déchiffrement — ERREUR, pas silence, et avec le geste à faire.
+ * Records a decryption failure — an ERROR, not silence, and with the action to take.
  *
- * Le fail-open historique se lisait ici : chaque appelant remplaçait le `null` par `''`
- * ou `undefined` et continuait (signature HMAC vide pour un webhook, envoi SMTP sans mot
- * de passe). Rendre `null` reste le contrat — mais la panne laisse désormais une trace
- * exploitable, une seule par minute et par motif.
+ * The historic fail-open happened here: every caller replaced the `null` with `''` or `undefined` and
+ * carried on (empty HMAC signature for a webhook, SMTP send without a password). Returning `null` remains
+ * the contract — but the failure now leaves an actionable trace, one per minute and per pattern.
  */
 function reportUnreadable(reason: string, context: Record<string, unknown> = {}): void {
   const now = Date.now();
@@ -79,8 +77,8 @@ function reportUnreadable(reason: string, context: Record<string, unknown> = {})
     {
       reason,
       derivedEncryptionKey: derived,
-      // Le geste à faire voyage avec l'événement : un journal qui dit seulement « null »
-      // envoie l'exploitant chercher dans le code au pire moment.
+      // The action to take travels with the event: a log that only says "null" sends the operator
+      // searching the code at the worst moment.
       remedy: derived ? REMEDY_DERIVED : REMEDY_EXPLICIT,
       ...context,
     },
@@ -88,14 +86,14 @@ function reportUnreadable(reason: string, context: Record<string, unknown> = {})
   );
 }
 
-/** Une seule fois par process : dire que l'installation repose sur la clé dérivée. */
+/** Once per process: states that the installation relies on the derived key. */
 function warnDerivedKeyOnce(): void {
   if (derivedKeyWarned || !usesDerivedEncryptionKey()) return;
   derivedKeyWarned = true;
   logger.warn(LOG_DERIVED_KEY);
 }
 
-/** Chiffre une chaîne → `iv.tag.ciphertext.kid`. */
+/** Encrypts a string → `iv.tag.ciphertext.kid`. */
 export function encryptSecret(plain: string): string {
   warnDerivedKeyOnce();
   const k = key();
@@ -107,17 +105,17 @@ export function encryptSecret(plain: string): string {
 }
 
 /**
- * Déchiffre une valeur produite par `encryptSecret`. `null` si le format est invalide, si
- * l'enveloppe a été altérée, ou si la clé n'est plus la bonne — ce dernier cas étant
- * désormais NOMMÉ dans le journal au lieu de se confondre avec les deux autres.
+ * Decrypts a value produced by `encryptSecret`. `null` if the format is invalid, if the envelope was
+ * altered, or if the key is no longer the right one — this last case is now NAMED in the log instead of
+ * being confused with the other two.
  *
- * Les valeurs écrites avant l'empreinte de clé n'ont que trois champs : elles restent
- * déchiffrables telles quelles, et se réécriront au format complet à la prochaine saisie.
+ * Values written before the key fingerprint have only three fields: they remain decryptable as-is, and
+ * will be rewritten in the full format at the next save.
  */
 export function decryptSecret(payload: string): string | null {
   warnDerivedKeyOnce();
   const parts = payload.split('.');
-  // `dataB` peut être vide (chiffré d'une chaîne vide) ; `kid` est facultatif (héritage).
+  // `dataB` may be empty (encrypted empty string); `kid` is optional (legacy).
   if (parts.length !== 3 && parts.length !== 4) {
     reportUnreadable('format', { fields: parts.length });
     return null;
@@ -139,7 +137,7 @@ export function decryptSecret(payload: string): string | null {
   }
 }
 
-/** Remise à zéro de l'anti-répétition des journaux (tests). */
+/** Resets the log anti-repeat state (tests). */
 export const __cryptoTesting = {
   resetLogState(): void {
     lastLogged.clear();

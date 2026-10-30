@@ -5,10 +5,10 @@ import PaintOverlay from './PaintOverlay';
 import type { SplatPaintState } from './useSplatPaint';
 
 /**
- * Calque de la brosse de surface, tel que les **deux** panes spatiaux le montent : il n'existe
- * que quand un des deux outils de brosse est armé et que la scène est prête. Le splat et le
- * modèle 3D posaient la même condition et les mêmes six props ; l'un des deux aurait fini par
- * dériver (et le viewer 3D n'avait rien du tout avant le lot 13).
+ * Layer of the surface brush, as **both** spatial panes mount it: it only exists while one of the
+ * two brush tools is armed and the scene is ready. The splat and the 3D model shared the same
+ * condition and the same six props; one of the two would eventually have drifted (and the 3D
+ * viewer had nothing at all before lot 13).
  */
 export default function SurfaceBrushLayer({
   paint,
@@ -16,9 +16,9 @@ export default function SurfaceBrushLayer({
   getCanvas,
 }: {
   paint: SplatPaintState;
-  /** Scène montée : sans elle, le geste n'aurait aucune surface à interroger. */
+  /** Scene mounted: without it, the gesture would have no surface to query. */
   ready: boolean;
-  /** Canvas de rendu — la molette lui est relayée pour conserver le zoom d'orbite. */
+  /** Render canvas: the wheel is relayed to it to keep the orbit zoom. */
   getCanvas: () => HTMLElement | null;
 }) {
   if (!paint.armed || !ready) return null;

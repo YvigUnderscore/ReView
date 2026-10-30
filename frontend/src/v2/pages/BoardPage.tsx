@@ -16,37 +16,37 @@ import { useBoardDocument } from './board/useBoardDocument';
 import type { BoardScope } from './board/boardApi';
 
 /**
- * Board mood/reference (Excalidraw, MIT) — un board par Projet et un par Asset (9.B).
- * Le chargement, l'autosave et l'édition concurrente vivent dans `useBoardDocument` ; les
- * images collées sont déposées dans MinIO plutôt qu'embarquées en base64 dans le document
- * (cf. `board/boardFiles`). Drag-drop d'images natif + insertion depuis la bibliothèque
- * média (médias publiés du projet).
+ * Board mood/reference (Excalidraw, MIT): one board per Project and one per Asset (9.B).
+ * Loading, autosave and concurrent editing live in `useBoardDocument`; pasted
+ * images are uploaded to MinIO rather than embedded as base64 in the document
+ * (see `board/boardFiles`). Native image drag-drop + insertion from the media library
+ * (published media of the project).
  *
- * **Undo/redo : celui d'Excalidraw, et rien d'autre.** L'éditeur porte son propre historique
- * (Ctrl+Z, Ctrl+Maj+Z, et Ctrl+Y sous Windows), complet et fidèle à chaque élément de la scène.
- * Lui en superposer un autre le doublerait sans rien gagner, et le nôtre ne saurait pas ce
- * qu'Excalidraw sait. Aucun de nos gestionnaires ne le lui prend : le registre partagé
- * (`lib/undoScope`) n'est monté que dans la review, et les raccourcis globaux (`lib/shortcuts`)
- * se retirent dès qu'une touche porte Ctrl. L'annulation d'un board est donc son affaire ;
- * l'autosave débouncée vient derrière, et enregistre l'état annulé comme n'importe quel autre.
+ * **Undo/redo: Excalidraw's own, and nothing else.** The editor keeps its own history
+ * (Ctrl+Z, Ctrl+Shift+Z, and Ctrl+Y on Windows), complete and faithful to each element of the scene.
+ * Layering another on top would double it for no gain, and ours would not know what
+ * Excalidraw knows. None of our handlers takes it from it: the shared registry
+ * (`lib/undoScope`) is only mounted in the review, and the global shortcuts (`lib/shortcuts`)
+ * step aside as soon as a key carries Ctrl. Undoing on a board is therefore its business;
+ * the debounced autosave comes after, and saves the undone state like any other.
  */
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type ExcalidrawApi = any;
 
 /**
- * Nos codes de langue vers ceux d'Excalidraw, qui a son propre catalogue.
+ * Our language codes mapped to those of Excalidraw, which has its own catalogue.
  *
- * Sans `langCode`, l'éditeur reste en anglais dans les quatorze langues — « To move canvas,
- * hold mouse wheel… », « Shapes », « Library » — au milieu d'une interface traduite.
+ * Without `langCode`, the editor stays in English in all fourteen languages — "To move canvas,
+ * hold mouse wheel…", "Shapes", "Library" — in the middle of a translated interface.
  *
- * Trois de nos langues n'existent pas chez lui : le breton et le corse retombent sur
- * l'anglais, l'alsacien sur l'allemand, dont il est bien plus proche.
+ * Three of our languages do not exist on its side: Breton and Corsican fall back to
+ * English, Alsatian to German, to which it is much closer.
  */
 /* eslint-disable no-restricted-syntax --
-   Ce ne sont pas des locales de formatage (dates, nombres) mais les identifiants du
-   catalogue d'Excalidraw, qui n'a pas le même jeu de codes que nous. `intlLocale()` n'a
-   rien à voir ici : la seule question est « quel fichier de traduction Excalidraw charger ». */
+   These are not formatting locales (dates, numbers) but the identifiers of the
+   Excalidraw catalogue, which does not have the same set of codes as ours. `intlLocale()` has
+   nothing to do with it here: the only question is "which Excalidraw translation file to load". */
 const EXCALIDRAW_LANG: Record<string, string> = {
   en: 'en',
   fr: 'fr-FR',
@@ -66,7 +66,7 @@ const EXCALIDRAW_LANG: Record<string, string> = {
 /* eslint-enable no-restricted-syntax */
 
 const uid = () => Math.random().toString(36).slice(2, 10);
-// Fichier Excalidraw construit hors du composant (règle react-hooks/purity : Date.now)
+// Excalidraw file built outside the component (react-hooks/purity rule: Date.now)
 const makeBoardFile = (fileId: string, mimeType: string, dataURL: string) => ({
   id: fileId,
   mimeType: mimeType || 'image/jpeg',

@@ -5,11 +5,11 @@ import { api } from '../../lib/apiClient';
 import { t } from '../i18n';
 
 /**
- * Web Push côté navigateur (42.B — №66) : enregistrement du service worker, abonnement
- * PushManager (clé VAPID du serveur) et synchronisation avec le backend.
+ * Browser-side Web Push (42.B — №66): service worker registration, subscription
+ * PushManager (server VAPID key) and synchronisation with the backend.
  */
 
-/** Le navigateur supporte-t-il les notifications push ? */
+/** Does the browser support push notifications? */
 export function pushSupported(): boolean {
   return (
     typeof window !== 'undefined' &&
@@ -19,7 +19,7 @@ export function pushSupported(): boolean {
   );
 }
 
-/** Clé VAPID base64url → Uint8Array (format attendu par `applicationServerKey`). */
+/** VAPID base64url key → Uint8Array (format expected by `applicationServerKey`). */
 export function urlBase64ToUint8Array(base64: string): Uint8Array<ArrayBuffer> {
   const padding = '='.repeat((4 - (base64.length % 4)) % 4);
   const b64 = (base64 + padding).replace(/-/g, '+').replace(/_/g, '/');
@@ -33,14 +33,14 @@ async function registration(): Promise<ServiceWorkerRegistration> {
   return navigator.serviceWorker.register('/sw.js');
 }
 
-/** Abonnement push actif de ce navigateur (ou null). */
+/** Active push subscription of this browser (or null). */
 export async function currentSubscription(): Promise<PushSubscription | null> {
   if (!pushSupported()) return null;
   const reg = await navigator.serviceWorker.getRegistration('/sw.js');
   return (await reg?.pushManager.getSubscription()) ?? null;
 }
 
-/** Active les notifications push : permission → abonnement → enregistrement backend. */
+/** Enables push notifications: permission → subscription → backend registration. */
 export async function enablePush(): Promise<void> {
   if (!pushSupported()) throw new Error(t('push.unsupported'));
   const permission = await Notification.requestPermission();
@@ -55,7 +55,7 @@ export async function enablePush(): Promise<void> {
   await api.post('/api/push/subscribe', sub.toJSON());
 }
 
-/** Désactive les notifications push : désabonnement navigateur + backend. */
+/** Disables push notifications: browser unsubscribe + backend. */
 export async function disablePush(): Promise<void> {
   const sub = await currentSubscription();
   if (!sub) return;

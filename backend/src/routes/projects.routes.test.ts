@@ -5,12 +5,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 
 /**
- * A5-03 — les routes de membres transmettent l'ACTEUR au service.
+ * A5-03: the member routes pass the ACTOR on to the service.
  *
- * `ProjectService` accepte un acteur optionnel (la synchronisation ShotGrid appelle sans
- * session humaine) : une route qui oublierait `req.user` compilerait sans broncher et
- * poserait une trace anonyme, exactement le trou qu'on referme. Ce test le fige côté
- * route, là où le compilateur ne peut pas le faire.
+ * `ProjectService` accepts an optional actor (the ShotGrid sync calls without a human session): a route
+ * that forgot `req.user` would compile without a murmur and leave an anonymous trace, exactly the hole
+ * being closed. This test freezes it on the route side, where the compiler cannot do it.
  */
 const { caller } = vi.hoisted(() => {
   const caller: { user: Request['user'] } = {
@@ -24,7 +23,8 @@ const { addMember, removeMember } = vi.hoisted(() => ({
   removeMember: vi.fn(),
 }));
 
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: Request, _res: Response, next: NextFunction) => {
     req.user = caller.user;
     next();
@@ -67,7 +67,7 @@ beforeEach(() => {
 });
 
 describe('POST /api/projects/:projectId/members', () => {
-  it("passe l'acteur au service, avec la cible et le rôle demandé", async () => {
+  it('passes the actor on to the service, with the target and the requested role', async () => {
     const res = await request(app).post('/api/projects/7/members').send({ userId: 42, role: 'CLIENT' });
     expect(res.status).toBe(201);
     expect(addMember).toHaveBeenCalledWith(7, 42, 'CLIENT', expect.objectContaining({ id: 5 }));
@@ -75,7 +75,7 @@ describe('POST /api/projects/:projectId/members', () => {
 });
 
 describe('DELETE /api/projects/:projectId/members/:userId', () => {
-  it("passe l'acteur au service", async () => {
+  it('passes the actor on to the service', async () => {
     const res = await request(app).delete('/api/projects/7/members/42');
     expect(res.status).toBe(204);
     expect(removeMember).toHaveBeenCalledWith(7, 42, expect.objectContaining({ id: 5 }));

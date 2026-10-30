@@ -14,33 +14,33 @@ import type { PresentationState } from '../presentation/usePresentation';
 import type { SplatViewer } from '../useSplat';
 import { useSplatCommands } from '../useSplatCommands';
 import { frameCameraToMesh } from './frameCamera';
-import { useT } from '../../../../i18n';
+import { useT } from '@/v2/i18n';
 
 export interface SplatInput {
-  /** Cadre la sélection si présente (édition), sinon le splat visible — touche F. */
+  /** Frames the selection if present (editing), otherwise the visible splat: F key. */
   frameView: () => void;
-  /** Rétablit la vue d'origine (cadrage automatique du mesh) — touche H. */
+  /** Restores the original view (automatic framing of the mesh): H key. */
   homeView: () => void;
   /**
-   * Joint — ou détache — l'animation caméra du commentaire en cours de rédaction, et dit si elle
-   * l'est déjà : le bouton du transport allume cet état, sans quoi seul un toast l'annonçait.
+   * Attaches, or detaches, the camera animation of the comment being written, and says whether it
+   * already is: the transport button lights this state, otherwise only a toast announced it.
    */
   attachLayout: { toggle: () => void; attached: boolean };
-  /** Importe une animation caméra (.abc) et la joue aussitôt. */
+  /** Imports a camera animation (.abc) and plays it immediately. */
   importLayout: (file: File) => void;
 }
 
 /**
- * Câblage pointeur/clavier du bloc splat : transport caméra, cadrage F/H, palette Ctrl+K, et les
- * deux actions d'animation caméra (joindre au commentaire, importer un fichier). Extrait de
- * `SplatReview` (budget lignes) — le composant compose, il ne câble plus.
+ * Pointer and keyboard wiring of the splat block: camera transport, F/H framing, Ctrl+K palette,
+ * and the two camera-animation actions (attach to the comment, import a file). Extracted from
+ * `SplatReview` (line budget): the component composes, it no longer wires.
  *
- * La pose des points d'intérêt n'est plus ici : elle suit l'outil du rail (`poi/usePoiPlacement`,
- * appelé par `SplatReview`), exactement comme dans le viewer 3D.
+ * Point-of-interest placement is no longer here: it follows the rail tool (`poi/usePoiPlacement`,
+ * called by `SplatReview`), exactly as in the 3D viewer.
  *
- * L'ordre de montage reprend celui d'avant l'extraction (transport caméra avant cadrage F/H) :
- * ces hooks posent des écouteurs clavier sur `window`, et on ne présume pas que l'ordre
- * d'inscription soit indifférent.
+ * The mounting order is the one from before the extraction (camera transport before F/H framing):
+ * these hooks register keyboard listeners on `window`, and one does not assume that the order of
+ * registration is irrelevant.
  */
 export function useSplatInput({
   splat,
@@ -54,22 +54,22 @@ export function useSplatInput({
 }: {
   splat: SplatViewer;
   data: MediaResp;
-  /** Annotations : animation caméra jointe au commentaire, et celle du commentaire relu. */
+  /** Annotations: camera animation attached to the comment, and the one of the comment being read. */
   ann: Annotations;
   pres: PresentationState;
-  /** Sélection de l'éditeur — F cadre dessus quand elle n'est pas vide. */
+  /** Editor selection: F frames it when it is not empty. */
   selected: ReadonlySet<number>;
-  /** Éditeur monté : il gère déjà F/H (sélection), les raccourcis viewer restent inertes. */
+  /** Editor mounted: it already handles F/H (selection), the viewer shortcuts stay inert. */
   showEdit: boolean;
-  /** Gestionnaire : peut poser des clés et éditer la mise en scène. */
+  /** Manager: can place keyframes and edit the staging. */
   canPresent: boolean;
-  /** Mode « Mise en scène » actif : Ctrl+Z pilote l'historique de l'animation. */
+  /** "Staging" mode active: Ctrl+Z drives the animation's history. */
   stageMode: boolean;
 }): SplatInput {
   const t = useT();
   const { ready, getSceneHandle } = splat;
 
-  // Raccourcis du transport caméra : Espace, K, ←/→, Début/Fin ; Ctrl+Z de l'anim en mode Layout.
+  // Camera transport shortcuts: Space, K, ←/→, Home/End; Ctrl+Z of the animation in Layout mode.
   useCameraShortcuts({
     anim: pres.anim,
     active: true,
@@ -78,7 +78,7 @@ export function useSplatInput({
     fps: data.fps ?? 24,
   });
 
-  // Mode layout : rejoue l'animation caméra jointe au commentaire sélectionné.
+  // Layout mode: replays the camera animation attached to the selected comment.
   const { setAnim: animSetAnim, play: animPlay } = pres.anim;
   const viewedCameraAnim = ann.viewedCameraAnim;
   useEffect(() => {
@@ -88,8 +88,8 @@ export function useSplatInput({
     }
   }, [viewedCameraAnim, animSetAnim, animPlay]);
 
-  // Joindre / détacher : le bouton porte l'état, il doit donc aussi savoir le défaire. Et rien
-  // ne part plus en silence — un appui sans animation le dit au lieu de ne rien faire.
+  // Attach / detach: the button carries the state, so it must also know how to undo it. And nothing
+  // goes out silently any more: a press without an animation says so instead of doing nothing.
   const toggleAttach = useCallback(() => {
     if (ann.cameraAnim) {
       ann.setCameraAnim(null);
@@ -121,8 +121,8 @@ export function useSplatInput({
     [pres.anim, t],
   );
 
-  // Cadrage F/H, actif pour **tous** (y compris en review post-publish) : F cadre la sélection
-  // si présente (édition), sinon le splat visible ; H rétablit la vue d'origine.
+  // F/H framing, active for **everyone** (including post-publish review): F frames the selection
+  // if present (editing), otherwise the visible splat; H restores the original view.
   const frameView = useCallback(() => {
     const handle = getSceneHandle();
     if (!handle) return;
@@ -134,7 +134,7 @@ export function useSplatInput({
     if (handle) frameCameraToMesh(handle.THREE, handle.mesh, handle.camera, handle.controls);
   }, [getSceneHandle]);
 
-  // Raccourcis F/H côté viewer (post-publish). En édition, l'éditeur gère déjà F/H (sélection).
+  // F/H viewer shortcuts (post-publish). In editing, the editor already handles F/H (selection).
   useFrameShortcuts({
     active: !showEdit && ready,
     isFlying: splat.isFlying,
@@ -142,7 +142,7 @@ export function useSplatInput({
     onHome: homeView,
   });
 
-  // Palette Ctrl+K (B3) : les actions du viewer, sans bouton de plus.
+  // Ctrl+K palette (B3): the viewer's actions, without one more button.
   useSplatCommands({
     pres,
     frameView,
@@ -151,7 +151,7 @@ export function useSplatInput({
     hasPresentation: !!data.splatPresentation,
   });
 
-  // L'action et son état partent ensemble : le bouton du transport doit dire ce qui est joint.
+  // The action and its state travel together: the transport button must say what is attached.
   const attachLayout = { toggle: toggleAttach, attached: ann.cameraAnim != null };
   return { frameView, homeView, attachLayout, importLayout };
 }

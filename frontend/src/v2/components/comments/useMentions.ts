@@ -3,7 +3,7 @@
 
 import { useState, type KeyboardEvent, type RefObject } from 'react';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { useProjectContext } from '../../stores/useProjectContext';
 import type { Membership } from '../../types/api';
@@ -16,9 +16,9 @@ import {
 } from './mentions';
 
 /**
- * Autocomplete des mentions @user (32.B) pour un textarea de commentaire.
- * Le projet courant vient du contexte (résolu par le breadcrumb de la review) ;
- * les membres partagent le cache `qk.project` de la page Projet.
+ * @user mention autocomplete (32.B) for a comment textarea.
+ * The current project comes from the context (resolved by the review breadcrumb);
+ * members share the `qk.project` cache of the Project page.
  */
 export function useMentions(
   value: string,
@@ -40,7 +40,7 @@ export function useMentions(
     : [];
   const open = mention !== null && candidates.length > 0;
 
-  /** À appeler après chaque frappe/clic : détecte la mention sous le caret. */
+  /** Call after each keystroke or click: detects the mention under the caret. */
   const refresh = () => {
     const el = textareaRef.current;
     const next = el ? activeMentionQuery(el.value, el.selectionStart ?? el.value.length) : null;
@@ -61,7 +61,7 @@ export function useMentions(
     }, 0);
   };
 
-  /** Intercepte la navigation du menu ; renvoie true si l'événement est consommé. */
+  /** Intercepts menu navigation; returns true if the event is consumed. */
   const onKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>): boolean => {
     if (!open) return false;
     if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {

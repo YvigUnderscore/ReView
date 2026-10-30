@@ -5,10 +5,10 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { httpError, mockApi, noContent, type ApiMock } from './apiMock';
 
 /**
- * Le bouchon d'API est de l'outillage, mais il porte de vraies décisions : quelle route
- * répond quand deux motifs conviennent, ce qu'il advient d'une requête non couverte, ce
- * qu'il transmet à la route. Un bouchon qui se trompe silencieusement fait échouer les
- * tests d'écran pour la mauvaise raison — c'est le pire des retours.
+ * The API double is tooling, but it carries real decisions: which route
+ * answers when two patterns match, what happens to an uncovered request, and what
+ * it passes on to the route. A double that fails silently makes the screen tests fail
+ * for the wrong reason, which is the worst kind of feedback.
  */
 
 let api: ApiMock | null = null;
@@ -26,7 +26,7 @@ afterEach(() => {
 const get = (path: string) => fetch(path);
 
 describe('mockApi', () => {
-  it('répond à une route exacte et sert du JSON', async () => {
+  it('answers an exact route and serves JSON', async () => {
     install({ 'GET /api/projects': { items: [{ id: 1 }] } });
 
     const res = await get('/api/projects');
@@ -35,7 +35,7 @@ describe('mockApi', () => {
     expect(await res.json()).toEqual({ items: [{ id: 1 }] });
   });
 
-  it('distingue les méthodes : un POST ne tombe pas sur la route GET', async () => {
+  it('distinguishes methods: a POST does not fall on the GET route', async () => {
     install({ 'GET /api/projects': { items: [] } });
 
     const res = await fetch('/api/projects', { method: 'POST', body: '{}' });
@@ -43,7 +43,7 @@ describe('mockApi', () => {
     expect(res.status).toBe(501);
   });
 
-  it('nomme la requête qu’aucune route ne couvre, au lieu de rester muet', async () => {
+  it('names the request that no route covers, instead of staying silent', async () => {
     const mock = install({});
 
     const res = await get('/api/inconnu?x=1');
@@ -53,7 +53,7 @@ describe('mockApi', () => {
     expect(mock.unhandled).toEqual(['GET /api/inconnu?x=1']);
   });
 
-  it('laisse passer une ressource locale, qui n’est pas un appel d’API', async () => {
+  it('lets a local resource through, which is not an API call', async () => {
     const mock = install({});
 
     const res = await fetch('data:application/wasm;base64,AGFzbQ==');
@@ -62,19 +62,19 @@ describe('mockApi', () => {
     expect(mock.calls).toEqual([]);
   });
 
-  it('extrait les segments nommés du motif', async () => {
+  it('extracts the named segments of the pattern', async () => {
     install({ 'GET /api/media/:id/comments': ({ params }) => ({ id: params.id }) });
 
     expect(await (await get('/api/media/42/comments')).json()).toEqual({ id: '42' });
   });
 
-  it('ne laisse pas un motif déborder sur un chemin plus long', async () => {
+  it('does not let a pattern spill over onto a longer path', async () => {
     install({ 'GET /api/projects/:id': { project: {} } });
 
     expect((await get('/api/projects/3/settings')).status).toBe(501);
   });
 
-  it('fait gagner la route qui exige une query-string sur celle qui n’en exige pas', async () => {
+  it('lets the route requiring a query string win over the one that does not require one', async () => {
     install({
       'GET /api/projects': { archived: false },
       'GET /api/projects?archived=1': { archived: true },
@@ -82,11 +82,11 @@ describe('mockApi', () => {
 
     expect(await (await get('/api/projects?archived=1')).json()).toEqual({ archived: true });
     expect(await (await get('/api/projects')).json()).toEqual({ archived: false });
-    // Une autre query-string retombe sur la route générique — c'est la pagination.
+    // Another query string falls back to the generic route: that is the pagination.
     expect(await (await get('/api/projects?page=2')).json()).toEqual({ archived: false });
   });
 
-  it('transmet le corps JSON à la route et enregistre l’appel', async () => {
+  it('passes the JSON body to the route and records the call', async () => {
     const mock = install({ 'PATCH /api/tasks/:id': { ok: true } });
 
     await fetch('/api/tasks/7', { method: 'PATCH', body: JSON.stringify({ status: 'TODO' }) });
@@ -97,7 +97,7 @@ describe('mockApi', () => {
     expect(call.params).toEqual({ id: '7' });
   });
 
-  it('rend le statut et le message d’une erreur explicite', async () => {
+  it('returns the status and message of an explicit error', async () => {
     install({ 'GET /api/secret': httpError(403, 'Forbidden') });
 
     const res = await get('/api/secret');
@@ -106,20 +106,20 @@ describe('mockApi', () => {
     expect(await res.json()).toEqual({ error: 'Forbidden' });
   });
 
-  it('sait répondre sans corps', async () => {
+  it('can respond without a body', async () => {
     install({ 'DELETE /api/projects/:id': noContent() });
 
     expect((await fetch('/api/projects/3', { method: 'DELETE' })).status).toBe(204);
   });
 
-  it('laisse une route posée après coup remplacer la précédente', async () => {
+  it('lets a route set afterwards replace the previous one', async () => {
     const mock = install({ 'GET /api/me': { role: 'ARTIST' } });
     mock.on('GET /api/me', { role: 'ADMIN' });
 
     expect(await (await get('/api/me')).json()).toEqual({ role: 'ADMIN' });
   });
 
-  it('rend `fetch` à l’environnement quand on le restaure', async () => {
+  it('gives `fetch` back to the environment when restored', async () => {
     const before = globalThis.fetch;
     const mock = mockApi({ 'GET /api/x': {} });
     expect(globalThis.fetch).not.toBe(before);

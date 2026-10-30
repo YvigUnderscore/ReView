@@ -5,22 +5,22 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import type { SceneViewer } from '../viewer/sceneHandle';
 import { turntableStep, type TurntableAxis } from './turntable';
 
-/** Contrôleur d'abonnement à la boucle de rendu (fourni par `useModel3DThree`). */
+/** Subscription controller to the render loop (provided by `useModel3DThree`). */
 interface FrameSource {
   subscribeFrame: (cb: (dt: number) => void) => () => void;
 }
 
 /**
- * Turntable paramétrable (39.D) : fait tourner la vue automatiquement autour de la cible (axe X/Y/Z,
- * vitesse en °/s). **Session-local** — prévisualisation d'inspection non persistée, non destructive
- * (n'altère ni le modèle ni la présentation). S'abonne à la boucle de rendu tant qu'il est actif.
+ * Configurable turntable (39.D): automatically rotates the view around the target (X/Y/Z axis,
+ * speed in °/s). **Session-local** — an inspection preview, not persisted, non-destructive (it alters
+ * neither the model nor the presentation). Subscribes to the render loop while active.
  */
 export function useTurntable(viewer: SceneViewer & FrameSource) {
   const { ready, getSceneHandle, subscribeFrame } = viewer;
   const [active, setActive] = useState(false);
   const [axis, setAxis] = useState<TurntableAxis>('y');
   const [speed, setSpeed] = useState(30); // °/s
-  // Lu dans la boucle sans relancer l'abonnement à chaque changement de vitesse/axe.
+  // Read in the loop without restarting the subscription on each speed/axis change.
   const cfg = useRef({ axis, speed });
   useEffect(() => {
     cfg.current = { axis, speed };

@@ -4,11 +4,11 @@
 import { ACTION_SAFE_RATIO, CENTER_CROSS_RATIO, TITLE_SAFE_RATIO } from './guideStyle';
 
 /**
- * Géométrie **pure** des repères de composition, en pixels de la boîte du média (le SVG qui
- * les porte a un `viewBox` en pixels CSS de sa propre boîte : une unité = un pixel, dans les
- * deux axes). C'est ce qui rend la croix centrale carrée — l'ancien overlay raisonnait en
- * pourcentages avec `preserveAspectRatio="none"`, donc en unités différentes en X et en Y :
- * ses deux branches n'avaient la même longueur qu'en 1:1.
+ * **Pure** geometry of the composition guides, in pixels of the media box. The SVG that carries
+ * them has a `viewBox` in CSS pixels of its own box: one unit = one pixel, on both axes. This is
+ * what makes the centre cross square. The old overlay reasoned in percentages with
+ * `preserveAspectRatio="none"`, hence in different units in X and Y: its two arms were of equal
+ * length only at 1:1.
  */
 
 export interface GuideSegment {
@@ -25,10 +25,10 @@ export interface GuideRect {
   height: number;
 }
 
-/** Dimension exploitable (garde-fou : une boîte non mesurée vaut zéro). */
+/** Usable dimension (safeguard: an unmeasured box is zero). */
 const side = (v: number): number => (Number.isFinite(v) && v > 0 ? v : 0);
 
-/** Règle des tiers : deux verticales, deux horizontales. */
+/** Rule of thirds: two verticals, two horizontals. */
 export function thirdsLines(w: number, h: number): GuideSegment[] {
   const bw = side(w);
   const bh = side(h);
@@ -41,8 +41,8 @@ export function thirdsLines(w: number, h: number): GuideSegment[] {
 }
 
 /**
- * Croix centrale **carrée** : les deux branches ont la même longueur, calée sur le plus petit
- * côté du cadre — elle reste donc carrée en 1:1, en 16:9 comme en 2.39:1, et ne déborde jamais.
+ * **Square** centre cross: both arms have the same length, wedged on the smaller side of the
+ * frame. It stays square at 1:1, at 16:9 as well as at 2.39:1, and never overflows.
  */
 export function centerCrossSegments(w: number, h: number): [GuideSegment, GuideSegment] {
   const bw = side(w);
@@ -56,28 +56,28 @@ export function centerCrossSegments(w: number, h: number): [GuideSegment, GuideS
   ];
 }
 
-/** Rectangle d'une safe area (fraction du cadre), centré. */
+/** Rectangle of a safe area (fraction of the frame), centred. */
 export function safeAreaRect(w: number, h: number, ratio: number): GuideRect {
   const bw = side(w);
   const bh = side(h);
   const r = Number.isFinite(ratio) && ratio > 0 ? Math.min(ratio, 1) : 1;
-  // Marge déduite de la largeur retenue (et non `bw * (1 - r)`) : `1000 × 0,1` vaut
-  // 99,999999… en flottant, et l'attribut SVG en portait toute la queue.
+  // Margin derived from the retained width (and not `bw * (1 - r)`): `1000 × 0.1` gives
+  // 99.999999… in floating point, and the SVG attribute carried all of that tail.
   const width = bw * r;
   const height = bh * r;
   return { x: (bw - width) / 2, y: (bh - height) / 2, width, height };
 }
 
-/** Safe area « action » (90 %). */
+/** "Action" safe area (90%). */
 export const actionSafeRect = (w: number, h: number): GuideRect => safeAreaRect(w, h, ACTION_SAFE_RATIO);
 
-/** Safe area « titre » (80 %). */
+/** "Title" safe area (80%). */
 export const titleSafeRect = (w: number, h: number): GuideRect => safeAreaRect(w, h, TITLE_SAFE_RATIO);
 
 /**
- * Liseré du cadre de livraison : rentré d'un demi-trait, sinon la moitié extérieure du trait
- * tombe hors du viewport SVG (qui rogne) et le liseré paraît deux fois plus fin que les
- * autres repères.
+ * Border of the delivery frame: inset by half a stroke, otherwise the outer half of the stroke
+ * falls outside the SVG viewport (which clips) and the border looks twice as thin as the other
+ * guides.
  */
 export function outlineRect(w: number, h: number, strokeWidth: number): GuideRect {
   const half = Math.max(0, strokeWidth) / 2;

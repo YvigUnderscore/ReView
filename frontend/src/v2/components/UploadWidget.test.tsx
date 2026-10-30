@@ -7,15 +7,15 @@ import { renderToStaticMarkup } from 'react-dom/server';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import UploadWidget, { UploadRow } from './UploadWidget';
-import { useUploadStore, type UploadItem } from '../../stores/useUploadStore';
-import { useSequenceUploadStore } from '../../stores/useSequenceUploadStore';
+import { useUploadStore, type UploadItem } from '../stores/useUploadStore';
+import { useSequenceUploadStore } from '../stores/useSequenceUploadStore';
 import { t } from '../i18n';
 
 /**
- * Le widget le plus vu de la journée renvoyait cinq libellés français en dur depuis une
- * fonction — invisibles du détecteur i18n, qui ne lit que le texte JSX. Ces cas fixent
- * les deux choses qui comptent : plus un mot hors catalogue, et une sortie possible pour
- * chaque ligne (annuler un transfert, retirer une ligne finie).
+ * The most-viewed widget of the day returned five hard-coded French labels from a
+ * function, invisible to the i18n detector, which only reads JSX text. These cases fix
+ * the two things that count: not one word outside the catalog, and a way out for
+ * each line (cancel a transfer, remove a finished line).
  */
 
 const item = (over: Partial<UploadItem>): UploadItem => ({
@@ -32,9 +32,9 @@ const row = (over: Partial<UploadItem>): string =>
   renderToStaticMarkup(<UploadRow item={item(over)} onDismiss={() => {}} />);
 
 /**
- * happy-dom ouvre une fenêtre de 1024 px. Le seuil de repli est descendu à 560 px, donc le
- * défaut montre désormais la variante complète — on règle quand même la largeur
- * explicitement : un test qui parle de repli doit dire de quelle largeur il parle.
+ * happy-dom opens a 1024 px window. The fallback threshold was lowered to 560 px, so the
+ * default now shows the full variant. We still set the width
+ * explicitly: a test that talks about the fallback must say which width it is talking about.
  */
 const setViewportWidth = (width: number): void => {
   (window as unknown as { happyDOM: { setViewport: (v: { width: number }) => void } }).happyDOM.setViewport({
@@ -43,16 +43,16 @@ const setViewportWidth = (width: number): void => {
 };
 
 /**
- * Le nom accessible de la pastille — c'est lui qui porte le x/y et, quand un envoi est en
- * vol, l'état en cours. Le lot 14 l'a rendu parlant : le nom d'avant (« Transferts (2) »)
- * ne disait ni combien étaient arrivés ni ce qui se passait.
+ * The accessible name of the badge: it carries the x/y and, when a send is in flight,
+ * the current state. Batch 14 made it speak: the former name ("Transfers (2)")
+ * said neither how many had arrived nor what was going on.
  */
 const triggerName = (done: number, total: number, status?: string): string =>
   status === undefined
     ? t('uploads.summaryAria', { done, total })
     : t('uploads.summaryBusyAria', { done, total, status });
 
-/** Les deux files sont des singletons de module : un test ne doit rien laisser au suivant. */
+/** Both queues are module singletons: a test must leave nothing for the next one. */
 beforeEach(() => {
   useUploadStore.setState({ uploads: [] });
   useSequenceUploadStore.setState({ uploads: [], proposal: null });
@@ -60,16 +60,16 @@ beforeEach(() => {
 });
 
 describe('UploadWidget', () => {
-  it('ne rend rien quand aucun transfert n’est en cours', () => {
+  it('renders nothing when no transfer is in progress', () => {
     expect(renderToStaticMarkup(<UploadWidget />)).toBe('');
   });
 
   /**
-   * Le lot 13 sort l'encart du coin bas droit, où il se posait par-dessus la pagination des
-   * listes, le HUD du viewer et la conversation ancrée. Ce cas verrouille la contrepartie :
-   * le widget ne se positionne plus lui-même, il n'est qu'un élément de la rangée d'en-tête.
+   * Batch 13 moved the panel out of the bottom-right corner, where it sat on top of the pagination of
+   * lists, the viewer HUD and the anchored conversation. This case locks in the counterpart:
+   * the widget no longer positions itself, it is just an element of the header row.
    */
-  it('ne flotte plus dans un coin : rien n’y est positionné hors du flux', () => {
+  it('no longer floats in a corner: nothing is positioned there outside the flow', () => {
     useUploadStore.setState({ uploads: [item({})] });
     const { container } = render(<UploadWidget />);
     const classes = [...container.querySelectorAll('*')].flatMap((el) => [...el.classList]);
@@ -78,12 +78,12 @@ describe('UploadWidget', () => {
     expect(classes.filter((c) => /^(bottom|right|left|top|z)-/.test(c))).toEqual([]);
   });
 
-  it('se résume à une pastille dépliable, le détail restant derrière un clic', async () => {
+  it('comes down to an unfoldable badge, the detail remaining behind a click', async () => {
     useUploadStore.setState({
       uploads: [item({}), item({ id: 'u2', filename: 'sh020_v001.mov' })],
     });
     render(<UploadWidget />);
-    // Replié : le compte, l'état — mais aucun nom de fichier n'occupe la rangée.
+    // Collapsed: the account and the state, but no file name takes up the row.
     const trigger = screen.getByRole('button', {
       name: triggerName(0, 2, t('uploads.sending', { pct: 40 })),
     });
@@ -94,7 +94,7 @@ describe('UploadWidget', () => {
     expect(screen.getByText('sh020_v001.mov')).toBeInTheDocument();
   });
 
-  it('montre l’avancement d’ensemble sans qu’on le déplie — un envoi se suit', () => {
+  it('shows the overall progress without unfolding it: a send is tracked', () => {
     useUploadStore.setState({ uploads: [item({ progress: 30 }), item({ id: 'u2', progress: 50 })] });
     const { container } = render(<UploadWidget />);
     const bars = [...container.querySelectorAll('span')].map((el) => el.style.width);
@@ -102,12 +102,12 @@ describe('UploadWidget', () => {
   });
 
   /**
-   * Le repli se faisait sous 1100 px, le seuil « fenêtre étroite » de la coquille. Contresens
-   * assumé et corrigé : c'est la largeur où la rangée gagne le plus de place (la recherche y
-   * tombe à une icône), et « voir le texte du statut pendant un upload » vise justement le
-   * portable et la fenêtre partagée. Ce cas remplace celui qui figeait l'ancien comportement.
+   * The fallback used to kick in below 1100 px, the shell's "narrow window" threshold. A misreading,
+   * acknowledged and corrected: that is the width where the row gains the most room (search
+   * falls to an icon), and "seeing the status text during an upload" is precisely aimed at
+   * the laptop and the shared window. This case replaces the one that froze the former behaviour.
    */
-  it('garde le texte d’état bien en dessous de 1100 px — portable, fenêtre partagée', () => {
+  it('keeps the status text well below 1100 px: laptop, shared window', () => {
     setViewportWidth(900);
     useUploadStore.setState({ uploads: [item({ progress: 30 })] });
     const { container } = render(<UploadWidget />);
@@ -115,13 +115,13 @@ describe('UploadWidget', () => {
     expect([...container.querySelectorAll('span')].map((el) => el.style.width)).toContain('30%');
   });
 
-  it('ne garde que le compte à la largeur d’un téléphone, où le fil d’Ariane n’a plus rien', () => {
+  it('keeps only the count at phone width, where the breadcrumb has no room left', () => {
     setViewportWidth(420);
     useUploadStore.setState({ uploads: [item({ progress: 30 })] });
     const { container } = render(<UploadWidget />);
     expect([...container.querySelectorAll('span')].map((el) => el.style.width)).not.toContain('30%');
     expect(screen.queryByText(t('uploads.sending', { pct: 30 }))).toBeNull();
-    // Le x/y, lui, reste : c'est ce qui dit qu'un envoi est en cours et où il en est.
+    // The x/y, for its part, remains: it is what says that a send is in progress and how far along it is.
     const trigger = screen.getByRole('button', {
       name: triggerName(0, 1, t('uploads.sending', { pct: 30 })),
     });
@@ -129,11 +129,11 @@ describe('UploadWidget', () => {
   });
 
   /**
-   * L'autre moitié de la contrainte : le texte visible ne doit pas chasser le fil d'Ariane de
-   * la rangée. La pastille vit dans le flux (lot 13) et ne rétrécit pas — c'est donc au texte
-   * d'être borné et de se tronquer, quelle que soit la longueur de la traduction.
+   * The other half of the constraint: the visible text must not push the breadcrumb out of
+   * the row. The badge lives in the flow (batch 13) and does not shrink, so it is the text
+   * that must be bounded and truncated, whatever the length of the translation.
    */
-  it('borne le texte d’état : il se tronque au lieu de pousser le fil d’Ariane dehors', () => {
+  it('bounds the status text: it truncates rather than pushing the breadcrumb out of the row', () => {
     setViewportWidth(900);
     useUploadStore.setState({ uploads: [item({ progress: 30 })] });
     render(<UploadWidget />);
@@ -143,11 +143,11 @@ describe('UploadWidget', () => {
   });
 
   /**
-   * « x/y » : ce qui est arrivé sur ce qui a été demandé. Une ligne en échec n'est pas un
-   * aboutissement — elle reste au dénominateur jusqu'à ce qu'on la retire, sans quoi une
-   * pastille « 3/3 » annoncerait un envoi complet alors qu'un plan manque.
+   * "x/y": what has arrived out of what was requested. A failed line is not a completion:
+   * it stays in the denominator until it is removed, otherwise a "3/3" badge would announce
+   * a complete send while a shot is missing.
    */
-  it('compte les lignes terminées sur le total, l’échec n’étant pas un aboutissement', () => {
+  it('counts finished lines out of the total, a failure not being a completion', () => {
     useUploadStore.setState({
       uploads: [
         item({ id: 'a', status: 'done', progress: 100 }),
@@ -159,22 +159,22 @@ describe('UploadWidget', () => {
     expect(screen.getByText('1/3')).toBeInTheDocument();
   });
 
-  it('montre le texte de l’état en cours sans qu’on déplie — « on voit ce qui se passe »', () => {
+  it('shows the current status text without unfolding it', () => {
     useUploadStore.setState({ uploads: [item({ status: 'uploading', progress: 42 })] });
     const { rerender } = render(<UploadWidget />);
     expect(screen.getByText(t('uploads.sending', { pct: 42 }))).toBeInTheDocument();
-    // Et il suit la phase, pas seulement l'octet : le transcodage se lit aussi.
+    // And it follows the phase, not just the byte: the transcoding can be read too.
     useUploadStore.setState({ uploads: [item({ status: 'processing', kind: 'VIDEO' })] });
     rerender(<UploadWidget />);
     expect(screen.getByText(t('uploads.transcoding'))).toBeInTheDocument();
   });
 
   /**
-   * Trois transferts montent à la fois, les suivants attendent : l'état *majoritaire* d'un
-   * dépôt de trente plans resterait « En attente » du début à la fin. La pastille montre
-   * donc la ligne la plus avancée — celle dont l'état changera le prochain.
+   * Three transfers go up at once, the others wait: the *majority* state of a
+   * drop of thirty shots would remain "Waiting" from start to finish. The badge therefore shows
+   * the most advanced line, the one whose state will change next.
    */
-  it('choisit la ligne la plus avancée quand plusieurs sont en vol', () => {
+  it('picks the most advanced line when several are in flight', () => {
     useUploadStore.setState({
       uploads: [
         item({ id: 'a', status: 'pending', progress: 0 }),
@@ -187,7 +187,7 @@ describe('UploadWidget', () => {
     expect(screen.queryByText(t('uploads.pending'))).toBeNull();
   });
 
-  it('n’affiche aucun état au repos : tout est arrivé, il n’y a plus rien à raconter', () => {
+  it('shows no status at rest: everything has arrived, there is nothing left to tell', () => {
     useUploadStore.setState({ uploads: [item({ status: 'done', progress: 100 })] });
     render(<UploadWidget />);
     expect(screen.getByRole('button', { name: triggerName(1, 1) })).toBeInTheDocument();
@@ -196,10 +196,10 @@ describe('UploadWidget', () => {
   });
 
   /**
-   * « Rendre plus visible cet encart quand il est actif » : au repos c'est une icône de
-   * barre parmi d'autres, en vol c'est une surface encadrée — celle de l'aperçu de la cloche.
+   * "Make this panel more visible when it is active": at rest it is one icon among
+   * the bar's others; in flight it is a framed surface, the same as the bell's preview.
    */
-  it('se distingue d’une icône de barre quand un envoi est en vol', () => {
+  it('stands out from a bar icon when a send is in flight', () => {
     useUploadStore.setState({ uploads: [item({ status: 'uploading', progress: 10 })] });
     const { rerender } = render(<UploadWidget />);
     const classesOf = (name: string): string[] => [...screen.getByRole('button', { name }).classList];
@@ -215,7 +215,7 @@ describe('UploadWidget', () => {
     expect(idle).toContain('text-muted-foreground');
   });
 
-  it('ne laisse aucune trace quand la dernière ligne est retirée', () => {
+  it('leaves no trace when the last line is removed', () => {
     useUploadStore.setState({ uploads: [item({})] });
     const { container, rerender } = render(<UploadWidget />);
     useUploadStore.setState({ uploads: [] });
@@ -225,29 +225,29 @@ describe('UploadWidget', () => {
 });
 
 /**
- * L'emplacement EST la correction demandée : un widget qui ne se positionne plus lui-même
- * doit être monté là où on veut le voir, sinon il part en fin d'arbre sans que rien ne le
- * dise. Aucune suite ne monte la coquille entière (elle tire la messagerie, la palette, le
- * temps réel et six requêtes) : on vérifie donc la composition à la source, sur le seul
- * fichier qui décide de l'emplacement.
+ * The location IS the requested fix: a widget that no longer positions itself
+ * must be mounted where one wants to see it, otherwise it ends up at the end of the tree without anything
+ * saying so. No suite mounts the whole shell (it pulls in messaging, the palette, real time and
+ * six requests): so we check the composition at the source, on the sole
+ * file that decides the location.
  */
-describe('Emplacement dans la coquille', () => {
+describe('Placement in the shell', () => {
   const shell = readFileSync('src/v2/components/Shell.tsx', 'utf8');
   const header = /<header[\s\S]*?<\/header>/.exec(shell)?.[0] ?? '';
 
-  it('monte le suivi des envois dans la rangée d’en-tête, et nulle part ailleurs', () => {
+  it('mounts the send tracker in the header row, and nowhere else', () => {
     expect(header).toContain('<UploadWidget />');
     expect(shell.split('<UploadWidget />')).toHaveLength(2);
   });
 
-  it('le place à gauche de la recherche, comme la cloche', () => {
+  it('places it to the left of the search, like the bell', () => {
     expect(header.indexOf('<UploadWidget />')).toBeLessThan(header.indexOf('<NotificationBell />'));
     expect(header.indexOf('<NotificationBell />')).toBeLessThan(header.indexOf("t('shell.search')"));
   });
 });
 
 describe('UploadRow', () => {
-  it('ne laisse plus un seul libellé français en dur, quel que soit l’état', () => {
+  it('no longer leaves a single hard-coded label, whatever the state', () => {
     const html = [
       row({ status: 'pending' }),
       row({ status: 'uploading' }),
@@ -270,7 +270,7 @@ describe('UploadRow', () => {
     }
   });
 
-  it('distingue les états de traitement par type de média', () => {
+  it('distinguishes processing states by media type', () => {
     const video = row({ status: 'processing', kind: 'VIDEO' });
     const model = row({ status: 'processing', kind: 'MODEL_3D' });
     const image = row({ status: 'processing', kind: 'IMAGE' });
@@ -278,8 +278,8 @@ describe('UploadRow', () => {
     expect(model).not.toBe(image);
   });
 
-  it('offre « annuler » sur un transfert vivant et « retirer » sur une ligne finie', () => {
-    // Les libellés viennent du catalogue anglais de base, seul embarqué au démarrage.
+  it('offers "cancel" on a live transfer and "remove" on a finished line', () => {
+    // The labels come from the base English catalog, the only one embedded at startup.
     expect(row({ status: 'uploading' })).toContain('aria-label="Cancel"');
     expect(row({ status: 'pending' })).toContain('aria-label="Cancel"');
     expect(row({ status: 'finalizing' })).toContain('aria-label="Cancel"');
@@ -287,14 +287,14 @@ describe('UploadRow', () => {
     expect(row({ status: 'error', error: 'boom' })).toContain('aria-label="Remove"');
   });
 
-  it('montre le nom du fichier, sa progression et le motif d’échec', () => {
+  it('shows the file name, its progress and the failure reason', () => {
     const html = row({ status: 'error', progress: 60, error: 'PUT 403' });
     expect(html).toContain('sh010_v003.mov');
     expect(html).toContain('PUT 403');
     expect(html).toContain('60%');
   });
 
-  it('remplace la barre par une attente indéterminée pendant le traitement serveur', () => {
+  it('replaces the bar with an indeterminate wait during server processing', () => {
     expect(row({ status: 'processing', progress: 100 })).toContain('animate-pulse');
     expect(row({ status: 'uploading', progress: 100 })).not.toContain('animate-pulse');
   });

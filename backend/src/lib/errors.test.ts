@@ -5,11 +5,11 @@ import { describe, expect, it } from 'vitest';
 import { AppError, badRequest, conflict, forbidden, notFound, unauthorized } from './errors';
 
 /**
- * Le code d'erreur est ce que le client traduit : c'est lui, et non le message anglais,
- * qui décide de la langue lue par l'utilisateur. Ces tests fixent le contrat des replis.
+ * The error code is what the client translates: it is the code, not the English message, that decides the
+ * language the user reads. These tests pin down the contract of the fallbacks.
  */
-describe('erreurs typées', () => {
-  it('porte statut, message et code', () => {
+describe('typed errors', () => {
+  it('carries status, message and code', () => {
     const err = badRequest('Empty path', 'PATH_EMPTY');
     expect(err).toBeInstanceOf(AppError);
     expect(err.statusCode).toBe(400);
@@ -17,7 +17,7 @@ describe('erreurs typées', () => {
     expect(err.code).toBe('PATH_EMPTY');
   });
 
-  it('sans argument : message anglais et code générique', () => {
+  it('no argument: English message and generic code', () => {
     expect(unauthorized()).toMatchObject({
       statusCode: 401,
       message: 'Not authenticated',
@@ -27,20 +27,20 @@ describe('erreurs typées', () => {
     expect(forbidden()).toMatchObject({ statusCode: 403, message: 'Access denied', code: 'FORBIDDEN' });
   });
 
-  it('message précis sans code : aucun code générique posé', () => {
-    // Sinon le client afficherait « Resource not found » à la place de la précision
-    // rédigée par l'appelant — la traduction est un progrès, pas une perte d'information.
+  it('specific message without code: no generic code set', () => {
+    // Otherwise the client would display "Resource not found" in place of the precise wording written by
+    // the caller — translation is progress, not a loss of information.
     expect(notFound('Media not found').code).toBeUndefined();
   });
 
-  it('message et code précis : les deux sont conservés', () => {
+  it('specific message and code: both are kept', () => {
     expect(notFound('Shot not found', 'SHOT_NOT_FOUND')).toMatchObject({
       message: 'Shot not found',
       code: 'SHOT_NOT_FOUND',
     });
   });
 
-  it('conflit et requête invalide exigent leur message', () => {
+  it('conflict and invalid request require their message', () => {
     expect(conflict('Code already taken', 'CODE_TAKEN')).toMatchObject({
       statusCode: 409,
       code: 'CODE_TAKEN',

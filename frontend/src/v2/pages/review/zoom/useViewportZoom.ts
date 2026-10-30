@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useCallback, useEffect, useRef, useState, type CSSProperties, type RefObject } from 'react';
-import { isEditable } from '../../../lib/shortcuts';
+import { isEditable } from '@/v2/lib/shortcuts';
 import { useViewShortcuts } from './useViewShortcuts';
 import {
   isFit,
@@ -18,52 +18,50 @@ import {
 
 export interface ViewportZoom {
   state: ZoomState;
-  /** Style à poser sur le calque média — et sur celui de la comparaison, pour qu'il suive. */
+  /** Style to apply to the media layer — and to the comparison one, so it follows. */
   style: CSSProperties;
-  /** Gestionnaires de pointeur à poser sur le conteneur (la molette est branchée nativement). */
+  /** Pointer handlers to attach to the container (the wheel is wired natively). */
   handlers: {
     onPointerDown: (e: React.PointerEvent) => void;
     onPointerMove: (e: React.PointerEvent) => void;
     onPointerUp: (e: React.PointerEvent) => void;
   };
-  /** Un glissement vient d'avoir lieu : le clic de relâchement ne doit pas lancer la lecture. */
+  /** A drag has just happened: the release click must not start playback. */
   consumeClick: () => boolean;
   zoomBy: (factor: number) => void;
-  /** Ajuster à l'écran (`F`, et le bouton « Ajuster » du rail). */
+  /** Fit to screen (`F`, and the "Fit" button of the rail). */
   reset: () => void;
-  /** Taille réelle 1:1 (`H`) — sans échelle connue, ne fait rien. */
+  /** Actual size 1:1 (`H`) — does nothing when no scale is known. */
   oneToOne: () => void;
   fit: boolean;
 }
 
 /**
- * Zoom et déplacement du lecteur vidéo — même geste que la visionneuse image : molette
- * pour zoomer sous le curseur, glissement pour déplacer, et le clavier pour s'en sortir
- * (`+` / `-`, puis `F` pour ajuster et `H` pour le 100 %).
+ * Zoom and pan of the video player — same gesture as the image viewer: the wheel zooms under the
+ * cursor, dragging pans, and the keyboard covers the rest (`+` / `-`, then `F` to fit and `H` for
+ * 100%).
  *
- * `0` et `1` tenaient ces deux derniers rôles et ont été retirés (Phase 50) : les chiffres nus
- * appartiennent à la bascule de mode du chrome, et `1` faisait les deux à la fois. `F` et `H`
- * sont les touches que le rail annonce depuis toujours (`action.fitMedia`, `action.resetMedia`)
- * sans que personne les écoute.
+ * `0` and `1` used to hold those last two roles and were removed (Phase 50): bare digits belong
+ * to the chrome's mode toggle, and `1` did both at once. `F` and `H` are the keys the rail has
+ * always announced (`action.fitMedia`, `action.resetMedia`) without anyone listening to them.
  *
- * Le bouton gauche sert déjà à lecture/pause et, en mode annotation, au tracé : il ne
- * déplace donc que sur la vidéo elle-même et seulement une fois zoomé — le bouton du
- * milieu, lui, déplace toujours. Le clic qui termine un glissement est consommé, sinon
- * chaque déplacement mettrait la lecture en pause.
+ * The left button already drives play/pause and, in annotation mode, drawing: it therefore only
+ * pans on the video itself and only once zoomed — the middle button always pans. The click that
+ * ends a drag is consumed, otherwise every pan would pause playback.
  */
 export function useViewportZoom({
   containerRef,
   oneToOneScale,
 }: {
   containerRef: RefObject<HTMLElement | null>;
-  /** Échelle d'un pixel média = un pixel écran, quand elle est connue (100 %). */
+  /** Scale at which one media pixel equals one screen pixel, when known (100%). */
   oneToOneScale?: () => number | null;
 }): ViewportZoom {
   const [state, setState] = useState<ZoomState>(ZOOM_FIT);
   const pan = useRef<{ id: number; x: number; y: number; moved: number } | null>(null);
   const clickBlocked = useRef(false);
 
-  /** Écart du point (clientX, clientY) au centre du conteneur. */
+  /** Offset of the point (clientX, clientY) from the container centre. */
   const offsetFromCenter = useCallback(
     (clientX: number, clientY: number): [number, number] => {
       const rect = containerRef.current?.getBoundingClientRect();
@@ -73,8 +71,8 @@ export function useViewportZoom({
     [containerRef],
   );
 
-  // Molette branchée nativement : React pose `wheel` en écouteur passif, où
-  // `preventDefault` est sans effet — la page défilerait derrière le zoom.
+  // Wheel wired natively: React attaches `wheel` as a passive listener, where
+  // `preventDefault` has no effect — the page would scroll behind the zoom.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -87,14 +85,14 @@ export function useViewportZoom({
     return () => el.removeEventListener('wheel', onWheel);
   }, [containerRef, offsetFromCenter]);
 
-  // Le calcul du 100 % dépend de la boîte courante : gardé en miroir, pour ne pas
-  // réabonner le clavier à chaque rendu du lecteur.
+  // The 100% computation depends on the current box: kept mirrored, so as not to resubscribe
+  // the keyboard on every player render.
   const oneToOneRef = useRef(oneToOneScale);
   useEffect(() => {
     oneToOneRef.current = oneToOneScale;
   });
 
-  // Clavier : le zoom reste pilotable sans souris (et rattrapable si la vue est perdue).
+  // Keyboard: zoom stays controllable without a mouse (and recoverable if the view is lost).
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
       if (e.ctrlKey || e.metaKey || e.altKey || isEditable(e.target)) return;
@@ -113,14 +111,14 @@ export function useViewportZoom({
     const target = oneToOneRef.current?.();
     if (target && target > 0) setState((s) => zoomTo(s, target, 0, 0));
   }, []);
-  // Les deux actions de vue du rail, au clavier : `F` ajuste, `H` revient à la taille réelle.
+  // The rail's two view actions, on the keyboard: `F` fits, `H` returns to actual size.
   useViewShortcuts({ fit: reset, oneToOne });
 
   const onPointerDown = (e: React.PointerEvent) => {
     const onMedia = (e.target as Element | null)?.tagName === 'VIDEO';
     const middle = e.button === 1;
     if (!middle && !(e.button === 0 && onMedia && !isFit(state))) return;
-    // Bouton du milieu : coupe le défilement automatique de Windows.
+    // Middle button: suppresses Windows' autoscroll.
     if (middle) e.preventDefault();
     (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     pan.current = { id: e.pointerId, x: e.clientX, y: e.clientY, moved: 0 };

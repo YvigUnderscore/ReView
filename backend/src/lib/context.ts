@@ -4,9 +4,9 @@
 import { prisma } from './prisma';
 
 /**
- * Résolution du contexte (fil d'Ariane) d'une entité du pipeline :
- * chaîne d'ancêtres Projet → Séquence → Shot | Asset → Tâche → Version → Média
- * en UNE requête Prisma (includes imbriqués). Sert le breadcrumb global de l'UI.
+ * Resolves the context (breadcrumb) of a pipeline entity:
+ * ancestor chain Project → Sequence → Shot | Asset → Task → Version → Media
+ * in ONE Prisma query (nested includes). Feeds the global UI breadcrumb.
  */
 
 export type ContextEntity = 'media' | 'version' | 'task' | 'shot' | 'sequence' | 'asset' | 'project';
@@ -86,7 +86,7 @@ function fromVersion(v: VersionRow | null): BreadcrumbContext | null {
   return { ...base, version: { id: v.id, name: v.name } };
 }
 
-/** Résout le contexte d'une entité ; `null` si introuvable ou à la corbeille. */
+/** Resolves the context of an entity; `null` if not found or in the trash. */
 export async function resolveContext(entity: ContextEntity, id: number): Promise<BreadcrumbContext | null> {
   switch (entity) {
     case 'project':

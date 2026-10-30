@@ -11,11 +11,10 @@ import {
 } from './guideStyle';
 
 /**
- * Calque SVG commun à **tous** les repères de review (composition et cadre de livraison) :
- * il pose le `viewBox` en pixels CSS de sa propre boîte (une unité = un pixel, mise à
- * l'échelle uniforme), l'ombre portée, et le seul groupe qui porte le trait. Les enfants
- * n'apportent que leur géométrie : ils héritent couleur, épaisseur et opacité, et ne peuvent
- * donc plus diverger.
+ * SVG layer common to **all** review guides (composition and delivery frame). It sets the
+ * `viewBox` in CSS pixels of its own box (one unit = one pixel, uniform scaling), the drop
+ * shadow, and the only group that carries the stroke. Children only provide their geometry:
+ * they inherit colour, thickness and opacity, and so can no longer diverge.
  */
 export default function GuideLayer({
   w,
@@ -25,27 +24,27 @@ export default function GuideLayer({
   style,
   children,
 }: {
-  /** Largeur de la boîte, en pixels CSS (mise en page, hors zoom). */
+  /** Box width, in CSS pixels (layout, excluding zoom). */
   w: number;
-  /** Hauteur de la boîte, en pixels CSS (mise en page, hors zoom). */
+  /** Box height, in CSS pixels (layout, excluding zoom). */
   h: number;
-  /** Échelle de l'ancêtre transformé — les longueurs sont divisées par elle. */
+  /** Scale of the transformed ancestor: lengths are divided by it. */
   scale?: number;
   className?: string;
   style?: CSSProperties;
   children: ReactNode;
 }) {
-  // Identifiant unique par instance : deux lecteurs affichés côte à côte (multi-grille,
-  // comparaison A/B) définiraient sinon deux filtres de même `id`, et le second reprendrait
-  // le flou du premier — donc l'ombre calculée pour un autre zoom.
-  // `useId` encadre son identifiant de ponctuation (`:r0:`, `«r0»` selon la version de React) :
-  // on ne garde que l'alphanumérique, seul jeu sûr dans un `url(#…)`.
+  // Unique identifier per instance: two players shown side by side (multi-grid, A/B comparison)
+  // would otherwise define two filters with the same `id`, and the second would reuse the blur
+  // of the first, hence the shadow computed for another zoom.
+  // `useId` wraps its identifier in punctuation (`:r0:`, `«r0»` depending on the React version):
+  // we keep only alphanumerics, the only safe set inside a `url(#…)`.
   const filterId = `review-guide-shadow-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`;
   const blur = guideShadowBlur(scale);
   const dy = guideShadowDy(scale);
   const stroke = guideStrokeProps(scale);
-  // Région du filtre en unités utilisateur : une bbox de hauteur nulle (un trait seul) rendrait
-  // la région nulle, et le navigateur n'afficherait rien du tout.
+  // Filter region in user units: a bbox of zero height (a single stroke) would make the region
+  // null, and the browser would display nothing at all.
   const margin = blur * 4 + dy + stroke.strokeWidth;
 
   return (

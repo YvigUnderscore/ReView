@@ -9,17 +9,17 @@ import EmptyState from './empty-state';
 import { SkeletonRows } from './skeleton';
 import { resolveQueryPhase } from './query-state.helpers';
 
-/** Requête surveillée — structurellement satisfaite par tout retour de `useQuery`. */
+/** Watched query — structurally satisfied by any return value of `useQuery`. */
 interface WatchedQuery {
   isError: boolean;
   refetch: () => unknown;
 }
 
 /**
- * Bloc de substitution d'un écran alimenté par une requête : squelette tant que la donnée
- * arrive, panneau d'échec avec reprise quand le serveur a refusé. Rend `null` dès que des
- * données sont disponibles, ce qui permet de le poser en garde sans changer la forme des
- * écrans existants :
+ * Substitution block for a screen fed by a query: skeleton while the data is arriving,
+ * failure panel with a retry when the server refused. Renders `null` as soon as data is
+ * available, which allows it to be placed as a guard without changing the shape of the
+ * existing screens:
  *
  * ```tsx
  * const systemQ = useQuery({ … });
@@ -27,10 +27,10 @@ interface WatchedQuery {
  * if (!system) return <QueryState query={systemQ} skeleton={<SkeletonRows count={3} />} />;
  * ```
  *
- * L'échec réemploie `EmptyState` — même cadre, mêmes espacements, mêmes tokens que le reste
- * du produit ; seule la bordure passe en `destructive`, pour qu'un vide voulu et une panne
- * ne se confondent pas. La reprise appelle `refetch()` : pas de rechargement de page, et
- * l'écran se remplit dès que le serveur répond.
+ * The failure reuses `EmptyState` — same frame, same spacing, same tokens as the rest of the
+ * product; only the border switches to `destructive`, so that an intended empty state and an
+ * outage are not confused. The retry calls `refetch()`: no page reload, and the screen fills
+ * as soon as the server responds.
  */
 export function QueryState({
   query,
@@ -41,13 +41,13 @@ export function QueryState({
   className,
 }: {
   query: WatchedQuery;
-  /** Rendu de chargement ; par défaut trois lignes, à ajuster à la densité de l'écran. */
+  /** Loading render; three rows by default, to adjust to the density of the screen. */
   skeleton?: ReactNode;
-  /** Force la phase « données présentes » : le bloc s'efface. */
+  /** Forces the "data present" phase: the block disappears. */
   hasData?: boolean;
-  /** Message d'échec sur mesure, quand la cause mérite d'être nommée. */
+  /** Custom failure message, when the cause deserves to be named. */
   description?: string;
-  /** Version resserrée, pour un panneau imbriqué plutôt qu'une section entière. */
+  /** Tighter version, for a nested panel rather than a whole section. */
   compact?: boolean;
   className?: string;
 }) {

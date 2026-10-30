@@ -4,15 +4,15 @@
 import type { SplatCamera } from '../../reviewTypes';
 
 /**
- * Helpers purs (testables) pour la **caméra-objet** dans la scène (Phase 17) : conversion entre la
- * pose de review (position + cible) et la représentation « objet » manipulable (position + regard).
- * L'orientation du mesh se fait via `Object3D.lookAt` côté Three ; ici on ne manipule que des
- * vecteurs, sans dépendance Three.
+ * Pure (testable) helpers for the **camera-object** in the scene (Phase 17): conversion between
+ * the review pose (position + target) and the manipulable "object" representation (position +
+ * look direction). The mesh orientation is done via `Object3D.lookAt` on the Three side; here we
+ * only manipulate vectors, with no Three dependency.
  */
 
 export type Vec3 = { x: number; y: number; z: number };
 
-/** Distance position→cible (rayon de regard conservé lors d'une réorientation au gizmo). */
+/** Position→target distance (look radius kept when reorienting with the gizmo). */
 export function lookDistance(pose: SplatCamera): number {
   const dx = pose.target.x - pose.position.x;
   const dy = pose.target.y - pose.position.y;
@@ -20,7 +20,7 @@ export function lookDistance(pose: SplatCamera): number {
   return Math.hypot(dx, dy, dz);
 }
 
-/** Cible reconstruite depuis une position, une direction de vue (unitaire) et une distance. */
+/** Target rebuilt from a position, a (unit) view direction and a distance. */
 export function targetFromForward(position: Vec3, forward: Vec3, dist: number): Vec3 {
   const len = Math.hypot(forward.x, forward.y, forward.z) || 1;
   return {
@@ -30,7 +30,7 @@ export function targetFromForward(position: Vec3, forward: Vec3, dist: number): 
   };
 }
 
-/** Direction de vue unitaire d'une pose (position → cible), ou -Z par défaut si dégénérée. */
+/** Unit view direction of a pose (position → target), or -Z by default if degenerate. */
 export function forwardOfPose(pose: SplatCamera): Vec3 {
   const dx = pose.target.x - pose.position.x;
   const dy = pose.target.y - pose.position.y;

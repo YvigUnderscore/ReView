@@ -7,19 +7,19 @@ import { notFound } from '../lib/errors';
 import { pickMostAdvanced, groupByDepartment, type DepartmentGroup } from '../lib/pipelineOrder';
 import { resolveProjectSettingsById, type Department } from '../lib/projectSettings';
 import { ASSIGNEE_SELECT, toAssigneeView, type AssigneeView } from './EntityAssigneeService';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 
 /**
- * « Quelle est la dernière version ? » — la question posée à chaque ouverture d'un asset
- * et à chaque calcul de montage (Phase 45).
+ * "What is the latest version?" — the question asked at each opening of an asset and at each edit computation
+ * (Phase 45).
  *
- * La règle est celle de `lib/pipelineOrder` : l'étape la plus avancée du pipe qui a
- * quelque chose de visible, puis la plus récente à cette étape. Tout est ici en LOTS
- * (`latestForShots`, `latestForAssets`) : un montage de deux cents plans ne peut pas
- * poser deux cents requêtes, et le tri par pipe se fait en mémoire de toute façon.
+ * The rule is that of `lib/pipelineOrder`: the most advanced step of the pipe that has something visible,
+ * then the most recent one at that step. Everything here works in BATCHES
+ * (`latestForShots`, `latestForAssets`): an edit of two hundred shots cannot issue two hundred queries, and
+ * the sort by pipe is done in memory anyway.
  */
 
-/** Un média est visible par l'équipe quand il est publié, prêt, et pas à la corbeille. */
+/** A media is visible to the team when it is published, ready, and not in the trash. */
 const VISIBLE_MEDIA = { deletedAt: null, published: true, status: MediaStatus.READY } as const;
 
 const mediaSelect = {
@@ -35,7 +35,7 @@ const mediaSelect = {
 
 export type LatestMedia = Prisma.MediaObjectGetPayload<{ select: typeof mediaSelect }>;
 
-/** Version retenue pour une entité, avec sa tâche, son étape et le média à jouer. */
+/** Version retained for an entity, with its task, its step and the media to play. */
 export interface LatestPick {
   versionId: number;
   versionName: string;
@@ -44,7 +44,7 @@ export interface LatestPick {
   taskId: number | null;
   taskName: string | null;
   media: LatestMedia | null;
-  /** Tous les médias visibles de la version (le lecteur en choisit un, l'arbre les liste). */
+  /** All the visible media of the version (the player picks one, the tree lists them). */
   allMedia: LatestMedia[];
 }
 
@@ -63,8 +63,8 @@ const versionSelect = {
 type VersionRow = Prisma.VersionGetPayload<{ select: typeof versionSelect }>;
 
 /**
- * Le média à jouer pour une version. La vidéo prime : un montage enchaîne des plans, et
- * une image fixe au milieu d'une séquence n'est un plan que faute de mieux.
+ * The media to play for a version. Video takes precedence: an edit chains shots together, and a still image
+ * in the middle of a sequence is a shot only for lack of a better option.
  */
 function preferPlayable(media: LatestMedia[]): LatestMedia | null {
   return media.find((m) => m.kind === MediaKind.VIDEO) ?? media[0] ?? null;
@@ -84,12 +84,12 @@ function toPick(row: VersionRow): LatestPick {
 }
 
 /**
- * Le strict nécessaire à l'élection : rattachement, étape, date, identifiant.
+ * The bare minimum needed for the election: attachment, step, date, identifier.
  *
- * L'élection chargeait auparavant la version ENTIÈRE — auteur, statut de review et tous
- * ses médias, `metadata` JSON compris — pour toutes les versions publiées des entités
- * demandées, puis en jetait 90 %. Un montage de deux mille plans à dix versions chacun
- * rapatriait ainsi des dizaines de milliers de lignes pour n'en garder que deux mille.
+ * The election used to load the WHOLE version — author, review status and all its media, JSON `metadata`
+ * included — for all the published versions of the requested entities, then
+ * discarded 90 % of it. An edit of two thousand shots with ten versions each thus fetched tens of thousands
+ * of rows to keep two thousand.
  */
 const candidateSelect = {
   id: true,
@@ -100,7 +100,7 @@ const candidateSelect = {
 
 type CandidateRow = Prisma.VersionGetPayload<{ select: typeof candidateSelect }>;
 
-/** Prétendants : versions publiées portant au moins un média visible, colonnes minimales. */
+/** Contenders: published versions carrying at least one visible media, minimal columns. */
 function fetchCandidates(where: Prisma.VersionWhereInput): Promise<CandidateRow[]> {
   return prisma.version.findMany({
     where: { ...where, deletedAt: null, published: true, media: { some: VISIBLE_MEDIA } },
@@ -109,7 +109,7 @@ function fetchCandidates(where: Prisma.VersionWhereInput): Promise<CandidateRow[
   });
 }
 
-/** Élit la version la plus avancée de chaque entité parente, sans charger leur contenu. */
+/** Elects the most advanced version of each parent entity, without loading their content. */
 function electPerParent(
   rows: CandidateRow[],
   parentOf: (row: CandidateRow) => number | null,
@@ -135,8 +135,7 @@ function electPerParent(
 }
 
 /**
- * Charge le contenu des seules versions élues — au plus une par entité — puis le range
- * sous son parent.
+ * Loads the content of the elected versions only — at most one per entity — then files it under its parent.
  */
 async function loadPicks(elected: Map<number, number>): Promise<Map<number, LatestPick>> {
   const out = new Map<number, LatestPick>();
@@ -154,9 +153,9 @@ async function loadPicks(elected: Map<number, number>): Promise<Map<number, Late
 }
 
 /**
- * Dernière version de chaque shot. `department` restreint la recherche à une étape
- * précise (montage « Layout », montage « Anim »…) ; le repli sur les étapes amont reste
- * assuré, puisqu'on ne filtre alors que le sommet du classement.
+ * Latest version of each shot. `department` restricts the search to a specific step (edit "Layout", edit
+ * "Anim"…); the fallback on upstream steps remains ensured, since only the top of the ranking is then
+ * filtered.
  */
 export async function latestForShots(
   shotIds: number[],
@@ -170,9 +169,9 @@ export async function latestForShots(
 }
 
 /**
- * Restreint aux étapes situées AU PLUS au niveau demandé : demander « Layout » sur un plan
- * déjà en compositing doit montrer le layout, pas le compositing ; demander « Lighting »
- * sur un plan qui n'en a pas encore doit montrer l'animation plutôt qu'un carton vide.
+ * Restricts to the steps located AT MOST at the requested level: asking for "Layout" on a shot already in
+ * compositing must show the layout, not the compositing; asking for "Lighting"
+ * on a shot that does not yet have any must show the animation rather than an empty card.
  */
 function withinDepartment(
   rows: CandidateRow[],
@@ -189,7 +188,7 @@ function withinDepartment(
   });
 }
 
-/** Dernière version de chaque asset — versions de ses tâches ET versions directes. */
+/** Latest version of each asset — versions of its tasks AND direct versions. */
 export async function latestForAssets(
   assetIds: number[],
   departments: Department[],
@@ -201,24 +200,23 @@ export async function latestForAssets(
   return loadPicks(electPerParent(rows, (row) => row.task?.assetId ?? row.assetId, departments));
 }
 
-/** Une tâche de l'arbre d'un asset, avec ses versions de la plus récente à la plus ancienne. */
+/** A task in an asset's tree, with its versions from most recent to oldest. */
 export interface AssetTreeTask {
   id: number | null;
   name: string;
   type: string | null;
   status: string | null;
-  /** Statut personnalisable (48) : celui du site ShotGrid sur un projet relié. */
+  /** Customisable status (48): that of the ShotGrid site on a linked project. */
   pipelineStatusId: number | null;
-  /** Planification (48) : reprise de ShotGrid quand le projet y est relié. */
+  /** Scheduling (48): ShotGrid's pick-up when the project is linked to it. */
   startDate: Date | null;
   dueDate: Date | null;
   department: string | null;
   /**
-   * Qui en répond.
+   * Who is responsible for it.
    *
-   * L'arbre ne le disait pas : la carte d'une tâche montrait son statut et ses versions,
-   * mais pas la personne — il fallait ouvrir la tâche pour l'apprendre, et rouvrir chacune
-   * pour savoir qui manquait sur le plan.
+   * The tree did not say so: a task's card showed its status and its versions, but not the person — one had
+   * to open the task to find out, and reopen each one to know who was missing on the shot.
    */
   assignee: AssigneeView | null;
   versions: AssetTreeVersion[];
@@ -236,12 +234,12 @@ export interface AssetTreeVersion {
 }
 
 /**
- * L'asset vu comme un dossier : départements dans l'ordre du pipe → tâches → versions.
+ * The asset seen as a folder: departments in pipe order → tasks → versions.
  *
- * Les brouillons sont inclus (l'artiste doit retrouver son travail en cours), mais leurs
- * médias restent filtrés par la visibilité habituelle : `userId` voit les siens, l'équipe
- * voit ce qui est publié. Les versions rattachées directement à l'asset — sans tâche —
- * forment une pseudo-tâche : elles existent en base et personne ne doit les perdre.
+ * Drafts are included (the artist must find their work in progress), but their media remain filtered by the
+ * usual visibility: `userId` sees their own, the team sees what is published.
+ * The versions attached directly to the asset — without a task — form a pseudo-task: they exist in the
+ * database and nobody must lose them.
  */
 export async function assetTree(
   assetId: number,
@@ -252,12 +250,12 @@ export async function assetTree(
 }
 
 /**
- * Même arbre pour un plan.
+ * The same tree for a shot.
  *
- * Un plan traverse ses étapes exactement comme un asset — anim, lighting, compositing —
- * et son travail se lit de la même façon : une carte par tâche, ses versions dessous. Il
- * n'y a aucune raison que les deux écrans divergent, ni deux fois la même requête à
- * écrire. Seule la colonne qui porte le rattachement change.
+ * A shot goes through its steps exactly as an asset does — anim, lighting, compositing — and its work reads
+ * the same way: a card per task, its versions underneath. There is no reason
+ * for the two screens to diverge, nor for the same query to be written twice. Only the column carrying the
+ * attachment changes.
  */
 export async function shotTree(
   shotId: number,
@@ -294,9 +292,8 @@ async function entityTree(
         },
       },
     }),
-    // Versions accrochées directement au parent, sans tâche. Un plan n'en porte jamais
-    // (la base ne le permet pas), mais un asset oui : elles existent, personne ne doit
-    // les perdre.
+    // Versions attached directly to the parent, without a task. A shot never carries any (the database does
+    // not allow it), but an asset does: they exist, nobody must lose them.
     'assetId' in parent
       ? prisma.version.findMany({
           where: { assetId: parent.assetId, deletedAt: null },
@@ -350,7 +347,7 @@ async function entityTree(
   return groupByDepartment(entries, departments);
 }
 
-/** Média tel qu'il sort de l'API : la clé de stockage reste au serveur, l'URL est signée. */
+/** Media as it leaves the API: the storage key stays on the server, the URL is signed. */
 export interface MediaView {
   id: number;
   kind: MediaKind;
@@ -369,12 +366,12 @@ const toMediaView = async (m: LatestMedia): Promise<MediaView> => ({
   thumbnailUrl: m.thumbnailKey ? await storage.getPresignedGetUrl(m.thumbnailKey) : null,
 });
 
-/** Une version telle qu'elle sort de l'API (médias signés). */
+/** A version as it leaves the API (signed media). */
 export type AssetTreeVersionView = Omit<AssetTreeVersion, 'media'> & { media: MediaView[] };
 export type AssetTreeTaskView = Omit<AssetTreeTask, 'versions'> & { versions: AssetTreeVersionView[] };
 
 export interface AssetOverview {
-  /** Le pipe du projet, dans l'ordre — l'interface s'en sert pour ses en-têtes. */
+  /** The project's pipe, in order — the interface uses it for its headers. */
   departments: Department[];
   groups: DepartmentGroup<AssetTreeTaskView>[];
   latest: {
@@ -390,9 +387,9 @@ export interface AssetOverview {
 }
 
 /**
- * L'asset tel que l'écran le montre : son pipe, son arbre départements → tâches →
- * versions, et la version qui fait foi. Tout est assemblé ici pour que la route reste
- * une route — et pour qu'un seul endroit décide de ce qu'est « la dernière version ».
+ * The asset as the screen shows it: its pipe, its tree departments → tasks → versions, and the version that
+ * counts. Everything is assembled here so that the route remains a route —
+ * and so that a single place decides what "the latest version" is.
  */
 export async function assetOverview(assetId: number, userId: number): Promise<AssetOverview> {
   const asset = await prisma.asset.findFirst({
@@ -447,11 +444,11 @@ export async function assetOverview(assetId: number, userId: number): Promise<As
 }
 
 /**
- * Le plan vu comme un dossier — pendant exact de `assetOverview`.
+ * The shot seen as a folder — exact counterpart of `assetOverview`.
  *
- * Un plan et un asset se travaillent de la même façon : des étapes, des tâches, des
- * versions. Leur donner deux écrans différents obligerait l'équipe à apprendre deux fois
- * la même chose, et à nous en tenir deux fois la mécanique à jour.
+ * A shot and an asset are worked on in the same way: steps, tasks, versions. Giving them two different
+ * screens would force the team to learn the same thing twice, and to keep
+ * the mechanics up to date twice.
  */
 export async function shotOverview(shotId: number, userId: number): Promise<AssetOverview> {
   const shot = await prisma.shot.findFirst({

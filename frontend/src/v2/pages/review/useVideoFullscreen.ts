@@ -4,14 +4,14 @@
 import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
 
 /**
- * Plein écran vidéo **immersif** : la vidéo occupe tout l'écran et la playbar devient un
- * bandeau translucide qui s'efface après 1 s sans mouvement de souris (curseur masqué avec).
- * `paneRef` = élément mis en plein écran. Complémentaire du plein écran unifié de la page.
+ * **Immersive** video fullscreen: the video fills the screen and the playbar becomes a translucent strip
+ * that fades after 1 s without mouse movement (the cursor hides with it). `paneRef` = element put in
+ * fullscreen. Complementary to the page's unified fullscreen.
  *
- * - `active` : le plein écran vidéo seule est en cours ;
- * - `controlsVisible` : la playbar est visible (révélée au mouvement, masquée après 1 s) ;
- * - `poke` : à appeler sur mouvement de souris pour révéler la playbar et relancer le délai ;
- * - `toggle` : entre/sort du plein écran vidéo seule.
+ * - `active`: video-only fullscreen is in progress;
+ * - `controlsVisible`: the playbar is visible (revealed on movement, hidden after 1 s);
+ * - `poke`: to call on mouse movement to reveal the playbar and restart the delay;
+ * - `toggle`: enters/exits video-only fullscreen.
  */
 export function useVideoFullscreen(paneRef: RefObject<HTMLElement | null>) {
   const [active, setActive] = useState(false);
@@ -24,8 +24,8 @@ export function useVideoFullscreen(paneRef: RefObject<HTMLElement | null>) {
     hideTimer.current = window.setTimeout(() => setControlsVisible(false), 1000);
   }, []);
 
-  // setState vit dans le handler d'événement (pas le corps de l'effet) : entrée en plein
-  // écran → on lance l'auto-masquage ; sortie → playbar rétablie et timer purgé.
+  // setState lives in the event handler (not in the effect body): entering fullscreen starts the
+  // auto-hide; exiting restores the playbar and purges the timer.
   useEffect(() => {
     const onFs = () => {
       const on = document.fullscreenElement === paneRef.current;

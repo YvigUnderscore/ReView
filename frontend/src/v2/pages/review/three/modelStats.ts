@@ -2,22 +2,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type * as THREE from 'three';
-import { t } from '../../../i18n';
+import { t } from '@/v2/i18n';
 
 /**
- * Fiche technique du modèle 3D (Phase 39, 39.C) : parcourt le sous-arbre chargé pour compter
- * géométrie (triangles/sommets/meshes), lister les matériaux, les jeux d'UV et les textures (par
- * canal). Purement lecture — aucune mutation de la scène. Testable sans contexte WebGL.
+ * Tech sheet of the 3D model (Phase 39, 39.C): walks the loaded subtree to count geometry
+ * (triangles/vertices/meshes), and to list materials, UV sets and textures (per channel).
+ * Read-only — no scene mutation. Testable without a WebGL context.
  */
 
 /**
- * Canaux de texture inspectés.
+ * Inspected texture channels.
  *
- * Les neuf premiers sont les slots du glTF de base (`MeshStandardMaterial`). Les suivants
- * viennent des extensions `KHR_materials_*`, que le chargeur glTF de Three résout tout seul
- * en `MeshPhysicalMaterial` : le viewer les **rendait** déjà, mais la fiche technique ne les
- * balayait pas — un shader de verre ou de vernis n'affichait donc aucune texture, et l'on
- * cherchait la cause du poids ou du flou ailleurs. L'ordre suit celui des extensions
+ * The first nine are the slots of the base glTF (`MeshStandardMaterial`). The following ones come
+ * from the `KHR_materials_*` extensions, which Three's glTF loader resolves on its own into
+ * `MeshPhysicalMaterial`: the viewer already **rendered** them, but the tech sheet did not scan
+ * them — a glass or varnish shader therefore showed no texture, and the cause was looked for
+ * elsewhere (weight, blur). The order follows that of the extensions
  * (clearcoat, transmission, volume, sheen, specular, iridescence, anisotropy).
  */
 export const TEXTURE_SLOTS = [
@@ -49,12 +49,12 @@ export type TextureSlot = (typeof TEXTURE_SLOTS)[number];
 
 export interface TextureInfo {
   slot: TextureSlot;
-  /** Matériau porteur (pour regrouper dans l'inspecteur). */
+  /** Owning material (to group them in the inspector). */
   material: string;
   name: string;
   width: number;
   height: number;
-  /** Référence Three (pour l'aperçu par canal — non sérialisable). */
+  /** Three reference (for the per-channel preview — not serializable). */
   texture: THREE.Texture;
 }
 
@@ -68,7 +68,7 @@ export interface ModelStats {
   triangles: number;
   vertices: number;
   materials: MaterialInfo[];
-  /** Jeux d'UV présents (ex. `['uv', 'uv1']`) — utile pour le lightmap/AO. */
+  /** UV sets present (e.g. `['uv', 'uv1']`) — useful for lightmap/AO. */
   uvSets: string[];
   textures: TextureInfo[];
 }
@@ -83,7 +83,7 @@ function materialType(m: THREE.Material): string {
   return m.type || m.constructor?.name || 'Material';
 }
 
-/** Collecte la fiche technique complète du modèle (`root` = objet normalisé chargé). */
+/** Collects the full tech sheet of the model (`root` = the loaded normalized object). */
 export function collectModelStats(root: THREE.Object3D): ModelStats {
   let meshes = 0;
   let triangles = 0;

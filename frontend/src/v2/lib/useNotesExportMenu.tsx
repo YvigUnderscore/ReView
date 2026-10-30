@@ -10,28 +10,28 @@ import type { MenuEntry } from './menuSpec';
 import { useT } from '../i18n';
 
 /**
- * Export des notes : la partie commune à toutes ses surfaces d'appel.
+ * Notes export: the part common to all its call surfaces.
  *
- * La route et le client (`lib/notesExport`) savaient déjà produire quatre formats ; seuls
- * deux étaient atteignables, depuis un unique panneau du dock de review. L'EDL et l'OTIO —
- * ceux qui font sortir les retours vers la salle de montage — n'avaient aucun bouton,
- * aucun menu, aucun raccourci : du code livré et injoignable.
+ * The route and the client (`lib/notesExport`) already knew how to produce four formats; only
+ * two were reachable, from a single panel of the review dock. The EDL and the OTIO —
+ * the ones that take feedback out to the editing room — had no button,
+ * no menu, no shortcut: shipped code that could not be reached.
  *
- * La liste des formats, les libellés, les icônes et la mutation vivent ici pour qu'un
- * sous-menu, une entrée déclarative et une rangée de boutons ne divergent jamais. Le
- * serveur refuse l'EDL et l'OTIO hors d'une suite de plans : `notesFormatsFor` applique la
- * même règle, pour ne jamais proposer une action dont on sait qu'elle échouera.
+ * The list of formats, the labels, the icons and the mutation live here so that a
+ * submenu, a declarative entry and a row of buttons never diverge. The
+ * server refuses the EDL and the OTIO outside a sequence of shots: `notesFormatsFor` applies the
+ * same rule, so as never to offer an action known to fail.
  */
 
-/** Une suite de plans porte un timecode continu ; un média isolé, non. */
+/** A sequence of shots carries a continuous timecode; an isolated media item does not. */
 const EDITORIAL_SCOPES: readonly NotesScope[] = ['playlist', 'timeline'];
 
-/** Formats réellement servis pour cette portée, dans l'ordre d'affichage. */
+/** Formats actually served for this scope, in display order. */
 export function notesFormatsFor(scope: NotesScope): NotesFormat[] {
   return EDITORIAL_SCOPES.includes(scope) ? ['csv', 'sheet', 'edl', 'otio'] : ['csv', 'sheet'];
 }
 
-/** Icône de chaque format — la même partout, pour qu'on les reconnaisse d'un écran à l'autre. */
+/** Icon of each format — the same everywhere, so they are recognised from one screen to the next. */
 export const NOTES_FORMAT_ICONS: Record<NotesFormat, ReactNode> = {
   csv: <FileSpreadsheet size={14} />,
   sheet: <Printer size={14} />,
@@ -44,7 +44,7 @@ export interface NotesExportTarget {
   id: number;
 }
 
-/** Lance un export et rend compte : nom du fichier obtenu, troncature, échec. */
+/** Starts an export and reports back: name of the file obtained, truncation, failure. */
 export function useNotesDownload({ scope, id }: NotesExportTarget) {
   const t = useT();
   const run = useMutation({
@@ -59,8 +59,8 @@ export function useNotesDownload({ scope, id }: NotesExportTarget) {
 }
 
 /**
- * Libellés des formats. Une fonction, pas une constante de module : une table figée au
- * chargement garderait la langue du démarrage.
+ * Format labels. A function, not a module constant: a table frozen at
+ * load time would keep the language of startup.
  */
 export function useNotesFormatLabels(): Record<NotesFormat, string> {
   const t = useT();
@@ -72,7 +72,7 @@ export function useNotesFormatLabels(): Record<NotesFormat, string> {
   };
 }
 
-/** Sous-menu « notes de review » décrit en données, pour `EntityContextMenu`. */
+/** "Review notes" submenu described as data, for `EntityContextMenu`. */
 export function useNotesExportEntry({ scope, id }: NotesExportTarget): MenuEntry {
   const t = useT();
   const labels = useNotesFormatLabels();

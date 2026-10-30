@@ -2,22 +2,22 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { prisma } from './prisma';
-import { storage } from '../services/StorageService';
-import { enqueueStorageCleanup } from '../services/JobService';
+import { storage } from './storage';
+import { enqueueStorageCleanup } from './queues';
 import { logger } from './logger';
 
 /**
- * Corbeille : soft-delete / restauration / purge définitive, avec cascade descendante
- * et nettoyage des objets MinIO à la purge.
+ * Trash: soft-delete / restore / permanent purge, with downward cascade and cleanup of MinIO
+ * objects on purge.
  *
- * Cascade (soft-delete & restore) :
+ * Cascade (soft-delete & restore):
  *   Sequence → Shots
- *   Asset    → Versions → Médias
- *   Version  → Médias
- *   Shot / Média : pas d'enfant porteur de deletedAt
- *   Project  : marqué seul (ses listings sont déjà filtrés par projet visible)
+ *   Asset    → Versions → Medias
+ *   Version  → Medias
+ *   Shot / Media: no child carrying deletedAt
+ *   Project  : marked alone (its listings are already filtered by visible project)
  *
- * Note : la restauration d'un parent restaure aussi ses descendants supprimés.
+ * Note: restoring a parent also restores its deleted descendants.
  */
 
 type MediaKeys = {
@@ -28,13 +28,13 @@ type MediaKeys = {
 };
 
 /**
- * Ce qu'il faut lire sur un média pour pouvoir libérer tout ce qu'il occupe.
+ * What must be read from a media in order to free everything it occupies.
  *
- * `imageSequence.storagePrefix` est le seul endroit de la base qui nomme les frames d'une
- * séquence d'images (`projects/…/{mediaId}/frames/`). Tant que la purge ne le lisait pas,
- * détruire une livraison de 2 000 EXR effaçait la ligne et le manifeste mais laissait les
- * quatre-vingts gigaoctets de frames dans le bucket — sans plus rien en base pour les
- * nommer, donc introuvables autrement qu'en balayant le stockage à la main.
+ * `imageSequence.storagePrefix` is the only place in the database that names the frames of an
+ * image sequence (`projects/…/{mediaId}/frames/`). As long as the purge did not read it,
+ * destroying a delivery of 2,000 EXRs erased the row and the manifest but left the eighty
+ * gigabytes of frames in the bucket, with nothing left in the database to name them, so they
+ * could only be found by sweeping the storage by hand.
  */
 const MEDIA_STORAGE_SELECT = {
   id: true,
@@ -43,7 +43,7 @@ const MEDIA_STORAGE_SELECT = {
   imageSequence: { select: { storagePrefix: true } },
 } as const;
 
-/** Aplati les clés storage (média + miniature) d'une liste de médias. */
+/** Flattens the storage keys (media + thumbnail) of a list of media. */
 function mediaStorageKeys(medias: MediaKeys[]): string[] {
   const keys: string[] = [];
   for (const m of medias) {
@@ -54,18 +54,18 @@ function mediaStorageKeys(medias: MediaKeys[]): string[] {
 }
 
 /**
- * Dossier propre à un média, déduit de sa clé source.
+ * A media's own folder, deduced from its source key.
  *
- * `StorageService.mediaKey` range toujours un média dans un dossier qui porte son
- * identifiant : `projects/{projet}/{parent}/{version}/{mediaId}/{fichier}`. Ce dossier
- * n'appartient donc qu'à lui, et c'est là que vivent, à côté du fichier d'origine, le
- * manifeste `sequence.json` et le sous-dossier `frames/` d'une séquence d'images.
+ * `StorageService.mediaKey` always places a media in a folder that carries its identifier:
+ * `projects/{project}/{parent}/{version}/{mediaId}/{file}`. This folder therefore belongs to it
+ * alone, and it is there that, next to the original file, the `sequence.json` manifest and the
+ * `frames/` subfolder of an image sequence live.
  *
- * Le suffixe `/{id}/` est EXIGÉ avant de rendre le préfixe : c'est la preuve que le
- * dossier est bien celui de ce média-là. Sans elle, une clé inattendue — vide (média créé
- * mais pas encore nommé), héritée d'une convention ancienne — ferait supprimer un préfixe
- * qui contient le travail de quelqu'un d'autre, voire le bucket entier. Aucun préfixe vaut
- * mieux qu'un préfixe trop large : les frames retomberaient alors sur `storagePrefix`.
+ * The `/{id}/` suffix is REQUIRED before the prefix is returned: it is the proof that the folder
+ * is indeed that of this media. Without it, an unexpected key (empty: media created but not yet
+ * named; or inherited from an old convention) would delete a prefix holding someone else's work,
+ * or even the whole bucket. No prefix is better than an overly broad one: the frames would then
+ * fall back to `storagePrefix`.
  */
 function mediaFolderPrefix(media: MediaKeys): string | null {
   const slash = media.storageKey.lastIndexOf('/');
@@ -75,17 +75,17 @@ function mediaFolderPrefix(media: MediaKeys): string | null {
 }
 
 /**
- * Préfixes MinIO qui n'appartiennent qu'à ces médias.
+ * MinIO prefixes that belong only to these media.
  *
- * Deux familles. (1) Tout ce que les workers fabriquent vit sous `derived/{mediaId}/` :
- * renditions HLS, proxy MP4, dérivé client, sprite de timeline, GLB converti, vignettes
- * spatiales, ops splat. Ces objets pèsent l'essentiel du bucket — une purge qui ne
- * supprimait que `storageKey` et `thumbnailKey` ne libérait presque rien, et pour une vidéo
- * rien du tout puisque l'original est déjà remplacé par son proxy à la fin du transcodage.
- * (2) Le dossier du média, qui emporte le fichier d'origine, le manifeste de séquence et
- * ses frames — et, par construction, tout dérivé qu'on rangerait demain à côté. Quand ce
- * dossier n'est pas démontrable (cf. `mediaFolderPrefix`), on se rabat sur le seul préfixe
- * de frames que la base connaisse.
+ * Two families. (1) Everything the workers produce lives under `derived/{mediaId}/`: HLS
+ * renditions, MP4 proxy, client derivative, timeline sprite, converted GLB, spatial thumbnails,
+ * splat ops. These objects make up the bulk of the bucket: a purge that only deleted
+ * `storageKey` and `thumbnailKey` freed almost nothing, and for a video nothing at all, since
+ * the original is already replaced by its proxy at the end of transcoding.
+ * (2) The media's folder, which carries the original file, the sequence manifest and its frames,
+ * and, by construction, any derivative one would store beside them tomorrow. When this folder
+ * cannot be proven (cf. `mediaFolderPrefix`), we fall back to the only frames prefix the
+ * database knows.
  */
 function mediaOwnedPrefixes(medias: MediaKeys[]): string[] {
   const prefixes: string[] = [];
@@ -99,16 +99,16 @@ function mediaOwnedPrefixes(medias: MediaKeys[]): string[] {
 }
 
 /**
- * Préfixes traités de front. Chaque préfixe coûte au moins un `ListObjectsV2` suivi d'un
- * `DeleteObjects` : les enchaîner strictement un par un faisait de la purge de deux cents
- * médias plusieurs centaines d'allers-retours en série, dans le fil de la requête HTTP.
- * Huit suffisent à masquer la latence sans transformer un ménage en charge pour MinIO.
+ * Prefixes processed together. Each prefix costs at least one `ListObjectsV2` followed by a
+ * `DeleteObjects`: chaining them strictly one after the other turned the purge of two hundred
+ * media into hundreds of serial round trips, in the HTTP request's thread. Eight is enough to
+ * hide the latency without turning a cleanup into a load on MinIO.
  */
 const PREFIX_DELETE_CONCURRENCY = 8;
 
 /**
- * Supprime les préfixes avec un parallélisme borné et renvoie ceux qui ont échoué, **dans
- * l'ordre d'entrée** — ce que le journal des orphelins réenfile doit rester reproductible.
+ * Deletes the prefixes with bounded parallelism and returns those that failed, **in input
+ * order**: what the orphan log re-queues must remain reproducible.
  */
 async function deletePrefixes(prefixes: string[]): Promise<string[]> {
   const failed: (string | null)[] = new Array<string | null>(prefixes.length).fill(null);
@@ -122,7 +122,7 @@ async function deletePrefixes(prefixes: string[]): Promise<string[]> {
         await storage.deletePrefix(prefix);
       } catch (err) {
         failed[index] = prefix;
-        logger.warn({ err, prefix }, '[Trash] suppression préfixe storage échouée (retry enfilé)');
+        logger.warn({ err, prefix }, '[Trash] storage prefix deletion failed (retry queued)');
       }
     }
   };
@@ -133,14 +133,14 @@ async function deletePrefixes(prefixes: string[]): Promise<string[]> {
 }
 
 /**
- * Supprime des objets MinIO **après** que la DB a été purgée. Ne lève jamais : un
- * échec storage n'a plus d'impact sur la cohérence DB (déjà committée). Les clés en
- * échec sont journalisées et enfilées pour retry (journal des orphelins, cf. 10.D7).
+ * Deletes MinIO objects **after** the DB has been purged. Never throws: a storage failure no
+ * longer affects DB consistency (already committed). Keys that failed are logged and queued for
+ * retry (orphan log, cf. 10.D7).
  *
- * Les clés partent en **suppression multiple** (`DeleteObjects`, 1 000 par appel) plutôt
- * qu'une par une. Si le transport tombe, tout le lot est réenfilé au lieu des seules clés
- * réellement en échec : la suppression d'un objet déjà absent est sans effet, l'état final
- * du bucket est donc identique — on retente simplement un peu plus large.
+ * Keys go out as a **multiple deletion** (`DeleteObjects`, 1,000 per call) rather than one by
+ * one. If the transport drops, the whole batch is re-queued instead of only the keys that really
+ * failed: deleting an already absent object has no effect, so the final state of the bucket is
+ * identical; we simply retry a little wider.
  */
 async function deleteStorageAfterCommit(keys: string[], prefixes: string[] = []): Promise<void> {
   let failedKeys: string[] = [];
@@ -148,10 +148,10 @@ async function deleteStorageAfterCommit(keys: string[], prefixes: string[] = [])
     try {
       failedKeys = await storage.deleteObjects(keys);
       if (failedKeys.length > 0)
-        logger.warn({ keys: failedKeys }, '[Trash] suppression objet storage refusée (retry enfilé)');
+        logger.warn({ keys: failedKeys }, '[Trash] storage object deletion refused (retry queued)');
     } catch (err) {
       failedKeys = [...keys];
-      logger.warn({ err, count: keys.length }, '[Trash] suppression objets storage échouée (retry enfilé)');
+      logger.warn({ err, count: keys.length }, '[Trash] storage objects deletion failed (retry queued)');
     }
   }
   const failedPrefixes = await deletePrefixes(prefixes);
@@ -159,7 +159,7 @@ async function deleteStorageAfterCommit(keys: string[], prefixes: string[] = [])
     await enqueueStorageCleanup({ keys: failedKeys, prefixes: failedPrefixes }).catch((err) =>
       logger.error(
         { err, keys: failedKeys, prefixes: failedPrefixes },
-        "[Trash] impossible d'enfiler le nettoyage storage — orphelins non retentés",
+        '[Trash] could not queue the storage cleanup — orphans will not be retried',
       ),
     );
   }
@@ -180,12 +180,12 @@ export async function softDeleteShot(id: number): Promise<void> {
 }
 
 /**
- * Épisode : aucune cascade, contrairement à la séquence.
+ * Episode: no cascade, unlike the sequence.
  *
- * Un épisode regroupe des séquences, il ne les possède pas. Emporter avec lui ses
- * séquences — et derrière elles les plans, les versions et les commentaires — ferait
- * d'un geste de rangement une destruction de production. Le rattachement (`episodeId`)
- * est conservé tel quel : la restauration rend l'épisode exactement comme il était.
+ * An episode groups sequences, it does not own them. Taking its sequences with it, and behind
+ * them the shots, versions and comments, would turn a tidying gesture into the destruction of
+ * production. The attachment (`episodeId`) is kept as is: restoring brings the episode back
+ * exactly as it was.
  */
 export async function softDeleteEpisode(id: number): Promise<void> {
   await prisma.episode.update({ where: { id }, data: { deletedAt: new Date() } });
@@ -216,9 +216,9 @@ export async function softDeleteProject(id: number): Promise<void> {
   await prisma.project.update({ where: { id }, data: { deletedAt: new Date() } });
 }
 
-// ── Soft-delete en lot (13.C) ─────────────────────────────────────────────────
-// Une seule transaction par domaine (updateMany), cascade descendante identique au
-// singulier. Les ids ont déjà été validés (accès projet) par le BulkService appelant.
+// ── Bulk soft-delete (13.C) ───────────────────────────────────────────────────
+// One transaction per domain (updateMany), with the same downward cascade as the single
+// variant. The ids have already been validated (project access) by the calling BulkService.
 
 export async function softDeleteSequences(ids: number[]): Promise<void> {
   const now = new Date();
@@ -261,7 +261,7 @@ export async function softDeleteProjects(ids: number[]): Promise<void> {
   await prisma.project.updateMany({ where: { id: { in: ids } }, data: { deletedAt: new Date() } });
 }
 
-// ── Restauration ────────────────────────────────────────────────────────────────
+// ── Restore ────────────────────────────────────────────────────────────────
 
 export async function restoreSequence(id: number): Promise<void> {
   await prisma.$transaction([
@@ -301,7 +301,7 @@ export async function restoreProject(id: number): Promise<void> {
   await prisma.project.update({ where: { id }, data: { deletedAt: null } });
 }
 
-// ── Restauration en lot (13.C) ────────────────────────────────────────────────
+// ── Bulk restore (13.C) ────────────────────────────────────────────────
 
 export async function restoreSequences(ids: number[]): Promise<void> {
   await prisma.$transaction([
@@ -344,11 +344,11 @@ export async function restoreProjects(ids: number[]): Promise<void> {
   await prisma.project.updateMany({ where: { id: { in: ids } }, data: { deletedAt: null } });
 }
 
-// ── Purge définitive (DB + MinIO) ────────────────────────────────────────────────
+// ── Permanent purge (DB + MinIO) ────────────────────────────────────────────────
 
-// Invariant 10.D7 : la suppression DB (atomique via cascade) précède TOUJOURS la
-// suppression storage. Un échec MinIO ne laisse donc jamais la DB incohérente ;
-// les objets orphelins sont journalisés et retentés (deleteStorageAfterCommit).
+// Invariant 10.D7: the DB deletion (atomic via cascade) ALWAYS precedes the storage deletion.
+// A MinIO failure therefore never leaves the DB inconsistent; orphaned objects are logged and
+// retried (deleteStorageAfterCommit).
 
 export async function purgeMedia(id: number): Promise<void> {
   const media = await prisma.mediaObject.findUnique({
@@ -365,7 +365,7 @@ export async function purgeVersion(id: number): Promise<void> {
     where: { versionId: id },
     select: MEDIA_STORAGE_SELECT,
   });
-  await prisma.version.delete({ where: { id } }); // cascade DB des médias
+  await prisma.version.delete({ where: { id } }); // DB cascade to the media
   await deleteStorageAfterCommit(mediaStorageKeys(medias), mediaOwnedPrefixes(medias));
 }
 
@@ -374,7 +374,7 @@ export async function purgeShot(id: number): Promise<void> {
     where: { version: { task: { shotId: id } } },
     select: MEDIA_STORAGE_SELECT,
   });
-  await prisma.shot.delete({ where: { id } }); // cascade DB : tasks → versions → médias
+  await prisma.shot.delete({ where: { id } }); // DB cascade: tasks → versions → media
   await deleteStorageAfterCommit(mediaStorageKeys(medias), mediaOwnedPrefixes(medias));
 }
 
@@ -388,15 +388,14 @@ export async function purgeAsset(id: number): Promise<void> {
 }
 
 export async function purgeSequence(id: number): Promise<void> {
-  // La suppression d'une séquence remet sequenceId à null sur ses shots (SetNull) :
-  // aucun média à purger ici.
+  // Deleting a sequence sets sequenceId to null on its shots (SetNull): no media to purge here.
   await prisma.sequence.delete({ where: { id } });
 }
 
 /**
- * Purge d'un épisode. Ses séquences survivent, simplement détachées (`ON DELETE SET
- * NULL`) : un épisode est un regroupement, pas un propriétaire — le détruire ne doit
- * emporter ni plan, ni version, ni commentaire. Aucun objet MinIO à retirer.
+ * Purge of an episode. Its sequences survive, simply detached (`ON DELETE SET NULL`): an
+ * episode is a grouping, not an owner, so destroying it must not take along any shot, version or
+ * comment. No MinIO object to remove.
  */
 export async function purgeEpisode(id: number): Promise<void> {
   await prisma.episode.delete({ where: { id } });
@@ -405,26 +404,26 @@ export async function purgeEpisode(id: number): Promise<void> {
 export async function purgeProject(id: number): Promise<void> {
   const project = await prisma.project.findUnique({ where: { id }, select: { slug: true } });
   if (!project) return;
-  await prisma.project.delete({ where: { id } }); // cascade DB intégrale
-  // Storage après commit — nouvelles clés lisibles + anciennes clés numériques (legacy).
+  await prisma.project.delete({ where: { id } }); // full DB cascade
+  // Storage after commit: new readable keys + old numeric keys (legacy).
   await deleteStorageAfterCommit([], [`projects/${project.slug}/`, `projects/${id}/`]);
 }
 
-// ── Purge définitive en lot (13.C) ───────────────────────────────────────────────
+// ── Bulk permanent purge (13.C) ───────────────────────────────────────────────
 
 /**
- * Purge groupée, pendant exact des `softDelete*`/`restore*` pluriels.
+ * Bulk purge, the exact counterpart of the plural `softDelete*` / `restore*`.
  *
- * La voie groupée appelait jusqu'ici la purge unitaire dans une boucle : deux cents médias
- * coûtaient deux cents lectures, deux cents suppressions et quatre cents allers-retours
- * MinIO en série, le tout dans le fil de la requête HTTP. Ici le lot est lu en une passe,
- * supprimé en une passe, et le stockage nettoyé en un seul `DeleteObjects` suivi des
- * préfixes en parallélisme borné.
+ * Until now the grouped path called the single purge in a loop: two hundred media cost two
+ * hundred reads, two hundred deletions and four hundred serial MinIO round trips, all in the
+ * HTTP request's thread. Here the batch is read in one pass, deleted in one pass, and the
+ * storage is cleaned by a single `DeleteObjects` followed by the prefixes with bounded
+ * parallelism.
  *
- * Même invariant 10.D7 : la DB d'abord, le stockage ensuite. Une différence assumée avec
- * la boucle unitaire : un `deleteMany` est tout ou rien là où la boucle laissait derrière
- * elle les éléments déjà purgés. Le chemin nominal, lui, produit exactement le même état.
- * Les ids ont déjà été validés (accès projet) par le BulkService appelant.
+ * Same invariant 10.D7: the DB first, the storage after. A deliberate difference from the single
+ * loop: a `deleteMany` is all-or-nothing, whereas the loop used to leave behind the items already
+ * purged. The nominal path, however, produces exactly the same state.
+ * The ids have already been validated (project access) by the calling BulkService.
  */
 const byIdAsc = { orderBy: { id: 'asc' } } as const;
 
@@ -446,7 +445,7 @@ export async function purgeVersions(ids: number[]): Promise<void> {
     select: MEDIA_STORAGE_SELECT,
     ...byIdAsc,
   });
-  await prisma.version.deleteMany({ where: { id: { in: ids } } }); // cascade DB des médias
+  await prisma.version.deleteMany({ where: { id: { in: ids } } }); // DB cascade to the media
   await deleteStorageAfterCommit(mediaStorageKeys(medias), mediaOwnedPrefixes(medias));
 }
 
@@ -457,7 +456,7 @@ export async function purgeShots(ids: number[]): Promise<void> {
     select: MEDIA_STORAGE_SELECT,
     ...byIdAsc,
   });
-  await prisma.shot.deleteMany({ where: { id: { in: ids } } }); // cascade : tasks → versions → médias
+  await prisma.shot.deleteMany({ where: { id: { in: ids } } }); // cascade: tasks → versions → media
   await deleteStorageAfterCommit(mediaStorageKeys(medias), mediaOwnedPrefixes(medias));
 }
 
@@ -472,13 +471,13 @@ export async function purgeAssets(ids: number[]): Promise<void> {
   await deleteStorageAfterCommit(mediaStorageKeys(medias), mediaOwnedPrefixes(medias));
 }
 
-/** Séquences : leurs shots sont détachés (SetNull), aucun objet MinIO à retirer. */
+/** Sequences: their shots are detached (SetNull), no MinIO object to remove. */
 export async function purgeSequences(ids: number[]): Promise<void> {
   if (ids.length === 0) return;
   await prisma.sequence.deleteMany({ where: { id: { in: ids } } });
 }
 
-/** Épisodes : leurs séquences sont détachées (SetNull), aucun objet MinIO à retirer. */
+/** Episodes: their sequences are detached (SetNull), no MinIO object to remove. */
 export async function purgeEpisodes(ids: number[]): Promise<void> {
   if (ids.length === 0) return;
   await prisma.episode.deleteMany({ where: { id: { in: ids } } });
@@ -493,28 +492,28 @@ export async function purgeProjects(ids: number[]): Promise<void> {
   });
   if (projects.length === 0) return;
   await prisma.project.deleteMany({ where: { id: { in: projects.map((p) => p.id) } } });
-  // Nouvelles clés lisibles + anciennes clés numériques (legacy), comme au singulier.
+  // New readable keys + old numeric keys (legacy), as in the single variant.
   await deleteStorageAfterCommit(
     [],
     projects.flatMap((p) => [`projects/${p.slug}/`, `projects/${p.id}/`]),
   );
 }
 
-// ── Purge automatique (balayage planifié) ────────────────────────────────────────
+// ── Automatic purge (scheduled sweep) ────────────────────────────────────────
 
 /**
- * Plafond d'une passe de purge automatique. Chaque élément coûte une transaction DB **et**
- * un ou plusieurs appels MinIO : vider d'un coup la corbeille d'un long-métrage occuperait
- * le worker des heures et martèlerait le stockage pendant que le studio travaille. La purge
- * est idempotente et reprend là où elle s'est arrêtée à la passe suivante.
+ * Ceiling of one automatic purge pass. Each item costs a DB transaction **and** one or more
+ * MinIO calls: emptying a feature film's trash in one go would keep the worker busy for hours and
+ * hammer the storage while the studio works. The purge is idempotent and resumes where it
+ * stopped on the next pass.
  */
 export const TRASH_PURGE_MAX_ITEMS = 2000;
 
 /**
- * Purge définitivement tout élément en corbeille depuis plus de `retentionDays` jours, dans
- * la limite de `maxItems` éléments par passe.
- * `retentionDays <= 0` désactive la purge automatique (no-op).
- * Ordre : enfants avant parents pour éviter les conflits de cascade.
+ * Permanently purges every trash item older than `retentionDays` days, up to the limit of
+ * `maxItems` items per pass.
+ * `retentionDays <= 0` disables the automatic purge (no-op).
+ * Order: children before parents, to avoid cascade conflicts.
  */
 export async function purgeExpiredTrash(
   retentionDays: number,
@@ -526,7 +525,7 @@ export async function purgeExpiredTrash(
   let budget = Math.max(0, Math.trunc(maxItems));
   let purged = 0;
 
-  /** Consomme le budget restant sur un niveau de la hiérarchie, du plus ancien au plus récent. */
+  /** Consumes the remaining budget on one level of the hierarchy, from oldest to newest. */
   const sweep = async (
     find: (take: number) => Promise<{ id: number }[]>,
     purgeOne: (id: number) => Promise<void>,
@@ -544,8 +543,8 @@ export async function purgeExpiredTrash(
   await sweep((take) => prisma.version.findMany({ ...page, take }), purgeVersion);
   await sweep((take) => prisma.shot.findMany({ ...page, take }), purgeShot);
   await sweep((take) => prisma.sequence.findMany({ ...page, take }), purgeSequence);
-  // Après les séquences : elles ne dépendent pas de leur épisode (SetNull), mais l'ordre
-  // enfants → parents reste la règle du balayage.
+  // After the sequences: they do not depend on their episode (SetNull), but the order
+  // children → parents remains the rule of the sweep.
   await sweep((take) => prisma.episode.findMany({ ...page, take }), purgeEpisode);
   await sweep((take) => prisma.asset.findMany({ ...page, take }), purgeAsset);
   await sweep((take) => prisma.project.findMany({ ...page, take }), purgeProject);

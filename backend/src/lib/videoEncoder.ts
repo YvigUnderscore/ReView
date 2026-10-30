@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Encodeur vidéo du worker (37.D) : libx264 (défaut, CPU) ou h264_nvenc (GPU NVIDIA,
- * opt-in via env VIDEO_ENCODER). Helpers PURS (testés) — le worker retombe sur libx264
- * si l'encodage NVENC échoue (pas de GPU exposé au conteneur).
+ * Video encoder of the worker (37.D): libx264 (default, CPU) or h264_nvenc (NVIDIA GPU, opt-in via
+ * the VIDEO_ENCODER env variable). PURE helpers (tested): the worker falls back to libx264 if NVENC
+ * encoding fails (no GPU exposed to the container).
  */
 
 export type VideoEncoder = 'libx264' | 'h264_nvenc';
 
-/** Presets x264 → presets NVENC (p1 rapide … p7 qualité). */
+/** x264 presets → NVENC presets (p1 fast … p7 quality). */
 const NVENC_PRESET: Record<string, string> = {
   ultrafast: 'p1',
   superfast: 'p2',
@@ -20,7 +20,7 @@ const NVENC_PRESET: Record<string, string> = {
   slow: 'p6',
 };
 
-/** Options codec en mode qualité constante (proxy MP4, dérivé client). */
+/** Codec options in constant-quality mode (MP4 proxy, client derivative). */
 export function qualityEncoderArgs(encoder: VideoEncoder, crf: number, x264Preset: string): string[] {
   if (encoder === 'h264_nvenc') {
     return ['-c:v h264_nvenc', `-preset ${NVENC_PRESET[x264Preset] ?? 'p4'}`, `-cq ${crf}`];
@@ -29,8 +29,8 @@ export function qualityEncoderArgs(encoder: VideoEncoder, crf: number, x264Prese
 }
 
 /**
- * Options codec en mode débit contraint (renditions HLS). Le GOP fixe reste géré par
- * l'appelant (-g/-keyint_min) ; le scene-cut est désactivé selon l'encodeur.
+ * Codec options in constrained-bitrate mode (HLS renditions). The fixed GOP remains handled by the
+ * caller (-g/-keyint_min); scene-cut is disabled depending on the encoder.
  */
 export function bitrateEncoderArgs(encoder: VideoEncoder, x264Preset: string): string[] {
   if (encoder === 'h264_nvenc') {

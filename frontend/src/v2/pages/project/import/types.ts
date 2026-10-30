@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Contrat de l'import CSV, tel que le sert `POST /api/projects/:id/import-csv`.
+ * Contract of the CSV import, as served by `POST /api/projects/:id/import-csv`.
  *
- * Le serveur ne renvoie aucune phrase : chaque anomalie est un code, une ligne, une
- * colonne et une valeur. C'est ici, côté lecteur, qu'elle devient un message — dans sa
- * langue, et dans le rapport qu'il télécharge pour corriger son fichier.
+ * The server returns no sentence: each anomaly is a code, a row, a column and a value. It is here,
+ * on the reader's side, that it becomes a message: in their language, and in the report they
+ * download to correct their file.
  */
 
 export const CSV_FIELDS = [
@@ -64,7 +64,7 @@ export interface DetectedColumn {
   manual: boolean;
 }
 
-/** Correspondance imposée par le lecteur pour une colonne — `null` la neutralise. */
+/** Mapping imposed by the reader for a column: `null` neutralizes it. */
 export interface ColumnOverride {
   index: number;
   field: CsvField | null;
@@ -76,7 +76,7 @@ export interface RowOutcome {
   episode: string | null;
   sequence: string | null;
   shot: string;
-  /** `blocked` : la ligne vise une entité de la corbeille, rien ne sera écrit pour elle. */
+  /** `blocked`: the row targets an entity in the trash, so nothing will be written for it. */
   action: 'create' | 'update' | 'unchanged' | 'blocked';
   tasks: { create: number; update: number; unchanged: number };
   issues: CsvIssue[];
@@ -104,7 +104,7 @@ export interface ImportReport {
   truncated: boolean;
 }
 
-/** Y a-t-il quelque chose à écrire ? Un fichier rejoué à l'identique ne propose rien. */
+/** Is there anything to write? A file replayed identically proposes nothing. */
 export function hasWork(counts: ImportCounts): boolean {
   return (
     counts.episodesToCreate +

@@ -15,31 +15,27 @@ import {
 } from './noteMarkdown';
 
 /**
- * La fiche telle qu'on l'écrit : une suite de blocs, pas une page de syntaxe.
+ * The note as it is written: a sequence of blocks, not a page of syntax.
  *
- * Un artiste n'a pas à savoir que `::progress Animation 60` fait une jauge, ni que `##-`
- * replie une section. L'éditeur manipule donc des blocs typés — un titre, un texte, une
- * jauge, une planche — et ce module fait la traduction dans les deux sens avec le markdown
- * qui reste, lui, le format de stockage. Rien à migrer, les briefs déjà écrits s'ouvrent
- * tels quels, et une fiche exportée reste lisible dans n'importe quel éditeur de texte.
+ * An artist does not need to know that `::progress Animation 60` makes a gauge, nor that `##-` collapses a section. The
+ * editor therefore handles typed blocks (a title, a text, a gauge, a board), and this module translates in both
+ * directions with markdown, which remains the storage format. Nothing to migrate: notes already written open as they are,
+ * and an exported note stays readable in any text editor.
  *
- * La liste est **plate** : une section n'enveloppe pas ses blocs, elle les précède, comme
- * un titre dans un document. C'est exactement ce que dit le markdown, et cela rend le
- * déplacement d'un bloc trivial — glisser un bloc sous un autre titre le change de section
- * sans qu'aucune structure n'ait à être recousue.
+ * The list is **flat**: a section does not wrap its blocks, it precedes them, like a title in a document. This is exactly
+ * what markdown says, and it makes moving a block trivial: dragging a block under another title changes its section without
+ * any structure having to be re-stitched.
  *
- * Tout est pur : aucune fonction d'ici ne touche au DOM ni au réseau, ce qui les rend
- * testables une par une et garantit le seul invariant qui compte — écrire puis relire une
- * fiche ne la déforme pas.
+ * Everything is pure: no function here touches the DOM or the network, which makes them testable one by one and guarantees
+ * the only invariant that matters, namely that writing then rereading a note does not distort it.
  */
 
 /**
- * Ce que tout bloc porte.
+ * What every block carries.
  *
- * `depth` dit l'appartenance : `1` pour un bloc rangé dans la section dépliable qui le
- * précède, `0` pour un bloc de la fiche elle-même. Une section n'avale donc plus tout ce
- * qui la suit — elle tient ce qu'on y a mis, et un bloc s'en sort d'un geste vers la
- * gauche. À l'enregistrement, ce retour à la racine s'écrit `::endsection`.
+ * `depth` records membership: `1` for a block filed in the collapsible section that precedes it, `0` for a block of the
+ * note itself. A section therefore no longer swallows everything that follows it: it holds what was put in it, and a block
+ * leaves it with a gesture to the left. On saving, this return to the root is written as `::endsection`.
  */
 interface BlockBase {
   id: string;
@@ -49,15 +45,14 @@ interface BlockBase {
 export interface HeadingBlock extends BlockBase {
   kind: 'heading';
   title: string;
-  /** Dépliée à l'ouverture de la fiche ? */
+  /** Expanded when the note is opened? */
   open: boolean;
 }
 /**
- * Un titre qui ne se replie pas.
+ * A title that does not collapse.
  *
- * Toutes les fiches n'ont pas besoin d'un dépliant : un brief court se découpe en trois
- * intertitres qu'on veut lire d'un coup. C'est un `###` de markdown ordinaire — donc rien de
- * nouveau à stocker, et un titre de plus dans le fil de lecture.
+ * Not every note needs a dropdown: a short brief is split into three subheadings that one wants to read at once. It is an
+ * ordinary markdown `###`, so nothing new to store, and one more title in the reading flow.
  */
 export interface TitleBlock extends BlockBase {
   kind: 'title';
@@ -66,7 +61,7 @@ export interface TitleBlock extends BlockBase {
 
 export interface TextBlock extends BlockBase {
   kind: 'text';
-  /** Markdown courant : gras, listes, liens, tableaux. Jamais de directive. */
+  /** Plain markdown: bold, lists, links, tables. Never a directive. */
   source: string;
 }
 export interface ProgressEditBlock extends BlockBase {
@@ -109,26 +104,24 @@ export type EditorBlock =
 export type EditorBlockKind = EditorBlock['kind'];
 
 /**
- * Identifiants de blocs.
+ * Block identifiers.
  *
- * Un compteur, pas un hachage du contenu : deux blocs de texte vides sont deux blocs, et
- * React comme le glisser-déposer ont besoin de les distinguer. Le compteur ne sort jamais
- * de la session d'édition — rien n'en est enregistré.
+ * A counter, not a hash of the content: two empty text blocks are two blocks, and React as well as drag-and-drop need to
+ * tell them apart. The counter never leaves the editing session: nothing is saved from it.
  */
 let counter = 0;
 export const nextBlockId = (): string => `b${++counter}`;
 
-// ───────────────────────────── Markdown → blocs ─────────────────────────────
+// ───────────────────────────── Markdown → blocks ─────────────────────────────
 
-/** Un intertitre ordinaire — celui qui ne se replie pas. `####` et au-delà restent du texte. */
+/** An ordinary subheading: the one that does not collapse. `####` and beyond remain text. */
 const TITLE_LINE_RE = /^###\s+(.+)$/;
 
 /**
- * Découpe un bloc de markdown en blocs d'édition.
+ * Splits a block of markdown into editing blocks.
  *
- * `parseNote` s'arrête au markdown, ce qui suffit à le rendre ; l'édition va plus loin —
- * un séparateur et une image posée seule sont des choses qu'on déplace et qu'on règle, pas
- * du texte au milieu d'un paragraphe.
+ * `parseNote` stops at the markdown, which is enough to render it; editing goes further: a separator and an image placed
+ * on its own are things one moves and adjusts, not text in the middle of a paragraph.
  */
 function splitMarkdown(source: string): EditorBlock[] {
   const out: EditorBlock[] = [];
@@ -166,7 +159,7 @@ function splitMarkdown(source: string): EditorBlock[] {
   return out;
 }
 
-/** Un bloc de rendu devient un ou plusieurs blocs d'édition. */
+/** A render block becomes one or several editing blocks. */
 function toEditor(block: NoteBlock): EditorBlock[] {
   switch (block.kind) {
     case 'markdown':
@@ -190,7 +183,7 @@ function toEditor(block: NoteBlock): EditorBlock[] {
       const section = block;
       return [
         { id: nextBlockId(), kind: 'heading', title: section.title, open: section.open },
-        // Ce que la section tient est rangé dedans : c'est ce que `depth` retient.
+        // What the section holds is filed inside it: this is what `depth` records.
         ...section.blocks.flatMap(toEditor).map((child) => ({ ...child, depth: 1 as const })),
       ];
     }
@@ -198,12 +191,11 @@ function toEditor(block: NoteBlock): EditorBlock[] {
 }
 
 /**
- * La fiche enregistrée, ouverte à l'édition.
+ * The saved note, opened for editing.
  *
- * Chaque bloc ressort avec une profondeur **explicite** : `0` pour ce qui vit à la racine —
- * y compris après un `::endsection` — et `1` pour ce qu'une section tient. Laisser la
- * profondeur indéfinie ferait retomber ces blocs-là dans la section précédente au premier
- * enregistrement, et la fin de section qu'on venait de poser aurait disparu.
+ * Each block comes out with an **explicit** depth: `0` for what lives at the root, including after an `::endsection`,
+ * and `1` for what a section holds. Leaving the depth undefined would drop those blocks back into the previous section on
+ * the first save, and the section end just placed would have vanished.
  */
 export function toEditorBlocks(source: string): EditorBlock[] {
   return parseNote(source)
@@ -211,15 +203,14 @@ export function toEditorBlocks(source: string): EditorBlock[] {
     .map((block) => ({ ...block, depth: block.depth ?? 0 }));
 }
 
-// ───────────────────────────── Blocs → markdown ─────────────────────────────
+// ───────────────────────────── Blocks → markdown ─────────────────────────────
 
 /**
- * Les mots-clés du format.
+ * The format's keywords.
  *
- * Nommés plutôt qu'interpolés dans des gabarits : ce sont les seuls endroits du dépôt où la
- * syntaxe d'une fiche s'écrit, et les rassembler évite qu'une directive change ici sans
- * changer là. Le contrôle de traduction y gagne aussi — un gabarit qui commence par du texte
- * lui est indiscernable d'une phrase à traduire, et il a raison de s'en méfier.
+ * Named rather than interpolated into templates: these are the only places in the repository where a note's syntax is
+ * written, and gathering them prevents a directive from changing here without changing there. The translation check also
+ * gains: a template starting with text is indistinguishable from a sentence to translate, and it is right to distrust it.
  */
 const DIRECTIVE = {
   progress: '::progress',
@@ -234,7 +225,7 @@ const DIRECTIVE = {
   divider: '---',
 } as const;
 
-/** Une planche n'écrit que ce qui s'écarte du carrousel d'origine. */
+/** A board only writes what departs from the original carousel. */
 function galleryHeader(block: GalleryBlock): string {
   if (block.layout !== 'grid') return DIRECTIVE.refs;
   return [DIRECTIVE.refs, DIRECTIVE.grid, `cols=${block.cols}`, `h=${block.height}`].join(' ');
@@ -249,8 +240,8 @@ function serializeBlock(block: EditorBlock): string {
     case 'text':
       return block.source.trim();
     case 'progress':
-      // La virgule décimale se lit à la relecture, mais s'écrit avec un point : c'est un
-      // nombre, pas un texte, et une fiche voyage entre des machines de langues différentes.
+      // The decimal comma is read back when rereading, but is written with a point: it is a number, not a text, and a
+      // note travels between machines of different languages.
       return [DIRECTIVE.progress, block.label.trim(), Number(block.value.toFixed(1))].join(' ');
     case 'small':
       return [DIRECTIVE.small, block.text.trim()].join(' ');
@@ -270,14 +261,13 @@ function serializeBlock(block: EditorBlock): string {
 }
 
 /**
- * Les blocs, redevenus la fiche.
+ * The blocks, turned back into the note.
  *
- * Les blocs vides disparaissent : on en laisse un derrière soi chaque fois qu'on hésite, et
- * enregistrer une ligne vide de plus à chaque passage finirait par écarter le texte.
+ * Empty blocks disappear: one leaves one behind each time one hesitates, and saving an extra blank line on every pass would
+ * eventually push the text away.
  *
- * La fermeture de section (`::endsection`) est écrite ici, jamais tenue à la main : elle se
- * déduit de la profondeur des blocs, et n'apparaît que là où quelque chose sort réellement
- * d'une section — un `::endsection` en trop se lirait dans un export sans rien vouloir dire.
+ * The section close (`::endsection`) is written here, never maintained by hand: it is deduced from the depth of the blocks,
+ * and appears only where something really leaves a section. A stray `::endsection` would read in an export as nonsense.
  */
 export function fromEditorBlocks(blocks: EditorBlock[]): string {
   const kept = normalizeDepth(blocks.filter((block) => !isEmptyBlock(block)));
@@ -294,7 +284,7 @@ export function fromEditorBlocks(blocks: EditorBlock[]): string {
   return lines.join('\n\n').trim();
 }
 
-/** Un bloc qui n'a rien à dire — ni texte, ni image, ni titre. */
+/** A block that has nothing to say: no text, no image, no title. */
 export function isEmptyBlock(block: EditorBlock): boolean {
   switch (block.kind) {
     case 'heading':
@@ -317,12 +307,11 @@ export function isEmptyBlock(block: EditorBlock): boolean {
 }
 
 /**
- * Ramène les profondeurs à ce qui a un sens.
+ * Brings depths back to what makes sense.
  *
- * Deux règles, et pas une de plus : une section ne s'imbrique pas (un titre est toujours à
- * la racine), et rien ne peut être « dans » une section qui n'a pas été ouverte — un bloc
- * hérité d'un déplacement au-dessus du premier titre revient donc à la racine plutôt que de
- * décrire une appartenance impossible.
+ * Two rules, and not one more: a section does not nest (a title is always at the root), and nothing can be "inside" a
+ * section that was never opened. A block inherited from a move above the first title therefore returns to the root rather
+ * than describing an impossible membership.
  */
 export function normalizeDepth(blocks: EditorBlock[]): EditorBlock[] {
   let open = false;
@@ -332,13 +321,13 @@ export function normalizeDepth(blocks: EditorBlock[]): EditorBlock[] {
       return { ...block, depth: 0 as const };
     }
     if (!open) return { ...block, depth: 0 as const };
-    // Profondeur non dite = celle du contexte : un bloc écrit sous un titre lui appartient,
-    // c'est ce que veut dire le markdown. Un `0` explicite, lui, est une décision.
+    // Unstated depth = that of the context: a block written under a title belongs to it, which is what markdown means.
+    // An explicit `0`, on the other hand, is a decision.
     return { ...block, depth: block.depth ?? (1 as const) };
   });
 }
 
-/** Un bloc peut-il entrer dans une section ? Seulement si un titre le précède. */
+/** Can a block enter a section? Only if a title precedes it. */
 export function canIndent(blocks: EditorBlock[], id: string): boolean {
   const index = blocks.findIndex((block) => block.id === id);
   if (index <= 0 || blocks[index].kind === 'heading') return false;
@@ -346,11 +335,10 @@ export function canIndent(blocks: EditorBlock[], id: string): boolean {
 }
 
 /**
- * Fait entrer un bloc dans la section qui le précède, ou l'en sort.
+ * Moves a block into the section that precedes it, or out of it.
  *
- * C'est le geste latéral du glisser-déposer, et les flèches ←/→ au clavier. Rien ne bouge
- * si le mouvement n'a pas de sens : sortir un bloc déjà à la racine, ou faire entrer le
- * premier bloc d'une fiche dans une section qui n'existe pas encore.
+ * This is the lateral gesture of drag-and-drop, and the ←/→ arrows on the keyboard. Nothing moves if the movement makes no
+ * sense: taking out a block already at the root, or putting the first block of a note into a section that does not exist yet.
  */
 export function setDepth(blocks: EditorBlock[], id: string, depth: 0 | 1): EditorBlock[] {
   const block = blocks.find((b) => b.id === id);
@@ -360,9 +348,9 @@ export function setDepth(blocks: EditorBlock[], id: string, depth: 0 | 1): Edito
   return blocks.map((b) => (b.id === id ? { ...b, depth } : b));
 }
 
-// ───────────────────────────── Manipulations ─────────────────────────────
+// ───────────────────────────── Operations ─────────────────────────────
 
-/** Un bloc neuf du type demandé, avec les valeurs qu'on garde le plus souvent. */
+/** A new block of the requested type, with the values one most often keeps. */
 export function emptyBlock(kind: EditorBlockKind): EditorBlock {
   const id = nextBlockId();
   switch (kind) {
@@ -393,12 +381,11 @@ export function emptyBlock(kind: EditorBlockKind): EditorBlock {
 }
 
 /**
- * Insère après la position donnée ; `-1` place en tête.
+ * Inserts after the given position; `-1` places at the head.
  *
- * Le bloc neuf **hérite de son voisin du dessus** : ajouté juste sous un titre, il entre
- * dans la section ; ajouté sous un bloc de section, il la rejoint. Sans cela, le premier
- * bloc ajouté sous un titre serait retombé à la racine et aurait refermé la section aussitôt
- * ouverte.
+ * The new block **inherits its upper neighbour**: added right under a title, it enters the section; added under a section
+ * block, it joins it. Without this, the first block added under a title would have fallen back to the root and closed the
+ * section just opened.
  */
 export function insertBlock(blocks: EditorBlock[], index: number, block: EditorBlock): EditorBlock[] {
   const above = index >= 0 ? blocks[index] : undefined;
@@ -417,10 +404,10 @@ export function updateBlock(blocks: EditorBlock[], id: string, patch: Partial<Ed
 }
 
 /**
- * Déplace un bloc d'un cran.
+ * Moves a block by one step.
  *
- * Un cran à la fois plutôt qu'un index d'arrivée : c'est ce que fait le clavier, et le
- * glisser-déposer s'exprime très bien avec la même primitive appliquée plusieurs fois.
+ * One step at a time rather than a target index: this is what the keyboard does, and drag-and-drop is expressed very well
+ * with the same primitive applied several times.
  */
 export function moveBlock(blocks: EditorBlock[], id: string, delta: number): EditorBlock[] {
   const from = blocks.findIndex((block) => block.id === id);
@@ -434,10 +421,10 @@ export function moveBlock(blocks: EditorBlock[], id: string, delta: number): Edi
 }
 
 /**
- * Déplace un bloc à une position donnée — c'est le geste du glisser-déposer.
+ * Moves a block to a given position: this is the drag-and-drop gesture.
  *
- * La profondeur est recalculée derrière : un bloc emmené au-dessus du premier titre ne peut
- * plus prétendre appartenir à une section, et l'écran doit le montrer tout de suite.
+ * The depth is recomputed behind it: a block moved above the first title can no longer claim to belong to a section, and
+ * the screen must show it straight away.
  */
 export function reorderBlocks(blocks: EditorBlock[], id: string, toIndex: number): EditorBlock[] {
   const from = blocks.findIndex((block) => block.id === id);

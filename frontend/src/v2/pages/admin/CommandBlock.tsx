@@ -7,22 +7,22 @@ import { Button } from '../../components/ui/button';
 import { useT } from '../../i18n';
 
 /**
- * Une commande de terminal, recopiable d'un clic.
+ * A terminal command, copyable with one click.
  *
- * C'est la pièce qui rend l'écran utile quand l'instance ne sait pas agir sur elle-même :
- * plutôt qu'un bouton grisé — qui fait croire à une panne et n'apprend rien —, on donne la
- * commande exacte, prête à coller dans le terminal de la machine qui héberge l'instance.
+ * This is the piece that makes the screen useful when the instance cannot act on itself:
+ * rather than a greyed-out button — which suggests a fault and teaches nothing — it gives the
+ * exact command, ready to paste into the terminal of the machine hosting the instance.
  *
- * Le texte est du `<pre>` : c'est ainsi qu'on déclare qu'il ne se traduit pas
- * (`scripts/check-untranslated.mjs`), et c'est vrai — une commande shell n'a pas de langue.
+ * The text is in a `<pre>`: that is how one declares that it is not translated
+ * (`scripts/check-untranslated.mjs`), and it is true — a shell command has no language.
  */
 export default function CommandBlock({ command }: { command: string }) {
   const t = useT();
   const [copied, setCopied] = useState(false);
 
   const copy = () => {
-    // `clipboard` peut manquer (contexte non sécurisé, permission refusée) : on n'annonce
-    // « copié » que si la copie a réellement eu lieu. La commande reste sélectionnable.
+    // `clipboard` may be missing (insecure context, permission denied): we only announce
+    // "copied" if the copy actually happened. The command stays selectable.
     navigator.clipboard
       ?.writeText(command)
       .then(() => {

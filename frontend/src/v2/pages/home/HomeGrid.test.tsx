@@ -3,19 +3,19 @@
 
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, screen } from '@testing-library/react';
-import { renderWithProviders } from '../../../test/renderWithProviders';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import HomeGrid from './HomeGrid';
 import type { HomeWidgetsPref } from './homeWidgets';
 import type { DashboardActivityItem, DashboardData, DashboardProject } from './homeTypes';
 import { t } from '../../i18n';
 
 /**
- * L'accueil redimensionnable (lot 13) — « je veux les mêmes réglages de redimensionnement,
- * de fenêtres, etc. qu'à la vue d'ensemble d'un projet ».
+ * The resizable home page (batch 13): "I want the same resize settings, window settings, etc.
+ * as the project overview".
  *
- * Ce que ces cas verrouillent, c'est la chaîne complète du geste : la poignée règle les deux
- * axes, la taille retenue part en préférence (une seule écriture), la grille porte l'emprise,
- * le contenu la suit — et un accueil composé **avant** ce lot se relit sans rien perdre.
+ * What these cases lock down is the complete gesture chain: the handle sets both axes, the chosen
+ * size goes into a preference (a single write), the grid carries the footprint, and the content
+ * follows it. A home page composed **before** this batch reads back without losing anything.
  */
 
 const project = (id: number): DashboardProject => ({
@@ -72,7 +72,7 @@ const handleOf = (id: string) =>
   document.querySelector<HTMLElement>(
     `section[data-widget="${id}"] button[title="${t('overview.widget.resizeHint')}"]`,
   );
-/** Tuiles de projet réellement montrées — le lien « tous les projets » n'en est pas une. */
+/** Project tiles actually shown: the "all projects" link is not one. */
 const projectTiles = () =>
   Array.from(sectionOf('projects')?.querySelectorAll('a') ?? [])
     .map((a) => a.getAttribute('href') ?? '')
@@ -83,10 +83,10 @@ const rowsOf = (id: string) =>
     ?.className.split(' ')
     .find((c) => c.startsWith('row-span-'));
 
-describe('HomeGrid — l’emprise des blocs', () => {
-  it('pose une grille en rangées qui tasse, et non plus des blocs alignés par le haut', () => {
-    // Un bloc court ouvrait sous lui un trou que son voisin ne pouvait pas combler : c'est
-    // `items-start` qui le produisait, et `grid-flow-row-dense` qui le referme.
+describe('HomeGrid — block footprint', () => {
+  it('lays out rows that pack, instead of blocks aligned to the top', () => {
+    // A short block opened a hole beneath it that its neighbour could not fill: `items-start`
+    // produced it, and `grid-flow-row-dense` closes it.
     mount(undefined);
     const grid = sectionOf('stats')?.parentElement;
     expect(grid?.className).toContain('grid-flow-row-dense');
@@ -94,21 +94,21 @@ describe('HomeGrid — l’emprise des blocs', () => {
     expect(grid?.className).not.toContain('items-start');
   });
 
-  it('rend la hauteur par défaut de chaque bloc', () => {
+  it('renders the default height of each block', () => {
     mount(undefined);
     expect(rowsOf('stats')).toBe('row-span-2');
     expect(rowsOf('activity')).toBe('row-span-4');
   });
 
-  it('rend la hauteur enregistrée', () => {
+  it('renders the saved height', () => {
     mount({ settings: { activity: { span: 8, rows: 6 } } });
     expect(rowsOf('activity')).toBe('row-span-6');
     expect(sectionOf('activity')?.className).toContain('xl:col-span-8');
   });
 
-  it('relit un accueil composé AVANT les rangées', () => {
-    // L'ancienne échelle se traduit à la lecture : personne ne perd le bloc haut qu'il
-    // s'était réglé, et la préférence n'est pas réécrite pour autant.
+  it('reads back a home page composed BEFORE the rows', () => {
+    // The old scale is translated on read: nobody loses the tall block they had set, and the
+    // preference is not rewritten for all that.
     const { onPref } = mount({ settings: { activity: { height: 'tall' }, stats: { height: 'short' } } });
     expect(rowsOf('activity')).toBe('row-span-5');
     expect(rowsOf('stats')).toBe('row-span-2');
@@ -116,8 +116,8 @@ describe('HomeGrid — l’emprise des blocs', () => {
   });
 });
 
-describe('HomeGrid — la poignée enregistre', () => {
-  it('règle la largeur et la hauteur, en une seule écriture de préférence', () => {
+describe('HomeGrid — the handle saves', () => {
+  it('sets width and height, in a single preference write', () => {
     const { onPref } = mount(undefined, true);
     const handle = handleOf('activity');
     expect(handle).not.toBeNull();
@@ -127,39 +127,38 @@ describe('HomeGrid — la poignée enregistre', () => {
     expect(onPref).toHaveBeenCalledWith({ settings: { activity: { span: 6, rows: 5 } } });
 
     fireEvent.keyDown(handle, { key: 'ArrowRight' });
-    // Largeurs offertes à ce bloc : 3, 4, 6, 8 — la suivante après 6 est 8.
+    // Widths offered to this block: 3, 4, 6, 8. The one after 6 is 8.
     expect(onPref).toHaveBeenLastCalledWith({ settings: { activity: { span: 8, rows: 4 } } });
     expect(onPref).toHaveBeenCalledTimes(2);
   });
 
-  it('ne montre aucune poignée hors composition', () => {
+  it('shows no handle outside composition mode', () => {
     mount(undefined);
     expect(handleOf('activity')).toBeNull();
   });
 });
 
-describe('HomeGrid — le contenu suit la taille', () => {
-  it('montre plus d’activité dans un bloc plus haut', () => {
-    // Trois lignes : c'est le plancher du modèle de taille, où mieux vaut une liste qui
-    // déborde qu'un bloc vide.
+describe('HomeGrid — content follows the size', () => {
+  it('shows more activity in a taller block', () => {
+    // Three rows: this is the floor of the size model, where an overflowing list is better than
+    // an empty block.
     mount({ settings: { activity: { rows: 2 } } });
     expect(sectionOf('activity')?.querySelectorAll('a').length).toBe(3);
   });
 
-  it('montre tout le flux quand le bloc en a la place', () => {
+  it('shows the whole feed when the block has the room', () => {
     mount({ settings: { activity: { rows: 6 } } });
     expect(sectionOf('activity')?.querySelectorAll('a').length).toBe(data.activity.length);
   });
 
-  it('montre plus de projets dans une grille plus haute', () => {
+  it('shows more projects in a taller grid', () => {
     mount({ settings: { projects: { rows: 4 } } });
-    // Quatre tuiles tiennent dans quatre rangées ; « Tous les projets », en haut du bloc,
-    // mène au reste.
+    // Four tiles fit in four rows; "All projects", at the top of the block, leads to the rest.
     expect(projectTiles()).toHaveLength(4);
     expect(screen.getByText(t('reviews.filter.allProjects'))).toBeInTheDocument();
   });
 
-  it('montre tous les projets quand la grille est assez haute', () => {
+  it('shows all projects when the grid is tall enough', () => {
     mount({ settings: { projects: { rows: 6 } } });
     expect(projectTiles()).toHaveLength(data.recentProjects.length);
   });

@@ -36,23 +36,21 @@ import type { NoteKind, NoteScope } from '../../lib/notesApi';
 import { useT } from '../../i18n';
 
 /**
- * Écriture d'une fiche, bloc par bloc.
+ * Writing a note, block by block.
  *
- * L'ancien éditeur était une zone de texte et six boutons qui inséraient des directives :
- * il fallait savoir que `::progress Animation 60` faisait une jauge, et une image ne
- * pouvait être qu'une URL collée depuis ailleurs. Ici, chaque élément est un bloc qu'on
- * ajoute, règle et déplace, les images se déposent dans la fiche, et le markdown — qui
- * reste le format enregistré — n'apparaît jamais à l'écran.
+ * The old editor was a text area with six buttons that inserted directives: one had to know that
+ * `::progress Animation 60` made a gauge, and an image could only be a URL pasted from elsewhere. Here, each element
+ * is a block that is added, adjusted and moved, images are dropped into the note, and the markdown, which remains the
+ * saved format, never appears on screen.
  *
- * L'état vit en blocs et n'est **sérialisé qu'à l'enregistrement** : reconvertir en
- * markdown à chaque frappe pour le reparser aussitôt aurait déplacé le curseur à chaque
- * lettre et fondu deux blocs voisins dès qu'un d'eux se vidait.
+ * The state lives in blocks and is **serialised only on save**: converting back to markdown at every keystroke, only
+ * to reparse it straight away, would have moved the cursor on every letter and merged two neighbouring blocks as soon
+ * as one of them emptied.
  */
 /**
- * Déplacement latéral au-delà duquel le glisser change l'appartenance à une section.
+ * Lateral displacement beyond which dragging changes a block's section.
  *
- * Assez large pour qu'un mouvement vertical un peu oblique ne fasse pas sortir un bloc de
- * sa section sans qu'on l'ait demandé.
+ * Wide enough that a slightly oblique vertical movement does not take a block out of its section unintentionally.
  */
 const INDENT_THRESHOLD = 40;
 
@@ -67,27 +65,27 @@ export default function NoteEditor({
   onCancel,
   onDirtyChange,
 }: {
-  /** La fiche enregistrée, au format markdown. */
+  /** The saved note, in markdown format. */
   initial: string;
   kind: NoteKind;
   id: number;
   projectId: number;
-  /** Périmètre proposé aux modèles — un brief de plan n'en est pas un d'asset. */
+  /** Scope offered to templates: a shot brief is not an asset brief. */
   scope: NoteScope;
   busy?: boolean;
   onSave: (body: string) => void;
   onCancel: () => void;
-  /** Prévient le parent qu'il y a du travail non enregistré — c'est lui qui garde la porte. */
+  /** Warns the parent that there is unsaved work: the parent is the one holding the gate. */
   onDirtyChange?: (dirty: boolean) => void;
 }) {
   const t = useT();
   const [blocks, setBlocks] = useState<EditorBlock[]>(() => {
     const parsed = toEditorBlocks(initial);
-    // Une fiche vide s'ouvre sur un bloc de texte : rien à cliquer pour commencer à écrire.
+    // An empty note opens on a text block: nothing to click to start writing.
     return parsed.length > 0 ? parsed : [emptyBlock('text')];
   });
-  // …et le curseur y est déjà. Une fiche existante, elle, s'ouvre en lecture : on vient
-  // presque toujours modifier un passage précis, pas repartir du début.
+  // …and the cursor is already there. An existing note, on the other hand, opens in reading mode: one almost
+  // always comes to change a specific passage, not to start over from the beginning.
   const [focused, setFocused] = useState<string | null>(() => (initial.trim() ? null : blocks[0].id));
   const [preview, setPreview] = useState(false);
 
@@ -115,10 +113,9 @@ export default function NoteEditor({
   }, [dirty, onDirtyChange]);
 
   /**
-   * Fermer l'onglet, recharger, suivre un lien : le navigateur demande confirmation tant
-   * qu'il reste du travail non enregistré. C'est le seul garde-fou qui tienne quand la
-   * page part sans passer par l'application — un fichier lâché à côté d'une zone de dépôt,
-   * par exemple, que le navigateur ouvre à la place de la page.
+   * Closing the tab, reloading, following a link: the browser asks for confirmation as long as there is unsaved
+   * work. It is the only guard that holds when the page leaves without going through the application, such as a file
+   * dropped beside a drop zone, which the browser opens in place of the page.
    */
   useEffect(() => {
     if (!dirty) return;
@@ -134,13 +131,12 @@ export default function NoteEditor({
   };
 
   /**
-   * Où atterrissent les images déposées.
+   * Where dropped images end up.
    *
-   * Sur une planche ou un bloc image, elles rejoignent le bloc lui-même. Collées dans du
-   * texte, elles créent une planche juste après — c'est le geste d'une capture d'écran
-   * envoyée en pleine rédaction, et l'interrompre pour demander où la ranger n'aurait
-   * servi à rien. Lâchées quelque part dans la fenêtre sans viser de bloc (`null`), elles
-   * s'ajoutent à la fin : c'est le seul endroit qui ne surprend personne.
+   * On a board or an image block, they join that block itself. Pasted into text, they create a board right after it:
+   * that is the gesture of a screenshot sent in the middle of writing, and interrupting it to ask where to file it
+   * would have been pointless. Dropped somewhere in the window without targeting a block (`null`), they are appended
+   * at the end: the only place that surprises nobody.
    */
   const onImages = async (blockId: string | null, files: File[]) => {
     const done = await upload(files);
@@ -164,13 +160,11 @@ export default function NoteEditor({
   };
 
   /**
-   * Fin d'un glisser : le mouvement vertical range, le mouvement latéral fait entrer ou
-   * sortir d'une section.
+   * End of a drag: the vertical movement sorts, the lateral movement moves a block into or out of a section.
    *
-   * Les deux dans le même geste, parce que c'est le même geste : on tire un bloc vers la
-   * droite pour le mettre dans la section au-dessus, vers la gauche pour l'en sortir. Le
-   * seuil évite qu'un déplacement vertical un peu oblique change l'appartenance sans
-   * qu'on l'ait voulu.
+   * Both happen in the same gesture, because it is the same gesture: one pulls a block to the right to put it in the
+   * section above, and to the left to take it out. The threshold prevents a slightly oblique vertical movement from
+   * changing membership without intent.
    */
   const onDragEnd = (event: DragEndEvent) => {
     const { active, over, delta } = event;
@@ -185,31 +179,28 @@ export default function NoteEditor({
     setBlocks((prev) => reorderBlocks(prev, id, to));
   };
 
-  /** Même chose au clavier, sur la poignée : ← sort de la section, → y entre. */
+  /** Same thing from the keyboard, on the handle: ← leaves the section, → enters it. */
   const onDepthKey = (id: string, key: string) => {
     if (key === 'ArrowRight') setBlocks((prev) => setDepth(prev, id, 1));
     else if (key === 'ArrowLeft') setBlocks((prev) => setDepth(prev, id, 0));
   };
 
   /**
-   * Une image lâchée à côté de la zone de dépôt.
+   * An image dropped beside the drop zone.
    *
-   * Sans ce garde-fou, le navigateur fait ce qu'il fait toujours d'un fichier lâché sur une
-   * page : il l'ouvre. La fiche en cours d'écriture disparaît alors avec la page, et rien
-   * n'a prévenu. Tant que l'éditeur est ouvert, le geste est donc capté partout — dans la
-   * fenêtre, l'image rejoint la fin de la fiche ; ailleurs, il ne se passe rien du tout.
+   * Without this guard, the browser does what it always does with a file dropped on a page: it opens it. The note
+   * being written then disappears with the page, and nothing warned. While the editor is open, the gesture is therefore
+   * captured everywhere: inside the window, the image joins the end of the note; elsewhere, nothing happens at all.
    *
-   * **En phase de capture** pour l'annulation : en phase de remontée, il suffit qu'un
-   * gestionnaire intermédiaire arrête la propagation pour que le garde-fou ne voie jamais
-   * l'événement — et la page part quand même. La capture passe avant tout le monde.
+   * **In the capture phase** for the cancellation: in the bubble phase, a middle handler stopping propagation is
+   * enough for the guard never to see the event, and the page leaves anyway. Capture goes before everyone.
    *
-   * L'atterrissage, lui, reste en remontée : s'il arrive jusque-là, c'est qu'aucune zone de
-   * dépôt ne l'a pris (elles arrêtent la propagation quand elles traitent), et l'image n'a
-   * donc pas été ajoutée deux fois.
+   * The landing, on the other hand, stays in the bubble phase: if it gets that far, no drop zone took it (they stop
+   * propagation when they handle it), so the image was not added twice.
    */
   const surface = useRef<HTMLDivElement>(null);
-  // Le garde-fou se pose une fois pour toute la session d'édition ; il lit la dernière
-  // version de `onImages` par cette référence plutôt que de se réabonner à chaque frappe.
+  // The guard is set up once for the whole editing session; it reads the latest version of `onImages` through this
+  // reference rather than resubscribing on each keystroke.
   const latestOnImages = useRef(onImages);
   useEffect(() => {
     latestOnImages.current = onImages;
@@ -265,8 +256,8 @@ export default function NoteEditor({
                   {blocks.map((block, index) => (
                     <div
                       key={block.id}
-                      // Rattaché à son titre, un bloc *montre* qu'il est dans la section.
-                      // Le filet est aussi la cible du geste : on tire dessus pour sortir.
+                      // Attached to its title, a block *shows* that it belongs to the section.
+                      // The rule is also the target of the gesture: one drags it to leave the section.
                       className={block.depth === 1 ? 'ml-3 border-l-2 border-primary/40 pl-3' : ''}
                     >
                       <NoteBlockRow

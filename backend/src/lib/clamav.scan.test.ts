@@ -21,14 +21,13 @@ vi.mock('../config/env', () => ({
 vi.mock('./logger', () => ({ logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() } }));
 
 /**
- * Descripteurs ouverts par `scanFile`, et octets réellement lus sur le disque.
+ * Descriptors opened by `scanFile`, and bytes actually read from disk.
  *
- * C'est la mesure du correctif. Quand clamd refuse, il coupe la connexion ; l'ancien client
- * détruisait le socket mais **jamais** son `ReadStream`. Le flux, mis en pause faute de
- * `drain` sur un socket mort, restait en vie indéfiniment : un descripteur de fichier fuité
- * à chaque média refusé, dans un worker qui en enchaîne des milliers. L'écouteur `data`
- * ci-dessous ne consomme rien — `scanFile` attache le sien immédiatement après, les deux
- * reçoivent les mêmes chunks.
+ * This is the measure of the fix. When clamd refuses, it cuts the connection; the old client destroyed
+ * the socket but **never** its `ReadStream`. The stream, paused for lack of `drain` on a dead socket,
+ * lived on indefinitely: a file descriptor leaked per refused media, in a worker processing thousands.
+ * The `data` listener below consumes nothing: `scanFile` attaches its own right after, both receive
+ * the same chunks.
  */
 let bytesRead = 0;
 let opened: { destroyed: boolean }[] = [];
@@ -50,7 +49,7 @@ vi.mock('node:fs', async (importOriginal) => {
 import { scanFile } from './clamav';
 import { logger } from './logger';
 
-/** clamd de paille : répond dès la commande `zINSTREAM`, comme le vrai quand il refuse. */
+/** Fake clamd: answers as soon as the `zINSTREAM` command arrives, like the real one does when refusing. */
 type Mode = 'refuse-size' | 'ok' | 'reset-silently' | 'ok-after-eof';
 
 let server: Server | undefined;
@@ -67,7 +66,7 @@ function startFakeClamd(mode: Mode): Promise<void> {
         total += d.length;
         if (mode === 'ok-after-eof') {
           tail = Buffer.concat([tail, d]).subarray(-4);
-          // Terminateur INSTREAM : un préfixe de longueur nulle en fin de flux.
+          // INSTREAM terminator: a zero-length prefix at the end of the stream.
           if (total > 10 && tail.length === 4 && tail.every((b) => b === 0)) sock.end('stream: OK\0');
           return;
         }
@@ -75,7 +74,7 @@ function startFakeClamd(mode: Mode): Promise<void> {
         answered = true;
         if (mode === 'reset-silently') return sock.destroy();
         const reply = mode === 'refuse-size' ? 'INSTREAM size limit exceeded. ERROR\0' : 'stream: OK\0';
-        // Refus puis coupure sèche : comportement relevé au fil sur un vrai clamd.
+        // Refusal then abrupt cut-off: behaviour observed on a real clamd.
         sock.write(reply, () => sock.destroy());
       });
     });
@@ -108,33 +107,33 @@ afterEach(async () => {
   rmSync(dir, { recursive: true, force: true });
 });
 
-describe('scanFile — refus de clamd', () => {
-  it('rend le refus de taille lisible, au lieu de « réponse inattendue » ou d’un ECONNRESET', async () => {
+describe('scanFile — clamd refusal', () => {
+  it('makes the size refusal readable, instead of "unexpected response" or an ECONNRESET', async () => {
     await startFakeClamd('refuse-size');
     const path = fileOf('master.mov', 4 * 1024 * 1024);
 
     await expect(scanFile(path)).rejects.toThrow(/StreamMaxLength/);
     await expect(scanFile(path)).rejects.toThrow(/size limit exceeded/);
-    // La taille du fichier voyage avec le message : l'administrateur voit le lien.
+    // The file size travels with the message: the administrator sees the limit.
     await expect(scanFile(path)).rejects.toThrow(/4\.0 MB/);
   });
 
-  it('referme le fichier dès que clamd a répondu : aucun descripteur fuité', async () => {
+  it('closes the file as soon as clamd has answered: no leaked descriptor', async () => {
     await startFakeClamd('refuse-size');
     const size = 8 * 1024 * 1024;
     const path = fileOf('rush.mov', size);
 
     await expect(scanFile(path)).rejects.toThrow();
-    // Mesure prise APRÈS avoir laissé tourner la boucle d'événements : sans le correctif,
-    // le flux restait en pause, jamais détruit — `destroyed` valait `false` pour toujours.
+    // Measured AFTER letting the event loop run: without the fix, the stream stayed paused, never
+    // destroyed — `destroyed` stayed `false` forever.
     await new Promise((r) => setTimeout(r, 300));
     expect(opened).toHaveLength(1);
     expect(opened.filter((s) => !s.destroyed)).toEqual([]);
-    // Et il n'a pas non plus vidé le fichier entier dans un socket mort.
+    // Nor did it flush the whole file into a dead socket.
     expect(bytesRead).toBeLessThan(size);
   });
 
-  it('ne déclare rien de sain quand clamd coupe sans répondre', async () => {
+  it('does not report anything healthy when clamd cuts off without answering', async () => {
     await startFakeClamd('reset-silently');
     const path = fileOf('rush.mov', 1024);
 
@@ -143,7 +142,7 @@ describe('scanFile — refus de clamd', () => {
 });
 
 describe('scanFile — verdicts', () => {
-  it('rend le verdict de clamd après avoir envoyé tout le fichier', async () => {
+  it("returns clamd's verdict after sending the whole file", async () => {
     await startFakeClamd('ok-after-eof');
     const path = fileOf('plan.png', 1024);
 
@@ -153,11 +152,11 @@ describe('scanFile — verdicts', () => {
   });
 
   /**
-   * clamd répond `OK` sans avoir scanné au-delà de `MaxFileSize` : vérifié contre un vrai
-   * clamd (`MaxFileSize 1M`), un fichier de 3 Mio portant EICAR en tête est déclaré `OK`.
-   * Le silence est indiscernable du verdict ; il est au moins rendu audible.
+   * clamd answers `OK` without having scanned beyond `MaxFileSize`: checked against a real clamd
+   * (`MaxFileSize 1M`), a 3 MiB file with EICAR at its head is reported `OK`.
+   * Silence is indistinguishable from a verdict; at least it is made audible.
    */
-  it('signale qu’un OK ne prouve rien au-delà du MaxFileSize par défaut de clamd', async () => {
+  it("signals that an OK proves nothing beyond clamd's default MaxFileSize", async () => {
     await startFakeClamd('ok');
     const path = fileOf('master.exr', 101 * 1024 * 1024, true);
 

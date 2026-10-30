@@ -4,18 +4,18 @@
 import { useEffect } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
-import { getSocket } from '../../../lib/socket';
+import { api } from '@/lib/apiClient';
+import { getSocket } from '@/lib/socket';
 import { qk } from '../../lib/query';
 import { useAuth } from '../../stores/useAuth';
 import type { TimelineMarker } from '../../types/api';
 import { useT } from '../../i18n';
 
 /**
- * Marqueurs de timeline nommés/colorés partagés (34.C) : query + mutations + invalidation
- * temps réel (`markers:changed` sur la room de review, jointe par la présence). Création
- * par les rôles d'écriture ; gestion (renommer/recolorer/supprimer) par l'auteur ou un
- * superviseur — le serveur fait foi, l'UI ne fait que masquer les actions.
+ * Shared named/colored timeline markers (34.C): query + mutations + real-time invalidation
+ * (`markers:changed` on the review room, joined through presence). Creation by the write roles;
+ * management (rename/recolor/delete) by the author or a supervisor — the server is authoritative, the
+ * UI only hides actions.
  */
 export interface TimelineMarkersApi {
   markers: TimelineMarker[];

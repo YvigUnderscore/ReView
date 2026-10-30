@@ -12,10 +12,10 @@ interface AnimRuntime {
 const clamp = (v: number, lo: number, hi: number) => Math.min(hi, Math.max(lo, v));
 
 /**
- * Contrôle des animations du GLB (Phase 15, transport complet en 40.A). Liste des clips, sélection
- * avec **crossfade**, transport pro : lecture/pause, **scrub** (temps ms), **vitesse** (timeScale),
- * **boucle** on/off, durée du clip courant. Le mixer est avancé par la boucle de rendu du parent ;
- * ici on pilote l'`AnimationAction` et on lit son temps via un abonnement à la boucle (throttlé).
+ * Control of the GLB's animations (Phase 15, full transport in 40.A). Clip list, selection with a
+ * **crossfade**, pro transport: play/pause, **scrub** (time in ms), **speed** (timeScale), **loop**
+ * on/off, duration of the current clip. The mixer is advanced by the parent's render loop; here we
+ * drive the `AnimationAction` and read its time via a throttled subscription to the loop.
  */
 export function useModelAnimations(
   runtimeRef: RefObject<AnimRuntime | null>,
@@ -46,7 +46,7 @@ export function useModelAnimations(
     [runtimeRef],
   );
 
-  /** Configure une action selon boucle/vitesse courantes (sans démarrer la lecture). */
+  /** Configures an action according to the current loop/speed (without starting playback). */
   const configure = useCallback(
     (action: THREE.AnimationAction) => {
       const THREE = threeRef.current;
@@ -61,7 +61,7 @@ export function useModelAnimations(
     [threeRef],
   );
 
-  /** Initialise la liste au chargement du modèle et pose le modèle sur la 1re frame du 1er clip. */
+  /** Initializes the list when the model loads, and poses the model on the first frame of the first clip. */
   const init = useCallback(
     (clips: THREE.AnimationClip[]) => {
       setAnimations(clips.map((c) => c.name));
@@ -74,7 +74,7 @@ export function useModelAnimations(
       if (first && rt?.mixer) {
         const action = configure(rt.mixer.clipAction(first));
         action.reset().play();
-        action.paused = true; // frame 0 affichée, lecture à l'arrêt
+        action.paused = true; // frame 0 shown, playback stopped
         rt.mixer.update(0);
         actionRef.current = action;
       }
@@ -83,7 +83,7 @@ export function useModelAnimations(
   );
 
   const play = useCallback(() => {
-    // L'action courante est amorcée par `init`/`selectAnim` (un mixer existe dès qu'il y a un clip).
+    // The current action is primed by `init`/`selectAnim` (a mixer exists as soon as there is a clip).
     if (!actionRef.current) return;
     actionRef.current.paused = false;
     if (!actionRef.current.isRunning()) actionRef.current?.reset().play();
@@ -108,7 +108,7 @@ export function useModelAnimations(
       setTimeMs(0);
       if (prev && prev !== next && playingRef.current) {
         next.play();
-        prev.crossFadeTo(next, 0.3, false); // fondu enchaîné pendant la lecture
+        prev.crossFadeTo(next, 0.3, false); // crossfade during playback
       } else {
         prev?.stop();
         next.play();
@@ -122,7 +122,7 @@ export function useModelAnimations(
     [runtimeRef, actionRef, configure, clipByName],
   );
 
-  /** Positionne la tête de lecture (ms) et met en pause — applique la pose immédiatement. */
+  /** Sets the playhead (ms) and pauses — applies the pose immediately. */
   const scrub = useCallback(
     (ms: number) => {
       const rt = runtimeRef.current;
@@ -156,8 +156,8 @@ export function useModelAnimations(
     [actionRef, threeRef],
   );
 
-  // Lecture du temps courant depuis la boucle de rendu (après `mixer.update`), throttlé ~20 Hz
-  // pour ne pas re-rendre le HUD à 60 fps. Détecte aussi la fin d'un clip non bouclé.
+  // Reads the current time from the render loop (after `mixer.update`), throttled to ~20 Hz so as
+  // not to re-render the HUD at 60 fps. Also detects the end of a clip that is not looping.
   useEffect(
     () =>
       subscribeFrame(() => {

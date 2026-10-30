@@ -4,8 +4,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { Role, TaskType } from '@prisma/client';
 
-// Le chemin DCC n'écrivait que la chaîne `Task.department` : la relation restait vide, et
-// l'assignation par département — qui interroge la relation — ignorait ces tâches-là.
+// The DCC path only wrote the `Task.department` string: the relation remained empty, and assignment by
+// department — which queries the relation — ignored these tasks.
 vi.mock('../lib/prisma', () => ({
   prisma: {
     task: { findFirst: vi.fn(), create: vi.fn(), updateMany: vi.fn() },
@@ -34,15 +34,15 @@ beforeEach(() => {
   vi.mocked(prisma.task.updateMany).mockResolvedValue({ count: 0 });
 });
 
-describe('ensureTask — département déclaré', () => {
-  it('écrit la clé ET la relation', async () => {
+describe('ensureTask: declared department', () => {
+  it('writes the key AND the relation', async () => {
     vi.mocked(resolveForTask).mockResolvedValue({ department: 'LOOKDEV', departmentId: 5 });
     await ensureTask(admin, 7, shot, { name: 'main', department: 'lookdev' });
     expect(resolveForTask).toHaveBeenCalledWith(7, 'lookdev');
     expect(dataOfCreate()).toMatchObject({ department: 'LOOKDEV', departmentId: 5 });
   });
 
-  it('retrouve la tâche d’avant le rattrapage, qui ne porte que la clé', async () => {
+  it('finds the task from before the catch-up, which only carries the key', async () => {
     vi.mocked(resolveForTask).mockResolvedValue({ department: 'LOOKDEV', departmentId: 5 });
     vi.mocked(prisma.task.findFirst).mockResolvedValue({ id: 12 } as never);
     const out = await ensureTask(admin, 7, shot, { name: 'main', department: 'lookdev' });
@@ -55,12 +55,12 @@ describe('ensureTask — département déclaré', () => {
     ]);
   });
 
-  it('rattache au passage la tâche que la publication d’avant n’avait pas reliée', async () => {
+  it('attaches in passing the task that the earlier publication had not linked', async () => {
     vi.mocked(resolveForTask).mockResolvedValue({ department: 'LOOKDEV', departmentId: 5 });
     vi.mocked(prisma.task.findFirst).mockResolvedValue({ id: 12 } as never);
     await ensureTask(admin, 7, shot, { name: 'main', department: 'lookdev' });
-    // Le filtre `departmentId: null` rend l'écriture sans effet sur une tâche déjà reliée :
-    // aucune ligne ne correspond, `updatedAt` ne bouge pas.
+    // The filter `departmentId: null` makes the write have no effect on a task already linked: no row
+    // matches, `updatedAt` does not move.
     expect(prisma.task.updateMany).toHaveBeenCalledWith({
       where: { id: 12, departmentId: null },
       data: { departmentId: 5 },
@@ -68,9 +68,9 @@ describe('ensureTask — département déclaré', () => {
   });
 });
 
-describe('ensureTask — département deviné', () => {
-  it('se rattache à l’étape existante sans jamais la créer', async () => {
-    // Une heuristique sur le nom de la tâche n'a pas à enrichir le pipe d'un studio.
+describe('ensureTask: guessed department', () => {
+  it('attaches to the existing step without ever creating it', async () => {
+    // A heuristic on the task name has no business enriching a studio's pipe.
     vi.mocked(findByKey).mockResolvedValue({ id: 8, key: 'ANIMATION' } as never);
     await ensureTask(admin, 7, shot, { name: 'anim_main' });
     expect(findByKey).toHaveBeenCalledWith(7, TaskType.ANIMATION);
@@ -78,7 +78,7 @@ describe('ensureTask — département deviné', () => {
     expect(dataOfCreate()).toMatchObject({ department: 'ANIMATION', departmentId: 8 });
   });
 
-  it('retombe sur les réglages quand les départements ne sont pas encore des entités', async () => {
+  it('falls back on the settings when the departments are not yet entities', async () => {
     vi.mocked(findByKey).mockResolvedValue(null);
     vi.mocked(resolveProjectSettingsById).mockResolvedValue({
       departments: [{ key: 'ANIMATION', name: 'Animation' }],
@@ -87,7 +87,7 @@ describe('ensureTask — département deviné', () => {
     expect(dataOfCreate()).toMatchObject({ department: 'ANIMATION', departmentId: null });
   });
 
-  it('n’invente rien quand le nom de la tâche ne dit rien', async () => {
+  it('invents nothing when the task name says nothing', async () => {
     await ensureTask(admin, 7, shot, { name: 'main' });
     expect(findByKey).not.toHaveBeenCalled();
     expect(resolveForTask).not.toHaveBeenCalled();

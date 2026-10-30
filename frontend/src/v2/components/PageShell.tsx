@@ -7,11 +7,11 @@ import { ShellHeaderContext } from './shell/shellHeaderContext';
 import { PageContainer, type PageWidth } from './ui/page';
 
 /**
- * Enveloppe d'une page (A1) : projette le titre / fil d'Ariane dans la barre du haut de
- * `Shell` et pose le conteneur de largeur.
+ * Page wrapper (A1): projects the title and breadcrumb into the top bar of
+ * `Shell` and sets the width container.
  *
- * Remplace l'ancien `<Shell title=… breadcrumb=…>` que chaque page rendait elle-même —
- * ce qui démontait toute la coquille (sidebar, chat, socket, palette) à chaque navigation.
+ * Replaces the former `<Shell title=… breadcrumb=…>` that each page rendered itself,
+ * which unmounted the whole shell (sidebar, chat, socket, palette) on each navigation.
  */
 export default function PageShell({
   title,

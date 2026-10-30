@@ -3,17 +3,16 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { screen, waitFor } from '@testing-library/react';
-import { renderWithProviders, page } from '../../../test/renderWithProviders';
+import { renderWithProviders, page } from '@/test/renderWithProviders';
 import AssignedToMeSection from './AssignedToMeSection';
 import { t } from '../../i18n';
 
 /**
- * L'encart « Assigned to me » de la page Reviews.
+ * The "Assigned to me" panel of the Reviews page.
  *
- * Ce qui se vérifie : il ne parle que des reviews qu'on m'a confiées (il demande bien
- * `assigned=me`), il disparaît quand il n'y en a aucune — un cadre vide en tête de page
- * coûterait à tout le monde — et il propose de voir la file entière seulement quand elle
- * déborde de l'aperçu.
+ * What is verified: it only lists the reviews assigned to me (it does request `assigned=me`), it
+ * disappears when there are none — an empty frame at the top of the page would cost everyone —
+ * and it offers to see the whole queue only when the queue overflows the preview.
  */
 
 const item = (id: number, name: string) => ({
@@ -32,17 +31,17 @@ const item = (id: number, name: string) => ({
 });
 
 describe('AssignedToMeSection', () => {
-  it('ne montre rien quand aucune review ne m’est confiée', async () => {
+  it('shows nothing when no review is assigned to me', async () => {
     const { api } = renderWithProviders(<AssignedToMeSection onSeeAll={() => {}} />, {
       api: { 'GET /api/media/reviews': page([]) },
     });
     await waitFor(() => expect(api.called('GET /api/media/reviews').length).toBe(1));
-    // Le `<section>` du gestionnaire de toasts vit dans le même conteneur : c'est l'encart
-    // nommé qu'on cherche, pas n'importe quelle section.
+    // The toast manager's `<section>` lives in the same container: we are looking for the named
+    // panel, not just any section.
     expect(screen.queryByRole('region', { name: t('reviews.assigned.title') })).toBeNull();
   });
 
-  it('n’interroge que mes reviews, et les montre', async () => {
+  it('only queries my reviews, and shows them', async () => {
     const { api } = renderWithProviders(<AssignedToMeSection onSeeAll={() => {}} />, {
       api: { 'GET /api/media/reviews': page([item(5, 'plan.mp4')], { total: 1 }) },
     });
@@ -52,7 +51,7 @@ describe('AssignedToMeSection', () => {
     expect(screen.getByText(t('reviews.assigned.count', { count: 1 }))).toBeTruthy();
   });
 
-  it('propose « tout voir » seulement quand la file dépasse l’aperçu', async () => {
+  it('offers "see all" only when the queue exceeds the preview', async () => {
     const onSeeAll = vi.fn();
     const { user } = renderWithProviders(<AssignedToMeSection onSeeAll={onSeeAll} />, {
       api: { 'GET /api/media/reviews': page([item(5, 'plan.mp4')], { total: 12 }) },
@@ -61,7 +60,7 @@ describe('AssignedToMeSection', () => {
     expect(onSeeAll).toHaveBeenCalled();
   });
 
-  it('ne propose pas « tout voir » quand tout est déjà à l’écran', async () => {
+  it('does not offer "see all" when everything is already on screen', async () => {
     renderWithProviders(<AssignedToMeSection onSeeAll={() => {}} />, {
       api: { 'GET /api/media/reviews': page([item(5, 'plan.mp4')], { total: 1 }) },
     });

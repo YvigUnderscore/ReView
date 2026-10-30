@@ -3,19 +3,19 @@
 
 import { Navigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { parseIdParam, reviewPath } from '../../lib/slug';
 import type { AssetLatest } from '../../types/api';
 import { useT } from '../../i18n';
 
 /**
- * `/assets/:id/latest` et `/shots/:id/latest` — adresse stable de l'état le plus avancé
- * d'une entité (Phase 45, étendue aux plans en C3).
+ * `/assets/:id/latest` and `/shots/:id/latest` — stable address of an entity's most advanced
+ * state (Phase 45, extended to shots in C3).
  *
- * Un lien collé dans une note de production, un ticket ou un message doit rester juste
- * quand le travail avance. Celui-ci se résout à chaque ouverture : il emmène sur la review
- * du média de l'étape la plus aval, ou sur la page de l'entité s'il n'y a rien à montrer.
+ * A link pasted into a production note, a ticket or a message must stay accurate
+ * as the work advances. This one resolves on each opening: it leads to the review of the
+ * media of the most downstream step, or to the entity page if there is nothing to show.
  */
 export default function AssetLatestRedirect({ entity = 'asset' }: { entity?: 'asset' | 'shot' }) {
   const t = useT();
@@ -31,8 +31,8 @@ export default function AssetLatestRedirect({ entity = 'asset' }: { entity?: 'as
   });
 
   if (isLoading) return <div className="p-6 text-sm text-muted-foreground">{t('common.loading')}</div>;
-  // Sans version publiée (ou sans média), la page de l'entité reste la meilleure destination :
-  // elle montre l'arbre complet, brouillons compris, plutôt qu'une erreur.
+  // Without a published version (or without media), the entity page remains the best destination:
+  // it shows the full tree, drafts included, rather than an error.
   if (isError || !data?.media) return <Navigate to={`/${segment}/${entityId}`} replace />;
   return <Navigate to={reviewPath(data.media)} replace />;
 }

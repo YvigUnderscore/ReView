@@ -2,15 +2,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { useT } from '../../i18n';
 import type { MediaRef } from '../../types/api';
 import type { BoardScope } from './boardApi';
 
 /**
- * Bibliothèque d'images publiées du projet, insérables dans le board d'un clic.
- * Le projectId d'un board d'asset se résout via l'asset.
+ * Library of the project's published images, insertable into the board with one click.
+ * An asset board's projectId is resolved via the asset.
  */
 export type MediaLite = MediaRef & { thumbnailUrl: string | null; url: string };
 

@@ -7,7 +7,7 @@ import { emitActivity, getSocket } from '../../lib/socket';
 import { qk } from './query';
 import { presenceKey, type PresenceUser } from './queries';
 
-/** Payloads des événements temps réel émis par les routes backend (10.E3). */
+/** Payloads of the real-time events emitted by the backend routes (10.E3). */
 interface TaskEvent {
   projectId: number;
   id: number;
@@ -26,11 +26,11 @@ interface MediaEvent {
   versionId: number;
 }
 /**
- * Plan, séquence ou asset : le serveur n'émet que le couple projet/identifiant.
+ * Shot, sequence or asset: the server only emits the project/identifier pair.
  *
- * `ids` est le volet « lot » : une action de production sur trente plans émet UN
- * événement qui les porte tous, au lieu de trente événements unitaires. `id` y reste
- * renseigné (premier du lot) pour les consommateurs qui ne lisent pas `ids`.
+ * `ids` is the "batch" part: a production action on thirty shots emits ONE event carrying them all,
+ * instead of thirty single events. `id` is still filled in (first of the batch) for the consumers that
+ * do not read `ids`.
  */
 interface EntityEvent {
   projectId: number;
@@ -47,39 +47,39 @@ const COMMENT_EVENTS = [
 ];
 
 /**
- * Fenêtre de regroupement des invalidations (ms).
+ * Grouping window for invalidations (ms).
  *
- * C'est le délai MAXIMAL entre un changement distant et son affichage, pas un délai
- * systématique : la première invalidation d'une rafale part au plus tôt (cf. `add`).
- * Deux dixièmes de seconde ne se voient pas à l'œil ; les allonger donnerait une
- * interface qui « ne bouge plus », ce qui serait pire que le problème traité.
+ * This is the MAXIMUM delay between a remote change and its display, not a systematic delay: the first
+ * invalidation of a burst goes out as early as possible (cf. `add`). Two tenths of a second are not
+ * visible to the eye; lengthening them would give an interface that "no longer moves", which would be
+ * worse than the problem being handled.
  */
 export const COALESCE_WINDOW_MS = 200;
 
 /**
- * Au-delà de ce nombre d'entités dans un lot, on invalide le préfixe d'entité plutôt
- * qu'une clé par identifiant : parcourir mille fois le cache pour mille fiches dont une
- * seule est à l'écran coûte plus cher que le rafraîchissement qu'on cherche à éviter.
+ * Beyond this number of entities in a batch, we invalidate the entity prefix rather than one key per
+ * identifier: walking the cache a thousand times for a thousand records of which only one is on screen
+ * costs more than the refresh we are trying to avoid.
  */
 const MAX_BATCH_KEYS = 50;
 
 type QueryKey = readonly unknown[];
 
-/** `a` est-il un préfixe de `b` ? (les invalidations Query matchent par préfixe) */
+/** Is `a` a prefix of `b`? (Query invalidations match by prefix) */
 function isPrefix(a: QueryKey, b: QueryKey): boolean {
   return a.length <= b.length && a.every((part, i) => Object.is(part, b[i]));
 }
 
 /**
- * Retire d'une fournée les clés qu'une autre clé de la même fournée invalide déjà.
+ * Removes from a batch the keys that another key of the same batch already invalidates.
  *
- * `invalidateQueries` matche par préfixe : invalider `['shot', 7]` puis `['shot', 7,
- * 'tree']` touchait deux fois la requête d'arbre — et comme `invalidateQueries` annule
- * par défaut la requête en vol pour en relancer une, la seconde jetait la réponse de la
- * première. Une requête HTTP sur deux, sur la fiche d'un plan, était abandonnée.
+ * `invalidateQueries` matches by prefix: invalidating `['shot', 7]` then `['shot', 7, 'tree']` touched
+ * the tree request twice — and since `invalidateQueries` cancels the in-flight request by default to
+ * start a new one, the second discarded the response of the first. One HTTP request in two, on a shot
+ * record, was being abandoned.
  *
- * Les clés reçues sont uniques (dédoublonnées par leur forme sérialisée en amont) :
- * deux entrées de contenu identique ne peuvent donc pas s'éliminer mutuellement.
+ * The keys received are unique (de-duplicated by their serialised form upstream): two entries with
+ * identical content can therefore not eliminate each other.
  */
 export function dropRedundantKeys(keys: QueryKey[]): QueryKey[] {
   return keys.filter((key) => !keys.some((other) => other !== key && isPrefix(other, key)));
@@ -91,19 +91,18 @@ interface InvalidationQueue {
 }
 
 /**
- * File d'invalidations coalescée.
+ * Coalesced invalidation queue.
  *
- * Un lot de statuts sur trente plans émettait trente `shot:update`, et chacun rechargeait
- * le kanban entier — la lecture la plus lourde de l'application — chez chaque personne
- * qui l'avait ouvert. Les vingt-neuf premières réponses étaient jetées : `invalidateQueries`
- * annule la requête en vol avant d'en relancer une.
+ * A batch of statuses on thirty shots emitted thirty `shot:update`, and each one reloaded the whole
+ * kanban — the heaviest read in the application — for each person who had it open. The first
+ * twenty-nine responses were thrown away: `invalidateQueries` cancels the request in flight before
+ * starting another one.
  *
- * Le regroupement est un « throttle à front montant », pas un debounce : la première
- * invalidation part tout de suite (à un tour de boucle près, le temps que toutes les clés
- * d'un même événement rejoignent la fournée), les suivantes sont retenues au plus
- * `COALESCE_WINDOW_MS`. Un debounce simple, lui, aurait repoussé l'affichage jusqu'à la
- * fin de la rafale : sur un lot qui met trois secondes à s'écrire côté serveur, l'écran
- * serait resté figé tout du long.
+ * The grouping is a "leading-edge throttle", not a debounce: the first invalidation goes out right
+ * away (within one turn of the loop, while all the keys of the same event join the batch), the next
+ * ones are held back at most `COALESCE_WINDOW_MS`. A simple debounce would have pushed the display back
+ * to the end of the burst: on a batch that takes three seconds to write on the server side, the screen
+ * would have stayed frozen throughout.
  */
 function createInvalidationQueue(qc: QueryClient): InvalidationQueue {
   const pending = new Map<string, QueryKey>();
@@ -115,8 +114,8 @@ function createInvalidationQueue(qc: QueryClient): InvalidationQueue {
     const keys = dropRedundantKeys([...pending.values()]);
     pending.clear();
     for (const queryKey of keys) void qc.invalidateQueries({ queryKey });
-    // Fenêtre de garde : ce qui arrive maintenant attend ici plutôt que de relancer
-    // aussitôt les mêmes requêtes. Elle se referme d'elle-même si rien ne vient.
+    // Guard window: whatever arrives now waits here rather than re-running the same requests straight
+    // away. It closes on its own if nothing comes.
     guard = setTimeout(() => {
       guard = null;
       if (pending.size > 0) flush();
@@ -126,10 +125,10 @@ function createInvalidationQueue(qc: QueryClient): InvalidationQueue {
   return {
     add(key: QueryKey): void {
       pending.set(JSON.stringify(key), key);
-      // Une fournée est déjà programmée, ou la fenêtre court : elle emportera cette clé.
+      // A batch is already scheduled, or the window is running: it will carry this key.
       if (lead || guard) return;
-      // Délai nul plutôt qu'appel direct : les quatre ou cinq clés d'un même événement
-      // rejoignent ainsi la même fournée, et se dédoublonnent entre elles.
+      // Zero delay rather than a direct call: the four or five keys of the same event thus join the
+      // same batch, and de-duplicate among themselves.
       lead = setTimeout(flush, 0);
     },
     dispose(): void {
@@ -142,29 +141,27 @@ function createInvalidationQueue(qc: QueryClient): InvalidationQueue {
   };
 }
 
-/** Identifiants portés par un événement d'entité : le lot s'il existe, sinon l'unité. */
+/** Identifiers carried by an entity event: the batch if there is one, otherwise the single one. */
 const entityIds = (e: EntityEvent): number[] => (e.ids?.length ? e.ids : [e.id]);
 
-/** Période du battement d'activité de fond (ms) — inchangée. */
+/** Period of the background activity heartbeat (ms) — unchanged. */
 const HEARTBEAT_MS = 60_000;
 
 /**
- * Intervalle minimal entre deux trames `activity` (ms).
+ * Minimum interval between two `activity` frames (ms).
  *
- * La fenêtre d'inactivité côté serveur se compte en minutes : une trame toutes les
- * trente secondes suffit à distinguer « devant l'écran » de « parti », et reste deux
- * fois plus fine que le battement de fond.
+ * The server-side inactivity window is counted in minutes: one frame every thirty seconds is enough to
+ * tell "in front of the screen" from "away", and remains twice as fine as the background heartbeat.
  */
 export const ACTIVITY_THROTTLE_MS = 30_000;
 
 /**
- * Poussée `presence:update` → cache Query.
+ * `presence:update` push → Query cache.
  *
- * Le serveur n'envoie que les identifiants en ligne : on réécrit le drapeau `online` des
- * personnes déjà en cache plutôt que de redemander l'annuaire. Un updater qui rend
- * `undefined` ne crée aucune entrée : si personne n'affiche l'annuaire, la poussée ne
- * coûte rien. Les objets inchangés sont rendus tels quels, pour ne pas faire re-rendre
- * la liste entière à chaque battement.
+ * The server only sends the identifiers online: we rewrite the `online` flag of the people already in
+ * cache rather than asking for the directory again. An updater returning `undefined` creates no entry:
+ * if nobody displays the directory, the push costs nothing. Unchanged objects are returned as they are,
+ * so as not to re-render the whole list on every heartbeat.
  */
 function applyPresencePush(qc: QueryClient, onlineUserIds: number[]): void {
   const online = new Set(onlineUserIds);
@@ -174,13 +171,12 @@ function applyPresencePush(qc: QueryClient, onlineUserIds: number[]): void {
 }
 
 /**
- * Volet présence du pont : poussée temps réel vers le cache, et battement d'activité.
+ * Presence part of the bridge: real-time push to the cache, and activity heartbeat.
  *
- * Les deux vivaient dans `usePresence`, donc dans CHAQUE consommateur de l'annuaire :
- * deux panneaux montés ensemble posaient deux abonnements socket, deux minuteries et
- * deux jeux d'écouteurs de fenêtre — et chacun émettait une trame `activity` par frappe,
- * soit quarante trames pour une phrase tapée dans une note de review. Installé une seule
- * fois au niveau du pont, le comportement est le même pour un coût fixe.
+ * Both used to live in `usePresence`, therefore in EACH consumer of the directory: two panels mounted
+ * together set up two socket subscriptions, two timers and two sets of window listeners — and each
+ * emitted an `activity` frame per keystroke, that is forty frames for a sentence typed in a review note.
+ * Installed once at the bridge level, the behaviour is the same for a fixed cost.
  */
 export function usePresenceBridge(): void {
   const qc = useQueryClient();
@@ -197,7 +193,7 @@ export function usePresenceBridge(): void {
   }, [qc]);
 
   useEffect(() => {
-    // `last` à zéro : la toute première trame part au montage, sans attendre le seuil.
+    // `last` at zero: the very first frame goes out on mount, without waiting for the threshold.
     let last = 0;
     const ping = (): void => {
       const now = Date.now();
@@ -218,19 +214,18 @@ export function usePresenceBridge(): void {
 }
 
 /**
- * Pont temps réel → cache Query (10.E3) : rejoint la room du projet courant
- * (RBAC revérifié côté serveur à chaque join) et traduit chaque événement
- * socket en invalidations ciblées. Une invalidation ne re-fetch que les
- * queries actuellement montées : coût nul pour les écrans non concernés.
+ * Real-time bridge → Query cache (10.E3): joins the current project's room (RBAC re-checked server-side
+ * on each join) and translates each socket event into targeted invalidations. An invalidation only
+ * re-fetches the queries currently mounted: zero cost for the screens not concerned.
  */
 export function useSocketInvalidation(projectId: number | null): void {
   const qc = useQueryClient();
 
-  // Monté ici parce que le pont est lui-même monté une fois pour toute l'application :
-  // c'est le seul endroit où l'annuaire de présence peut avoir un unique abonnement.
+  // Mounted here because the bridge is itself mounted once and for all for the application:
+  // it is the only place where the presence directory can have a single subscription.
   usePresenceBridge();
 
-  // Rejoint la room du projet courant ; re-join après une reconnexion socket.
+  // Joins the current project's room; re-join after a socket reconnection.
   useEffect(() => {
     if (!projectId) return;
     const socket = getSocket();
@@ -239,8 +234,8 @@ export function useSocketInvalidation(projectId: number | null): void {
     socket.on('connect', join);
     return () => {
       socket.off('connect', join);
-      // On quitte la salle en partant (D3) : sans cela, un onglet ouvert toute la journée
-      // reçoit les événements de tous les projets visités depuis le matin.
+      // Leave the room on the way out (D3): without this, a tab open all day
+      // receives the events of every project visited since the morning.
       socket.emit('leave_project', projectId);
     };
   }, [projectId]);
@@ -248,8 +243,8 @@ export function useSocketInvalidation(projectId: number | null): void {
   useEffect(() => {
     const socket = getSocket();
     const q = createInvalidationQueue(qc);
-    // Les payloads commentaire n'exposent pas toujours le mediaObjectId (delete,
-    // réactions) : invalidation par préfixe — seule la review montée re-fetch.
+    // Comment payloads do not always expose the mediaObjectId (delete,
+    // reactions): invalidation by prefix — only the mounted review re-fetches.
     const onComment = () => {
       q.add(['comments']);
     };
@@ -268,13 +263,13 @@ export function useSocketInvalidation(projectId: number | null): void {
       q.add(['timeline']);
     };
     const onMedia = (e: MediaEvent) => {
-      // Ne jamais invalider qk.media(id) : URLs présignées en staleTime Infinity
-      // (10.E1) — un refetch rechargerait le viewer en pleine lecture.
+      // Never invalidate qk.media(id): presigned URLs with staleTime Infinity
+      // (10.E1) — a refetch would reload the viewer in the middle of playback.
       q.add(qk.version(e.versionId));
       q.add(['versions']);
       q.add(qk.projectActivity(e.projectId));
-      // Publier un média fait avancer l'asset et le montage : c'est tout l'intérêt de
-      // l'auto-timeline (Phase 45), elle doit se remettre à jour sans rechargement.
+      // Publishing a media advances the asset and the edit: that is the whole point of
+      // the auto-timeline (Phase 45), it must update without a reload.
       q.add(['asset']);
       q.add(['timeline']);
     };
@@ -282,13 +277,13 @@ export function useSocketInvalidation(projectId: number | null): void {
       q.add(['timeline']);
     };
     /**
-     * Plans, séquences et assets — le serveur émettait déjà ces trois événements et
-     * personne ne les écoutait : un statut changé ailleurs (par un collègue, ou lu depuis
-     * ShotGrid) n'atteignait jamais un écran ouvert. Il fallait recharger la page pour le
-     * voir, ce qui donnait l'impression que le changement n'était pas passé.
+     * Shots, sequences and assets — the server already emitted these three events and nobody
+     * listened to them: a status changed elsewhere (by a colleague, or read from ShotGrid) never reached
+     * an open screen. You had to reload the page to see it, which gave the impression that the change
+     * had not gone through.
      *
-     * `qk.shotTree`/`qk.assetTree` ne sont plus cités : `qk.shot`/`qk.asset` en sont le
-     * préfixe et les invalident déjà (cf. `dropRedundantKeys`).
+     * `qk.shotTree`/`qk.assetTree` are no longer cited: `qk.shot`/`qk.asset` are their prefix and
+     * already invalidate them (cf. `dropRedundantKeys`).
      */
     const onShot = (e: EntityEvent) => {
       const ids = entityIds(e);

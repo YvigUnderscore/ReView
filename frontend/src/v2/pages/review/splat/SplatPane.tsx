@@ -4,13 +4,13 @@
 import { type ReactNode, type RefObject } from 'react';
 import { VIEWER_ZONE } from '../reviewTypes';
 import ReviewFrame from '../ReviewFrame';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
- * Pane Gaussian Splat de la review (viewer Spark/SparkJS) — 10.G.
- * Le hook `useSplat` monte la scène Three.js dans `containerRef` ; ce composant gère le
- * cadre de review à aspect fixe (V6 — canvas letterboxé, non étiré à l'écran), les états de
- * repli (chargement, échec) et l'overlay d'annotation 2D superposé.
+ * Gaussian Splat pane of the review (Spark / SparkJS viewer), batch 10.G.
+ * The `useSplat` hook mounts the Three.js scene in `containerRef`; this component handles the fixed-aspect
+ * review frame (V6: letterboxed canvas, not stretched to the screen), the fallback states (loading, failure)
+ * and the overlaid 2D annotation overlay.
  */
 export default function SplatPane({
   containerRef,
@@ -30,29 +30,29 @@ export default function SplatPane({
   containerRef: RefObject<HTMLDivElement | null>;
   ready: boolean;
   loadError: boolean;
-  /** Progression du téléchargement réseau (0..1) ou null (décodage/LOD en cours) — 41.B. */
+  /** Download progress (0..1) or null (decoding / LOD in progress), 41.B. */
   progress: number | null;
   status: string;
   overlay: ReactNode;
-  /** Overlay interactif de l'éditeur (tracé de sélection) — capte le pointeur, contrairement à `overlay`. */
+  /** Interactive overlay of the editor (selection trace): captures the pointer, unlike `overlay`. */
   editorOverlay?: ReactNode;
-  /** Fenêtre PiP du mode layout (PipFrame — le rendu WebGL est dessiné dessous en scissor). */
+  /** PiP window of layout mode (PipFrame: the WebGL rendering is drawn underneath with scissor). */
   pip?: ReactNode;
   /**
-   * Menus du viewer, posés en HAUT À GAUCHE (Phase 50, lot 12) : édition du nuage et réglages
-   * de rendu, au même coin et dans le même langage que ceux du modèle 3D (lot 6). Absent du
-   * partage client, qui ne règle rien.
+   * Viewer menus, placed TOP LEFT (Phase 50, batch 12): cloud editing and rendering settings, in the same
+   * corner and the same language as those of the 3D model (batch 6). Absent from the client share, which
+   * adjusts nothing.
    */
   settings?: ReactNode;
-  /** Aspect du cadre de review fixe (issu de la caméra de présentation) — défaut 16:9 (V6). */
+  /** Aspect of the fixed review frame (from the presentation camera): 16:9 default (V6). */
   aspect?: number;
-  /** Auto-key armé : liseré d'enregistrement sur le viewport (façon DCC). */
+  /** Auto-key armed: recording outline on the viewport (DCC-style). */
   recording?: boolean;
-  /** Bandeau d'état posé au-dessus du nuage (placement d'un point d'intérêt) — jumeau du 3D. */
+  /** Status banner placed above the cloud (placement of a point of interest): 3D twin. */
   notice?: ReactNode;
   /**
-   * Sortie de la lecture d'un commentaire annoté, en BAS du viewer — même bord et même pilule
-   * que le modèle 3D et l'image ; le haut centré appartient au bandeau d'état.
+   * Exit of the playback of an annotated comment, at the BOTTOM of the viewer: same edge and same pill as
+   * the 3D model and the image. The centred top belongs to the status banner.
    */
   exit?: ReactNode;
 }) {
@@ -62,16 +62,16 @@ export default function SplatPane({
       {recording && (
         <div className="pointer-events-none absolute inset-0 z-20 ring-2 ring-destructive/70 ring-inset" />
       )}
-      {/* Viewer plein espace + guide letterbox du cadre de livraison (Phase 25) ; l'overlay
-          d'annotation 2D est ancré au guide, la sélection éditeur reste plein cadre. */}
+      {/* Full-space viewer + letterbox guide of the delivery frame (Phase 25). The 2D annotation overlay is
+          anchored to the guide; the editor selection stays full-frame. */}
       <ReviewFrame
         aspect={aspect}
         frame={overlay && <div className="pointer-events-none absolute inset-0">{overlay}</div>}
       >
-        {/* Conteneur de la scène Three.js (rempli par useSplat) — toujours monté */}
+        {/* Container of the Three.js scene (filled by useSplat): always mounted */}
         <div ref={containerRef} className="absolute inset-0" />
 
-        {/* Overlay d'édition (sélection rectangle/lasso) — au-dessus du canvas, sous les états */}
+        {/* Editing overlay (rectangle / lasso selection): above the canvas, below the states */}
         {editorOverlay}
 
         {pip}
@@ -80,19 +80,19 @@ export default function SplatPane({
       {notice}
       {exit}
 
-      {/* Au-dessus du cadre, jamais dedans : le guide letterbox et l'overlay d'annotation
-          gardent leurs coordonnées — ce coin ne touche pas au cadrage. */}
+      {/* Above the frame, never inside it: the letterbox guide and the annotation overlay keep their
+          coordinates; this corner does not touch the framing. */}
       {settings && <div className="absolute top-2 left-2 z-20">{settings}</div>}
 
-      {/* États de repli — centrés dans toute la zone (hors letterbox) */}
+      {/* Fallback states: centred across the whole zone (outside the letterbox) */}
       {loadError ? (
         <div className="absolute inset-0 flex items-center justify-center p-6">
           <p className="max-w-sm text-center text-sm text-muted-foreground">{t('splat.unviewable')}</p>
         </div>
       ) : status === 'PROCESSING' || !ready ? (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
-          {/* 41.B : barre de progression réelle pendant le téléchargement (grosses scènes) ;
-              une fois le fichier reçu (progress null), on bascule sur le décodage indéterminé. */}
+          {/* 41.B: real progress bar during download (large scenes); once the file has been received
+              (progress null), we switch to indeterminate decoding. */}
           {typeof progress === 'number' && progress < 1 ? (
             <>
               <span className="text-sm text-muted-foreground">

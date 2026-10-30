@@ -3,50 +3,49 @@
 
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { api } from '../../../../lib/apiClient';
-import { qk } from '../../../lib/query';
-import { usePreferences, useUpdatePreferences } from '../../../lib/usePreferences';
-import { useProjectRole } from '../../../lib/useProjectRole';
-import { useAuth } from '../../../stores/useAuth';
-import type { WidgetsPref } from '../../../lib/widgetLayout';
-import type { Role } from '../../../types/api';
-import { useT } from '../../../i18n';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
+import { usePreferences, useUpdatePreferences } from '@/v2/lib/usePreferences';
+import { useProjectRole } from '@/v2/lib/useProjectRole';
+import { useAuth } from '@/v2/stores/useAuth';
+import type { WidgetsPref } from '@/v2/lib/widgetLayout';
+import type { Role } from '@/v2/types/api';
+import { useT } from '@/v2/i18n';
 import { OVERVIEW_PREFERENCE_KEY, resolveOverviewLayout, roleLayout } from './overviewWidgets';
 
-/** Réponse de `GET /api/studio/overview-layout` — un rôle absent n'a jamais été réglé. */
+/** Response of `GET /api/studio/overview-layout`: an absent role has never been set. */
 interface RoleDefaultsResponse {
   defaults: Partial<Record<Role, WidgetsPref>>;
 }
 
 export interface OverviewLayoutState {
-  /** Disposition à rendre : la personne, complétée par le défaut de son rôle. */
+  /** Layout to render: the person's, completed by their role's default. */
   layout: WidgetsPref;
-  /** Ce que la personne a elle-même réglé — absent tant qu'elle n'a rien changé. */
+  /** What the person has set themselves: absent as long as they have changed nothing. */
   personal: WidgetsPref | undefined;
   role: Role | null;
   canManage: boolean;
   isAdmin: boolean;
-  /** Rôles pour lesquels l'administration a enregistré un défaut — les seuls à pouvoir être retirés. */
+  /** Roles for which the administration has saved a default: the only ones that can be removed. */
   definedRoles: Role[];
-  /** Faux tant que les préférences n'ont pas répondu : écrire avant les écraserait. */
+  /** False until the preferences have answered: writing before then would overwrite them. */
   ready: boolean;
   save: (next: WidgetsPref) => void;
-  /** Efface la personnalisation : la page revient au défaut du rôle. */
+  /** Clears the customization: the page returns to its role default. */
   useRoleDefault: () => void;
   saveRoleDefault: (role: Role, layout: WidgetsPref | null) => void;
 }
 
 /**
- * Disposition de la vue d'ensemble : celle de la personne, le défaut de son rôle, et les
- * gestes qui écrivent l'une ou l'autre.
+ * Overview layout: the person's, their role's default, and the gestures that write either one.
  *
- * Deux sources, deux portées. La préférence de compte (`preferences.projectOverview`) suit
- * la personne d'un projet à l'autre — on ne réapprend pas sa page à chaque projet. Le
- * défaut par rôle est un réglage studio, servi à qui n'a rien personnalisé.
+ * Two sources, two scopes. The account preference (`preferences.projectOverview`) follows the
+ * person from one project to another: one does not relearn one's page for each project. The
+ * per-role default is a studio setting, served to whoever has customized nothing.
  *
- * Le rôle retenu est le rôle **effectif sur ce projet** (`useProjectRole`), pas le rôle du
- * compte : quelqu'un qui supervise un projet et exécute sur un autre n'ouvre pas la même
- * page des deux côtés, et c'est bien ce qu'on veut.
+ * The role retained is the role **effective on this project** (`useProjectRole`), not the account's
+ * role: someone who supervises one project and executes on another does not open the same page on
+ * both sides, and that is indeed what is wanted.
  */
 export function useOverviewLayout(projectId: number): OverviewLayoutState {
   const t = useT();
@@ -72,13 +71,13 @@ export function useOverviewLayout(projectId: number): OverviewLayoutState {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  // La clé est typée dans `UserPreferences` : pas de transtypage, donc pas de forme
-  // supposée. `null` (clé effacée) et absence disent la même chose — rien de personnalisé.
+  // The key is typed in `UserPreferences`: no cast, hence no assumed shape. `null` (cleared key) and
+  // absence say the same thing: nothing customized.
   const personal = prefsQ.data?.projectOverview ?? undefined;
   const forRole = roleLayout(defaultsQ.data, role);
 
-  // Les préférences ne sont pas encore là : composer maintenant écraserait la disposition
-  // enregistrée, le serveur fusionnant la clé `projectOverview` en bloc.
+  // The preferences have not arrived yet: composing now would overwrite the saved layout, since the
+  // server merges the `projectOverview` key as a whole block.
   const ready = !prefsQ.isPending;
 
   return {
@@ -92,8 +91,8 @@ export function useOverviewLayout(projectId: number): OverviewLayoutState {
     save: (next) => {
       if (ready) updatePrefs.mutate({ [OVERVIEW_PREFERENCE_KEY]: next });
     },
-    // `null` supprime la clé côté serveur (merge superficiel) : la page repart du défaut du
-    // rôle, y compris de celui que l'administration réglera plus tard.
+    // `null` removes the key server-side (shallow merge): the page starts again from the role
+    // default, including the one the administration will set later.
     useRoleDefault: () => {
       if (ready) updatePrefs.mutate({ [OVERVIEW_PREFERENCE_KEY]: null });
     },

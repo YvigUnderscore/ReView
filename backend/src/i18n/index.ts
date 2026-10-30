@@ -20,24 +20,24 @@ import oc from './messages/oc.json';
 export * from './locales';
 
 /**
- * Traduction côté serveur — emails, notifications, messages destinés aux utilisateurs.
+ * Server-side translation: emails, notifications, messages meant for users.
  *
- * Même contrat que le front (anglais de référence, repli en cascade, interpolation
- * `{name}`, pluriels CLDR), mais les catalogues sont chargés d'un bloc : ils pèsent
- * quelques dizaines de kilo-octets et le serveur sert plusieurs langues à la fois.
+ * Same contract as the frontend (English as reference, cascading fallback, `{name}`
+ * interpolation, CLDR plurals), but the catalogs are loaded in one block: they weigh a few
+ * tens of kilobytes and the server serves several languages at once.
  *
- * Ces catalogues sont **indépendants** de ceux du front : le serveur n'a pas besoin des
- * libellés d'interface, et l'interface n'a pas besoin des gabarits d'email.
+ * These catalogs are **independent** of the frontend's: the server does not need UI labels,
+ * and the UI does not need email templates.
  */
 
 type PluralForms = Partial<Record<Intl.LDMLPluralRule, string>> & { other: string };
 type Message = string | PluralForms;
 type Catalog = Partial<Record<MessageKey, Message>>;
 
-/** L'ensemble des clés de traduction — dérivé du catalogue anglais de référence. */
+/** The set of translation keys, derived from the English reference catalog. */
 export type MessageKey = keyof typeof en;
 
-/** Valeurs interpolées dans un message ; `count` sélectionne la forme plurielle. */
+/** Values interpolated into a message; `count` selects the plural form. */
 export type TParams = Record<string, string | number> & { count?: number };
 
 const CATALOGS: Record<Locale, Catalog> = {
@@ -76,23 +76,23 @@ function selectPlural(forms: PluralForms, count: number, locale: Locale): string
 }
 
 /**
- * Traduit une clé dans la langue demandée, avec repli sur l'anglais clé par clé — une
- * traduction partielle donne donc un email lisible plutôt qu'un email troué.
+ * Translates a key into the requested language, falling back to English key by key, so a
+ * partial translation yields a readable email rather than a gappy one.
  */
 export function t(locale: Locale, key: MessageKey, params?: TParams): string {
-  // Le typage ne protège pas d'une langue venue de la base (préférence enregistrée avant
-  // qu'une langue soit retirée du registre) : un email dégradé vaut mieux qu'un envoi qui échoue.
+  // Typing does not protect against a language coming from the database (preference saved
+  // before a language was removed from the registry): a degraded email beats a failed send.
   const own = CATALOGS[locale]?.[key];
   const message = own ?? CATALOGS[BASE_LOCALE][key];
   if (message === undefined) return key;
   if (typeof message === 'string') return interpolate(message, params);
-  // Le pluriel suit la langue du message réellement retenu : un repli anglais s'accorde
-  // en anglais, pas selon les règles de la langue demandée.
+  // Plural rules follow the language of the message actually used: an English fallback is
+  // pluralised in English, not according to the rules of the requested language.
   const resolved = own === undefined ? BASE_LOCALE : locale;
   return interpolate(selectPlural(message, params?.count ?? 0, resolved), params);
 }
 
-/** Langue choisie par un compte dans ses préférences, si elle est connue du registre. */
+/** The language chosen by an account in its preferences, if known to the registry. */
 export function localeFromPreferences(preferences: unknown): Locale | null {
   if (!preferences || typeof preferences !== 'object') return null;
   const value = (preferences as Record<string, unknown>).locale;
@@ -100,17 +100,16 @@ export function localeFromPreferences(preferences: unknown): Locale | null {
 }
 
 /**
- * Langue d'un lecteur **non authentifié**, négociée depuis `Accept-Language`.
+ * Language of an **unauthenticated** reader, negotiated from `Accept-Language`.
  *
- * Les surfaces publiques du backend — au premier chef la page `/api/docs`, que l'AGPL §13
- * oblige à porter la mention de source — n'ont ni compte ni préférence enregistrée à
- * consulter. Faute de cette négociation, leur contenu était écrit en dur : la mention légale
- * de `/api/docs` s'affichait **en français** pour tout le monde, alors que la même mention
- * est rendue en anglais par le front. Une mention légale qui change de langue selon la porte
- * d'entrée n'est pas une mention légale.
+ * The backend's public surfaces, first among them the `/api/docs` page, which AGPL section 13
+ * requires to carry the source notice, have no account or saved preference to consult. Without
+ * this negotiation their content was hard-coded: the legal notice on `/api/docs` was shown
+ * **in French** to everyone, whereas the same notice is rendered in English by the frontend.
+ * A legal notice whose language changes depending on the entry point is not a legal notice.
  *
- * Les valeurs de qualité (`;q=`) sont respectées, et un tag régional retombe sur la langue :
- * `zh-CN` choisit `zh-Hans`, `pt-BR` choisit `pt`. Repli sur la langue de base.
+ * Quality values (`;q=`) are honoured, and a regional tag falls back to its language:
+ * `zh-CN` picks `zh-Hans`, `pt-BR` picks `pt`. Falls back to the base language.
  */
 export function localeFromAcceptLanguage(header: string | null | undefined): Locale {
   if (!header) return BASE_LOCALE;
@@ -123,7 +122,7 @@ export function localeFromAcceptLanguage(header: string | null | undefined): Loc
       return { tag: tag.trim().toLowerCase(), weight: Number.isFinite(weight) ? weight : 0 };
     })
     .filter((r) => r.tag !== '' && r.tag !== '*' && r.weight > 0)
-    // Tri stable : à qualité égale, l'ordre d'écriture fait foi, comme le veut la RFC.
+    // Stable sort: at equal quality, the order written decides, as RFC 9110 requires.
     .sort((a, b) => b.weight - a.weight);
   for (const { tag } of ranked) {
     const exact = LOCALE_CODES.find((c) => c.toLowerCase() === tag);

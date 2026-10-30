@@ -4,23 +4,23 @@
 import { useCallback, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { api } from '../../../../lib/apiClient';
-import { qk } from '../../../lib/query';
-import { useT } from '../../../i18n';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
+import { useT } from '@/v2/i18n';
 
 /**
- * Enregistrement de l'override de scène USD comme **base du média** (46.D) : ce que le
- * gestionnaire voit devient ce que tout le monde verra. Réservé aux gestionnaires et refusé
- * après publication (verrou P11, vérifié côté serveur) — le hook n'expose alors aucune action.
+ * Saves the USD scene override as the **media's base** (46.D): what the manager sees becomes what
+ * everyone will see. Reserved for managers and refused after publication (P11 lock, checked
+ * server-side) — the hook then exposes no action.
  *
- * Extrait de `Model3DReview` (budget de lignes) : l'orchestrateur ne garde que le câblage.
+ * Extracted from `Model3DReview` (line budget): the orchestrator only keeps the wiring.
  */
 export function useSaveSceneOverride(params: {
   mediaId: number;
   allowed: boolean;
-  /** Override fusionné à envoyer (base + exploration locale). */
+  /** Merged override to send (base + local exploration). */
   merged: () => unknown;
-  /** Remet l'exploration locale à zéro une fois la base enregistrée. */
+  /** Resets the local exploration to zero once the base is saved. */
   onSaved: () => void;
 }) {
   const { mediaId, allowed, merged, onSaved } = params;

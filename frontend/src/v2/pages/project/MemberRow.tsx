@@ -19,19 +19,19 @@ import type { Member } from './projectTypes';
 import type { Role } from '../../types/api';
 
 /**
- * Une personne sur le projet : son rôle, ses départements.
+ * A person on the project: their role and their departments.
  *
- * Le rôle par projet était déjà réglable (38.E) ; le département, lui, n'avait aucun écran
- * — la relation existait depuis la vague B et seule l'API savait l'écrire. Les deux se
- * posent maintenant au même endroit, au clic droit, là où l'on regarde déjà la personne.
+ * The per-project role was already adjustable (38.E). The department, however, had no screen: the
+ * relation existed since wave B, and only the API knew how to write it. Both are now set in the
+ * same place, on right-click, where one already looks at the person.
  *
- * **Un artiste appartient à PLUSIEURS départements.** C'est un choix, pas une facilité de
- * modèle : un lead compositing qui tient aussi le roto, un généraliste qui passe du layout
- * au lighting. Les cases se cochent indépendamment, et chaque bascule est envoyée seule —
- * deux clics rapides ne doivent pas s'annuler l'un l'autre.
+ * **An artist belongs to SEVERAL departments.** This is a choice, not a modelling convenience: a
+ * compositing lead who also does roto, or a generalist who moves from layout to lighting. The boxes
+ * are ticked independently, and each toggle is sent on its own: two quick clicks must not cancel
+ * each other out.
  */
 
-/** Rôle projet : override facultatif du rôle global (38.E). `GLOBAL` = hérite. */
+/** Project role: optional override of the global role (38.E). `GLOBAL` means inherit. */
 const INHERIT = 'GLOBAL';
 const ROLE_VALUES = [INHERIT, 'SUPERVISOR', 'ARTIST', 'CLIENT'] as const;
 const ROLE_KEY: Record<(typeof ROLE_VALUES)[number], MessageKey> = {
@@ -51,7 +51,7 @@ export default function MemberRow({
 }: {
   projectId: number;
   member: Member;
-  /** Projet relié à un site : le rapprochement de comptes s'affiche alors sur la ligne. */
+  /** Project linked to a site: the account matching then shows on the row. */
   sgLinked: boolean;
   canManage: boolean;
   onRole: (userId: number, role: Role | undefined) => void;
@@ -64,12 +64,12 @@ export default function MemberRow({
   const own = member.user.departments ?? [];
   const ownIds = new Set(own.map((d) => d.id));
   /**
-   * Ce que le menu propose : le pipe du projet, **plus** ce que la personne porte déjà.
+   * What the menu offers: the project's pipeline, **plus** what the person already carries.
    *
-   * Les deux listes ne coïncident pas toujours. Un projet qui déclare ses propres étapes
-   * masque celles du studio dans les menus (`listForProject`), alors que la fiche du membre
-   * rend les deux — c'est la vérité, et la cacher serait pire. Sans cette réunion, une
-   * étape du studio s'affichait en pastille sans qu'aucune case ne permette de la décocher.
+   * The two lists do not always coincide. A project that declares its own steps hides the studio's
+   * in the menus (`listForProject`), whereas the member sheet renders both. That is the truth, and
+   * hiding it would be worse. Without this union, a studio step displayed as a badge with no box to
+   * untick it.
    */
   const choices = [...departments, ...own.filter((d) => !departments.some((p) => p.id === d.id))];
 
@@ -139,7 +139,7 @@ export default function MemberRow({
             size={28}
           />
           <div className="min-w-0">
-            {/* Même identité que dans l'annuaire d'ajout : pseudo honoré, rôle lisible. */}
+            {/* Same identity as in the add directory: nickname honoured, role readable. */}
             <span className="text-sm font-medium">{personLabel(member.user)}</span>
             <span className="ml-2 text-xs text-muted-foreground">
               {member.user.email} · {t(ROLE_LABEL_KEY[member.user.role])}
@@ -148,7 +148,7 @@ export default function MemberRow({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {/* Compte ShotGrid : l'adresse ne suffit pas toujours à rapprocher les deux. */}
+          {/* ShotGrid account: the email address is not always enough to match the two. */}
           {sgLinked && <SgAccountLink projectId={projectId} userId={member.user.id} />}
           <select
             className="rounded border border-input bg-background px-2 py-1 text-xs"
@@ -177,7 +177,7 @@ export default function MemberRow({
   );
 }
 
-/** Les départements de la personne, dans la teinte du pipe. */
+/** The person's departments, in the pipeline's tint. */
 function MemberDepartments({
   departments,
   isDark,
@@ -191,8 +191,8 @@ function MemberDepartments({
   return (
     <div className="mt-1 flex flex-wrap gap-1">
       {departments.map((d) => {
-        // La couleur vient de la base : normalisée, sinon un jaune clair posé en fond
-        // devient illisible sur le thème sombre.
+        // The colour comes from the database: normalized, otherwise a light yellow used as a
+        // background would become unreadable on the dark theme.
         const swatch = statusSwatch(d.color, isDark);
         return (
           <span

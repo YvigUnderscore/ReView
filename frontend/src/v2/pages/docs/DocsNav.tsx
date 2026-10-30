@@ -11,19 +11,19 @@ import { matchingHeadings } from './docsSearch';
 import HighlightedText from './HighlightedText';
 
 /**
- * Sommaire de la documentation : une entrée dépliable par section, et sous la page
- * ouverte la liste de ses chapitres.
+ * Documentation table of contents: one collapsible entry per section, and under the open page
+ * the list of its chapters.
  *
- * Soixante-dix pages à plat faisaient une colonne qu'on parcourait au jugé. Repliées par
- * section, elles tiennent dans un écran ; la section courante s'ouvre seule, et le
- * chapitre lu se surligne au fil du défilement.
+ * Seventy flat pages made a column that was scanned by eye. Collapsed by section, they fit on
+ * one screen; the current section opens on its own, and the chapter being read is highlighted
+ * as the user scrolls.
  *
- * Pendant une recherche, le sommaire répond comme la palette Ctrl+K : les pages trouvées
- * **par un titre de chapitre** apparaissent avec ce chapitre en dessous, cliquable — la
- * réponse n'est pas « cette page », c'est « cet endroit de cette page ».
+ * During a search, the table of contents answers like the Ctrl+K palette: pages found **by a
+ * chapter title** appear with that chapter beneath them, clickable. The answer is not "this
+ * page" but "this place in this page".
  */
 
-/** Chapitres de la page ouverte, suivis au défilement. */
+/** Chapters of the open page, tracked on scroll. */
 function ChapterList({
   chapters,
   activeChapter,
@@ -55,7 +55,7 @@ function ChapterList({
   );
 }
 
-/** Chapitres qui portent la recherche — la raison du résultat, et l'endroit où entrer. */
+/** Chapters matching the search: the reason for the result, and where to enter. */
 function MatchedChapters({
   page,
   headings,
@@ -102,7 +102,7 @@ export default function DocsNav({
   chapters: DocChapter[];
   activeChapter: string;
   query: string;
-  /** Mots de la recherche, repliés — ce que l'on surligne dans les libellés. */
+  /** Search words, accent-folded: what is highlighted in the labels. */
   words: string[];
   filtering: boolean;
   unavailable: boolean;
@@ -114,8 +114,8 @@ export default function DocsNav({
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const currentDir = useMemo(() => sectionOf(sections, page)?.dir, [sections, page]);
 
-  // Repliée par défaut, sauf l'aperçu et la section de la page ouverte. Pendant un filtre,
-  // tout est ouvert : une section repliée cacherait le résultat cherché.
+  // Collapsed by default, except the preview and the section of the open page. During a filter,
+  // everything is open: a collapsed section would hide the sought result.
   const isOpen = (dir: string) => {
     if (filtering) return true;
     const closedByDefault = dir !== '' && dir !== currentDir;

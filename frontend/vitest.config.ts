@@ -1,26 +1,29 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { defineConfig } from 'vitest/config';
 
 /**
- * Tests unitaires frontend (10.F3) : stores Zustand, lib (apiClient, uploadClient),
- * utilitaires purs, **et tests de rendu** (Testing Library) sous `src/test/`.
- * Environnement happy-dom (localStorage, DOM léger).
+ * Frontend unit tests (10.F3): Zustand stores, lib (apiClient, uploadClient), pure utilities,
+ * **and render tests** (Testing Library) under `src/test/`.
+ * happy-dom environment (localStorage, lightweight DOM).
  */
 export default defineConfig({
+  // `@/…` = `src/…` — keep in sync with tsconfig `paths` and vite.config.js.
+  resolve: { alias: { '@': path.join(path.dirname(fileURLToPath(import.meta.url)), 'src') } },
   test: {
     environment: 'happy-dom',
-    // Les scripts d'outillage du frontend (build-docs) vivent hors de `src` : leurs
-    // tests sont ramassés ici plutôt que de rester sans suite.
+    // The frontend tooling scripts (build-docs) live outside `src`: their
+    // tests are collected here rather than left without a suite.
     include: ['src/**/*.test.{ts,tsx}', 'scripts/**/*.test.mjs'],
-    // `vitest.setup.ts` corrige une incompatibilité WebAssembly ; `src/setupTests.ts`
-    // installe le socle DOM des tests de rendu (jest-dom, démontage, API manquantes).
+    // `vitest.setup.ts` works around a WebAssembly incompatibility; `src/setupTests.ts`
+    // installs the DOM base of the render tests (jest-dom, unmounting, missing APIs).
     setupFiles: ['./vitest.setup.ts', './src/setupTests.ts'],
     /**
-     * Mesure de couverture — inerte tant que `--coverage` n'est pas passé. Les seuils par
-     * dossier et le cliquet vivent dans `scripts/check-coverage.mjs` (voir le commentaire
-     * jumeau côté backend).
+     * Coverage measurement — inert unless `--coverage` is passed. The per-folder thresholds and
+     * the ratchet live in `scripts/check-coverage.mjs` (see the twin comment on the backend side).
      */
     coverage: {
       provider: 'v8',
@@ -32,7 +35,7 @@ export default defineConfig({
         'src/setupTests.ts',
         'src/test/**',
         'src/**/*.d.ts',
-        // Point d'entrée et déclarations : ni l'un ni les autres ne portent de logique.
+        // Entry point (main.tsx) and declarations: neither carries any logic.
         'src/main.tsx',
         'src/vite-env.d.ts',
       ],

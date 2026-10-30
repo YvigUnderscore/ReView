@@ -14,12 +14,12 @@ import { toPublicUser } from '../lib/userView';
 import { versionWhere, commentWhere } from './AdminContentService';
 
 /**
- * Vue d'administration des projets : liste enrichie (compteurs + stockage/quota) et
- * fiche détaillée (membres, réglages résolus, hiérarchie séquences→shots avec héritage
- * pipeline visible à chaque niveau). La mise en forme de la hiérarchie est pure (testée).
+ * Administration view of projects: enriched list (counters + storage/quota) and detailed record
+ * (members, resolved settings, sequence -> shot hierarchy with the pipeline inheritance visible at
+ * each level). Formatting the hierarchy is pure (and tested).
  */
 
-// ── Hiérarchie (pure) ────────────────────────────────────────────────────────
+// ── Hierarchy (pure) ─────────────────────────────────────────────────────────
 
 export interface HierarchyShotRow {
   id: number;
@@ -37,7 +37,7 @@ export interface HierarchySequenceRow {
   shots: HierarchyShotRow[];
 }
 
-/** Un JSON de réglages contient-il un override pipeline (résolution ou framerate) ? */
+/** Does a settings JSON contain a pipeline override (resolution or framerate)? */
 export function hasPipelineOverride(raw: unknown): boolean {
   const o = (raw ?? {}) as { resolution?: unknown; framerate?: unknown };
   return (o.resolution != null && typeof o.resolution === 'object') || Number.isFinite(o.framerate);
@@ -54,8 +54,8 @@ export interface HierarchyShotView {
 }
 
 /**
- * Met en forme la hiérarchie séquences→shots avec, à chaque niveau, les réglages
- * pipeline effectifs (héritage projet→séquence→shot) et un drapeau « override ».
+ * Formats the sequence -> shot hierarchy, with the effective pipeline settings at each level
+ * (project -> sequence -> shot inheritance) and an "override" flag.
  */
 export function buildHierarchy(
   project: ProjectSettings,
@@ -91,9 +91,9 @@ export function buildHierarchy(
   };
 }
 
-// ── Requêtes ─────────────────────────────────────────────────────────────────
+// ── Queries ──────────────────────────────────────────────────────────────────
 
-/** Liste enrichie de tous les projets (admin) : compteurs, stockage consommé, quota. */
+/** Enriched list of all projects (admin): counters, storage used, quota. */
 export async function listProjects() {
   const projects = await prisma.project.findMany({
     where: { deletedAt: null },
@@ -138,7 +138,7 @@ export async function listProjects() {
   );
 }
 
-/** Fiche détaillée d'un projet (admin) : membres, réglages résolus, hiérarchie, stats. */
+/** Detailed record of a project (admin): members, resolved settings, hierarchy, stats. */
 export async function projectDetail(id: number) {
   const project = await prisma.project.findFirst({
     where: { id },

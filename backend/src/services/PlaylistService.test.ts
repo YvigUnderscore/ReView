@@ -23,7 +23,7 @@ vi.mock('../lib/prisma', () => ({
     $transaction: vi.fn((ops: unknown[]) => Promise.all(ops as Promise<unknown>[])),
   },
 }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: { getPresignedGetUrl: vi.fn(async (k: string) => `https://minio/${k}`) },
 }));
 
@@ -38,7 +38,7 @@ beforeEach(() => {
 });
 
 describe('create (33.A)', () => {
-  it('résout mediaIds → versions, dédoublonne et ordonne les items initiaux', async () => {
+  it('resolves mediaIds → versions, de-duplicates and orders the initial items', async () => {
     vi.mocked(prisma.mediaObject.findMany).mockResolvedValue([
       { versionId: 5 },
       { versionId: 6 },
@@ -65,13 +65,13 @@ describe('create (33.A)', () => {
     );
   });
 
-  it('refuse une version hors du projet de la playlist', async () => {
+  it("refuses a version outside the playlist's project", async () => {
     vi.mocked(prisma.version.findMany).mockResolvedValue([{ id: 5 }] as never);
     vi.mocked(prisma.playlist.findUnique).mockResolvedValue(null);
     await expect(create(artist, 2, 'X', [5, 6])).rejects.toThrow(/do not belong to the project/);
   });
 
-  it('refuse un doublon de nom dans le projet (409)', async () => {
+  it('refuses a duplicate name within the project (409)', async () => {
     vi.mocked(prisma.playlist.findUnique).mockResolvedValue({ id: 1 } as never);
     await expect(create(artist, 2, 'Dailies')).rejects.toMatchObject({ statusCode: 409 });
   });
@@ -86,7 +86,7 @@ describe('addItems (33.A)', () => {
     } as never);
   });
 
-  it('ajoute en fin, en sautant les versions déjà présentes', async () => {
+  it('adds at the end, skipping the versions already present', async () => {
     vi.mocked(prisma.version.findMany).mockResolvedValue([{ id: 5 }, { id: 7 }] as never);
     vi.mocked(prisma.playlistItem.findMany).mockResolvedValue([
       { versionId: 5, order: 0 },
@@ -100,13 +100,13 @@ describe('addItems (33.A)', () => {
     });
   });
 
-  it('refuse un non-créateur non superviseur', async () => {
+  it('refuses a non-creator who is not a supervisor', async () => {
     await expect(addItems({ id: 55, role: 'ARTIST' } as never, 1, [5])).rejects.toMatchObject({
       statusCode: 403,
     });
   });
 
-  it('accepte un superviseur non créateur', async () => {
+  it('accepts a supervisor who is not the creator', async () => {
     vi.mocked(prisma.version.findMany).mockResolvedValue([{ id: 5 }] as never);
     vi.mocked(prisma.playlistItem.findMany).mockResolvedValue([] as never);
     const out = await addItems(supervisor, 1, [5]);
@@ -124,23 +124,23 @@ describe('reorder (33.A)', () => {
     vi.mocked(prisma.playlistItem.findMany).mockResolvedValue([{ id: 11 }, { id: 12 }, { id: 13 }] as never);
   });
 
-  it('réécrit order selon le nouvel ordre complet', async () => {
+  it('rewrites order according to the new complete order', async () => {
     await reorder(artist, 1, [13, 11, 12]);
     expect(prisma.playlistItem.update).toHaveBeenCalledWith({ where: { id: 13 }, data: { order: 0 } });
     expect(prisma.playlistItem.update).toHaveBeenCalledWith({ where: { id: 11 }, data: { order: 1 } });
     expect(prisma.playlistItem.update).toHaveBeenCalledWith({ where: { id: 12 }, data: { order: 2 } });
   });
 
-  it('accepte un ordre partiel : les items non cités suivent, dans leur ordre', async () => {
-    // Le cas qui bloquait tout : le détail masque les versions en corbeille, donc l'écran
-    // renvoyait moins d'items qu'il n'en existe — et réordonner devenait impossible.
+  it('accepts a partial order: the items not cited follow, in their order', async () => {
+    // The case that blocked everything: the detail hides the versions in the trash, so the screen returned
+    // fewer items than exist — and reordering became impossible.
     await reorder(artist, 1, [13, 11]);
     expect(prisma.playlistItem.update).toHaveBeenCalledWith({ where: { id: 13 }, data: { order: 0 } });
     expect(prisma.playlistItem.update).toHaveBeenCalledWith({ where: { id: 11 }, data: { order: 1 } });
     expect(prisma.playlistItem.update).toHaveBeenCalledWith({ where: { id: 12 }, data: { order: 2 } });
   });
 
-  it('refuse un item étranger à la playlist', async () => {
+  it('refuses an item foreign to the playlist', async () => {
     await expect(reorder(artist, 1, [13, 11, 99])).rejects.toMatchObject({ statusCode: 400 });
   });
 });
@@ -154,26 +154,26 @@ describe('rename / removeItem / remove (33.A)', () => {
     } as never);
   });
 
-  it('rename refuse un doublon de nom', async () => {
+  it('rename refuses a duplicate name', async () => {
     vi.mocked(prisma.playlist.findUnique)
       .mockResolvedValueOnce({ id: 1, projectId: 2, createdById: 10 } as never)
       .mockResolvedValueOnce({ id: 3 } as never);
     await expect(rename(artist, 1, 'Autre')).rejects.toMatchObject({ statusCode: 409 });
   });
 
-  it('removeItem : 404 si l’item n’est pas dans la playlist', async () => {
+  it('removeItem: 404 if the item is not in the playlist', async () => {
     vi.mocked(prisma.playlistItem.deleteMany).mockResolvedValue({ count: 0 });
     await expect(removeItem(artist, 1, 42)).rejects.toMatchObject({ statusCode: 404 });
   });
 
-  it('remove supprime la playlist (créateur)', async () => {
+  it('remove deletes the playlist (creator)', async () => {
     await remove(artist, 1);
     expect(prisma.playlist.delete).toHaveBeenCalledWith({ where: { id: 1 } });
   });
 });
 
 describe('getDetail (33.A)', () => {
-  it('items ordonnés : localisation lisible, premier média visible presigné, versions corbeille exclues', async () => {
+  it('ordered items: readable location, first visible media presigned, trashed versions excluded', async () => {
     vi.mocked(prisma.playlist.findUnique).mockResolvedValue({
       id: 1,
       projectId: 2,

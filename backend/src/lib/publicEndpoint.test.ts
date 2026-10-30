@@ -6,50 +6,49 @@ import { isLoopbackEndpoint } from './publicEndpoint';
 
 describe('isLoopbackEndpoint', () => {
   /**
-   * Le cas qui a coûté une session : `docker compose up` sans passer par `install.sh` laisse
-   * `S3_PUBLIC_ENDPOINT` à `http://localhost:9000`, et l'upload échoue en silence dès qu'on
-   * ouvre ReView depuis une autre machine du réseau.
+   * The case that cost a session: `docker compose up` without going through `install.sh` leaves
+   * `S3_PUBLIC_ENDPOINT` at `http://localhost:9000`, and the upload fails silently as soon as ReView is
+   * opened from another machine on the network.
    */
-  it('reconnaît le défaut de la stack docker', () => {
+  it('recognises the default of the docker stack', () => {
     expect(isLoopbackEndpoint('http://localhost:9000')).toBe(true);
   });
 
-  it('reconnaît tout le /8 de bouclage, pas seulement 127.0.0.1', () => {
+  it('recognises the whole loopback /8, not just 127.0.0.1', () => {
     expect(isLoopbackEndpoint('http://127.0.0.1:9000')).toBe(true);
     expect(isLoopbackEndpoint('http://127.0.1.1:9000')).toBe(true);
     expect(isLoopbackEndpoint('http://127.255.255.254/')).toBe(true);
   });
 
-  it('reconnaît les formes IPv6, crochets compris', () => {
+  it('recognises IPv6 forms, brackets included', () => {
     expect(isLoopbackEndpoint('http://[::1]:9000')).toBe(true);
     expect(isLoopbackEndpoint('http://[0:0:0:0:0:0:0:1]:9000')).toBe(true);
     expect(isLoopbackEndpoint('http://[::ffff:127.0.0.1]:9000')).toBe(true);
   });
 
-  // « Toutes les interfaces » n'est pas du bouclage, mais n'est pas davantage une adresse
-  // qu'un navigateur puisse appeler : le même avertissement s'impose.
-  it('traite « toutes les interfaces » comme inutilisable côté navigateur', () => {
+  // "All interfaces" is not loopback, but it is not an address a browser can call either: the same warning applies.
+  it('treats "all interfaces" as unusable from the browser side', () => {
     expect(isLoopbackEndpoint('http://0.0.0.0:9000')).toBe(true);
     expect(isLoopbackEndpoint('http://[::]:9000')).toBe(true);
   });
 
-  it('laisse passer une adresse que le réseau peut joindre', () => {
+  it('lets through an address the network can reach', () => {
     expect(isLoopbackEndpoint('http://192.168.1.115:9000')).toBe(false);
     expect(isLoopbackEndpoint('https://stockage.studio.example')).toBe(false);
     expect(isLoopbackEndpoint('http://minio:9000')).toBe(false);
-    // 127 ailleurs que dans le premier octet n'est pas du bouclage.
+    // 127 anywhere other than the first octet is not loopback.
     expect(isLoopbackEndpoint('http://10.127.0.1:9000')).toBe(false);
     expect(isLoopbackEndpoint('http://192.168.127.1:9000')).toBe(false);
   });
 
-  // Un hôte qui se termine par « localhost » est réservé au bouclage (RFC 6761).
-  it('prend en compte les sous-domaines de localhost', () => {
+  // A host ending in "localhost" is reserved for loopback (RFC 6761).
+  it('takes subdomains of localhost into account', () => {
     expect(isLoopbackEndpoint('http://minio.localhost:9000')).toBe(true);
-    // …mais pas un domaine qui contient seulement le mot.
+    // …but not a domain that merely contains the word.
     expect(isLoopbackEndpoint('http://localhost.studio.example')).toBe(false);
   });
 
-  it('se tait sur une valeur absente ou illisible — ce n’est pas son sujet', () => {
+  it('stays silent on an absent or unreadable value — that is not its concern', () => {
     expect(isLoopbackEndpoint(undefined)).toBe(false);
     expect(isLoopbackEndpoint(null)).toBe(false);
     expect(isLoopbackEndpoint('')).toBe(false);

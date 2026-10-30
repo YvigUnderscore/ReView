@@ -11,16 +11,16 @@ import type { SgConnection, StatusScope } from '../../types/shotgrid';
 const SCOPES: readonly StatusScope[] = ['task', 'shot', 'sequence', 'asset'];
 
 /**
- * Statuts retenus pour ce projet, périmètre par périmètre.
+ * Statuses kept for this project, scope by scope.
  *
- * Un site de studio propose vingt et un statuts de plan ; une production n'en emploie
- * que six. Les vingt et un se retrouvaient dans chaque menu contextuel, chaque filtre,
- * chaque liste déroulante — et il fallait tous les lire pour trouver celui du jour.
- * Le studio déclare donc ici ceux qu'il veut voir, comme il déclare ses étapes.
+ * A studio site offers twenty-one plan statuses; a production uses only six. All twenty-one
+ * showed up in every context menu, every filter and every dropdown, and you had to read them
+ * all to find the one you needed. The studio therefore declares here the ones it wants to
+ * see, just as it declares its stages.
  *
- * Ne rien cocher n'est pas une erreur : le périmètre reste alors entier. Et masquer
- * n'efface rien — la synchronisation continue d'importer le statut réel d'une entité,
- * le badge d'un plan déjà « on hold » reste juste. Seul le choix est réduit.
+ * Ticking nothing is not an error: the scope then stays complete. And hiding does not
+ * erase anything: sync keeps importing an entity's real status, and a plan already marked
+ * "on hold" keeps its badge. Only the choice is reduced.
  */
 export default function SgStatusesPanel({
   connection,
@@ -35,8 +35,8 @@ export default function SgStatusesPanel({
   const [query, setQuery] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Le catalogue entier : c'est ici, et seulement ici, qu'on veut tout voir — cocher
-  // dans une liste déjà amputée d'elle-même ne permettrait plus d'y revenir.
+  // The full catalogue: this is the one place, and the only one, where everything must be
+  // visible. Ticking items in a list already trimmed by itself would make it impossible to get back.
   const { data: statuses = [], isLoading } = usePipelineStatuses(scope, connection.projectId, {
     all: true,
   });
@@ -120,8 +120,8 @@ export default function SgStatusesPanel({
               />
               <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: status.color }} />
               <span className="min-w-0 flex-1 truncate">{status.name}</span>
-              {/* Le code est ce que le site écrit dans `sg_status_list` : c'est lui qui
-                  départage deux statuts de même nom, et le seul repère stable. */}
+              {/* The code is what the site writes in `sg_status_list`: it is what tells apart two
+                  statuses with the same name, and the only stable marker. */}
               <span className="shrink-0 font-mono text-xs text-muted-foreground">{status.code}</span>
             </label>
           ))}

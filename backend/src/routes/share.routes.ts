@@ -4,16 +4,16 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role, SharePermission, ShareScope } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole, assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import * as ShareLinkService from '../services/ShareLinkService';
 import { sendShareMail, SHARE_MAIL_MAX_RECIPIENTS } from '../services/ShareMailService';
 
 /**
- * Côté studio du partage client (35.C) : liens durcis — portée, mot de passe, expiration,
- * limite de vues — et envoi du lien par courriel. La logique vit dans `ShareLinkService`
- * et `ShareMailService` ; ces routes valident et répondent.
+ * Studio side of client sharing (35.C): hardened links (scope, password, expiry, view limit), and sending
+ * of the link by email. The logic lives in `ShareLinkService` and `ShareMailService`; these routes
+ * validate and respond.
  */
 const router = Router();
 router.use(authenticate);
@@ -23,8 +23,8 @@ const projectQuery = z.object({ projectId: z.coerce.number().int() });
 const idParam = z.object({ id: z.coerce.number().int() });
 
 /**
- * Portée du lien. La cible n'est pas contrainte ici mais dans le service : elle doit
- * appartenir au projet, et le savoir demande la base.
+ * Scope of the link. The target is not constrained here but in the service: it must belong to the
+ * project, and knowing that requires the database.
  */
 const scopeBody = {
   scope: z.nativeEnum(ShareScope).default(ShareScope.PROJECT),
@@ -33,22 +33,22 @@ const scopeBody = {
   mediaIds: z.array(z.number().int().positive()).max(ShareLinkService.SHARE_SELECTION_LIMIT).optional(),
 };
 
-// GET /api/share?projectId=X — liste les liens de partage d'un projet (superviseur/admin)
+// GET /api/share?projectId=X — lists a project's share links (supervisor and admin)
 router.get('/', manager, validate({ query: projectQuery }), async (req, res) => {
   const projectId = Number(req.query.projectId);
   await assertProjectAccess(req, projectId);
   res.json({ links: await ShareLinkService.list(projectId) });
 });
 
-// GET /api/share/candidates?projectId=X — médias publiés, pour choisir une portée « sélection ».
-// Déclarée avant `/:id` pour que « candidates » ne soit pas lu comme un identifiant.
+// GET /api/share/candidates?projectId=X — published media, to choose a "selection" scope.
+// Declared before `/:id` so that "candidates" is not read as an identifier.
 router.get('/candidates', manager, validate({ query: projectQuery }), async (req, res) => {
   const projectId = Number(req.query.projectId);
   await assertProjectAccess(req, projectId);
   res.json({ candidates: await ShareLinkService.candidates(projectId) });
 });
 
-// POST /api/share — crée un lien durci (35.C)
+// POST /api/share — creates a hardened link (35.C)
 router.post(
   '/',
   manager,
@@ -66,11 +66,11 @@ router.post(
   async (req, res) => {
     const body = req.body as ShareLinkService.CreateShareInput;
     await assertProjectAccess(req, body.projectId);
-    res.status(201).json({ link: await ShareLinkService.create(req.user!.id, body) });
+    res.status(201).json({ link: await ShareLinkService.create(requireUser(req).id, body) });
   },
 );
 
-// POST /api/share/:id/email — envoie le lien, son expiration et sa portée au destinataire
+// POST /api/share/:id/email — sends the link, its expiry and its scope to the recipient
 router.post(
   '/:id/email',
   manager,
@@ -85,16 +85,16 @@ router.post(
     const id = Number(req.params.id);
     await assertProjectAccess(req, await ShareLinkService.projectOf(id));
     const body = req.body as { recipients: string[]; note?: string };
-    res.json(await sendShareMail(req.user!.id, id, body.recipients, body.note ?? null));
+    res.json(await sendShareMail(requireUser(req).id, id, body.recipients, body.note ?? null));
   },
 );
 
-// DELETE /api/share/:id — révoque un lien (superviseur/admin)
+// DELETE /api/share/:id — revokes a link (supervisor and admin)
 router.delete('/:id', manager, validate({ params: idParam }), async (req, res) => {
   const id = Number(req.params.id);
   const projectId = await ShareLinkService.projectOf(id);
   await assertProjectAccess(req, projectId);
-  await ShareLinkService.revoke(req.user!.id, id, projectId);
+  await ShareLinkService.revoke(requireUser(req).id, id, projectId);
   res.status(204).end();
 });
 

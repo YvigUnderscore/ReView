@@ -1,28 +1,27 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { UsdPurpose } from '../../../types/api';
+import type { UsdPurpose } from '@/v2/types/api';
 import { isSelfOrDescendant, parentPath } from './usdScenegraph';
 
 /**
- * « ReView override » (Phase 46, 46.B) — logique **pure et testable**.
+ * "ReView override" (Phase 46, 46.B) — **pure and testable** logic.
  *
- * Ce n'est **pas** de l'USD : c'est un delta propre à ReView, appliqué à la scène **au
- * chargement**, sans reconversion ni job worker. Il dit simplement « ce prim a été déplacé
- * ici, mis à cette échelle, masqué, ce look forcé ». D'où sa forme : un dictionnaire
- * `chemin de prim → édition`, assez léger pour tenir dans les métadonnées d'un média ou dans
- * une annotation de commentaire.
+ * This is **not** USD: it is a delta specific to ReView, applied to the scene **at load time**,
+ * without reconversion or worker job. It simply says "this prim was moved here, set to this scale,
+ * hidden, this look forced". Hence its shape: a dictionary `prim path → edit`, light enough to fit
+ * in a media's metadata or in a comment annotation.
  *
- * La transformation est un **delta** posé par-dessus celle du fichier, jamais une valeur
- * absolue : une reconversion du média (nouvelle variante, nouvel export) peut changer les
- * transformations d'origine sans invalider l'override.
+ * The transform is a **delta** laid on top of the one from the file, never an absolute value: a
+ * reconversion of the media (new variant, new export) may change the original transforms without
+ * invalidating the override.
  *
- * Deux étages se composent : l'override **de base** du média (réglé avant publication, figé
- * ensuite, rejoué pour tout le monde) et le delta **porté par un commentaire** (proposition
- * d'un reviewer, rejouée seulement quand ce commentaire est sélectionné).
+ * Two layers compose: the media's **base** override (set before publication, frozen afterwards,
+ * replayed for everyone) and the delta **carried by a comment** (a reviewer's proposal, replayed
+ * only when that comment is selected).
  */
 
-/** Delta de transformation : translation, rotation (radians, euler XYZ) et échelle. */
+/** Transform delta: translation, rotation (radians, Euler XYZ) and scale. */
 export interface PrimTransform {
   t: [number, number, number];
   r: [number, number, number];
@@ -30,34 +29,34 @@ export interface PrimTransform {
 }
 
 /**
- * Clone de mise en scène (C1) : une copie du prim, purement côté override — la géométrie du
- * GLB est dupliquée au chargement, aucune reconversion. `transform` est le delta du clone par
- * rapport à l'état d'origine du prim source (même convention que `PrimEdit.transform`).
+ * Staging clone (C1): a copy of the prim, purely on the override side — the GLB geometry is
+ * duplicated at load time, no reconversion. `transform` is the clone's delta relative to the
+ * original state of the source prim (same convention as `PrimEdit.transform`).
  */
 export interface PrimClone {
   id: string;
   transform: PrimTransform;
 }
 
-/** Édition d'un prim. Chaque champ est optionnel : seul ce qui diffère est stocké. */
+/** Edit of a prim. Each field is optional: only what differs is stored. */
 export interface PrimEdit {
-  /** Visibilité forcée — masque aussi la descendance (comportement `Object3D.visible`). */
+  /** Forced visibility — also hides the descendants (`Object3D.visible` behavior). */
   visible?: boolean;
   transform?: PrimTransform;
-  /** Look forcé sur ce prim : `{ lookVariant: 'dirty' }`. */
+  /** Forced look on this prim: `{ lookVariant: 'dirty' }`. */
   variants?: Record<string, string>;
-  /** Clones de mise en scène du prim (C1) — set-dressing léger sans reconversion. */
+  /** Staging clones of the prim (C1) — light set dressing without reconversion. */
   clones?: PrimClone[];
 }
 
 export interface SceneOverride {
   version: 1;
-  /** Purpose affiché (global à la scène), absent = celui de la conversion. */
+  /** Displayed purpose (global to the scene), absent = that of the conversion. */
   purpose?: UsdPurpose;
   prims: Record<string, PrimEdit>;
 }
 
-/** Borne de volume : un override réaliste touche quelques prims, pas des milliers. */
+/** Volume bound: a realistic override touches a few prims, not thousands. */
 export const MAX_OVERRIDE_PRIMS = 500;
 
 export const IDENTITY_TRANSFORM: PrimTransform = { t: [0, 0, 0], r: [0, 0, 0], s: [1, 1, 1] };
@@ -70,7 +69,7 @@ const isVec3 = (v: unknown): v is [number, number, number] =>
 const sameVec = (a: readonly number[], b: readonly number[]) =>
   a.every((n, i) => Math.abs(n - (b[i] ?? 0)) < 1e-6);
 
-/** Vrai si la transformation ne change rien (identité) — inutile de la stocker. */
+/** True if the transform changes nothing (identity) — no point storing it. */
 export function isIdentityTransform(t: PrimTransform): boolean {
   return (
     sameVec(t.t, IDENTITY_TRANSFORM.t) &&
@@ -79,7 +78,7 @@ export function isIdentityTransform(t: PrimTransform): boolean {
   );
 }
 
-/** Vrai si l'édition est vide de sens (aucun champ effectif). */
+/** True if the edit is meaningless (no effective field). */
 export function isEmptyEdit(edit: PrimEdit): boolean {
   if (edit.visible !== undefined) return false;
   if (edit.transform && !isIdentityTransform(edit.transform)) return false;
@@ -94,15 +93,15 @@ export function isEmptyOverride(override: SceneOverride | null | undefined): boo
   return Object.keys(override.prims).length === 0;
 }
 
-/** Nombre de prims réellement édités — affiché à l'utilisateur avant d'enregistrer. */
+/** Number of prims actually edited — shown to the user before saving. */
 export function countEdits(override: SceneOverride | null | undefined): number {
   return override ? Object.keys(override.prims).length : 0;
 }
 
 /**
- * Nettoie une valeur venue du réseau ou du stockage : rejette ce qui n'a pas la bonne forme,
- * supprime les éditions sans effet et borne le volume. Ne lève jamais — un override corrompu
- * ne doit pas empêcher d'ouvrir la review.
+ * Cleans a value coming from the network or from storage: rejects what does not have the right
+ * shape, removes edits with no effect and bounds the volume. Never throws — a corrupted override
+ * must not prevent opening the review.
  */
 export function normalizeOverride(raw: unknown): SceneOverride {
   const source = (raw ?? {}) as Partial<SceneOverride>;
@@ -135,7 +134,7 @@ export function normalizeOverride(raw: unknown): SceneOverride {
       for (const c of raw.clones as Array<Partial<PrimClone> | null>) {
         if (!c || typeof c.id !== 'string' || !c.id || seen.has(c.id)) continue;
         const ct = c.transform;
-        // L'identité est valide pour un clone : une copie posée au même endroit a un sens.
+        // Identity is valid for a clone: a copy placed at the same spot makes sense.
         if (!ct || !isVec3(ct.t) || !isVec3(ct.r) || !isVec3(ct.s)) continue;
         seen.add(c.id);
         clones.push({ id: c.id, transform: { t: [...ct.t], r: [...ct.r], s: [...ct.s] } });
@@ -148,9 +147,9 @@ export function normalizeOverride(raw: unknown): SceneOverride {
 }
 
 /**
- * Superpose `delta` (proposition d'un commentaire) sur `base` (override du média). Champ par
- * champ : une proposition qui ne touche que la visibilité d'un prim ne doit pas effacer la
- * transformation que l'override de base lui applique.
+ * Overlays `delta` (a comment's proposal) on `base` (the media's override). Field by field: a
+ * proposal touching only a prim's visibility must not erase the transform the base override
+ * applies to it.
  */
 export function mergeOverrides(
   base: SceneOverride | null | undefined,
@@ -161,7 +160,7 @@ export function mergeOverrides(
   if (top.purpose) merged.purpose = top.purpose;
   for (const [path, edit] of Object.entries(top.prims)) {
     const current = merged.prims[path] ?? {};
-    // Clones fusionnés par id : la proposition met à jour un clone existant ou en ajoute.
+    // Clones merged by id: the proposal updates an existing clone or adds one.
     const clones =
       current.clones || edit.clones
         ? [
@@ -181,7 +180,7 @@ export function mergeOverrides(
   return merged;
 }
 
-/** Remplace l'édition d'un prim (immutable). Une édition devenue vide est retirée. */
+/** Replaces the edit of a prim (immutable). An edit that became empty is removed. */
 export function setPrimEdit(override: SceneOverride, path: string, patch: PrimEdit | null): SceneOverride {
   const prims = { ...override.prims };
   if (patch === null) delete prims[path];
@@ -196,24 +195,24 @@ export function setPrimEdit(override: SceneOverride, path: string, patch: PrimEd
   return { ...override, prims };
 }
 
-// ── Clones de mise en scène (C1) ─────────────────────────────────────────────────────────────
+// ── Staging clones (C1) ─────────────────────────────────────────────────────────────
 
-/** Séparateur du pseudo-chemin d'un clone : `/World/Chair#c3` désigne le clone `c3` du prim. */
+/** Separator of a clone's pseudo-path: `/World/Chair#c3` designates clone `c3` of the prim. */
 const CLONE_SEP = '#';
 
 export const isClonePath = (path: string): boolean => path.includes(CLONE_SEP);
 
-/** Pseudo-chemin d'un clone — utilisé par la sélection, le gizmo et l'arbre. */
+/** Pseudo-path of a clone — used by selection, the gizmo and the tree. */
 export const clonePath = (path: string, id: string): string => `${path}${CLONE_SEP}${id}`;
 
-/** Décompose un pseudo-chemin de clone en (prim source, id), ou null. */
+/** Decomposes a clone pseudo-path into (source prim, id), or null. */
 export function parseClonePath(pseudo: string): { path: string; id: string } | null {
   const i = pseudo.indexOf(CLONE_SEP);
   if (i <= 0 || i === pseudo.length - 1) return null;
   return { path: pseudo.slice(0, i), id: pseudo.slice(i + 1) };
 }
 
-/** Identifiant de clone raisonnablement unique dans un override. */
+/** Reasonably unique clone identifier within an override. */
 export function newCloneId(): string {
   return `c${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`;
 }
@@ -222,18 +221,18 @@ export function clonesOf(override: SceneOverride, path: string): PrimClone[] {
   return override.prims[path]?.clones ?? [];
 }
 
-/** Ajoute un clone au prim (immutable). */
+/** Adds a clone to the prim (immutable). */
 export function addClone(override: SceneOverride, path: string, clone: PrimClone): SceneOverride {
   return setPrimEdit(override, path, { clones: [...clonesOf(override, path), clone] });
 }
 
-/** Retire un clone (immutable) — no-op si absent. */
+/** Removes a clone (immutable) — no-op if absent. */
 export function removeClone(override: SceneOverride, path: string, id: string): SceneOverride {
   const rest = clonesOf(override, path).filter((c) => c.id !== id);
   return setPrimEdit(override, path, { clones: rest });
 }
 
-/** Remplace le delta d'un clone (immutable). */
+/** Replaces the delta of a clone (immutable). */
 export function setCloneTransform(
   override: SceneOverride,
   path: string,
@@ -245,8 +244,8 @@ export function setCloneTransform(
 }
 
 /**
- * Vrai si le prim est masqué par un **ancêtre** plutôt que par lui-même : l'arbre le grise
- * sans le présenter comme masqué à titre propre (le rétablir n'aurait aucun effet visible).
+ * True if the prim is hidden by an **ancestor** rather than by itself: the tree greys it out without
+ * presenting it as hidden in its own right (restoring it would have no visible effect).
  */
 export function isHiddenByAncestor(override: SceneOverride, path: string): boolean {
   for (let parent = parentPath(path); parent; parent = parentPath(parent))
@@ -254,19 +253,19 @@ export function isHiddenByAncestor(override: SceneOverride, path: string): boole
   return false;
 }
 
-/** Vrai si le prim est masqué, directement ou par héritage. */
+/** True if the prim is hidden, directly or by inheritance. */
 export function isHidden(override: SceneOverride, path: string): boolean {
   return override.prims[path]?.visible === false || isHiddenByAncestor(override, path);
 }
 
 /**
- * Isole un prim : masque ses frères à chaque niveau, en gardant visibles sa lignée d'ancêtres
- * et toute sa descendance. Rendu classique d'un scenegraph de DCC.
+ * Isolates a prim: hides its siblings at each level, keeping its ancestry and its whole subtree
+ * visible. Classic rendering of a DCC scenegraph.
  *
- * Seuls les **frères directs de la lignée** reçoivent `visible: false` — l'héritage de
- * visibilité masque leur descendance gratuitement. Écrire une entrée par prim masqué, comme
- * avant, dépassait la borne `MAX_OVERRIDE_PRIMS` sur une scène riche (Kitchen_set : des
- * milliers de prims) : la troncature silencieuse laissait la moitié de la scène visible.
+ * Only the **direct siblings along the lineage** receive `visible: false` — visibility inheritance
+ * hides their descendants for free. Writing one entry per hidden prim, as before, exceeded the
+ * `MAX_OVERRIDE_PRIMS` bound on a rich scene (Kitchen_set: thousands of prims): the silent
+ * truncation left half the scene visible.
  */
 export function isolatePrim(
   override: SceneOverride,
@@ -278,13 +277,13 @@ export function isolatePrim(
 
   let next = override;
   for (const candidate of allPaths) {
-    // La lignée et la descendance du prim redeviennent visibles (annule un masquage antérieur).
+    // The prim's lineage and descendants become visible again (cancels a previous masking).
     if (isSelfOrDescendant(path, candidate) || isSelfOrDescendant(candidate, path)) {
       next = setPrimEdit(next, candidate, { visible: undefined });
       continue;
     }
-    // Frère direct d'un maillon de la lignée (ou prim de premier niveau hors lignée) : masqué,
-    // et tout son sous-arbre avec lui par héritage.
+    // Direct sibling of a link in the lineage (or top-level prim outside it): hidden, and its
+    // whole subtree with it, by inheritance.
     const parent = parentPath(candidate);
     const sibling =
       parent === null ? !lineage.has(candidate) : lineage.has(parent) && !lineage.has(candidate);

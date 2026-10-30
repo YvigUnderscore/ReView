@@ -6,14 +6,14 @@ import { useT } from '../../i18n';
 import type { SgDomain, SgSettings } from '../../types/shotgrid';
 
 /**
- * Matrice des échanges : pour chaque domaine, ce que ReView lit de ShotGrid et ce
- * qu'il y écrit. Chaque case est une décision — d'où la description de conséquence
- * sous chaque ligne plutôt qu'un simple libellé.
+ * Exchange matrix: for each domain, what ReView reads from ShotGrid and what it writes
+ * back. Each cell is a decision, which is why a consequence description sits under each
+ * row rather than a bare label.
  */
 
 const DOMAINS: SgDomain[] = ['hierarchy', 'tasks', 'statuses', 'versions', 'notes', 'playlists', 'users'];
 
-/** Domaines dont l'écriture n'a pas de sens : ReView ne redéfinit pas ces référentiels. */
+/** Domains that are never written: ReView does not redefine these catalogues. */
 const READ_ONLY: SgDomain[] = ['statuses', 'users'];
 
 export default function SgDomainMatrix({

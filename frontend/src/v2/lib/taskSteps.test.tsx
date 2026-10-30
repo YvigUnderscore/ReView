@@ -31,12 +31,12 @@ beforeEach(() => {
 });
 
 /**
- * Un projet autonome a un pipe : ses départements. Les écrans le lisaient pourtant à
- * travers ShotGrid, si bien qu'un studio non relié n'avait aucune étape à proposer — donc
- * aucune task à créer.
+ * A standalone project has a pipe: its departments. Screens nevertheless read it
+ * through ShotGrid, so an unlinked studio had no step to offer — and therefore
+ * no task to create.
  */
 describe('useTaskSteps', () => {
-  it('sert les départements du projet quand aucun site ne le pilote', () => {
+  it('serves the project departments when no site drives it', () => {
     departments.mockReturnValue({
       data: [
         { id: 1, key: 'ANIM', color: '#111', writable: true },
@@ -52,7 +52,7 @@ describe('useTaskSteps', () => {
     ]);
   });
 
-  it('écarte les étapes où la personne ne peut pas écrire, et garde les anciennes réponses', () => {
+  it('drops steps the person cannot write to, and keeps old responses', () => {
     departments.mockReturnValue({
       data: [
         { id: 1, key: 'ANIM', color: null, writable: false },
@@ -64,7 +64,7 @@ describe('useTaskSteps', () => {
     expect(result.current.steps.map((s) => s.code)).toEqual(['COMP']);
   });
 
-  it('sert le référentiel du site dès que le projet y est relié', () => {
+  it('serves the site catalogue as soon as the project is linked to it', () => {
     connection.mockReturnValue({ data: { active: true } });
     sgSteps.mockReturnValue({
       data: [{ sgId: 4, code: 'Animation', shortName: 'anm', color: '#0f0', order: 1, used: true }],
@@ -73,13 +73,13 @@ describe('useTaskSteps', () => {
     const { result } = renderHook(() => useTaskSteps(3, 'shot'));
     expect(result.current.linked).toBe(true);
     expect(result.current.steps).toEqual([{ key: 'sg-4', code: 'Animation', color: '#0f0', sgId: 4 }]);
-    // Le bord compte : une étape de plan n'est pas une étape d'asset.
+    // The side matters: a shot step is not an asset step.
     expect(sgSteps).toHaveBeenCalledWith(3, 'Shot', true);
   });
 });
 
 describe('useCreateStepTask', () => {
-  it('crée dans ReView sur un projet autonome, sur le département choisi', async () => {
+  it('creates in ReView on a standalone project, on the chosen department', async () => {
     const { result } = renderHook(() => useCreateStepTask(3));
     const created = await result.current({
       step: { key: 'dept-1', code: 'ANIM' },
@@ -96,7 +96,7 @@ describe('useCreateStepTask', () => {
     expect(created).toEqual({ taskId: 6, name: 'ANIM' });
   });
 
-  it('accepte une task sans étape — elle se range en fourre-tout', async () => {
+  it('accepts a task without a step — it lands in the catch-all', async () => {
     const { result } = renderHook(() => useCreateStepTask(3));
     await result.current({ step: null, parent: { kind: 'asset', id: 4 }, name: 'Retake client' });
     expect(local).toHaveBeenCalledWith(
@@ -105,10 +105,10 @@ describe('useCreateStepTask', () => {
   });
 
   /**
-   * L'invariant du projet : sur un projet piloté depuis ShotGrid, la tâche naît là-bas.
-   * Une tâche posée localement ferait doublon à la synchronisation suivante.
+   * The project's invariant: on a project driven from ShotGrid, the task is born there.
+   * A task set locally would duplicate at the next sync.
    */
-  it('passe par le site dès que l’étape en vient', async () => {
+  it('goes through the site as soon as the step comes from it', async () => {
     const { result } = renderHook(() => useCreateStepTask(3));
     const created = await result.current({
       step: { key: 'sg-4', code: 'Animation', sgId: 4 },

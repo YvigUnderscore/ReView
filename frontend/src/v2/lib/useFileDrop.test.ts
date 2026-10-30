@@ -7,9 +7,9 @@ import type { DragEvent } from 'react';
 import { useFileDrop } from './useFileDrop';
 
 /**
- * Un plan livré en séquence d'images arrive en DOSSIER. La cible de dépôt le lisait par
- * `dataTransfer.files`, qui ignore les répertoires : le dépôt ne produisait rien. Ce qui
- * se vérifie ici, c'est que le hook passe bien par la lecture d'arborescence.
+ * A shot delivered as an image sequence arrives as a FOLDER. The drop target read it through
+ * `dataTransfer.files`, which ignores directories: the drop produced nothing. What
+ * is verified here is that the hook does go through the directory-tree reading.
  */
 
 const fileEntry = (name: string): FileSystemEntry =>
@@ -28,7 +28,7 @@ const dirEntry = (name: string, children: FileSystemEntry[]): FileSystemEntry =>
     isDirectory: true,
     createReader: () => ({
       readEntries: (cb: (e: FileSystemEntry[]) => void) => {
-        // Le drapeau tombe AVANT le rappel : le lecteur relit dans le rappel même.
+        // The flag drops BEFORE the callback: the reader rereads within the callback itself.
         const batch = done ? [] : children;
         done = true;
         cb(batch);
@@ -48,7 +48,7 @@ const dropEvent = (entries: FileSystemEntry[]): DragEvent =>
   }) as unknown as DragEvent;
 
 describe('useFileDrop', () => {
-  it('déplie un dossier déposé et rend ses frames', async () => {
+  it('unfolds a dropped folder and returns its frames', async () => {
     const onFiles = vi.fn();
     const { result } = renderHook(() => useFileDrop(onFiles));
     const folder = dirEntry('SH0100_comp_v003', [fileEntry('plan.1001.exr'), fileEntry('plan.1002.exr')]);
@@ -60,7 +60,7 @@ describe('useFileDrop', () => {
     ]);
   });
 
-  it('ne remonte pas le dépôt à la zone englobante : un fichier ne part pas deux fois', () => {
+  it('does not bubble the drop up to the enclosing zone: a file is not sent twice', () => {
     const { result } = renderHook(() => useFileDrop(vi.fn()));
     const event = dropEvent([fileEntry('a.mov')]);
     act(() => result.current.dropProps.onDrop(event));

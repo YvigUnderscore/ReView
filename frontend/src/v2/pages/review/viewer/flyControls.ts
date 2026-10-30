@@ -3,73 +3,74 @@
 
 import type * as THREE from 'three';
 import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { isEditable } from '../../../lib/shortcuts';
+import { isEditable } from '@/v2/lib/shortcuts';
 import { applyRoll, rollFromCamera } from '../three/cameraRoll';
 import { inhibitOrbit } from './controlsLock';
 
 /**
- * Navigation « fly » type Unreal (10.G-V1) : clic droit maintenu = regard souris + déplacement
- * clavier ZQSD/WASD (codes physiques, donc azerty/qwerty confondus) + A/E descendre/monter,
- * molette = vitesse de vol, Maj = accélérer. OrbitControls est gelé pendant le vol puis recalé
- * (cible replacée devant la caméra, à distance constante) pour une reprise d'orbite cohérente.
+ * Unreal-style "fly" navigation (10.G-V1): holding the right click = mouse look + keyboard
+ * movement ZQSD/WASD (physical codes, so AZERTY and QWERTY behave the same) + A/E down/up,
+ * wheel = flight speed, Shift = accelerate. OrbitControls is frozen during the flight, then
+ * re-synced (target moved in front of the camera, at constant distance) for a consistent
+ * orbit resume.
  *
- * Le **tilt** (roulis du panneau Caméra) fait partie de la pose de vol : cf. `flyLookEuler`.
+ * The **tilt** (roll from the Camera panel) is part of the fly pose: see `flyLookEuler`.
  *
- * Le clic droit maintenu est un **mode de navigation** : tant qu'il dure, le clavier appartient
- * au vol et à rien d'autre (le chrome de review et l'éditeur se taisent, cf. `useChromeState`).
- * Un clic droit **bref**, lui, n'est pas un vol : c'est le menu contextuel, servi par
- * `useSpatialContextMenu` — ce module ne fait que bloquer le menu natif du navigateur.
+ * Holding the right click is a **navigation mode**: while it lasts, the keyboard belongs to the
+ * flight and to nothing else (the review chrome and the editor stay silent, see
+ * `useChromeState`). A **short** right click is not a flight: it is the context menu, served by
+ * `useSpatialContextMenu` — this module only blocks the browser's native menu.
  *
- * Implémentation locale plutôt que `FpsMovement` de Spark : celui-ci attache ses listeners
- * `document` dans son constructeur sans jamais les retirer (fuite à chaque remontage du viewer).
- * On reprend son mapping par codes physiques, avec des listeners proprement disposés.
+ * Local implementation rather than Spark's `FpsMovement`: that one attaches its `document`
+ * listeners in its constructor and never removes them (a leak on every viewer remount).
+ * Its physical-code mapping is kept, with listeners that are properly disposed.
  */
 
-/** Mapping code physique → direction locale caméra (X droite, Y haut, -Z avant). */
+/** Physical code → local camera direction mapping (X right, Y up, -Z forward). */
 export const FLY_MOVE_MAPPING: Record<string, readonly [number, number, number]> = {
-  KeyW: [0, 0, -1], // Z (azerty) / W : avancer
-  KeyS: [0, 0, 1], // S : reculer
-  KeyA: [-1, 0, 0], // Q (azerty) / A : gauche
-  KeyD: [1, 0, 0], // D : droite
-  KeyE: [0, 1, 0], // E : monter
-  KeyQ: [0, -1, 0], // A (azerty) / Q : descendre
+  KeyW: [0, 0, -1], // Z (AZERTY) / W: forward
+  KeyS: [0, 0, 1], // S: backward
+  KeyA: [-1, 0, 0], // Q (AZERTY) / A: left
+  KeyD: [1, 0, 0], // D: right
+  KeyE: [0, 1, 0], // E: up
+  KeyQ: [0, -1, 0], // A (AZERTY) / Q: down
 };
 
-/** Multiplicateur de vitesse avec Maj enfoncée (comme FpsMovement). */
+/** Speed multiplier while Shift is held (as in FpsMovement). */
 export const FLY_SHIFT_MULTIPLIER = 5;
 
 /**
- * Cette touche appartient-elle au vol ? **Référence unique** des touches de vol : trois
- * gestionnaires clavier concurrents vivent sur `window`/`document` (ce module, le chrome de
- * review, l'auto-pause de l'animation caméra) et doivent tous se prononcer sur le même jeu de
- * codes physiques — recopier la liste, c'est la laisser diverger.
+ * Does this key belong to the flight? **Single source of truth** for the flight keys: three
+ * competing keyboard handlers live on `window`/`document` (this module, the review chrome, the
+ * camera animation auto-pause) and must all agree on the same set of physical codes. Copying
+ * the list would let it drift.
  */
 export function isFlyMoveCode(code: string): boolean {
   return code in FLY_MOVE_MAPPING;
 }
 
-/** Sensibilité du regard (radians par pixel de mouvement souris). */
+/** Look sensitivity (radians per pixel of mouse movement). */
 const LOOK_SPEED = 0.0035;
 
 /**
- * Au-delà de cette composante verticale de la vue, le repère qui sert à mesurer le roulis est
- * dégénéré (`cameraRoll.baseUp` y bascule d'axe) : le tilt n'y est plus relu.
+ * Beyond this vertical component of the view, the frame used to measure the roll is degenerate
+ * (`cameraRoll.baseUp` flips axis there): the tilt is no longer read.
  */
 const VERTICAL_LIMIT = 0.999;
 
 /**
- * Pose du regard en vol (Euler `YXZ`) : lacet et tangage viennent de la souris, **le roulis vient
- * du tilt**. Pur, testable.
+ * Look pose during the flight (Euler `YXZ`): yaw and pitch come from the mouse, **the roll comes
+ * from the tilt**. Pure, testable.
  *
- * POURQUOI. Le tilt du panneau Caméra vit dans `camera.up`, que seul `lookAt` consulte — donc
- * OrbitControls, gelé pendant le vol. La pose composée ici forçait `z = 0` : le roulis tombait à
- * plat au premier mouvement de souris et ne revenait qu'à l'atterrissage, quand l'orbite reprenait
- * la main et recadrait la caméra. Il fait désormais partie de la pose de vol.
+ * WHY. The Camera panel tilt lives in `camera.up`, which only `lookAt` reads — and OrbitControls
+ * is frozen during the flight. The pose composed here used to force `z = 0`: the roll dropped
+ * flat on the first mouse movement and only came back on landing, when the orbit took over again
+ * and reframed the camera. It is now part of the fly pose.
  *
- * `z = -roll` : dans l'ordre `YXZ`, `Rz` tourne autour de l'axe de vue, et l'angle mesuré par
- * `rollFromUp` (celui de `up` autour de `forward`) est de signe opposé — un tilt de +30° se
- * compose donc en `z = -30°`. C'est exactement l'orientation que produirait `lookAt` avec le `up`
- * de `applyRoll` : rien ne saute à l'atterrissage.
+ * `z = -roll`: in `YXZ` order, `Rz` rotates around the view axis, and the angle measured by
+ * `rollFromUp` (that of `up` around `forward`) has the opposite sign — a +30° tilt therefore
+ * composes as `z = -30°`. This is exactly the orientation `lookAt` would produce with the `up`
+ * from `applyRoll`: nothing jumps on landing.
  */
 export function flyLookEuler(
   look: { x: number; y: number },
@@ -82,12 +83,12 @@ export function flyLookEuler(
   return {
     x: Math.max(-limit, Math.min(limit, look.x - dy * LOOK_SPEED)),
     y: look.y - dx * LOOK_SPEED,
-    // `roll !== 0` : sans tilt, on rend un 0 franc plutôt que le -0 de la négation.
+    // `roll !== 0`: without tilt, return a plain 0 rather than the -0 of the negation.
     z: Number.isFinite(roll) && roll !== 0 ? -roll : 0,
   };
 }
 
-/** Direction de déplacement locale (normalisée) selon les codes enfoncés — pur, testable. */
+/** Local movement direction (normalized) from the pressed codes — pure, testable. */
 export function moveDirection(pressed: ReadonlySet<string>): [number, number, number] {
   let x = 0;
   let y = 0;
@@ -104,9 +105,9 @@ export function moveDirection(pressed: ReadonlySet<string>): [number, number, nu
 }
 
 export interface FlyControls {
-  /** Vol en cours (clic droit maintenu sur le canvas). */
+  /** Flight in progress (right click held on the canvas). */
   readonly flying: boolean;
-  /** À appeler à chaque frame avec le delta en secondes ; ne fait rien hors vol. */
+  /** Call every frame with the delta in seconds; does nothing outside the flight. */
   update(dt: number): void;
   dispose(): void;
 }
@@ -117,20 +118,20 @@ export function createFlyControls(
   controls: OrbitControls,
   dom: HTMLElement,
 ): FlyControls {
-  // Le clic droit passe au vol : l'orbite garde gauche = tourner, molette = zoom, et le pan
-  // bascule sur le bouton du milieu (convention DCC).
+  // Right click switches to flight: the orbit keeps left = rotate, wheel = zoom, and pan
+  // moves to the middle button (DCC convention).
   controls.mouseButtons.MIDDLE = THREE.MOUSE.PAN;
   controls.mouseButtons.RIGHT = null;
 
   const pressed = new Set<string>();
   let flying = false;
   let shift = false;
-  let speed = 1; // unités/s, recalée sur l'échelle de la scène à chaque départ de vol
-  let roll = 0; // tilt du plan, relu depuis `camera.up` au fil du vol (cf. `onPointerMove`)
-  let orbitDistance = 1; // distance caméra→cible au départ, restituée à l'atterrissage
+  let speed = 1; // units/s, re-scaled to the scene's scale at each flight start
+  let roll = 0; // tilt of the plane, re-read from `camera.up` during the flight (see `onPointerMove`)
+  let orbitDistance = 1; // camera→target distance at start, restored on landing
   let pointerId = -1;
-  // Jeton d'inhibition de l'orbite pendant le vol (cf. `controlsLock`) : plus personne n'écrit
-  // `controls.enabled`, sinon le démontage d'un gizmo rendait l'orbite en plein vol.
+  // Orbit inhibition token held during the flight (see `controlsLock`): nobody writes
+  // `controls.enabled` directly anymore, otherwise a gizmo unmount restored the orbit mid-flight.
   let releaseOrbit: (() => void) | null = null;
   const euler = new THREE.Euler(0, 0, 0, 'YXZ');
   const move = new THREE.Vector3();
@@ -141,7 +142,7 @@ export function createFlyControls(
     flying = false;
     if (pointerId >= 0 && dom.hasPointerCapture?.(pointerId)) dom.releasePointerCapture(pointerId);
     pointerId = -1;
-    // Recale la cible d'orbite devant la caméra, à la distance du départ de vol.
+    // Re-sync the orbit target in front of the camera, at the flight start distance.
     move.set(0, 0, -1).applyQuaternion(camera.quaternion);
     controls.target.copy(camera.position).addScaledVector(move, orbitDistance);
     releaseOrbit?.();
@@ -153,31 +154,31 @@ export function createFlyControls(
     if (e.button !== 2 || flying) return;
     flying = true;
     pointerId = e.pointerId;
-    // Le vol part **à l'arrêt**, avec l'état réel de Maj : les touches de direction ne sont
-    // accumulées qu'en vol, et une touche déjà enfoncée à l'appui n'appartient pas au vol.
+    // The flight starts **from rest**, with the real Shift state: direction keys only accumulate
+    // during the flight, and a key already held at press time does not belong to the flight.
     pressed.clear();
     shift = e.shiftKey;
     orbitDistance = Math.max(camera.position.distanceTo(controls.target), 0.01);
     speed = Math.max(orbitDistance, 0.1);
-    releaseOrbit = inhibitOrbit(controls, 'fly'); // gèle l'orbite pendant le vol
+    releaseOrbit = inhibitOrbit(controls, 'fly'); // freeze the orbit during the flight
     try {
       dom.setPointerCapture(e.pointerId);
     } catch {
-      // Pointeurs synthétiques sans capture (tests, automation) : le vol reste fonctionnel.
+      // Synthetic pointers without capture (tests, automation): the flight stays functional.
     }
     e.preventDefault();
   };
 
   const onPointerMove = (e: PointerEvent) => {
     if (!flying) return;
-    // Le tilt est relu depuis l'**orientation** de la caméra à chaque mouvement, puis remis en
-    // phase avec la nouvelle direction de vue : la lecture est idempotente (`rollFromUp` inverse
-    // exactement `applyRoll`), et un réglage du panneau en plein vol est pris tel quel. Le lire
-    // dans `camera.up` ne marche plus : hors vol, le tilt n'y est plus figé mais recomposé dans
-    // l'orientation à chaque tour (cf. `cameraRoll.updateOrbitKeepingRoll`), et `up` est à plat —
-    // le premier mouvement de souris remettait donc le roulis à zéro. Vue quasi verticale
-    // exceptée : le repère de mesure y est dégénéré, on garde le dernier tilt lu plutôt que de
-    // laisser la caméra tournoyer au zénith.
+    // The tilt is re-read from the camera **orientation** on every movement, then realigned with
+    // the new view direction: the read is idempotent (`rollFromUp` exactly inverts `applyRoll`),
+    // and a panel adjustment made during the flight is taken as is. Reading it from
+    // `camera.up` no longer works: outside the flight the tilt is no longer frozen there but
+    // recomposed into the orientation on every turn (see `cameraRoll.updateOrbitKeepingRoll`),
+    // and `up` is flat — so the first mouse movement reset the roll to zero. Except for a
+    // near-vertical view: the measurement frame is degenerate there, so we keep the last tilt
+    // read rather than letting the camera spin at the zenith.
     forward.set(0, 0, -1).applyQuaternion(camera.quaternion);
     if (Math.abs(forward.y) < VERTICAL_LIMIT) roll = rollFromCamera(THREE, camera);
     euler.setFromQuaternion(camera.quaternion);
@@ -186,9 +187,9 @@ export function createFlyControls(
     euler.y = look.y;
     euler.z = look.z;
     camera.quaternion.setFromEuler(euler);
-    // `camera.up` reste tenu en phase pendant le vol : c'est lui que lit le `lookAt` du
-    // `controls.update()` de l'atterrissage (`endFlight`), avant que la boucle ne reprenne la
-    // main — sans quoi le tilt tomberait à plat le temps d'une frame en reposant l'orbite.
+    // `camera.up` stays aligned during the flight: it is what the `lookAt` of the landing
+    // `controls.update()` (`endFlight`) reads, before the loop takes over again — otherwise the
+    // tilt would drop flat for a frame while the orbit resumes.
     forward.set(0, 0, -1).applyQuaternion(camera.quaternion);
     applyRoll(THREE, camera, forward, roll);
   };
@@ -199,15 +200,15 @@ export function createFlyControls(
 
   const onWheel = (e: WheelEvent) => {
     if (!flying) return;
-    e.preventDefault(); // pas de zoom d'orbite pendant le vol : la molette règle la vitesse
+    e.preventDefault(); // no orbit zoom during the flight: the wheel sets the speed
     speed *= e.deltaY < 0 ? 1.25 : 0.8;
   };
 
   const onKeyDown = (e: KeyboardEvent) => {
-    // HORS VOL, le clavier n'appartient pas au vol. Les touches étaient accumulées en
-    // permanence, saisie de texte comprise : maintenir une direction sans cliquer ne faisait
-    // rien de visible, puis le clic droit démarrait un vol **déjà en mouvement**. Le clic droit
-    // maintenu est le mode de navigation — il commence là, et le clavier avec lui.
+    // OUTSIDE THE FLIGHT, the keyboard does not belong to the flight. Keys used to accumulate
+    // permanently, text input included: holding a direction without clicking did nothing
+    // visible, then the right click started a flight **already moving**. The held right click is
+    // the navigation mode — it starts there, and the keyboard with it.
     if (!flying || isEditable(e.target)) return;
     if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') shift = true;
     if (!isFlyMoveCode(e.code)) return;
@@ -215,8 +216,8 @@ export function createFlyControls(
     e.preventDefault();
   };
   const onKeyUp = (e: KeyboardEvent) => {
-    // Le relâchement, lui, n'est jamais filtré : une touche relâchée après l'atterrissage (ou
-    // hors de la fenêtre) doit quitter l'ensemble, sinon la direction reste collée.
+    // Key release is never filtered: a key released after landing (or outside the window) must
+    // leave the set, otherwise the direction stays stuck.
     if (e.code === 'ShiftLeft' || e.code === 'ShiftRight') shift = false;
     pressed.delete(e.code);
   };

@@ -10,9 +10,9 @@ import { useSavedViews, filtersEqual, normalizeFilters } from '../lib/useSavedVi
 import { useT } from '../i18n';
 
 /**
- * Menu des vues de liste sauvegardées (42.A5 — №73). Compact (règle UI simple) : un seul
- * déclencheur dans la barre de filtres. Applique/enregistre/supprime des jeux de filtres
- * nommés, persistés par compte via `useSavedViews`.
+ * Saved list views menu (42.A5, №73). Compact (simple UI rule): a single
+ * trigger in the filter bar. Applies, saves and deletes named filter sets,
+ * persisted per account via `useSavedViews`.
  */
 export default function SavedViewsMenu({
   scope,
@@ -20,9 +20,9 @@ export default function SavedViewsMenu({
   onApply,
 }: {
   scope: string;
-  /** Filtres actuels de la liste (clé → valeur, « » = inactif). */
+  /** Current filters of the list (key → value, "" = inactive). */
   current: Record<string, string>;
-  /** Applique un jeu de filtres sauvegardé à la liste. */
+  /** Applies a saved filter set to the list. */
   onApply: (filters: Record<string, string>) => void;
 }) {
   const t = useT();

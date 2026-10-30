@@ -5,16 +5,16 @@ import { registerShutdownTask, SHUTDOWN_PHASE } from '../lib/gracefulShutdown';
 import { logger } from '../lib/logger';
 
 /**
- * Extinction d'un consommateur de file BullMQ.
+ * Shutdown of a BullMQ queue consumer.
  *
- * `worker.close()` attend la fin des jobs actifs : c'est ce qu'on veut, mais un
- * transcodage dure des minutes et docker ne laisse que quelques secondes avant SIGKILL.
- * On laisse donc la fermeture douce courir jusqu'au délai de grâce, puis on force —
- * le job perd son verrou, BullMQ le rejouera, et la réconciliation au démarrage rattrape
- * ce qui serait resté figé.
+ * `worker.close()` waits for active jobs to finish: that is what we want, but a
+ * transcode lasts minutes and Docker only leaves a few seconds before SIGKILL.
+ * So we let the graceful close run until the grace period expires, then force it:
+ * the job loses its lock, BullMQ will replay it, and the startup reconciliation catches
+ * whatever would have stayed frozen.
  */
 
-/** Surface minimale d'un `Worker` BullMQ, pour éviter la variance des génériques. */
+/** Minimal surface of a BullMQ `Worker`, to avoid generic variance issues. */
 interface ClosableWorker {
   close(force?: boolean): Promise<void>;
 }
@@ -26,7 +26,7 @@ export function registerWorkerShutdown(name: string, worker: ClosableWorker): vo
     run: () => worker.close(),
     force: () => {
       void worker.close(true).catch((err: unknown) => {
-        logger.warn({ err }, `[shutdown] fermeture forcée impossible : ${name}`);
+        logger.warn({ err }, `[shutdown] forced close failed: ${name}`);
       });
     },
   });

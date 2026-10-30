@@ -7,37 +7,37 @@ import { findPixelTextSizes } from './check-text-sizes.mjs';
 const matches = (source) => findPixelTextSizes(source).map((o) => o.match);
 
 describe('findPixelTextSizes', () => {
-  it('relève une taille de police en pixels', () => {
+  it('reports a font size in pixels', () => {
     expect(matches('<span className="text-[10px]" />')).toEqual(['text-[10px]']);
   });
 
-  it('relève chaque occurrence de la ligne', () => {
+  it('reports every occurrence on the line', () => {
     expect(matches('"text-[9px] gap-1 text-[11px]"')).toEqual(['text-[9px]', 'text-[11px]']);
   });
 
-  it('relève aussi les points typographiques', () => {
+  it('also reports point sizes', () => {
     expect(matches('"text-[12pt]"')).toEqual(['text-[12pt]']);
   });
 
-  it('laisse passer la rampe de tokens', () => {
+  it('lets the token scale through', () => {
     expect(matches('"text-2xs text-xs text-sm text-base text-lg"')).toEqual([]);
   });
 
-  it('ne vise que la typographie, pas les autres valeurs arbitraires', () => {
+  it('only targets typography, not other arbitrary values', () => {
     expect(matches('"w-[72px] min-w-[1440px] left-[-99999px] h-[calc(100vh-7rem)]"')).toEqual([]);
   });
 
-  it('laisse passer une couleur ou une variable arbitraires', () => {
+  it('lets arbitrary colours or variables through', () => {
     expect(matches('"text-[#ff0000] text-[var(--x)]"')).toEqual([]);
   });
 
-  it('rapporte la ligne et la colonne', () => {
+  it('reports the line and the column', () => {
     const [found] = findPixelTextSizes('ligne une\n  <p className="text-[10px]">');
     expect(found.line).toBe(2);
     expect(found.column).toBeGreaterThan(1);
   });
 
-  it('ne relève rien dans une source propre', () => {
+  it('reports nothing in a clean source', () => {
     expect(findPixelTextSizes('const a = 1;\n// text de commentaire\n')).toEqual([]);
   });
 });

@@ -6,7 +6,7 @@ import EntityThumb from '../../components/entity/EntityThumb';
 import type { SequenceDetailData } from '../project/projectTypes';
 import { useT } from '../../i18n';
 
-/** Assets rattachés à la séquence — décor, véhicules, éléments partagés par ses plans. */
+/** Assets attached to the sequence — sets, vehicles, elements shared by its shots. */
 export default function SequenceAssets({ assets }: { assets: SequenceDetailData['assets'] }) {
   const t = useT();
   if (assets.length === 0) return null;

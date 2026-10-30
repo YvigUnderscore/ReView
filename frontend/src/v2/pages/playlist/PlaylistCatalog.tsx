@@ -14,14 +14,14 @@ import { useDepartments } from '../../lib/departmentsApi';
 import { useT } from '../../i18n';
 
 /**
- * Catalogue du projet, à gauche de la playlist (C5).
+ * Project catalogue, to the left of the playlist (C5).
  *
- * Monter une playlist obligeait à ouvrir chaque plan un par un pour y cliquer
- * « ajouter » : il n'existait aucune vue d'où choisir. On y cherche, on y filtre, et on
- * ajoute d'un clic — ou plusieurs d'un coup après sélection.
+ * Building a playlist used to require opening each shot one by one to click "add": there was no
+ * view from which to choose. One searches there, filters there, and adds with a click, or several
+ * at once after a selection.
  *
- * « Dernière version seulement » est coché par défaut : une playlist de dailies montre
- * l'état courant du travail, pas l'historique de chaque tâche.
+ * "Latest version only" is ticked by default: a dailies playlist shows the current state of the
+ * work, not the history of each task.
  */
 export default function PlaylistCatalog({
   projectId,
@@ -30,7 +30,7 @@ export default function PlaylistCatalog({
   busy,
 }: {
   projectId: number;
-  /** Ce que la playlist contient déjà : on le signale au lieu de le proposer deux fois. */
+  /** What the playlist already contains: flagged rather than offered a second time. */
   presentVersionIds: ReadonlySet<number>;
   onAdd: (versionIds: number[]) => void;
   busy: boolean;

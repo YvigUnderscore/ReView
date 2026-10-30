@@ -4,9 +4,8 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * Ce que l'export met dans le fichier : l'ordre de lecture du fil, la frame affichée (base
- * `startFrame` du projet), la décision de la version, et surtout ce qu'un compte CLIENT n'a
- * pas le droit d'emporter.
+ * What the export puts in the file: the reading order of the thread, the displayed frame (base `startFrame`
+ * of the project), the version's decision, and above all what a CLIENT account is not allowed to take away.
  */
 
 const { db, scope, sheet, projectSettings } = vi.hoisted(() => ({
@@ -31,7 +30,7 @@ vi.mock('./CommentExportScope', () => scope);
 vi.mock('./CommentExportSheet', () => sheet);
 vi.mock('../lib/projectSettings', () => projectSettings);
 vi.mock('../lib/settings', () => ({ resolveUserLocale: vi.fn().mockResolvedValue('en') }));
-vi.mock('./StorageService', () => ({ storage: { getObjectBuffer: vi.fn() } }));
+vi.mock('../lib/storage', () => ({ storage: { getObjectBuffer: vi.fn() } }));
 
 import { Role } from '@prisma/client';
 import { exportNotes, orderThread } from './CommentExportService';
@@ -104,8 +103,8 @@ beforeEach(() => {
   });
 });
 
-describe('exportNotes — CSV', () => {
-  it('donne un fichier nommé, typé, et une ligne par note', async () => {
+describe('exportNotes: CSV', () => {
+  it('produces a named, typed file with one row per note', async () => {
     const file = await exportNotes({ scope: 'media', id: 7, format: 'csv', viewer });
     expect(file.filename).toBe('notes-media-7.csv');
     expect(file.contentType).toBe('text/csv; charset=utf-8');
@@ -116,15 +115,15 @@ describe('exportNotes — CSV', () => {
     expect(line).toContain('flicker à gauche');
   });
 
-  it('donne la frame affichée du projet et le timecode du média', async () => {
+  it('gives the displayed frame of the project and the timecode of the media', async () => {
     const file = await exportNotes({ scope: 'media', id: 7, format: 'csv', viewer });
     const cells = file.body.split('\n')[1]!.split(',');
-    expect(cells[7]).toBe('1037'); // 1001 + round(1,5 × 24)
+    expect(cells[7]).toBe('1037'); // 1001 + round(1.5 × 24)
     expect(cells[8]).toBe('00:00:01:12');
     expect(cells[16]).toBe('Retake');
   });
 
-  it('laisse vides frame et timecode d’une note sans repère de temps', async () => {
+  it('leaves frame and timecode empty for a note without a time reference', async () => {
     db.comment.findMany.mockResolvedValue([comment({ timestamp: null })]);
     const cells = (await exportNotes({ scope: 'media', id: 7, format: 'csv', viewer })).body
       .split('\n')[1]!
@@ -133,7 +132,7 @@ describe('exportNotes — CSV', () => {
     expect(cells[8]).toBe('');
   });
 
-  it('signale la troncature quand le plafond est dépassé', async () => {
+  it('reports truncation when the cap is exceeded', async () => {
     db.comment.findMany.mockImplementation(({ take }: { take: number }) =>
       Promise.resolve(Array.from({ length: take }, (_, i) => comment({ id: i + 1 }))),
     );
@@ -142,18 +141,18 @@ describe('exportNotes — CSV', () => {
   });
 });
 
-describe('exportNotes — cloisonnement', () => {
-  it('ne sort à un CLIENT que les notes qui lui sont visibles', async () => {
+describe('exportNotes: scoping', () => {
+  it('exports to a CLIENT only the notes visible to them', async () => {
     await exportNotes({ scope: 'media', id: 7, format: 'csv', viewer: { id: 9, role: Role.CLIENT } });
     expect(db.comment.findMany.mock.calls[0]?.[0].where.isVisibleToClient).toBe(true);
   });
 
-  it('laisse l’équipe voir tout le fil', async () => {
+  it('lets the team see the whole thread', async () => {
     await exportNotes({ scope: 'media', id: 7, format: 'csv', viewer });
     expect(db.comment.findMany.mock.calls[0]?.[0].where.isVisibleToClient).toBeUndefined();
   });
 
-  it('garde les retours de montage au montage hors portée timeline', async () => {
+  it('keeps edit feedback in the edit, out of the timeline scope', async () => {
     await exportNotes({ scope: 'media', id: 7, format: 'csv', viewer });
     expect(db.comment.findMany.mock.calls[0]?.[0].where.OR).toEqual([
       { timelineId: null },
@@ -162,21 +161,21 @@ describe('exportNotes — cloisonnement', () => {
   });
 });
 
-describe('exportNotes — éditorial', () => {
-  it('refuse un EDL sur autre chose qu’une playlist ou un montage', async () => {
+describe('exportNotes: editorial', () => {
+  it('refuses an EDL for anything other than a playlist or an edit', async () => {
     await expect(exportNotes({ scope: 'media', id: 7, format: 'edl', viewer })).rejects.toThrow(
       /playlist or a montage/,
     );
   });
 
-  it('écrit les notes d’une playlist en marqueurs EDL', async () => {
+  it('writes the notes of a playlist as EDL markers', async () => {
     const file = await exportNotes({ scope: 'playlist', id: 3, format: 'edl', viewer });
     expect(file.filename).toBe('notes-playlist-3.edl');
     expect(file.body).toContain('* FROM CLIP NAME: SH010_comp_v003.mov');
     expect(file.body).toContain('* LOC: 00:00:01:12 RED alice: flicker à gauche');
   });
 
-  it('écrit les mêmes notes en marqueurs OTIO', async () => {
+  it('writes the same notes as OTIO markers', async () => {
     const file = await exportNotes({ scope: 'playlist', id: 3, format: 'otio', viewer });
     const document = JSON.parse(file.body) as {
       tracks: { children: Array<{ children: Array<{ markers: Array<{ color: string }> }> }> };
@@ -186,8 +185,8 @@ describe('exportNotes — éditorial', () => {
   });
 });
 
-describe('exportNotes — planche', () => {
-  it('rend un document HTML autonome avec le contexte du plan', async () => {
+describe('exportNotes: sheet', () => {
+  it('renders a standalone HTML document with the shot context', async () => {
     const file = await exportNotes({ scope: 'media', id: 7, format: 'sheet', viewer });
     expect(file.filename).toBe('notes-media-7.html');
     expect(file.contentType).toBe('text/html; charset=utf-8');
@@ -207,7 +206,7 @@ describe('orderThread', () => {
       ...over,
     }) as unknown as Parameters<typeof orderThread>[0][number];
 
-  it('classe les racines par timecode puis colle chaque réponse à la sienne', () => {
+  it('sorts roots by timecode, then attaches each reply to its parent', () => {
     const ordered = orderThread(
       [note(1, { timestamp: 5 }), note(2, { timestamp: 1 }), note(3, { parentId: 2 })],
       [7],
@@ -215,7 +214,7 @@ describe('orderThread', () => {
     expect(ordered.map((n) => n.id)).toEqual([2, 3, 1]);
   });
 
-  it('suit l’ordre des clips avant celui du temps', () => {
+  it('follows the order of the clips before the order of time', () => {
     const ordered = orderThread(
       [note(1, { mediaObjectId: 8, timestamp: 0 }), note(2, { mediaObjectId: 7, timestamp: 9 })],
       [7, 8],
@@ -223,12 +222,12 @@ describe('orderThread', () => {
     expect(ordered.map((n) => n.id)).toEqual([2, 1]);
   });
 
-  it('traite comme racine une réponse dont le parent est hors du lot', () => {
+  it('treats as a root a reply whose parent is outside the batch', () => {
     const ordered = orderThread([note(4, { parentId: 999, timestamp: 2 })], [7]);
     expect(ordered.map((n) => n.id)).toEqual([4]);
   });
 
-  it('range les notes sans timecode après celles qui en portent un', () => {
+  it('places notes without a timecode after those that carry one', () => {
     const ordered = orderThread([note(1), note(2, { timestamp: 3 })], [7]);
     expect(ordered.map((n) => n.id)).toEqual([2, 1]);
   });

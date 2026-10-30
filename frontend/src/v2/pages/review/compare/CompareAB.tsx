@@ -2,17 +2,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { X } from 'lucide-react';
-import { Button } from '../../../components/ui/button';
-import { Select } from '../../../components/ui/select';
+import { Button } from '@/v2/components/ui/button';
+import { Select } from '@/v2/components/ui/select';
 import type { CompareTarget } from './useCompareTargets';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
- * Réglages A et B de la comparaison, dans la barre d'options du mode « Compare ».
+ * A and B settings of the comparison, in the options bar of the "Compare" mode.
  *
- * A est le média ouvert, B se choisit par version **puis par média** : une version portant
- * plusieurs images ne pouvait être comparée que par la première. Le choix vivait jusqu'ici
- * dans un onglet du dock qui redisait l'en-tête sans offrir de B.
+ * A is the open media. B is chosen by version **then by media**: a version carrying several
+ * images could only be compared through the first one. The choice used to live in a dock tab
+ * that repeated the header without offering B.
  */
 export default function CompareAB({
   aName,
@@ -51,7 +51,7 @@ export default function CompareAB({
         onChange={(e) => (e.target.value ? onSetB(Number(e.target.value)) : onClear())}
       >
         <option value="">{t('compare.noB')}</option>
-        {/* B déjà choisi mais détails encore en vol : l'option manquante viderait le champ. */}
+        {/* B is already chosen but its details are still in flight: the missing option would empty the field. */}
         {bId != null && !known && <option value={bId}>{t('common.loading')}</option>}
         {groups.map((v) => (
           <optgroup key={v.versionId} label={v.name}>

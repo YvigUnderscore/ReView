@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Liens profonds de review (32.E) : `?frame=N` (frame absolue, base startFrame)
- * ouvre la review à la frame ; `?comment=ID` sélectionne le commentaire (seek +
- * annotation + caméra restaurés). Construction et parsing purs, testés.
+ * Review deep links (32.E): `?frame=N` (absolute frame, based on startFrame) opens the review
+ * at that frame; `?comment=ID` selects the comment (seek + annotation + camera restored).
+ * Pure construction and parsing, tested.
  */
 
 export function frameLink(origin: string, pathname: string, frame: number): string {
@@ -25,7 +25,7 @@ export function parseDeepLink(search: string): { frame?: number; commentId?: num
   };
 }
 
-/** Temps vidéo (s) d'une frame absolue ; borné à 0 pour une frame antérieure au départ. */
+/** Video time (s) of an absolute frame; clamped to 0 for a frame before the start. */
 export function frameToTime(frame: number, startFrame: number, fps: number): number {
   if (!Number.isFinite(fps) || fps <= 0) return 0;
   return Math.max(0, (frame - startFrame) / fps);

@@ -2,17 +2,15 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Un plan, une séquence ou un asset modifié doit prévenir les écrans ouverts.
+ * A shot, sequence or asset that is modified must notify the open screens.
  *
- * Le front écoute `shot:update`, `sequence:update` et `asset:update` depuis leur
- * introduction (`v2/lib/socketBridge`), mais seuls `PipelineEnsureService` (création
- * automatique à l'upload) et la synchronisation ShotGrid les émettaient : aucun des chemins
- * qu'emprunte un humain qui édite dans l'interface. Un statut changé au clic droit restait
- * donc invisible sur tout autre écran jusqu'au rechargement — au point de faire croire que
- * le changement n'était pas passé.
+ * The front end has listened to `shot:update`, `sequence:update` and `asset:update` since their introduction
+ * (`v2/lib/socketBridge`), but only `PipelineEnsureService` (automatic creation on upload) and the ShotGrid synchronization
+ * emitted them: none of the paths a human editing in the interface takes. A status changed by right-click therefore stayed
+ * invisible on every other screen until reload, to the point of making the change look as if it had not gone through.
  *
- * Ces trois assertions ferment la boucle côté émetteur ; le test frontal `currentProject`
- * la ferme côté récepteur (la page doit d'abord rejoindre la room du projet).
+ * These three assertions close the loop on the emitter side; the front-end test `currentProject` closes it on the receiver
+ * side (the page must first join the project's room).
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -47,35 +45,35 @@ beforeEach(() => {
   db.asset.count.mockResolvedValue(0);
 });
 
-/** Les événements émis pour ce projet, par nom. */
+/** Events emitted for this project, by name. */
 function emitted(name: string) {
   return socket.emitToProject.mock.calls.filter((c) => c[1] === name);
 }
 
-describe('événements d’entité émis par les chemins d’édition ordinaires', () => {
-  it('un plan modifié émet shot:update pour son projet', async () => {
+describe('entity events emitted by the ordinary edit paths', () => {
+  it('a modified shot emits shot:update for its project', async () => {
     await ShotService.update(21, PROJECT, { pipelineStatusId: 8 });
     expect(emitted('shot:update')).toEqual([[PROJECT, 'shot:update', { projectId: PROJECT, id: 21 }]]);
   });
 
-  it('un plan modifié continue d’émettre timeline:update (montages automatiques)', async () => {
+  it('a modified shot still emits timeline:update (automatic timelines)', async () => {
     await ShotService.update(21, PROJECT, { omitted: true });
     expect(emitted('timeline:update')).toHaveLength(1);
   });
 
-  it('une séquence modifiée émet sequence:update pour son projet', async () => {
+  it('a modified sequence emits sequence:update for its project', async () => {
     await SequenceService.update(13, PROJECT, { pipelineStatusId: 8 });
     expect(emitted('sequence:update')).toEqual([
       [PROJECT, 'sequence:update', { projectId: PROJECT, id: 13 }],
     ]);
   });
 
-  it('un asset modifié émet asset:update pour son projet', async () => {
+  it('a modified asset emits asset:update for its project', async () => {
     await AssetService.update(PROJECT, 58, { pipelineStatusId: 8 });
     expect(emitted('asset:update')).toEqual([[PROJECT, 'asset:update', { projectId: PROJECT, id: 58 }]]);
   });
 
-  it('émet même quand le changement ne touche pas le statut', async () => {
+  it('emits even when the change does not touch the status', async () => {
     await ShotService.update(21, PROJECT, { name: 'Snow field, wide' });
     await SequenceService.update(13, PROJECT, { name: 'Cold open' });
     await AssetService.update(PROJECT, 58, { name: 'Kitchen Set' });

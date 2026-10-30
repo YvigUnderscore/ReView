@@ -7,11 +7,11 @@ import { renderWithoutHelpers } from '../../viewer/sceneHelpers';
 import { createCameraObject } from './cameraObject';
 
 /**
- * Le retour visuel de la caméra-objet : vue de la caméra libre en toutes circonstances, absente de
- * la passe PiP. Le reste de la pose est testé dans `poseObject.test.ts`.
+ * Visual feedback of the camera-object: visible from the free camera in all circumstances, absent
+ * from the PiP pass. The rest of the pose is tested in `poseObject.test.ts`.
  */
 
-/** Tous les matériaux de l'objet (corps, frustum, marqueur, trajectoire). */
+/** All the object's materials (body, frustum, marker, trajectory). */
 function materials(scene: THREE.Scene): THREE.Material[] {
   const out: THREE.Material[] = [];
   scene.traverse((o) => {
@@ -21,8 +21,8 @@ function materials(scene: THREE.Scene): THREE.Material[] {
   return out;
 }
 
-describe('cameraObject — l’artiste doit la voir', () => {
-  it('dessinée par-dessus la scène (dans un nuage de splats, la profondeur l’effaçait)', () => {
+describe('cameraObject — the artist must see it', () => {
+  it('drawn over the scene (inside a splat cloud, depth used to erase it)', () => {
     const scene = new THREE.Scene();
     const obj = createCameraObject(THREE, scene, 1);
     const mats = materials(scene);
@@ -30,16 +30,16 @@ describe('cameraObject — l’artiste doit la voir', () => {
     for (const m of mats) {
       expect(m.depthTest).toBe(false);
       expect(m.depthWrite).toBe(false);
-      expect(m.transparent).toBe(true); // passe des transparents : après les splats
+      expect(m.transparent).toBe(true); // transparent pass: after the splats
     }
     obj.dispose();
   });
 
-  it('ordre de rendu posé sur CHAQUE objet dessiné, pas sur le seul groupe', () => {
+  it('render order set on EVERY drawn object, not just the group', () => {
     const scene = new THREE.Scene();
     const obj = createCameraObject(THREE, scene, 1);
     const drawn: number[] = [];
-    // Le corps est un `Group` : Three lit `renderOrder` sur l'objet rendu, pas sur son parent.
+    // The body is a `Group`: Three reads `renderOrder` on the rendered object, not on its parent.
     obj.body.traverse((o) => {
       if (o !== obj.body) drawn.push(o.renderOrder);
     });
@@ -48,7 +48,7 @@ describe('cameraObject — l’artiste doit la voir', () => {
     obj.dispose();
   });
 
-  it('déclarée objet d’aide : masquée pendant la passe PiP, restaurée après', () => {
+  it('declared as a helper object: hidden during the PiP pass, restored afterwards', () => {
     const scene = new THREE.Scene();
     const obj = createCameraObject(THREE, scene, 1);
     obj.setVisible(true);
@@ -64,7 +64,7 @@ describe('cameraObject — l’artiste doit la voir', () => {
     obj.dispose();
   });
 
-  it('démontée, elle ne pèse plus sur la passe PiP', () => {
+  it('once unmounted, it no longer weighs on the PiP pass', () => {
     const scene = new THREE.Scene();
     const obj = createCameraObject(THREE, scene, 1);
     const { body } = obj;

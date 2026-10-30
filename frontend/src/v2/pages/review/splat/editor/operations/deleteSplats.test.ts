@@ -5,7 +5,7 @@ import { describe, expect, it, vi } from 'vitest';
 import type { SplatSceneHandle } from '../../useSplat';
 import { hideSplats, rehideSplats, restoreSplats } from './deleteSplats';
 
-/** Poignée factice : 3 splats dont un déjà masqué, générateur espionné (reflet immédiat 11.C). */
+/** Dummy handle: 3 splats, one already masked, generator spied (immediate reflection, 11.C). */
 function makeHandle() {
   const opacities = [1, 0.5, 0];
   const packed = {
@@ -25,23 +25,23 @@ function makeHandle() {
   return { handle: { mesh } as unknown as SplatSceneHandle, opacities, packed, mesh };
 }
 
-describe('deleteSplats — masquage non-destructif + reflet immédiat (11.C)', () => {
-  it('masque, mémorise les opacités d’origine et invalide le générateur', () => {
+describe('deleteSplats — non-destructive masking + immediate reflection (11.C)', () => {
+  it('masks, remembers the original opacities and invalidates the generator', () => {
     const { handle, opacities, packed, mesh } = makeHandle();
     const hidden = hideSplats(handle, [0, 1, 2]);
-    expect(hidden).toEqual({ indices: [0, 1], opacities: [1, 0.5] }); // le 2 était déjà masqué
+    expect(hidden).toEqual({ indices: [0, 1], opacities: [1, 0.5] }); // 2 was already masked
     expect(opacities).toEqual([0, 0, 0]);
     expect(packed.needsUpdate).toBe(true);
     expect(mesh.updateGenerator).toHaveBeenCalledTimes(1);
   });
 
-  it('ne touche pas au générateur quand il n’y a rien à masquer', () => {
+  it('does not touch the generator when there is nothing to mask', () => {
     const { handle, mesh } = makeHandle();
-    expect(hideSplats(handle, [2])).toBeNull(); // déjà masqué
+    expect(hideSplats(handle, [2])).toBeNull(); // already masked
     expect(mesh.updateGenerator).not.toHaveBeenCalled();
   });
 
-  it('undo/redo restaurent puis re-masquent, avec invalidation à chaque fois', () => {
+  it('undo/redo restore, then re-mask, with invalidation each time', () => {
     const { handle, opacities, mesh } = makeHandle();
     const hidden = hideSplats(handle, [0, 1])!;
     restoreSplats(handle, hidden);

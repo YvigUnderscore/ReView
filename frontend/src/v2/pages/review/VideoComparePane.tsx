@@ -4,7 +4,7 @@
 import { useRef, useState, type RefObject } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Diff, SplitSquareHorizontal, X } from 'lucide-react';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { VIEWER_ZONE, type MediaResp } from './reviewTypes';
 import { useVideoSync } from './useVideoSync';
@@ -12,14 +12,14 @@ import { useFitBox } from './zoom/useFitBox';
 import { useT } from '../../i18n';
 
 /**
- * Pane B de la comparaison vidéo (10.G + 14.C + 34.D) : vidéo esclave, muette et sans
- * contrôles, synchronisée sur le lecteur maître (hook `useVideoSync`). Côte-à-côte ou
- * case de la grille 2×2 ; `onWipe` (absent en grille) bascule vers le mode wipe.
+ * Pane B of the video comparison (10.G + 14.C + 34.D): a slave video, muted and without
+ * controls, synchronized to the master player (`useVideoSync` hook). Side by side or a cell of
+ * the 2×2 grid; `onWipe` (absent in the grid) switches to wipe mode.
  *
- * La vidéo s'ajuste à sa boîte comme celle du maître (`useFitBox`, zone commune du
- * `CompareFitProvider`) : elle s'affichait jusqu'ici à sa **taille source**, si bien qu'un
- * proxy 480p tenait au centre d'un pane plus large que lui, minuscule entre deux bandes
- * noires, à côté d'un 1080p qui, lui, remplissait sa moitié.
+ * The video fits its box like the master's (`useFitBox`, common area of the
+ * `CompareFitProvider`): until now it was displayed at its **source size**, so a 480p proxy
+ * sat tiny in the center of a pane wider than it, between two black bands, next to a 1080p
+ * that filled its half.
  */
 export default function VideoComparePane({
   compareId,
@@ -31,7 +31,7 @@ export default function VideoComparePane({
   compareId: number;
   masterRef: RefObject<HTMLVideoElement | null>;
   onClose: () => void;
-  /** Bascules wipe/diff — proposées seulement en A/B simple (pas en grille 34.D). */
+  /** Wipe/diff toggles — offered only in simple A/B (not in the 34.D grid). */
   onWipe?: () => void;
   onDiff?: () => void;
 }) {
@@ -39,10 +39,10 @@ export default function VideoComparePane({
   const slaveRef = useRef<HTMLVideoElement>(null);
   const zoneRef = useRef<HTMLDivElement>(null);
   const [slaveReady, setSlaveReady] = useState(false);
-  // Même ajustement « contain » que le lecteur maître, dans la zone commune aux panes.
+  // Same "contain" fit as the master player, in the area common to the panes.
   const { box, setAspect } = useFitBox(zoneRef);
 
-  // staleTime Infinity : même règle que la review — URLs présignées, pas de refetch.
+  // staleTime Infinity: same rule as the review — presigned URLs, no refetch.
   const mediaQ = useQuery({
     queryKey: qk.media(compareId),
     queryFn: () => api.get<MediaResp>(`/api/media/${compareId}`),

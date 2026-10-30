@@ -8,15 +8,15 @@ import { applyDisplayMode, createDisplayResources } from './displayModes';
 import { setObjectOpacity } from './modelCompare';
 
 /**
- * `KHR_materials_specular` + `KHR_materials_ior` : un matériau déclarant
- * `specularColorFactor [0,0,0]` et `ior 1.0` doit charger en `MeshPhysicalMaterial` avec ces
- * valeurs (F0 nul → aucun reflet d'environnement à incidence normale), et les **conserver** à
- * travers les surcouches non destructives du viewer (modes d'affichage, opacité de comparaison).
- * Contre-exemple documenté : une primitive glTF **sans matériau** reçoit le matériau par défaut
- * de la spec (métal blanc, `metalness 1`) — c'est elle qui reflète un HDRI, pas le viewer.
+ * `KHR_materials_specular` + `KHR_materials_ior`: a material declaring
+ * `specularColorFactor [0,0,0]` and `ior 1.0` must load as `MeshPhysicalMaterial` with these
+ * values (zero F0: no environment reflection at normal incidence), and **keep** them through the
+ * non-destructive overlays of the viewer (display modes, comparison opacity).
+ * Documented counter-example: a glTF primitive **without a material** receives the spec's default
+ * material (white metal, `metalness 1`): it is that which reflects an HDRI, not the viewer.
  */
 
-/** GLB binaire minimal : un triangle avec le matériau sous test + un triangle sans matériau. */
+/** Minimal binary GLB: a triangle with the material under test, plus a triangle without a material. */
 function buildGlb(): ArrayBuffer {
   const positions = new Float32Array([0, 0, 0, 1, 0, 0, 0, 1, 0]);
   const bin = new Uint8Array(positions.buffer.slice(0));
@@ -55,7 +55,7 @@ function buildGlb(): ArrayBuffer {
   const total = 12 + 8 + jsonBytes.byteLength + 8 + bin.byteLength;
   const out = new Uint8Array(total);
   const view = new DataView(out.buffer);
-  view.setUint32(0, 0x46546c67, true); // magic « glTF »
+  view.setUint32(0, 0x46546c67, true); // magic "glTF"
   view.setUint32(4, 2, true);
   view.setUint32(8, total, true);
   view.setUint32(12, jsonBytes.byteLength, true);
@@ -73,8 +73,8 @@ const parseGlb = (): Promise<GLTF> =>
 const meshByName = (root: THREE.Object3D, name: string): THREE.Mesh =>
   root.getObjectByName(name) as THREE.Mesh;
 
-describe('KHR_materials_specular / KHR_materials_ior — honorés et préservés', () => {
-  it('charge specularColor noir, ior 1 et specularIntensity 1 en MeshPhysicalMaterial', async () => {
+describe('KHR_materials_specular / KHR_materials_ior — honored and preserved', () => {
+  it('loads specularColor black, ior 1 and specularIntensity 1 as MeshPhysicalMaterial', async () => {
     const gltf = await parseGlb();
     const mat = meshByName(gltf.scene, 'shaded').material as THREE.MeshPhysicalMaterial;
     expect(mat.isMeshPhysicalMaterial).toBe(true);
@@ -84,7 +84,7 @@ describe('KHR_materials_specular / KHR_materials_ior — honorés et préservés
     expect(mat.metalness).toBe(0);
   });
 
-  it('une primitive sans matériau reçoit le défaut glTF métallique (source de reflets)', async () => {
+  it('a primitive without a material receives the glTF metallic default (source of reflections)', async () => {
     const gltf = await parseGlb();
     const mat = meshByName(gltf.scene, 'unbound').material as THREE.MeshStandardMaterial & {
       isMeshPhysicalMaterial?: boolean;
@@ -94,7 +94,7 @@ describe('KHR_materials_specular / KHR_materials_ior — honorés et préservés
     expect(mat.roughness).toBe(1);
   });
 
-  it('les modes d’affichage restaurent le matériau d’origine à l’identique (même instance)', async () => {
+  it('the display modes restore the original material identically (same instance)', async () => {
     const gltf = await parseGlb();
     const mesh = meshByName(gltf.scene, 'shaded');
     const original = mesh.material as THREE.MeshPhysicalMaterial;
@@ -108,7 +108,7 @@ describe('KHR_materials_specular / KHR_materials_ior — honorés et préservés
     expect(original.ior).toBe(1);
   });
 
-  it('l’opacité de comparaison ne touche ni specularColor ni ior', async () => {
+  it('the comparison opacity touches neither specularColor nor ior', async () => {
     const gltf = await parseGlb();
     const mat = meshByName(gltf.scene, 'shaded').material as THREE.MeshPhysicalMaterial;
     setObjectOpacity(gltf.scene, 0.5);

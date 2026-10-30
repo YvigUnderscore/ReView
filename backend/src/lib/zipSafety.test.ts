@@ -23,13 +23,13 @@ const file = (name: string, size = 10, compressedSize = 5): ZipEntryInfo => ({
 });
 
 describe('normalizeEntryName', () => {
-  it('normalise les séparateurs et retire les segments neutres', () => {
+  it('normalizes separators and strips neutral segments', () => {
     expect(normalizeEntryName('assets\\tex\\color.png')).toEqual({ path: 'assets/tex/color.png' });
     expect(normalizeEntryName('./scene.usda')).toEqual({ path: 'scene.usda' });
     expect(normalizeEntryName('a//b/./c.usdc')).toEqual({ path: 'a/b/c.usdc' });
   });
 
-  it('refuse les chemins absolus (Unix, Windows, UNC)', () => {
+  it('rejects absolute paths (Unix, Windows, UNC)', () => {
     expect(normalizeEntryName('/etc/passwd')).toEqual({
       reject: { code: 'ABSOLUTE_PATH', entry: '/etc/passwd' },
     });
@@ -41,7 +41,7 @@ describe('normalizeEntryName', () => {
     });
   });
 
-  it('refuse la traversée de répertoire et les octets nuls', () => {
+  it('rejects directory traversal and null bytes', () => {
     expect(normalizeEntryName('../../etc/cron.d/x')).toMatchObject({ reject: { code: 'PATH_TRAVERSAL' } });
     expect(normalizeEntryName('assets/../../x')).toMatchObject({ reject: { code: 'PATH_TRAVERSAL' } });
     expect(normalizeEntryName('scene\0.usda')).toMatchObject({ reject: { code: 'PATH_TRAVERSAL' } });
@@ -49,21 +49,21 @@ describe('normalizeEntryName', () => {
 });
 
 describe('isSymlinkEntry', () => {
-  it('reconnaît un lien symbolique Unix dans les attributs externes', () => {
+  it('recognizes a Unix symbolic link in the external attributes', () => {
     expect(isSymlinkEntry((0o120777 << 16) >>> 0)).toBe(true);
   });
-  it('accepte fichiers et répertoires ordinaires', () => {
+  it('accepts ordinary files and directories', () => {
     expect(isSymlinkEntry((0o100644 << 16) >>> 0)).toBe(false);
     expect(isSymlinkEntry((0o040755 << 16) >>> 0)).toBe(false);
   });
-  it('tolère les archives sans attributs Unix', () => {
+  it('tolerates archives without Unix attributes', () => {
     expect(isSymlinkEntry(undefined)).toBe(false);
     expect(isSymlinkEntry(0)).toBe(false);
   });
 });
 
 describe('planExtraction', () => {
-  it('retient les fichiers avec un nom normalisé et somme les tailles', () => {
+  it('keeps the files with a normalized name and sums the sizes', () => {
     const plan = planExtraction(
       [
         { name: 'usd/', size: 0, compressedSize: 0, isDirectory: true },
@@ -77,18 +77,18 @@ describe('planExtraction', () => {
     expect(plan.totalBytes).toBe(1500);
   });
 
-  it('refuse toute l’archive dès qu’une entrée sort du répertoire cible', () => {
+  it('rejects the whole archive as soon as an entry leaves the target directory', () => {
     const plan = planExtraction([file('scene.usda'), file('../../evil.sh')], LIMITS);
     expect(plan.rejection).toMatchObject({ code: 'PATH_TRAVERSAL' });
     expect(plan.files).toEqual([]);
   });
 
-  it('refuse les liens symboliques', () => {
+  it('rejects symbolic links', () => {
     const plan = planExtraction([{ ...file('link'), externalAttributes: (0o120777 << 16) >>> 0 }], LIMITS);
     expect(plan.rejection).toMatchObject({ code: 'SYMLINK' });
   });
 
-  it('borne le nombre d’entrées', () => {
+  it('caps the number of entries', () => {
     const entries = Array.from({ length: 5 }, (_, i) => file(`f${i}.usdc`));
     expect(planExtraction(entries, { ...LIMITS, maxEntries: 4 }).rejection).toMatchObject({
       code: 'TOO_MANY_ENTRIES',
@@ -96,7 +96,7 @@ describe('planExtraction', () => {
     });
   });
 
-  it('borne la taille décompressée cumulée', () => {
+  it('caps the cumulative uncompressed size', () => {
     const plan = planExtraction([file('a.usdc', 800), file('b.usdc', 800)], {
       ...LIMITS,
       maxTotalBytes: 1000,
@@ -104,20 +104,20 @@ describe('planExtraction', () => {
     expect(plan.rejection).toMatchObject({ code: 'TOO_LARGE', limit: 1000 });
   });
 
-  it('refuse une bombe de décompression au-delà du plancher de ratio', () => {
+  it('rejects a decompression bomb above the ratio floor', () => {
     const plan = planExtraction([file('bomb.bin', 64 * 1024 * 1024, 1024)], LIMITS);
     expect(plan.rejection).toMatchObject({ code: 'RATIO' });
   });
 
-  it('ignore le ratio sous le plancher (petit .usda très répétitif)', () => {
+  it('ignores the ratio below the floor (small, highly repetitive .usda)', () => {
     expect(planExtraction([file('scene.usda', 1024 * 1024, 8)], LIMITS).rejection).toBeNull();
   });
 });
 
 describe('describeRejection', () => {
-  it('produit un message lisible pour chaque motif', () => {
-    expect(describeRejection({ code: 'SYMLINK', entry: 'link' })).toContain('lien symbolique');
-    expect(describeRejection({ code: 'TOO_LARGE', limit: 2 * 1024 * 1024, actual: 3 })).toContain('2 Mo');
+  it('produces a readable message for each reason', () => {
+    expect(describeRejection({ code: 'SYMLINK', entry: 'link' })).toContain('symbolic link');
+    expect(describeRejection({ code: 'TOO_LARGE', limit: 2 * 1024 * 1024, actual: 3 })).toContain('2 MB');
     expect(describeRejection({ code: 'RATIO', limit: 200, actual: 5000 })).toContain('×5000');
   });
 });
@@ -125,13 +125,13 @@ describe('describeRejection', () => {
 describe('resolveInside', () => {
   const dest = resolve('/tmp/review-extract');
 
-  it('résout une entrée légitime sous le répertoire cible', () => {
+  it('resolves a legitimate entry under the target directory', () => {
     const target = resolveInside(dest, 'usd/scene.usda');
     expect(target).not.toBeNull();
     expect(target!.startsWith(dest)).toBe(true);
   });
 
-  it('renvoie null pour toute entrée qui s’échappe', () => {
+  it('returns null for any entry that escapes', () => {
     expect(resolveInside(dest, '../evil')).toBeNull();
     expect(resolveInside(dest, '/etc/passwd')).toBeNull();
   });

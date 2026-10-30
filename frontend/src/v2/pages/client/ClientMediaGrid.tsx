@@ -6,9 +6,9 @@ import type { ClientMedia, MediaKind } from '../../types/api';
 import { useT } from '../../i18n';
 
 /**
- * Grille de tuiles de la page publique — le seul endroit où un média s'affiche, quel que
- * soit le chemin qui y mène (accueil, playlist, séquence, plan, asset). Les nœuds de
- * l'arborescence ne portent que des identifiants ; c'est ici qu'ils redeviennent des images.
+ * Tile grid of the public page: the only place a media is displayed, whatever path leads
+ * there (home, playlist, sequence, shot, asset). Tree nodes only carry identifiers; this is
+ * where they turn back into images.
  */
 
 const kindIcon: Record<MediaKind, React.ReactNode> = {
@@ -18,7 +18,7 @@ const kindIcon: Record<MediaKind, React.ReactNode> = {
   SPLAT: <Sparkles size={26} />,
 };
 
-/** Vignette d'une tuile, ou l'icône de son type quand le pipeline n'en a pas produit. */
+/** Thumbnail of a tile, or the icon of its type when the pipeline produced none. */
 export function MediaThumb({ media }: { media: ClientMedia | null }) {
   return (
     <div className="flex aspect-video items-center justify-center overflow-hidden bg-black/50 text-muted-foreground">
@@ -38,7 +38,7 @@ export function MediaThumb({ media }: { media: ClientMedia | null }) {
 
 export const GRID_CLASS = 'grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5';
 
-/** Ce qui situe une livraison sous son nom de fichier : la tâche, puis la version. */
+/** Situates a delivery under its filename: the task, then the version. */
 const subtitleOf = (m: ClientMedia): string =>
   m.version.taskName ? `${m.version.taskName} · ${m.version.name}` : m.version.name;
 
@@ -50,9 +50,9 @@ export default function ClientMediaGrid({
 }: {
   media: readonly ClientMedia[];
   onOpen: (media: ClientMedia) => void;
-  /** Liste compacte : une ligne par média, pour balayer cent plans sans faire défiler. */
+  /** Compact list: one row per media, to scan a hundred shots without scrolling. */
   view?: 'grid' | 'list';
-  /** Message d'absence — « rien de partagé ici » n'est pas « rien ne correspond ». */
+  /** Empty-state message: "nothing shared here" is not "nothing matches". */
   empty?: string;
 }) {
   const t = useT();
@@ -104,8 +104,8 @@ export default function ClientMediaGrid({
           )}
           <div className="px-2.5 py-2">
             <p className="truncate text-xs">{m.originalName}</p>
-            {/* Le nom de la version et celui de la tâche situent la livraison : sans eux, une
-                grille de trois « comp.mov » ne dit pas laquelle est la dernière. */}
+            {/* The version name and the task name locate the delivery: without them, a grid of three
+                "comp.mov" files does not say which one is the latest. */}
             <p className="truncate text-2xs text-muted-foreground">{subtitleOf(m)}</p>
           </div>
         </button>

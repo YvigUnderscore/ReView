@@ -2,14 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Progression d'un job média, publiée via `job.updateProgress`.
+ * Progress of a media job, published via `job.updateProgress`.
  *
- * Sans elle, un job bloqué depuis six heures est indiscernable d'un long encodage :
- * le tableau de bord d'administration ne montre qu'un « actif » muet. On découpe donc
- * chaque type de travail en étapes nommées, chacune occupant une plage du pourcentage
- * global, et on interpole à l'intérieur d'une étape avec la progression remontée par
- * ffmpeg. Les plages sont grossièrement proportionnées au coût observé : sur une vidéo,
- * l'échelle HLS pèse la moitié du travail.
+ * Without it, a job stuck for six hours is indistinguishable from a long encode: the admin dashboard only shows a mute
+ * "active". Each type of work is therefore split into named steps, each occupying a range of the global percentage,
+ * and we interpolate within a step with the progress reported by ffmpeg. The ranges are roughly proportioned to the
+ * observed cost: on a video, the HLS ladder weighs half the work.
  */
 
 export type MediaJobKind = 'transcode' | 'thumbnail' | 'convert3d' | 'scan';
@@ -27,20 +25,20 @@ export type MediaJobStep =
   | 'scan'
   | 'done';
 
-/** État publié sur le job BullMQ (sérialisé tel quel dans Redis). */
+/** State published on the BullMQ job (serialised as-is in Redis). */
 export interface MediaJobProgress {
   step: MediaJobStep;
-  /** Pourcentage global, entier, 0-100. */
+  /** Global percentage, integer, 0-100. */
   percent: number;
-  /** Rang de la rendition en cours (1-based), quand l'étape est répétée. */
+  /** Rank of the current rendition (1-based), when the step is repeated. */
   index?: number;
-  /** Nombre total de répétitions de l'étape. */
+  /** Total number of repetitions of the step. */
   total?: number;
 }
 
 type Range = readonly [number, number];
 
-/** Plages de pourcentage par type de travail. La somme couvre 0 → 100. */
+/** Percentage ranges per type of work. The sum covers 0 → 100. */
 const RANGES: Record<MediaJobKind, Partial<Record<MediaJobStep, Range>>> = {
   transcode: {
     download: [0, 8],
@@ -72,20 +70,19 @@ const RANGES: Record<MediaJobKind, Partial<Record<MediaJobStep, Range>>> = {
 };
 
 export interface MediaProgressOptions {
-  /** Rang 0-based de la répétition en cours (renditions HLS). */
+  /** 0-based rank of the current repetition (HLS renditions). */
   index?: number;
-  /** Nombre total de répétitions. */
+  /** Total number of repetitions. */
   total?: number;
-  /** Avancement 0→1 à l'intérieur de la répétition courante (progression ffmpeg). */
+  /** Progress 0→1 within the current repetition (ffmpeg progress). */
   fraction?: number;
 }
 
 const clamp01 = (v: number): number => (Number.isFinite(v) ? Math.min(1, Math.max(0, v)) : 0);
 
 /**
- * Pourcentage global au début (`fraction` absente) ou au cours d'une étape.
- * Une étape inconnue pour ce type de travail renvoie 0 : c'est une erreur de
- * programmation, elle ne doit jamais faire échouer un transcodage.
+ * Global percentage at the start (`fraction` absent) or during a step.
+ * An step unknown for this type of work returns 0: it is a programming error, and must never make a transcode fail.
  */
 export function mediaJobProgress(
   kind: MediaJobKind,
@@ -109,7 +106,7 @@ export function mediaJobProgress(
   return out;
 }
 
-/** Position temporelle d'un `timemark` ffmpeg (« 00:01:23.45 ») en secondes. */
+/** Time position of an ffmpeg `timemark` ("00:01:23.45") in seconds. */
 export function parseTimemarkSec(timemark: unknown): number | null {
   if (typeof timemark !== 'string') return null;
   const m = /^(\d+):(\d{1,2}):(\d{1,2}(?:\.\d+)?)$/.exec(timemark.trim());
@@ -120,12 +117,12 @@ export function parseTimemarkSec(timemark: unknown): number | null {
 }
 
 /**
- * Avancement 0→1 d'une commande ffmpeg, d'après son événement `progress`.
+ * Progress 0→1 of an ffmpeg command, from its `progress` event.
  *
- * `percent` n'est renseigné que si fluent-ffmpeg connaît la durée totale — ce qui n'est
- * pas le cas d'une entrée synthétique ni d'un conteneur sans en-tête de durée. On retombe
- * alors sur le `timemark`, rapporté à la durée sondée du média. Sans l'un ni l'autre,
- * `null` : l'appelant garde le pourcentage du début d'étape plutôt que d'inventer.
+ * `percent` is only filled in when fluent-ffmpeg knows the total duration — which is not the case for a synthetic
+ * input nor for a container without a duration header. We then fall back on the `timemark`, relative to the probed
+ * duration of the media. Without either, `null`: the caller keeps the percentage at the start of the step rather
+ * than inventing one.
  */
 export function ffmpegFraction(
   progress: { percent?: number | null; timemark?: string | null },

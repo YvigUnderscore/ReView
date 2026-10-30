@@ -22,28 +22,27 @@ export interface PickableTask {
 const ROW =
   'flex w-full items-center gap-2 rounded-md border border-border px-3 py-2 text-left text-sm transition-colors hover:border-primary/60 hover:bg-secondary/40';
 
-/** Clé d'attente de la tâche sans étape : les autres valent `sg-<id>` ou `dept-<id>`. */
+/** Wait key of the stepless task: the others are `sg-<id>` or `dept-<id>`. */
 const STEPLESS_KEY = 'stepless';
 
 /**
- * À quelle tâche appartient cette version ?
+ * Which task does this version belong to?
  *
- * Jusqu'ici la destination était le contexte de navigation : une version créée depuis un
- * asset s'y accrochait directement, sans jamais passer par une tâche. Sur un projet
- * ShotGrid, où un asset traverse cinq étapes (art, model, rig, groom, lookdev) et chaque
- * plan autant, cela range un rendu de texturing à côté de l'asset plutôt que sous l'étape
- * qui l'a produit — et la version poussée vers le site arrive sans `sg_task`.
+ * Until now the destination was the navigation context: a version created from an asset
+ * attached itself directly to it, never going through a task. On a ShotGrid project, where an
+ * asset goes through five steps (art, model, rig, groom, lookdev) and each shot as many,
+ * this filed a texturing render next to the asset rather than under the step that produced
+ * it — and the version pushed to the site arrived without `sg_task`.
  *
- * Le dialogue s'ouvre toujours DEPUIS une entité, et ne propose que les tâches de
- * celle-ci. Il a listé un temps le reste du projet — du même bord, asset ou plan — pour
- * ranger un rendu sous n'importe quelle étape sans quitter la page. Fausse commodité :
- * on dépose sur l'entité qu'on regarde, et une version rangée sous un autre asset part
- * vers le site au mauvais endroit, ce qui ne se rattrape pas. Si l'étape manque, on la
- * crée ici même, sur l'entité ouverte.
+ * The dialog always opens FROM an entity, and only offers that entity's tasks. It once listed
+ * the rest of the project — from the same side, asset or shot — to file a render under any
+ * step without leaving the page. A false convenience: you drop onto the entity you are
+ * looking at, and a version filed under another asset goes to the site in the wrong place,
+ * which cannot be undone. If the step is missing, it is created right here, on the open entity.
  *
- * Reste à ne jamais être sans issue : quand l'entité n'a aucune tâche et le pipe aucune
- * étape à proposer, le dialogue explique pourquoi et laisse créer une tâche SANS étape
- * (cf. `barren` / `stepless`). Une boîte vide rendait le dépôt impossible.
+ * It must still never leave the user without an exit: when the entity has no task and the
+ * pipeline offers no step to propose, the dialog explains why and lets the user create a task
+ * WITHOUT a step (see `barren` / `stepless`). An empty box made the drop impossible.
  */
 export default function TaskPickerDialog({
   open,
@@ -56,41 +55,40 @@ export default function TaskPickerDialog({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** Tâches de l'entité ouverte, déjà connues de la page. */
+  /** Tasks of the open entity, already known to the page. */
   tasks: PickableTask[];
   projectId: number;
   /**
-   * L'entité depuis laquelle le dialogue est ouvert : la seule destination possible, et
-   * celle qui portera la tâche créée à la volée. Exigée — un dépôt sans entité connue
-   * n'existe pas, et le type interdit de faire revenir la liste du projet entier.
+   * The entity the dialog is opened from: the only possible destination, and the one that
+   * will carry the task created on the fly. Required — a drop without a known entity does
+   * not exist, and the type forbids bringing back the whole project list.
    */
   parent: { kind: 'asset' | 'shot'; id: number };
   /**
-   * Permettre de rattacher la version au parent plutôt qu'à une tâche.
+   * Allow attaching the version to the parent rather than to a task.
    *
-   * **Réservé à un asset.** Une version pend à une tâche OU à un asset, jamais à un plan :
-   * la base l'impose (`CHECK Version_parent_xor`, `num_nonnulls(taskId, assetId) = 1`), et
-   * `ShotPage` refuse d'ailleurs un `taskId` nul. Le poser sur un plan par symétrie
-   * n'ouvrirait donc qu'un bouton sans effet — sur un plan, la sortie est `stepless`.
+   * **Reserved for an asset.** A version hangs off a task OR an asset, never a shot: the
+   * database enforces it (`CHECK Version_parent_xor`, `num_nonnulls(taskId, assetId) = 1`), and
+   * `ShotPage` in fact refuses a null `taskId`. Setting it on a shot for symmetry would
+   * therefore only open a button with no effect — on a shot, the exit is `stepless`.
    */
   allowNone?: boolean;
   onPick: (taskId: number | null) => void;
 }) {
   const t = useT();
   const [creating, setCreating] = useState<string | null>(null);
-  // Les tâches du projet ne servent plus de destinations — seulement à proposer des noms
-  // déjà employés. Demandées à l'ouverture seulement : sur un gros projet, ce n'est pas
-  // une liste à charger à chaque affichage de page.
+  // The project's tasks no longer serve as destinations — only to suggest names already
+  // used. Requested on opening only: on a large project, it is not a list to load on every page render.
   const { data: projectTasks = [] } = useProjectTasks(projectId, open);
-  // Les étapes du pipe, d'où qu'elles viennent : le site sur un projet relié — elles y
-  // existent avant toute tâche, et c'est ce qui manquait pour déposer un rendu sur un asset
-  // neuf — les départements du projet sinon (B2).
+  // The pipeline steps, wherever they come from: the site on a linked project — they exist
+  // there before any task, which is what was missing to drop a render on a new asset — the
+  // project's departments otherwise (B2).
   const { linked, steps, isLoading } = useTaskSteps(projectId, parent.kind, open);
   const { data: members = [] } = useSgProjectMembers(projectId, open && linked);
   const createTask = useCreateStepTask(projectId);
-  // Nom et personne à qui confier la tâche : proposés, jamais imposés. Le nom part du
-  // code de l'étape — c'est la convention — mais un studio nomme parfois « model_hi »
-  // là où l'étape s'appelle « modeling ».
+  // Name and person to assign the task to: suggested, never imposed. The name comes from the
+  // step's code — that is the convention — but a studio sometimes names "model_hi" where the
+  // step is called "modeling".
   const [draftName, setDraftName] = useState('');
   const [assignee, setAssignee] = useState('');
 
@@ -100,11 +98,10 @@ export default function TaskPickerDialog({
   };
 
   /**
-   * Étapes qu'aucune tâche de l'entité ne couvre encore.
+   * Steps that no task of the entity covers yet.
    *
-   * Toutes déroulées, sans recherche : la liste est celle du projet — celles que le
-   * studio a déclarées, ou à défaut celles que ses tasks emploient — et elle tient à
-   * l'écran. Chercher dans cinq lignes n'aide personne.
+   * All listed, without search: the list is the project's — the ones the studio declared, or
+   * failing that the ones its tasks use — and it fits on screen. Searching five rows helps no one.
    */
   const freeSteps = useMemo(() => {
     const covered = new Set(tasks.map((task) => (task.department ?? task.name).toLowerCase()));
@@ -112,44 +109,43 @@ export default function TaskPickerDialog({
   }, [steps, tasks]);
 
   /**
-   * Rien à choisir et rien à créer : le dialogue serait une boîte vide, et le dépôt
+   * Nothing to choose and nothing to create: the dialog would be an empty box, and the drop
    * impossible.
    *
-   * Le cas est atteignable, et pas seulement en configuration exotique : rien ne sème de
-   * département à l'installation, donc un studio qui n'en a jamais déclaré n'en a AUCUN ;
-   * la politique de département ne laisse d'étape écrivable qu'à qui appartient à l'une
-   * d'elles ; un site relié peut ne rien exposer pour ce type d'entité. Sur une entité
-   * neuve il ne restait alors que la croix de la modale, et le média restait sur le bureau.
-   * La liste du projet entier servait de sortie de secours — elle déposait au mauvais
-   * endroit, ce qui ne se rattrape pas.
+   * The case is reachable, and not only in an exotic configuration: nothing seeds a department
+   * at installation, so a studio that never declared one has NONE; the department policy only
+   * leaves a step writable to whoever belongs to one of them; a linked site may expose nothing
+   * for this kind of entity. On a fresh entity only the modal's close button was left, and the
+   * media stayed on the desktop. The whole project's list served as the emergency exit — it
+   * filed in the wrong place, which cannot be undone.
    */
   const barren = !isLoading && tasks.length === 0 && freeSteps.length === 0;
   /**
-   * La vraie sortie : une tâche SANS étape, sur l'entité ouverte. Le serveur l'accepte de
-   * tout contributeur — la politique de département ne se vérifie que lorsqu'une étape est
-   * renseignée (`TaskService.create`) — et elle range la version au bon endroit.
+   * The real exit: a task WITHOUT a step, on the open entity. The server accepts it from any
+   * contributor — the department policy is only checked when a step is set (`TaskService.create`) —
+   * and it files the version in the right place.
    *
-   * Jamais sur un projet relié : une tâche née dans ReView y ferait doublon à la
-   * synchronisation suivante. Là, c'est au site de déclarer l'étape ; le dialogue le dit.
+   * Never on a linked project: a task born in ReView would duplicate on the next sync. There,
+   * it is up to the site to declare the step; the dialog says so.
    */
   const stepless = barren && !linked;
-  // Sans étape, le nom ne peut plus retomber sur son code : il devient obligatoire, et le
-  // libellé du champ doit cesser de promettre un défaut qui n'existe pas.
+  // Without a step, the name can no longer fall back to its code: it becomes mandatory, and
+  // the field label must stop promising a default that does not exist.
   const namePrompt = stepless ? t('upload.pickTask.nameRequired') : t('upload.pickTask.namePlaceholder');
 
   const createFromStep = async (step: PickableStep | null) => {
     setCreating(step?.key ?? STEPLESS_KEY);
     try {
-      // La tâche naît dans ShotGrid ou dans ReView selon l'étape choisie — `useCreateStepTask`
-      // tranche, le dialogue n'a pas à connaître les deux chemins.
+      // The task is born in ShotGrid or in ReView depending on the chosen step — `useCreateStepTask`
+      // decides, the dialog does not need to know both paths.
       const created = await createTask({
         step,
         parent,
         name: draftName,
         assigneeSgId: assignee ? Number(assignee) : null,
       });
-      // Le message ne promet ShotGrid que lorsque la tâche y a bien été créée : sur un
-      // projet autonome, annoncer une écriture distante serait faux.
+      // The message only mentions ShotGrid when the task was really created there: on a
+      // standalone project, announcing a remote write would be false.
       toast.success(
         step?.sgId !== undefined
           ? t('upload.pickTask.created', { name: created.name })
@@ -169,7 +165,7 @@ export default function TaskPickerDialog({
         <DialogHeader>
           <DialogTitle>{t('upload.pickTask.title')}</DialogTitle>
         </DialogHeader>
-        {/* L'aide parlait de ShotGrid à tout le monde, y compris sur un projet autonome. */}
+        {/* The help text mentioned ShotGrid to everyone, including on a standalone project. */}
         <p className="text-sm text-muted-foreground">
           {linked ? t('upload.pickTask.hint') : t('upload.pickTask.hintLocal')}
         </p>
@@ -180,8 +176,8 @@ export default function TaskPickerDialog({
               <FileStack size={14} className="shrink-0 text-muted-foreground" />
               <span className="min-w-0 flex-1">
                 <span className="truncate font-medium">{task.name}</span>
-                {/* Le département ne s'affiche que s'il apprend quelque chose : sur un
-                    site ShotGrid, le nom de la tâche EST souvent celui de l'étape. */}
+                {/* The department is only shown if it adds information: on a ShotGrid site, the
+                    task's name is often the step's name. */}
                 {task.department && task.department !== task.name && (
                   <span className="ml-2 text-xs text-muted-foreground">
                     <Layers size={10} className="mr-0.5 inline" />
@@ -196,10 +192,10 @@ export default function TaskPickerDialog({
             </button>
           ))}
 
-          {/* Le pipe se charge : dire « rien à choisir » avant sa réponse serait faux. */}
+          {/* The pipeline is loading: saying "nothing to choose" before its response would be false. */}
           {isLoading && <p className="px-1 py-2 text-sm text-muted-foreground">{t('common.loading')}</p>}
 
-          {/* La boîte vide s'explique, et dit ce qui reste à faire pour déposer quand même. */}
+          {/* The empty box is explained, and says what is left to do to drop anyway. */}
           {barren && (
             <p className="rounded-md border border-dashed border-border px-3 py-2 text-sm text-muted-foreground">
               {stepless ? t('upload.pickTask.barren') : t('upload.pickTask.barrenLinked')}
@@ -220,10 +216,10 @@ export default function TaskPickerDialog({
                   aria-label={namePrompt}
                   className="rounded-md border border-input bg-background px-2 py-1.5 text-sm"
                 />
-                {/* Les noms déjà employés — ici et ailleurs dans le projet. Un nom n'est
-                    pas une destination : la convention du studio se lit sur tout le
-                    projet (« model_hi » là où l'étape s'appelle « modeling »), alors que
-                    la version, elle, ne peut se ranger que sous l'entité ouverte. */}
+                {/* Names already used — here and elsewhere in the project. A name is not a
+                    destination: the studio's convention is read across the whole project
+                    ("model_hi" where the step is called "modeling"), whereas the version
+                    can only be filed under the open entity. */}
                 <datalist id="review-task-names">
                   {[...new Set([...tasks.map((x) => x.name), ...projectTasks.map((x) => x.name)])].map(
                     (n) => (
@@ -262,7 +258,7 @@ export default function TaskPickerDialog({
                 <Plus size={14} className="shrink-0 text-muted-foreground" />
               )}
               <span className="min-w-0 flex-1 truncate">
-                {/* Le libellé ne promet ShotGrid que lorsque la tâche y sera bien créée. */}
+                {/* The label only promises ShotGrid when the task will really be created there. */}
                 {step.sgId !== undefined
                   ? t('upload.pickTask.createStep', { step: step.code })
                   : t('upload.pickTask.createStepLocal', { step: step.code })}
@@ -276,8 +272,8 @@ export default function TaskPickerDialog({
           {stepless && (
             <button
               type="button"
-              // Sans étape d'où tirer le nom, un nom vide ferait une tâche que le serveur
-              // refuse : le bouton attend qu'on en donne un.
+              // Without a step to take the name from, an empty name would make a task the server
+              // refuses: the button waits for one to be given.
               disabled={creating !== null || draftName.trim() === ''}
               onClick={() => void createFromStep(null)}
               className={`${ROW} disabled:opacity-50`}

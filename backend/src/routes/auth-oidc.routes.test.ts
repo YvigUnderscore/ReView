@@ -4,10 +4,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * L'issuer OIDC est une URL d'administration que le serveur va chercher lui-même, depuis
- * le réseau applicatif : jusqu'ici `openid-client` la suivait sans aucun contrôle. Ces
- * tests vérifient que la bibliothèque reçoit bien notre `fetch` durci, et que ce dernier
- * refuse une cible interne.
+ * The OIDC issuer is an administration URL that the server fetches itself, from the application
+ * network: until now `openid-client` followed it without any control. These tests verify that the
+ * library does receive our hardened `fetch`, and that the latter refuses an internal target.
  */
 const { CUSTOM_FETCH, discoveryMock, buildUrlMock, oidcCfg } = vi.hoisted(() => ({
   CUSTOM_FETCH: Symbol.for('openid-client.customFetch'),
@@ -61,14 +60,14 @@ const app = express().use(express.json()).use('/api/auth/oidc', oidcRoutes).use(
 
 type GuardedFetch = (url: string, options: RequestInit) => Promise<Response>;
 
-/** Le `fetch` remis à openid-client lors de la découverte. */
+/** The `fetch` handed to openid-client during discovery. */
 async function capturedFetch(issuer: string): Promise<GuardedFetch> {
   const config: Record<symbol, unknown> = {};
   discoveryMock.mockResolvedValue(config);
   oidcCfg.current = { ...oidcCfg.current, issuer };
   await request(app).get('/api/auth/oidc/login');
   const options = discoveryMock.mock.calls.at(-1)?.[4] as Record<symbol, GuardedFetch>;
-  // La découverte reçoit l'option ET la configuration la conserve, pour l'échange du code.
+  // Discovery receives the option, and the configuration keeps it for the code exchange.
   expect(config[CUSTOM_FETCH]).toBe(options[CUSTOM_FETCH]);
   return options[CUSTOM_FETCH]!;
 }
@@ -78,13 +77,13 @@ beforeEach(() => {
   vi.mocked(lookup).mockResolvedValue([{ address: '93.184.216.34', family: 4 }] as never);
 });
 
-describe('SSO OIDC — requêtes sortantes sous garde', () => {
-  it('remet un fetch durci à openid-client', async () => {
+describe('SSO OIDC — outbound requests under guard', () => {
+  it('hands a hardened fetch to openid-client', async () => {
     const guarded = await capturedFetch('https://accounts.a.exemple.com');
     expect(typeof guarded).toBe('function');
   });
 
-  it('refuse un issuer qui vise le service de métadonnées', async () => {
+  it('rejects an issuer targeting the metadata service', async () => {
     const guarded = await capturedFetch('https://accounts.b.exemple.com');
     const fetchMock = vi.fn<typeof fetch>();
     vi.stubGlobal('fetch', fetchMock);
@@ -95,7 +94,7 @@ describe('SSO OIDC — requêtes sortantes sous garde', () => {
     vi.unstubAllGlobals();
   });
 
-  it('refuse un issuer dont le nom résout vers une adresse interne', async () => {
+  it('rejects an issuer whose name resolves to an internal address', async () => {
     const guarded = await capturedFetch('https://accounts.c.exemple.com');
     vi.mocked(lookup).mockResolvedValue([{ address: '10.0.0.5', family: 4 }] as never);
     await expect(guarded('https://sso.interne.exemple/token', { method: 'POST' })).rejects.toBeInstanceOf(
@@ -103,7 +102,7 @@ describe('SSO OIDC — requêtes sortantes sous garde', () => {
     );
   });
 
-  it('émet vers un fournisseur public, sans jamais suivre une redirection en aveugle', async () => {
+  it('sends to a public provider, never following a redirect blindly', async () => {
     const guarded = await capturedFetch('https://accounts.d.exemple.com');
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response('{}', { status: 200 }));
     vi.stubGlobal('fetch', fetchMock);
@@ -117,12 +116,12 @@ describe('SSO OIDC — requêtes sortantes sous garde', () => {
 });
 
 /**
- * A1-01 — la porte la plus large de toutes : en SSO, l'identité vit chez le fournisseur et
- * survit au départ. Sans garde, le callback rendait au partant, sans même un mot de passe,
- * l'accès que la désactivation venait de lui retirer.
+ * A1-01: the widest gate of all. With SSO, the identity lives with the provider and outlives the
+ * departure. Without a guard, the callback handed the leaver, even without a password, the access
+ * that the deactivation had just withdrawn from them.
  */
-describe('GET /api/auth/oidc/callback — compte désactivé', () => {
-  /** Cookie d'état : le callback exige le state+nonce qu'il a lui-même posés. */
+describe('GET /api/auth/oidc/callback — deactivated account', () => {
+  /** State cookie: the callback requires the state and nonce that it set itself. */
   const stateCookie = () =>
     `oidc_state=${jwt.sign({ kind: 'oidc', state: 's1', nonce: 'n1' }, env.JWT_SECRET)}`;
 
@@ -141,16 +140,26 @@ describe('GET /api/auth/oidc/callback — compte désactivé', () => {
     return request(app).get('/api/auth/oidc/callback?code=abc&state=s1').set('Cookie', stateCookie());
   };
 
-  it('n’émet aucun jeton pour un compte désactivé', async () => {
+  it('issues no token for a deactivated account', async () => {
     const res = await callback(new Date());
     expect(res.headers.location).toContain('#ssoerr=');
     expect(res.headers.location).not.toContain('#sso=');
     expect(createSession).not.toHaveBeenCalled();
   });
 
-  it('connecte normalement un compte actif', async () => {
+  it('logs in an active account normally', async () => {
     const res = await callback(null);
     expect(res.headers.location).toContain('#sso=');
     expect(createSession).toHaveBeenCalled();
+  });
+
+  it('puts no token in the redirect URL: the refresh token goes into its httpOnly cookie', async () => {
+    const res = await callback(null);
+    expect(res.headers.location).toBe('/login#sso=cookie');
+    const cookies = ([] as string[]).concat(res.headers['set-cookie'] ?? []);
+    const refresh = cookies.find((c) => c.startsWith('review_refresh='));
+    expect(refresh).toMatch(/HttpOnly/i);
+    expect(refresh).toMatch(/SameSite=Strict/i);
+    expect(refresh).toMatch(/Path=\/api\/auth\/refresh/);
   });
 });

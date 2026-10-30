@@ -25,142 +25,142 @@ const check = (base, target, options = {}) =>
   });
 
 describe('placeholders', () => {
-  it('relève les variables interpolées', () => {
+  it('reports the interpolated variables', () => {
     expect(placeholders('{translated} sur {total}')).toEqual(new Set(['translated', 'total']));
   });
 
-  it('rend un ensemble vide sans variable', () => {
+  it('returns an empty set when there is no variable', () => {
     expect(placeholders('Bonjour')).toEqual(new Set());
   });
 
-  it('ignore les accolades qui n’encadrent pas un identifiant', () => {
+  it('ignores braces that do not enclose an identifier', () => {
     expect(placeholders('{ } {-}')).toEqual(new Set());
   });
 });
 
 describe('normalizeMessage', () => {
-  it('range une chaîne simple sous « other »', () => {
+  it('files a plain string under "other"', () => {
     expect(normalizeMessage('Bonjour')).toEqual({ other: 'Bonjour' });
   });
 
-  it('laisse les formes plurielles telles quelles', () => {
+  it('leaves plural forms as they are', () => {
     expect(normalizeMessage({ one: 'a', other: 'b' })).toEqual({ one: 'a', other: 'b' });
   });
 });
 
 describe('resolveIntlTag', () => {
-  it('retient la première étiquette connue d’Intl', () => {
+  it('keeps the first tag known to Intl', () => {
     expect(resolveIntlTag(['fr'])).toBe('fr');
   });
 
-  it('passe à la candidate suivante quand la langue est absente d’ICU', () => {
+  it('moves on to the next candidate when the language is absent from ICU', () => {
     expect(resolveIntlTag(['zz-nope', 'de'])).toBe('de');
   });
 
-  it('retombe sur l’anglais quand aucune candidate n’est connue', () => {
+  it('falls back to English when no candidate is known', () => {
     expect(resolveIntlTag(['zz-nope', 'qq-nope'])).toBe('en');
   });
 
-  it('survit à une étiquette mal formée', () => {
+  it('survives a malformed tag', () => {
     expect(resolveIntlTag(['!!!', 'fr'])).toBe('fr');
   });
 });
 
 describe('supportedCategories', () => {
-  it('rend « other » seul pour le japonais', () => {
+  it('returns "other" alone for Japanese', () => {
     expect(supportedCategories('ja')).toEqual(['other']);
   });
 
-  it('distingue le singulier en anglais', () => {
+  it('distinguishes the singular in English', () => {
     expect(supportedCategories('en')).toContain('one');
   });
 
-  it('ne rend que des catégories CLDR connues', () => {
+  it('only returns known CLDR categories', () => {
     for (const c of supportedCategories('fr')) expect(CLDR_CATEGORIES).toContain(c);
   });
 });
 
 describe('glossaryHits', () => {
-  it('reconnaît le terme au pluriel', () => {
+  it('recognises the term in the plural', () => {
     expect(glossaryHits('vos reviews et boards', TERMS)).toContain('board');
   });
 
-  it('reconnaît le terme suffixé par une langue agglutinante', () => {
+  it('recognises the term suffixed by an agglutinative language', () => {
     expect(glossaryHits('boardetara itzultzeko', TERMS)).toContain('board');
   });
 
-  it('reconnaît le terme collé à un caractère non latin', () => {
+  it('recognises the term attached to a non-Latin character', () => {
     expect(glossaryHits('作業、board로 돌아가세요', TERMS)).toContain('board');
   });
 
-  it('ignore la casse', () => {
+  it('ignores case', () => {
     expect(glossaryHits('Bienvenue sur ReView', ['review'])).toEqual(['review']);
   });
 
-  it('ne déclenche pas sur une fin de mot', () => {
+  it('does not trigger on the end of a word', () => {
     expect(glossaryHits('skateboard', ['board'])).toEqual([]);
   });
 });
 
 describe('sameRegistry', () => {
-  it('ignore les clés de commentaire', () => {
+  it('ignores the comment keys', () => {
     expect(sameRegistry({ $comment: 'a', base: 'en' }, { base: 'en' })).toBe(true);
   });
 
-  it('repère une langue en écart', () => {
+  it('spots a language that has drifted', () => {
     expect(sameRegistry({ locales: ['en'] }, { locales: ['en', 'fr'] })).toBe(false);
   });
 });
 
 describe('localeUnionCodes', () => {
-  it('extrait les codes de l’union TypeScript', () => {
+  it('extracts the codes of the TypeScript union', () => {
     const source = "export type Locale =\n  | 'en'\n  | 'zh-Hans';\n\nexport const X = 1;";
     expect(localeUnionCodes(source)).toEqual(['en', 'zh-Hans']);
   });
 
-  it('rend null quand l’union est absente', () => {
+  it('returns null when the union is absent', () => {
     expect(localeUnionCodes('export const X = 1;')).toBeNull();
   });
 });
 
 describe('checkCatalog', () => {
-  it('accepte une traduction conforme et compte les clés traduites', () => {
+  it('accepts a compliant translation and counts the translated keys', () => {
     const r = check({ a: 'Hello {name}', b: 'Bye' }, { a: 'Bonjour {name}' });
     expect(r.errors).toEqual([]);
     expect(r.translated).toBe(1);
   });
 
-  it('refuse une variable perdue', () => {
+  it('refuses a lost variable', () => {
     const r = check({ a: 'Hello {name}' }, { a: 'Bonjour' });
     expect(r.errors.join()).toMatch(/perd la variable \{name\}/);
   });
 
-  it('refuse une variable inventée', () => {
+  it('refuses an invented variable', () => {
     const r = check({ a: 'Hello' }, { a: 'Bonjour {name}' });
     expect(r.errors.join()).toMatch(/invente la variable \{name\}/);
   });
 
-  it('refuse une clé absente de la référence', () => {
+  it('refuses a key absent from the reference', () => {
     const r = check({ a: 'Hello' }, { a: 'Bonjour', zzz: 'Orpheline' });
     expect(r.errors.join()).toMatch(/« zzz » absente du catalogue de référence/);
   });
 
-  it('refuse un message compté rendu par une chaîne simple', () => {
+  it('refuses a counted message rendered as a plain string', () => {
     const r = check({ a: { one: '{n} item', other: '{n} items' } }, { a: '{n} éléments' });
     expect(r.errors.join()).toMatch(/attend des formes plurielles/);
   });
 
-  it('refuse des formes plurielles sans « other »', () => {
+  it('refuses plural forms without "other"', () => {
     const r = check({ a: { one: '{n} item', other: '{n} items' } }, { a: { one: '{n} élément' } });
     expect(r.errors.join()).toMatch(/n'a pas de forme « other »/);
   });
 
-  it('refuse une forme hors CLDR', () => {
+  it('refuses a form outside CLDR', () => {
     const r = check({ a: { other: '{n} items' } }, { a: { plural: '{n} éléments', other: '{n} éléments' } });
     expect(r.errors.join()).toMatch(/forme inconnue « plural »/);
   });
 
-  it('refuse une forme que la langue ne distingue pas', () => {
+  it('refuses a form the language does not distinguish', () => {
     const r = check(
       { a: { one: '{n} item', other: '{n} items' } },
       { a: { one: '1 件', other: '{n} 件' } },
@@ -171,33 +171,33 @@ describe('checkCatalog', () => {
     expect(r.errors.join()).toMatch(/définit « one », que cette langue ne distingue pas/);
   });
 
-  it('refuse un terme métier traduit', () => {
+  it('refuses a translated business term', () => {
     const r = check({ a: 'Open the shot' }, { a: 'Ouvrir le plan' });
     expect(r.errors.join()).toMatch(/terme métier « shot »/);
   });
 
-  it('accepte un terme métier conservé au pluriel', () => {
+  it('accepts a business term kept in the plural', () => {
     const r = check({ a: 'Your dailies' }, { a: 'Vos dailies' });
     expect(r.errors).toEqual([]);
   });
 
-  it('refuse un message vide', () => {
+  it('refuses an empty message', () => {
     const r = check({ a: 'Hello' }, { a: '   ' });
     expect(r.errors.join()).toMatch(/est vide/);
   });
 
-  it('signale sans bloquer une forme plurielle manquante', () => {
+  it('reports a missing plural form without blocking', () => {
     const r = check({ a: { one: '{n} item', other: '{n} items' } }, { a: { other: '{n} éléments' } });
     expect(r.errors).toEqual([]);
     expect(r.warnings.join()).toMatch(/n'a pas de forme « one »/);
   });
 
-  it('ne réclame pas de formes plurielles sur une phrase ordinaire', () => {
+  it('does not demand plural forms for an ordinary sentence', () => {
     const r = check({ a: 'Hello' }, { a: 'Bonjour' });
     expect(r.warnings).toEqual([]);
   });
 
-  it('tolère une traduction partielle', () => {
+  it('tolerates a partial translation', () => {
     const r = check({ a: 'Hello', b: 'Bye', c: 'Ciao' }, { a: 'Bonjour' });
     expect(r.errors).toEqual([]);
     expect(r.translated).toBe(1);

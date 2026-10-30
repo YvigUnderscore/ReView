@@ -5,30 +5,30 @@ import type { Shape } from '../../components/AnnotationCanvas';
 import type { Hotspot3D } from '../review/reviewTypes';
 
 /**
- * Ce qu'un invité joint à son commentaire — **pur**, donc testable sans monter un viewer.
+ * What a guest attaches to their comment: **pure**, so testable without mounting a viewer.
  *
- * Le format est celui de la review interne (`useSubmitComment`) : un tableau de « parts »
- * relu par `splitAnnotationParts`. Il n'y a pas de format « client » : le retour d'un client
- * se rouvre dans la review de l'artiste, et deux formats qui divergent, c'est un dessin qui
- * ne s'affiche plus six mois plus tard.
+ * The format is the internal review's (`useSubmitComment`): an array of "parts" read back
+ * by `splitAnnotationParts`. There is no "client" format. A client's feedback is reopened
+ * in the artist's review, and two diverging formats would mean a drawing that no longer
+ * displays six months later.
  *
- * Ce que l'invité ne joint PAS, et que le backend refuse de sa part : une proposition de
- * mise en scène 3D (`scene-override`), une animation caméra, les traits du painter. Ce sont
- * des gestes d'auteur rejoués pour tous les spectateurs — pas des remarques de client.
+ * What the guest does NOT attach, and the backend refuses from them: a 3D staging proposal
+ * (`scene-override`), a camera animation, painter strokes. These are author gestures
+ * replayed for all viewers, not client remarks.
  */
 
-/** Contenu de repli quand l'invité n'envoie qu'un dessin : le serveur exige un texte. */
+/** Fallback content when the guest sends only a drawing: the server requires text. */
 const DRAWING_ONLY = '(annotation)';
 
 export interface GuestAnnotationInput {
   shapes: readonly Shape[];
-  /** Point de surface posé sur un modèle 3D ou un splat. */
+  /** Surface point placed on a 3D model or a splat. */
   hotspot?: Hotspot3D | null;
 }
 
 /**
- * Assemble les parts. Le hotspot vient en tête, comme côté interne : `splitAnnotationParts`
- * n'en retient qu'un, et l'ordre décide lequel.
+ * Assembles the parts. The hotspot comes first, as internally: `splitAnnotationParts` keeps
+ * only one, and the order decides which.
  */
 export function buildGuestAnnotation({ shapes, hotspot }: GuestAnnotationInput): unknown[] | undefined {
   const parts: unknown[] = [];
@@ -43,7 +43,7 @@ export function buildGuestAnnotation({ shapes, hotspot }: GuestAnnotationInput):
   return parts.length > 0 ? parts : undefined;
 }
 
-/** Un dessin seul vaut un retour : le texte devient facultatif dès qu'il y a une annotation. */
+/** A drawing alone counts as feedback: the text becomes optional once there is an annotation. */
 export function guestCommentContent(text: string, annotation: unknown[] | undefined): string | null {
   const trimmed = text.trim();
   if (trimmed) return trimmed;
@@ -51,8 +51,8 @@ export function guestCommentContent(text: string, annotation: unknown[] | undefi
 }
 
 /**
- * Numéro de frame cité par l'invité, dans la numérotation du studio. Il est calculé sur le
- * temps **du média** (slate retiré) : l'invité et l'artiste doivent parler de la même image.
+ * Frame number cited by the guest, in the studio's numbering. It is computed on the **media**
+ * time (slate removed): the guest and the artist must talk about the same image.
  */
 export function frameOf(mediaSeconds: number, fps: number, startFrame: number): number {
   if (!Number.isFinite(fps) || fps <= 0) return startFrame;

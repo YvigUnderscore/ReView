@@ -12,7 +12,7 @@ const both: KeyRef[] = [
   { channel: 'px', index: 1 },
 ];
 
-/** Monte le hook avec l'animation et la tête de lecture que `useCameraAnim` lui prêterait. */
+/** Mounts the hook with the animation and playhead that `useCameraAnim` would lend it. */
 function setup(timeMs = 0) {
   const animRef = { current: upsertKey(upsertKey(emptyAnim(), 'px', 0, 0), 'px', 500, 50) };
   const timeRef = { current: timeMs };
@@ -30,8 +30,8 @@ beforeEach(() => {
   localStorage.clear();
 });
 
-describe('useCurveSelection — sélection', () => {
-  it('mémorise la sélection et la vide sur demande', () => {
+describe('useCurveSelection — selection', () => {
+  it('remembers the selection and clears it on request', () => {
     const { result } = setup();
     expect(result.current.selection).toEqual([]);
     act(() => result.current.setSelection(both));
@@ -40,7 +40,7 @@ describe('useCurveSelection — sélection', () => {
     expect(result.current.selection).toEqual([]);
   });
 
-  it('applique un profil de tangente à toutes les clés sélectionnées', () => {
+  it('applies a tangent profile to all selected keys', () => {
     const { result, commit, animRef } = setup();
     act(() => result.current.setSelection(both));
     act(() => result.current.applyTangentType('linear'));
@@ -48,7 +48,7 @@ describe('useCurveSelection — sélection', () => {
     expect(modes(animRef.current)).toEqual(['linear', 'linear']);
   });
 
-  it('applique un profil au seul côté visé, ce qui brise les clés', () => {
+  it('applies a profile to the targeted side only, which breaks the keys', () => {
     const { result, animRef } = setup();
     act(() => result.current.setSelection(both));
     act(() => result.current.applyTangentType('flat', 'out'));
@@ -57,7 +57,7 @@ describe('useCurveSelection — sélection', () => {
     expect(keys.keys.every(isBroken)).toBe(true);
   });
 
-  it('brise, unifie et pondère la sélection', () => {
+  it('breaks, unifies and weights the selection', () => {
     const { result, animRef } = setup();
     act(() => result.current.setSelection(both));
     act(() => result.current.setSelectionBroken(true));
@@ -68,7 +68,7 @@ describe('useCurveSelection — sélection', () => {
     expect((animRef.current.channels.px?.keys ?? []).every(isWeighted)).toBe(true);
   });
 
-  it('supprime les clés sélectionnées et rend la sélection vide', () => {
+  it('deletes the selected keys and returns an empty selection', () => {
     const { result, commit, animRef } = setup();
     act(() => result.current.setSelection([{ channel: 'px', index: 0 }]));
     act(() => result.current.removeSelection());
@@ -77,7 +77,7 @@ describe('useCurveSelection — sélection', () => {
     expect(result.current.selection).toEqual([]);
   });
 
-  it('sans sélection, ni les tangentes ni la suppression ne touchent à l’animation', () => {
+  it('without a selection, neither tangents nor deletion touch the animation', () => {
     const { result, commit } = setup();
     act(() => result.current.applyTangentType('step'));
     act(() => result.current.setSelectionBroken(true));
@@ -87,22 +87,22 @@ describe('useCurveSelection — sélection', () => {
   });
 });
 
-describe('useCurveSelection — presse-papier', () => {
-  it('rien à coller sur un presse-papier vide', () => {
+describe('useCurveSelection — clipboard', () => {
+  it('nothing to paste from an empty clipboard', () => {
     const { result, commit } = setup();
     act(() => result.current.paste());
     expect(result.current.canPaste).toBe(false);
     expect(commit).not.toHaveBeenCalled();
   });
 
-  it('copie puis colle à la tête de lecture, et sélectionne les clés collées', () => {
+  it('copies then pastes at the playhead, and selects the pasted keys', () => {
     const { result, commit, animRef } = setup(200);
     act(() => result.current.setSelection(both));
     act(() => result.current.copySelection());
     expect(result.current.canPaste).toBe(true);
     act(() => result.current.paste());
     expect(commit).toHaveBeenCalledTimes(1);
-    // Temps rebasés sur le plus tôt de la copie (0 et 500) puis reposés depuis 200 ms.
+    // Times rebased on the earliest of the copy (0 and 500) then placed from 200 ms.
     expect(times(animRef.current)).toEqual([0, 200, 500, 700]);
     expect(result.current.selection).toEqual([
       { channel: 'px', index: 1 },
@@ -110,13 +110,13 @@ describe('useCurveSelection — presse-papier', () => {
     ]);
   });
 
-  it('copier sans sélection ne rend rien collable', () => {
+  it('copying with no selection yields nothing pasteable', () => {
     const { result } = setup();
     act(() => result.current.copySelection());
     expect(result.current.canPaste).toBe(false);
   });
 
-  it('le presse-papier survit au démontage : un autre média peut coller', () => {
+  it('the clipboard survives unmounting: another media can paste', () => {
     const first = setup();
     act(() => first.result.current.setSelection([{ channel: 'px', index: 1 }]));
     act(() => first.result.current.copySelection());

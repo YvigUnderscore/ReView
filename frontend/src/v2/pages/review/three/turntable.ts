@@ -6,15 +6,15 @@ import type { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
 export type TurntableAxis = 'x' | 'y' | 'z';
 
-/** Bornes de vitesse du turntable (degrés/seconde). */
+/** Speed bounds of the turntable (degrees/second). */
 export const TURNTABLE_SPEED_MIN = 1;
 export const TURNTABLE_SPEED_MAX = 180;
 
 /**
- * Un pas de turntable (39.D) : fait orbiter la **caméra** autour de `controls.target` autour de
- * l'axe monde choisi, d'un angle `deltaRad`. Ne touche ni au modèle ni à `camera.up` (conservé
- * vertical → compatible OrbitControls, horizon stable) : c'est une prévisualisation non
- * destructive, rien à rétablir à l'arrêt. Pur/testable (le rayon à la cible est préservé).
+ * One turntable step (39.D): makes the **camera** orbit around `controls.target` around the chosen
+ * world axis, by an angle `deltaRad`. Touches neither the model nor `camera.up` (kept vertical →
+ * compatible with OrbitControls, stable horizon): it is a non-destructive preview, nothing to
+ * restore on stop. Pure, testable (the distance to the target is preserved).
  */
 export function turntableStep(
   three: typeof import('three'),

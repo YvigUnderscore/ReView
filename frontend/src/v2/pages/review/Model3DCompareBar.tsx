@@ -9,9 +9,9 @@ import { useT } from '../../i18n';
 const shortName = (name: string) => (name.length > 22 ? `${name.slice(0, 20)}…` : name);
 
 /**
- * Choix du modèle comparé, dans l'en-tête du chrome : un onglet par modèle de la version, plus
- * « Voir tous » (côte à côte, caméra liée). Monté pour tous les spectateurs quand la version
- * porte plusieurs modèles, hors mode édition.
+ * Compared-model picker in the chrome header: one tab per model of the version, plus
+ * "See all" (side by side, linked camera). Mounted for all viewers when the version carries
+ * several models, outside edit mode.
  */
 export default function Model3DCompareBar({ compare }: { compare: Model3DCompareState }) {
   const t = useT();

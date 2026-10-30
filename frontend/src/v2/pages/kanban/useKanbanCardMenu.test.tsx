@@ -9,7 +9,7 @@ const { api, projectRole } = vi.hoisted(() => ({
   api: { patch: vi.fn(), del: vi.fn() },
   projectRole: { canManage: true },
 }));
-vi.mock('../../../lib/apiClient', () => ({ api, setSessionExpiredHandler: vi.fn() }));
+vi.mock('@/lib/apiClient', () => ({ api, setSessionExpiredHandler: vi.fn() }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('@tanstack/react-query', async (importOriginal) => ({
   ...(await importOriginal<typeof import('@tanstack/react-query')>()),
@@ -19,8 +19,8 @@ vi.mock('../../lib/useProjectRole', () => ({ useProjectRole: () => projectRole }
 vi.mock('../../stores/useAuth', () => ({
   useAuth: (pick: (s: unknown) => unknown) => pick({ user: { id: 4 } }),
 }));
-// Statut et assignation ont leurs propres tests : ici, seules comptent les entrées neuves
-// et la stabilité de `menuFor`, dont dépend la mémoïsation des mille cartes du board.
+// Status and assignment have their own tests: here only the new entries matter, and the stability
+// of `menuFor`, on which the memoization of the board's thousand cards depends.
 vi.mock('../../lib/useStatusMenu', () => ({
   useStatusMenu: () => ({ entry: () => null, choices: [] }),
 }));
@@ -52,12 +52,12 @@ const TASK: BoardTask = {
 const seen: ((task: BoardTask) => unknown)[] = [];
 
 /**
- * Écriture optimiste stable, comme celle que `useKanbanBoard` mémoïse : le board la passe
- * telle quelle, et c'est une condition de la stabilité de `menuFor`.
+ * Stable optimistic write, as the one `useKanbanBoard` memoizes: the board passes it through as
+ * is, and this is a condition of the stability of `menuFor`.
  */
 const applyOptimisticStatus = () => () => undefined;
 
-/** Un écran minimal : il rend le menu de la carte, et une frappe qui le fait se re-rendre. */
+/** A minimal screen: it renders the card menu, and a keystroke that makes it re-render. */
 function Harness() {
   const [typed, setTyped] = useState('');
   const { menuFor, dialogs } = useKanbanCardMenu(3, applyOptimisticStatus);
@@ -89,11 +89,11 @@ beforeEach(() => {
 afterEach(cleanup);
 
 /**
- * Renommer et supprimer une tâche n'existait nulle part dans l'interface (Phase 50) — et la
- * suppression ne s'expose qu'avec sa garde serveur, `Version.taskId` étant en cascade.
+ * Renaming and deleting a task existed nowhere in the interface (Phase 50). Deletion is only
+ * exposed together with its server guard, since `Version.taskId` cascades.
  */
 describe('useKanbanCardMenu', () => {
-  it('offre le renommage et la suppression à la production, et rien aux autres', () => {
+  it('offers renaming and deletion to production, and nothing to the others', () => {
     render(<Harness />);
     expect(screen.getByText(t('task.rename'))).toBeTruthy();
     expect(screen.getByText(t('task.delete'))).toBeTruthy();
@@ -105,10 +105,10 @@ describe('useKanbanCardMenu', () => {
   });
 
   /**
-   * Le point fragile : `menuFor` est la dépendance de mémoïsation des cartes. S'il devient
-   * neuf à chaque rendu, une frappe dans la recherche rejoue les mille cartes du board.
+   * The fragile point: `menuFor` is the memoization dependency of the cards. If it becomes new on
+   * each render, a keystroke in the search replays the board's thousand cards.
    */
-  it('garde la même identité quand l’écran se rend à nouveau', () => {
+  it('keeps the same identity when the screen renders again', () => {
     render(<Harness />);
     fireEvent.change(screen.getByLabelText('search'), { target: { value: 'sh0' } });
     fireEvent.change(screen.getByLabelText('search'), { target: { value: 'sh01' } });
@@ -116,7 +116,7 @@ describe('useKanbanCardMenu', () => {
     expect(new Set(seen).size).toBe(1);
   });
 
-  it('renomme la tâche depuis son dialogue', async () => {
+  it('renames the task from its dialog', async () => {
     render(<Harness />);
     fireEvent.click(screen.getByText(t('task.rename')));
     fireEvent.change(screen.getByLabelText(t('task.nameLabel')), { target: { value: ' comp v2 ' } });
@@ -124,8 +124,8 @@ describe('useKanbanCardMenu', () => {
     await waitFor(() => expect(api.patch).toHaveBeenCalledWith('/api/tasks/50', { name: 'comp v2' }));
   });
 
-  /** La suppression passe par une confirmation : c'est un geste sans retour. */
-  it('ne supprime qu’après confirmation', async () => {
+  /** Deletion goes through a confirmation: it is a gesture with no way back. */
+  it('deletes only after confirmation', async () => {
     render(<Harness />);
     fireEvent.click(screen.getByText(t('task.delete')));
     expect(api.del).not.toHaveBeenCalled();

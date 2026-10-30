@@ -9,13 +9,13 @@ import { VIEWER_ZONE } from '../review/reviewTypes';
 import { useT } from '../../i18n';
 
 /**
- * Branche **image** de la page client : la visionneuse de la review, pas un `<img>` nu.
+ * Image branch of the client page: the review viewer, not a bare `<img>`.
  *
- * L'ancienne version posait l'image directement dans la zone du viewer, sans conteneur
- * mesuré : il n'y avait donc aucun endroit où poser un overlay dont les coordonnées 0..1
- * tombent juste. `ImageReviewViewer` porte déjà le fit, le zoom/pan et le canevas
- * d'annotation **dans le plan transformé** — dessin et image subissent la même
- * transformation, l'annotation reste alignée au pixel quel que soit le zoom.
+ * The old version placed the image straight into the viewer area with no measured
+ * container, so there was nowhere to put an overlay whose 0..1 coordinates land on the
+ * right pixel. `ImageReviewViewer` already handles fit, zoom/pan and the annotation canvas
+ * **inside the transformed plane**: drawing and image undergo the same transform, so the
+ * annotation stays pixel-aligned at any zoom.
  */
 export default function ClientImageView({
   src,
@@ -53,8 +53,8 @@ export default function ClientImageView({
       <ImageReviewViewer
         src={src}
         alt={alt}
-        // L'annotation d'un commentaire sélectionné l'emporte sur le brouillon : on regarde
-        // ce que le studio montre, on ne dessine pas par-dessus.
+        // A selected comment's annotation takes precedence over the draft: we show what the
+        // studio shows, we do not draw on top of it.
         shapes={ann.viewed ?? ann.annot}
         onChange={ann.setShapes}
         editable={canAnnotate && ann.annotating && !ann.viewed}

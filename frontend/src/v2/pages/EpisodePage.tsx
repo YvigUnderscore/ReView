@@ -29,14 +29,14 @@ import { isBadId, isMissingOrForbidden } from '../components/entityAvailability'
 import { useT } from '../i18n';
 
 /**
- * La page d'un épisode : ses séquences, et sous chacune ses plans.
+ * An episode page: its sequences, and under each of them its shots.
  *
- * Le niveau étant facultatif, la page se garde elle-même : sur un projet où il est
- * éteint, le serveur répond 409 et l'écran le dit au lieu d'afficher une coquille vide.
- * Aucune URL devinée ne fait donc apparaître un niveau que le projet n'a pas.
+ * The level being optional, the page guards itself: on a project where it is
+ * switched off, the server answers 409 and the screen says so instead of showing an empty shell.
+ * No guessed URL can therefore make a level the project does not have appear.
  *
- * Le fil d'Ariane est local (Projets › Projet › Épisode) : la chaîne d'ancêtres partagée
- * (`EntityBreadcrumb`) ne connaît pas encore l'épisode.
+ * The breadcrumb is local (Projects › Project › Episode): the shared ancestor chain
+ * (`EntityBreadcrumb`) does not know about episodes yet.
  */
 export default function EpisodePage() {
   const t = useT();
@@ -76,17 +76,17 @@ export default function EpisodePage() {
     </Breadcrumb>
   );
 
-  // Épisode absent, retiré, ou identifiant inexploitable : la page rendait un `<main>` VIDE —
-  // ni message, ni redirection, juste un écran blanc. Les autres pages d'entité passent par
-  // `EntityUnavailable` depuis longtemps ; celle-ci n'y avait jamais été branchée.
+  // Episode missing, removed, or unusable identifier: the page rendered an EMPTY `<main>` —
+  // no message, no redirect, just a blank screen. The other entity pages have used
+  // `EntityUnavailable` for a long time; this one had never been wired to it.
   if (isBadId(episodeId) || (error && isMissingOrForbidden(error)))
     return <EntityUnavailable kind="episode" error={isBadId(episodeId) ? undefined : error} />;
 
   return (
     <PageShell breadcrumb={breadcrumb}>
       {error && <p className="mb-4 text-sm text-destructive">{error.message}</p>}
-      {/* Le niveau vient d'être éteint alors que la page était ouverte : le dire, plutôt
-          que de laisser un écran qui ne se rechargera jamais. */}
+      {/* The level was switched off while the page was open: say so, rather
+           than leaving a screen that will never reload. */}
       {settings.data?.enabled === false && (
         <p className="mb-4 text-sm text-muted-foreground">{t('episodes.disabledHere')}</p>
       )}
@@ -95,13 +95,13 @@ export default function EpisodePage() {
   );
 }
 
-/** Corps de la page — séparé pour que la page tienne son budget de lignes. */
+/** Body of the page — split out so the page stays within its line budget. */
 function EpisodeBody({ episode }: { episode: EpisodeDetail }) {
   const t = useT();
   return (
     <div>
       <header className="mb-5 flex flex-wrap items-start gap-4">
-        {/* Comme les autres fiches : la vignette, ou le nom de l'épisode à sa place. */}
+        {/* Like the other sheets: the thumbnail, or the episode name in its place. */}
         <div className="h-24 w-40 shrink-0 overflow-hidden rounded-lg border border-border">
           <EntityThumb url={episode.thumbnailUrl} name={episode.code} />
         </div>
@@ -146,7 +146,7 @@ function EpisodeBody({ episode }: { episode: EpisodeDetail }) {
   );
 }
 
-/** Une séquence de l'épisode et les plans qu'elle porte. */
+/** One sequence of the episode and the shots it carries. */
 function SequenceBlock({ sequence, shots }: { sequence: EpisodeSequence; shots: EpisodeDetail['shots'] }) {
   const t = useT();
   const rows = shotsOfSequence(shots, sequence);

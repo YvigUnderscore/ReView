@@ -4,22 +4,22 @@
 import type { SplatMesh } from '@sparkjsdev/spark';
 
 /**
- * Colorisations d'inspection CG/VFX (10.G-V6) : modifiers dyno (GLSL) — **normales** (dérivées
- * de l'orientation/échelle de chaque gaussienne) ou **profondeur** (heatmap distance caméra).
- * Outil local (non persisté), togglé dans le panneau de réglages du HUD. Le namespace `dyno`
- * est injecté par l'appelant (import dynamique) — testable avec un faux namespace.
+ * CG/VFX inspection colourings (10.G-V6): dyno modifiers (GLSL): **normals** (derived from the
+ * orientation and scale of each gaussian) or **depth** (camera-distance heatmap). Local tool (not
+ * persisted), toggled from the HUD's settings panel. The `dyno` namespace is injected by the caller
+ * (dynamic import), so it is testable with a fake namespace.
  */
 export type DebugColorMode = 'none' | 'normal' | 'depth';
 type DynoNs = typeof import('@sparkjsdev/spark').dyno;
 
-/** GLSL de la heatmap de profondeur (pur, testable) : proche = chaud, loin = froid. */
+/** GLSL of the depth heatmap (pure, testable): near = warm, far = cold. */
 export function depthGlsl(g: string, camPos: string, dMin: string, dMax: string): string {
   return `float d = clamp((distance(${g}.center, ${camPos}) - ${dMin}) / max(${dMax} - ${dMin}, 1e-4), 0.0, 1.0);
 ${g}.rgba.rgb = mix(vec3(1.0, 0.45, 0.1), vec3(0.15, 0.35, 1.0), d);`;
 }
 
 export interface DebugColorRuntime {
-  /** Recale la caméra et la plage de distances (mode depth, appelé chaque frame). */
+  /** Resets the camera and the distance range (depth mode, called every frame). */
   updateCamera(pos: { x: number; y: number; z: number }, dMin: number, dMax: number): void;
   dispose(): void;
 }
@@ -50,8 +50,8 @@ export function createDebugColor(
     return { updateCamera: () => undefined, dispose: detach };
   }
 
-  // Mode profondeur : uniformes caméra + plage, recalés à chaque frame par l'appelant.
-  // Three accepte tout objet {x,y,z} pour un uniform vec3 (setValueV3f) — cast du typage strict.
+  // Depth mode: camera uniforms and range, reset every frame by the caller.
+  // Three accepts any {x,y,z} object for a vec3 uniform (setValueV3f): cast around the strict typing.
   const camVec = { x: 0, y: 0, z: 0 };
   const camPos = dyno.dynoVec3(camVec as unknown as import('three').Vector3);
   const dMin = dyno.dynoFloat(0);

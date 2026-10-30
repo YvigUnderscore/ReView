@@ -2,38 +2,35 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Scopes d'API fins (API v1) — helpers PURS, testés.
+ * Fine-grained API scopes (API v1): pure helpers, tested.
  *
- * Un token porte une liste de scopes `domaine:action`. Les tokens émis avant cette
- * granularité ne portent que `read`/`write` : `expandScopes` les traduit en scopes
- * fins, de sorte qu'aucun token existant ne se retrouve invalidé. Un token de service
- * (ferme de rendu, bot) n'appartient à personne : il porte son propre rôle effectif et,
- * facultativement, se limite à un projet — voir `lib/apiTokens`.
+ * A token carries a list of `domain:action` scopes. Tokens issued before this granularity only carry
+ * `read`/`write`: `expandScopes` translates them into fine scopes, so no existing token is
+ * invalidated. A service token (render farm, bot) belongs to nobody: it carries its own effective
+ * role and may optionally be limited to one project — see `lib/apiTokens`.
  *
- * **Le catalogue ne décrit que ce qui est réellement gardé.** Neuf scopes déclarés ici
- * n'étaient exigés par aucune route : `playlists:*`, `webhooks:*`, `users:*`,
- * `projects:write` et `events:write`. Un scope qui ne protège rien est pire qu'absent —
- * il se coche à la création d'un token, il se lit dans la documentation, et il laisse
- * croire à un cantonnement qui n'existe pas. Ils sont retirés ; les familles concernées
- * ne sont tout simplement pas exposées par `/api/v1` (les webhooks et l'annuaire vivent
- * sur l'API interne, que `apiTokenSurface` ferme aux jetons).
+ * **The catalogue only describes what is really guarded.** Nine scopes declared here were required
+ * by no route: `playlists:*`, `webhooks:*`, `users:*`, `projects:write` and `events:write`. A scope
+ * that protects nothing is worse than none: it is ticked when creating a token, read in the docs,
+ * and suggests a scoping that does not exist. They have been removed; the families concerned are
+ * simply not exposed by `/api/v1` (webhooks and the directory live on the internal API, which
+ * `apiTokenSurface` closes to tokens).
  */
 
 export type ScopeAction = 'read' | 'write';
 
 /**
- * Domaines adressables, et pour chacun les actions qu'une route v1 exige vraiment.
+ * Addressable domains, and for each the actions a v1 route really requires.
  *
- * Ajouter une action ici sans la poser sur une route la remettrait dans le même état :
- * la table est la déclaration, `requireScope` est l'usage, et les deux doivent bouger
- * ensemble.
+ * Adding an action here without placing it on a route would put it back in the same state: the table
+ * is the declaration, `requireScope` is the usage, and both must move together.
  */
 const DOMAIN_ACTIONS = {
-  // Lecture seule : la création d'un projet n'appartient pas à l'API d'intégration.
+  // Read-only: creating a project does not belong to the integration API.
   projects: ['read'],
-  // Le niveau épisode se lit ; il se compose depuis l'interface. Écrire ce qu'un épisode
-  // porte (responsables, brief) passe par `sequences:write`, le cran qu'il regroupe —
-  // plutôt que de déclarer une action d'écriture qu'aucune route n'exigerait.
+  // Episode level is readable; it is composed from the interface. Writing what an episode carries
+  // (leads, brief) goes through `sequences:write`, the level it groups under, rather than declaring
+  // a write action that no route would require.
   episodes: ['read'],
   sequences: ['read', 'write'],
   shots: ['read', 'write'],
@@ -42,23 +39,23 @@ const DOMAIN_ACTIONS = {
   versions: ['read', 'write'],
   media: ['read', 'write'],
   comments: ['read', 'write'],
-  // Le journal d'événements se lit ; il s'écrit tout seul.
+  // The event log is read; it writes itself.
   events: ['read'],
 } as const satisfies Readonly<Record<string, readonly ScopeAction[]>>;
 
 export type ScopeDomain = keyof typeof DOMAIN_ACTIONS;
 
-/** Domaines adressables par un token. Un domaine = une famille de ressources v1. */
+/** Domains addressable by a token. One domain = one v1 resource family. */
 export const SCOPE_DOMAINS = Object.keys(DOMAIN_ACTIONS) as readonly ScopeDomain[];
 
-/** Exactement les couples déclarés ci-dessus — `projects:write` n'existe pas. */
+/** Exactly the pairs declared above; `projects:write` does not exist. */
 export type Scope =
   { [D in ScopeDomain]: `${D}:${(typeof DOMAIN_ACTIONS)[D][number]}` }[ScopeDomain] | 'admin';
 
-/** Scopes hérités (tokens créés avant les scopes fins) — conservés pour compatibilité. */
+/** Legacy scopes (tokens created before fine scopes), kept for compatibility. */
 export const LEGACY_SCOPES = ['read', 'write'] as const;
 
-/** Tous les scopes fins attribuables, dans un ordre stable (doc, UI, tests). */
+/** All assignable fine scopes, in a stable order (docs, UI, tests). */
 export const ALL_SCOPES: readonly Scope[] = [
   ...SCOPE_DOMAINS.flatMap((d): Scope[] => DOMAIN_ACTIONS[d].map((a) => `${d}:${a}` as Scope)),
   'admin',
@@ -66,19 +63,18 @@ export const ALL_SCOPES: readonly Scope[] = [
 
 const SCOPE_SET = new Set<string>(ALL_SCOPES);
 
-/** Chaîne acceptée à la création d'un token : scope fin ou scope hérité. */
+/** String accepted when creating a token: a fine scope or a legacy scope. */
 export const isGrantableScope = (value: string): boolean =>
   SCOPE_SET.has(value) || (LEGACY_SCOPES as readonly string[]).includes(value);
 
 /**
- * Développe les scopes stockés en scopes fins effectifs.
- * - `read`  → tous les `*:read`
- * - `write` → tous les `*:read` ET les `*:write` déclarés (une écriture suppose de relire)
- * - `admin` → tout
+ * Expands stored scopes into effective fine scopes.
+ * - `read`  → all `*:read`
+ * - `write` → all `*:read` AND the declared `*:write` (a write implies reading)
+ * - `admin` → everything
  *
- * Un scope stocké qui n'est plus au catalogue (un `playlists:read` d'hier) est ignoré
- * comme n'importe quelle chaîne inconnue : le token reste valide, et il ne perd aucun
- * pouvoir puisque aucune route n'a jamais consulté ce scope.
+ * A stored scope no longer in the catalogue (yesterday's `playlists:read`) is ignored like any
+ * unknown string: the token stays valid, and loses no power since no route ever checked that scope.
  */
 export function expandScopes(stored: readonly string[]): Set<Scope> {
   const out = new Set<Scope>();
@@ -95,7 +91,7 @@ export function expandScopes(stored: readonly string[]): Set<Scope> {
   for (const s of stored) {
     if (SCOPE_SET.has(s)) out.add(s as Scope);
   }
-  // Une écriture accordée finement implique la lecture du même domaine.
+  // A finely granted write implies reading the same domain.
   for (const s of [...out]) {
     const [domain, action] = s.split(':');
     if (action === 'write' && domain) out.add(`${domain}:read` as Scope);
@@ -103,7 +99,7 @@ export function expandScopes(stored: readonly string[]): Set<Scope> {
   return out;
 }
 
-/** Le token couvre-t-il le scope demandé ? `admin` couvre tout. */
+/** Does the token cover the requested scope? `admin` covers everything. */
 export function hasScope(stored: readonly string[], required: Scope): boolean {
   const granted = expandScopes(stored);
   return granted.has('admin') || granted.has(required);

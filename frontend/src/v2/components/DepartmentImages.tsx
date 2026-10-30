@@ -8,21 +8,22 @@ import { toast } from 'sonner';
 import { api } from '../../lib/apiClient';
 import { useDepartments } from '../lib/departmentsApi';
 import { useT } from '../i18n';
+import { presignAndUpload } from '@/v2/lib/presignedUpload';
 
 /**
- * Image de chaque département du pipe.
+ * Image of each department in the pipe.
  *
- * Au-delà de six étapes, une pastille de couleur ne se distingue plus — et une grille
- * d'assets en montre vingt à la fois. Le logo du studio pour « Compositing » se reconnaît
- * d'un coup d'œil là où « #7C3AED » ne dit rien.
+ * Beyond six steps, a color dot is no longer distinguishable, and an asset grid
+ * shows twenty at a time. The studio logo for "Compositing" is recognized
+ * at a glance, where "#7C3AED" says nothing.
  *
- * Le dépôt suit le chemin des vignettes d'entité : URL présignée, dépôt direct dans MinIO,
- * puis enregistrement de la clé — que le serveur reconstruit lui-même, pour qu'un appelant
- * ne puisse pas faire pointer un département vers un objet quelconque du bucket.
+ * The upload follows the path of entity thumbnails: presigned URL, direct upload to MinIO,
+ * then recording of the key, which the server rebuilds itself so that a caller
+ * cannot point a department at an arbitrary object in the bucket.
  */
 
 const ACCEPTED = 'image/png,image/jpeg,image/webp,image/svg+xml';
-/** Au-delà, c'est un rendu déposé par erreur, pas un logo. */
+/** Beyond that, it is a render dropped by mistake, not a logo. */
 const MAX_BYTES = 4 * 1024 * 1024;
 
 function useSetDepartmentImage(projectId: number) {
@@ -34,19 +35,17 @@ function useSetDepartmentImage(projectId: number) {
         await api.put(`/api/departments/${id}/image`, { key: null });
         return;
       }
-      const { url, key } = await api.post<{ url: string; key: string }>(
+      const { key } = await presignAndUpload(
         `/api/departments/${id}/image/presign`,
         { contentType: file.type },
+        file,
+        t('common.error.upload'),
       );
-      const res = await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-      // Le dépôt va directement vers MinIO : son échec ne passe pas par notre client HTTP
-      // et resterait sans message si on ne le formulait pas ici.
-      if (!res.ok) throw new Error(t('common.error.upload'));
       await api.put(`/api/departments/${id}/image`, { key });
     },
     onSuccess: () => {
       void qc.invalidateQueries({ queryKey: ['departments'] });
-      // Les colonnes d'un asset portent ces images : elles doivent se relire aussi.
+      // An asset's columns carry these images: they must be re-read too.
       void qc.invalidateQueries({ queryKey: [projectId, 'departments'] });
     },
   });
@@ -57,7 +56,7 @@ export default function DepartmentImages({ projectId }: { projectId: number }) {
   const { data: departments = [] } = useDepartments(projectId, projectId > 0);
   const setImage = useSetDepartmentImage(projectId);
   const inputs = useRef<Record<number, HTMLInputElement | null>>({});
-  /** Aperçu local : le dépôt et l'invalidation prennent une seconde, muette sans lui. */
+  /** Local preview: the upload and the invalidation take a second, silent without it. */
   const [previews, setPreviews] = useState<Record<number, string>>({});
 
   if (departments.length === 0) return null;

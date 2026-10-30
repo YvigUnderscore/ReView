@@ -28,8 +28,8 @@ vi.mock('../lib/projectRoles', async () => {
 });
 vi.mock('./TaskService', () => tasks);
 vi.mock('./DepartmentService', () => departments);
-// `assertAssignable` vit désormais dans `EntityAssigneeService` et s'exerce ici pour de
-// vrai : ce sont ses deux dépendances de bord qu'on neutralise, pas la garde elle-même.
+// `assertAssignable` now lives in `EntityAssigneeService` and is exercised here for real: it is its two
+// boundary dependencies that are stubbed, not the guard itself.
 vi.mock('./SocketService', () => ({ emitToProject: vi.fn() }));
 vi.mock('../lib/userView', () => ({ avatarUrl: vi.fn(async () => null) }));
 
@@ -49,7 +49,7 @@ beforeEach(() => {
 });
 
 describe('assignEntity', () => {
-  it('pose la personne sur les tâches existantes de l’asset', async () => {
+  it("sets the person on the asset's existing tasks", async () => {
     db.task.findMany.mockResolvedValue([
       { id: 11, assigneeId: null, departmentId: 3 },
       { id: 12, assigneeId: null, departmentId: 4 },
@@ -59,16 +59,15 @@ describe('assignEntity', () => {
     expect(tasks.setAssignee).toHaveBeenCalledWith(actor, 42, 11, 9);
   });
 
-  it('n’écrit pas sur une tâche déjà confiée à cette personne', async () => {
-    // Sans cette sortie, chaque assignation renotifierait l'artiste et repartirait
-    // vers ShotGrid pour rien.
+  it('does not write to a task already assigned to this person', async () => {
+    // Without this early exit, every assignment would re-notify the artist and push to ShotGrid for nothing.
     db.task.findMany.mockResolvedValue([{ id: 11, assigneeId: 9, departmentId: 3 }]);
     const result = await assignEntity(actor, { holder: 'asset', id: 5, userId: 9 });
     expect(result.updated).toBe(0);
     expect(tasks.setAssignee).not.toHaveBeenCalled();
   });
 
-  it('crée la tâche manquante du département visé', async () => {
+  it('creates the missing task for the targeted department', async () => {
     db.task.findMany.mockResolvedValue([]);
     db.task.create.mockResolvedValue({ id: 20 });
     const result = await assignEntity(actor, {
@@ -81,13 +80,12 @@ describe('assignEntity', () => {
     expect(db.task.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ assetId: 5, departmentId: 3 }) }),
     );
-    // Le département devient une étape que l'asset traverse : inutile de le redéclarer.
+    // The department becomes a step the asset goes through: no need to declare it again.
     expect(departments.attachHolderDepartments).toHaveBeenCalledWith('asset', 5, [3]);
   });
 
-  it('refuse de créer une tâche sur un projet piloté depuis ShotGrid', async () => {
-    // La tâche doit naître sur le site : en créer une ici en ferait deux à la
-    // synchronisation suivante.
+  it('refuses to create a task on a project driven from ShotGrid', async () => {
+    // The task must be born on the site: creating one here would make two at the next sync.
     db.task.findMany.mockResolvedValue([]);
     db.shotgridConnection.findUnique.mockResolvedValue({ active: true });
     await expect(
@@ -96,7 +94,7 @@ describe('assignEntity', () => {
     expect(db.task.create).not.toHaveBeenCalled();
   });
 
-  it('refuse un compte de service', async () => {
+  it('refuses a service account', async () => {
     db.task.findMany.mockResolvedValue([{ id: 11, assigneeId: null, departmentId: 3 }]);
     db.user.findMany.mockResolvedValue([{ id: 9, role: Role.ARTIST, isService: true, disabledAt: null }]);
     await expect(assignEntity(actor, { holder: 'asset', id: 5, userId: 9 })).rejects.toMatchObject({
@@ -105,12 +103,12 @@ describe('assignEntity', () => {
   });
 
   /**
-   * La copie privée de `assertAssignable` que gardait ce service avait divergé de la garde
-   * commune : elle ne lisait pas `disabledAt`. Un compte désactivé était donc refusé comme
-   * responsable d'un plan (`EntityAssigneeService`) et accepté comme assigné d'une tâche —
-   * l'un des deux chemins servant de porte de service à l'autre. Il n'y a plus qu'une garde.
+   * The private copy of `assertAssignable` kept by this service had diverged from the shared guard: it did
+   * not read `disabledAt`. A disabled account was therefore refused as the owner of a shot
+   * (`EntityAssigneeService`) yet accepted as the assignee of a task, one of the two paths serving as a
+   * service door to the other. There is now only one guard.
    */
-  it('refuse un compte désactivé, comme le fait l’assignation d’entité', async () => {
+  it('refuses a disabled account, as entity assignment does', async () => {
     db.task.findMany.mockResolvedValue([{ id: 11, assigneeId: null, departmentId: 3 }]);
     db.user.findMany.mockResolvedValue([
       { id: 9, role: Role.ARTIST, isService: false, disabledAt: new Date('2026-01-01') },
@@ -121,7 +119,7 @@ describe('assignEntity', () => {
     expect(tasks.setAssignee).not.toHaveBeenCalled();
   });
 
-  it('refuse une personne inconnue', async () => {
+  it('refuses an unknown person', async () => {
     db.task.findMany.mockResolvedValue([{ id: 11, assigneeId: null, departmentId: 3 }]);
     db.user.findMany.mockResolvedValue([]);
     await expect(assignEntity(actor, { holder: 'asset', id: 5, userId: 9 })).rejects.toMatchObject({
@@ -129,7 +127,7 @@ describe('assignEntity', () => {
     });
   });
 
-  it('refuse un client et un non-membre', async () => {
+  it('refuses a client and a non-member', async () => {
     db.task.findMany.mockResolvedValue([{ id: 11, assigneeId: null, departmentId: 3 }]);
     vi.mocked(effectiveProjectRole).mockResolvedValue(Role.CLIENT);
     await expect(assignEntity(actor, { holder: 'asset', id: 5, userId: 9 })).rejects.toMatchObject({
@@ -141,14 +139,14 @@ describe('assignEntity', () => {
     });
   });
 
-  it('désassigne sans contrôler la personne', async () => {
+  it('unassigns without checking the person', async () => {
     db.task.findMany.mockResolvedValue([{ id: 11, assigneeId: 9, departmentId: 3 }]);
     const result = await assignEntity(actor, { holder: 'asset', id: 5, userId: null });
     expect(result.updated).toBe(1);
     expect(db.user.findMany).not.toHaveBeenCalled();
   });
 
-  it('signale une entité sans aucune tâche', async () => {
+  it('reports an entity with no task at all', async () => {
     db.task.findMany.mockResolvedValue([]);
     await expect(assignEntity(actor, { holder: 'asset', id: 5, userId: 9 })).rejects.toMatchObject({
       code: 'NO_TASK',
@@ -157,10 +155,10 @@ describe('assignEntity', () => {
 });
 
 describe('assignMany', () => {
-  it('compte à part ce qui n’a pas pu être assigné, sans perdre le reste', async () => {
+  it('counts separately what could not be assigned, without losing the rest', async () => {
     db.task.findMany
       .mockResolvedValueOnce([{ id: 11, assigneeId: null, departmentId: 3 }])
-      .mockResolvedValueOnce([]) // celui-ci n'a aucune tâche
+      .mockResolvedValueOnce([]) // this one has no task
       .mockResolvedValueOnce([{ id: 13, assigneeId: null, departmentId: 3 }]);
     const result = await assignMany(actor, 'asset', [1, 2, 3], { userId: 9 });
     expect(result).toEqual({ updated: 2, created: 0, skipped: 1 });

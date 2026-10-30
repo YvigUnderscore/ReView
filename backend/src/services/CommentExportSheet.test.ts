@@ -4,13 +4,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * Les images de la planche : la bonne tuile de sprite pour l'instant commenté, un objet lu
- * une seule fois par média, et un budget d'octets qui empêche une review chargée de
- * produire un document de cent mégaoctets.
+ * The sheet's images: the right sprite tile for the commented instant, an object read only once per media,
+ * and a byte budget that prevents a loaded review from producing a hundred-megabyte document.
  */
 
 const { store } = vi.hoisted(() => ({ store: { getObjectBuffer: vi.fn() } }));
-vi.mock('./StorageService', () => ({ storage: store }));
+vi.mock('../lib/storage', () => ({ storage: store }));
 vi.mock('../lib/logger', () => ({ logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() } }));
 
 import { createSheetImages, spriteTile } from './CommentExportSheet';
@@ -47,14 +46,14 @@ beforeEach(() => {
 });
 
 describe('spriteTile', () => {
-  it('choisit la vignette de l’intervalle qui contient l’instant', () => {
+  it('chooses the thumbnail of the interval containing the instant', () => {
     const sprite = { intervalSec: 3, count: 10, cols: 5 };
     expect(spriteTile(sprite, 0)).toEqual({ col: 0, row: 0 });
     expect(spriteTile(sprite, 7)).toEqual({ col: 2, row: 0 });
     expect(spriteTile(sprite, 16)).toEqual({ col: 0, row: 1 });
   });
 
-  it('borne aux vignettes existantes', () => {
+  it('is bounded to the existing thumbnails', () => {
     const sprite = { intervalSec: 3, count: 10, cols: 5 };
     expect(spriteTile(sprite, 9999)).toEqual({ col: 4, row: 1 });
     expect(spriteTile(sprite, -5)).toEqual({ col: 0, row: 0 });
@@ -62,36 +61,36 @@ describe('spriteTile', () => {
 });
 
 describe('createSheetImages', () => {
-  it('découpe la sprite à l’instant commenté', async () => {
+  it('crops the sprite at the commented instant', async () => {
     const image = await createSheetImages()(clip(), 7);
     expect(image?.src.startsWith('data:image/jpeg;base64,')).toBe(true);
     expect(image?.width).toBe(160);
     expect(image?.tile).toEqual({ offsetX: 320, offsetY: 0, sheetWidth: 800, sheetHeight: 180 });
   });
 
-  it('ne lit qu’une fois l’objet, même pour vingt notes du même média', async () => {
+  it('reads the object only once, even for twenty notes on the same media', async () => {
     const images = createSheetImages();
     for (let i = 0; i < 20; i++) await images(clip(), i);
     expect(store.getObjectBuffer).toHaveBeenCalledTimes(1);
   });
 
-  it('retombe sur la miniature quand la note n’a pas de repère de temps', async () => {
+  it('falls back to the thumbnail when the note has no time reference', async () => {
     const image = await createSheetImages()(clip(), null);
     expect(store.getObjectBuffer).toHaveBeenCalledWith('derived/7/thumb.jpg');
     expect(image?.tile).toBeUndefined();
     expect(image?.height).toBe(90);
   });
 
-  it('rend null quand le média n’a ni sprite ni miniature', async () => {
+  it('returns null when the media has neither sprite nor thumbnail', async () => {
     expect(await createSheetImages()(clip({ sprite: null, thumbnailKey: null }), 3)).toBeNull();
   });
 
-  it('sort la note sans image plutôt que d’échouer quand l’objet est illisible', async () => {
+  it('outputs the note without an image rather than failing when the object is unreadable', async () => {
     store.getObjectBuffer.mockRejectedValue(new Error('gone'));
     expect(await createSheetImages()(clip({ sprite: null }), null)).toBeNull();
   });
 
-  it('écarte une image trop lourde pour un document imprimable', async () => {
+  it('discards an image too heavy for a printable document', async () => {
     store.getObjectBuffer.mockResolvedValue(Buffer.alloc(3 * 1024 * 1024));
     expect(await createSheetImages()(clip({ sprite: null }), null)).toBeNull();
   });

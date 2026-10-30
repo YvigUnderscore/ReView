@@ -42,7 +42,7 @@ class FakeClient:
             media_id=128,
             media={"status": "PROCESSING"},
             version=VERSION,
-            published=not options.get("publish") is False,
+            published=options.get("publish") is not False,
             idempotency_key="key",
             created=["shot"],
         )
@@ -110,10 +110,21 @@ class Reads(unittest.TestCase):
             self.assertEqual(code, 0)
             self.assertTrue(os.path.exists(os.path.join(folder, "SH0100_comp_v003.mov")))
             self.assertIn(folder, out)
-            # Chaque média signe son URL au moment d'être rapatrié : une URL demandée en
-            # même temps que la liste aurait expiré pendant le plan précédent.
+            # Each media signs its URL at the moment it is fetched: a URL requested at the
+            # same time as the list would have expired during the previous shot.
             self.assertFalse(client.calls[0][2]["urls"])
             self.assertEqual(client.calls[1][0], "download")
+
+    def test_download_never_writes_outside_the_chosen_folder(self) -> None:
+        client = FakeClient()
+        hostile = dict(VERSION, media=[{"id": 128, "filename": "../../escape.mov"}])
+        client.latest = lambda path, **options: {"version": hostile}  # type: ignore[method-assign]
+        with tempfile.TemporaryDirectory() as root:
+            folder = os.path.join(root, "a", "b")
+            code, _out, _err, _client = run(["latest", "PROJ/SQ010/SH0100", "--download", folder], client)
+            self.assertEqual(code, 0)
+            self.assertTrue(os.path.exists(os.path.join(folder, "escape.mov")))
+            self.assertFalse(os.path.exists(os.path.join(root, "escape.mov")))
 
     def test_urls_are_only_requested_when_asked(self) -> None:
         _code, out, _err, _client = run(["--json", "latest", "PROJ/SQ010/SH0100", "--urls"])
@@ -131,13 +142,13 @@ class Reads(unittest.TestCase):
 
 
 class ConsoleEncoding(unittest.TestCase):
-    """Une console Windows en cp1252 ne doit pas faire échouer une publication réussie."""
+    """A Windows console in cp1252 must not make a successful publish fail."""
 
     class NarrowStream(io.StringIO):
         encoding = "cp1252"
 
         def write(self, text: str) -> int:
-            text.encode(self.encoding)  # lève UnicodeEncodeError comme la vraie console
+            text.encode(self.encoding)  # raises UnicodeEncodeError like the real console
             return super().write(text)
 
     def test_replaces_what_the_console_cannot_spell(self) -> None:

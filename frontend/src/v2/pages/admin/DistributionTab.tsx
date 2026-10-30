@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Save } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { QueryState } from '../../components/ui/query-state';
@@ -22,12 +22,12 @@ interface WatermarkConfig {
 }
 
 /**
- * Section Diffusion (35.B/35.D) : watermark spectateur (viewers internes + partages) et
+ * Distribution section (35.B/35.D): viewer watermark (internal viewers + shares) and
  * burn-ins.
  *
- * Le logo du studio se déposait ici, alors que la page de connexion l'affiche aussi : la
- * même marque se réglait à deux endroits, et celui qu'on ouvrait n'était pas toujours le
- * bon. Il vit désormais avec le nom et la couleur du studio ; cet écran y renvoie.
+ * The studio logo used to be uploaded here, although the login page shows it too: the
+ * same brand was set in two places, and the one one opened was not always the
+ * right one. It now lives with the studio's name and colour; this screen links there.
  */
 export default function DistributionTab() {
   const t = useT();

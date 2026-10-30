@@ -2,18 +2,16 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * En-têtes de licence SPDX — pose et vérification.
+ * SPDX licence headers — writing and checking.
  *
- *   node scripts/add-license-headers.mjs           # pose les en-têtes manquants
- *   node scripts/add-license-headers.mjs --check   # n'écrit rien, échoue s'il en manque
+ *   node scripts/add-license-headers.mjs           # adds the missing headers
+ *   node scripts/add-license-headers.mjs --check   # writes nothing, fails if any is missing
  *
- * Idempotent : un fichier déjà en-hêté n'est jamais retouché. Le mode --check est
- * appelé par scripts/validate.sh, ce qui garantit qu'aucun fichier source ne part
- * sans sa licence.
+ * Idempotent: a file that already has a header is never touched. The --check mode is called by
+ * scripts/validate.sh, which guarantees that no source file ships without its licence.
  *
- * Les fins de ligne du fichier sont préservées (les sources sont en CRLF sous Windows,
- * et prettier tourne en endOfLine "auto" : injecter du LF déclencherait une réécriture
- * complète du fichier).
+ * The file's line endings are preserved (sources are CRLF under Windows, and prettier runs with
+ * endOfLine "auto": injecting LF would trigger a full rewrite of the file).
  */
 import { readFile, readdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
@@ -22,7 +20,7 @@ import { fileURLToPath } from 'node:url';
 export const COPYRIGHT = 'SPDX-FileCopyrightText: 2026 Yvig Bidon';
 export const LICENSE_ID = 'SPDX-License-Identifier: AGPL-3.0-or-later';
 
-/** Racines balayées, relatives à la racine du dépôt. */
+/** Scanned roots, relative to the repository root. */
 export const ROOTS = [
   'backend/src',
   'backend/scripts',
@@ -33,7 +31,7 @@ export const ROOTS = [
   'scripts',
 ];
 
-/** Fichiers de configuration à la racine des paquets (hors des racines ci-dessus). */
+/** Configuration files at the package roots (outside the roots above). */
 export const EXTRA_FILES = [
   'backend/vitest.config.ts',
   'backend/vitest.integration.config.ts',
@@ -46,15 +44,15 @@ export const EXTRA_FILES = [
   'frontend/vitest.setup.ts',
 ];
 
-/** Dossiers jamais balayés (dépendances, artefacts, code généré). */
+/** Directories never scanned (dependencies, artefacts, generated code). */
 const SKIP_DIRS = new Set(['node_modules', 'dist', 'build', 'coverage', 'generated', 'migrations']);
 
 const SLASH_EXT = new Set(['.ts', '.tsx', '.js', '.jsx', '.mjs', '.cjs', '.prisma']);
 const HASH_EXT = new Set(['.sh', '.py']);
-/** Types sans commentaire de ligne : l'en-tête s'écrit en commentaires de bloc d'une ligne. */
+/** Types without line comments: the header is written as one-line block comments. */
 const BLOCK_EXT = new Set(['.css']);
 
-/** Préfixe de commentaire correspondant à l'extension, ou null si le type est ignoré. */
+/** Comment prefix matching the extension, or null if the type is ignored. */
 export function commentPrefix(ext) {
   if (SLASH_EXT.has(ext)) return '//';
   if (HASH_EXT.has(ext)) return '#';
@@ -62,24 +60,24 @@ export function commentPrefix(ext) {
   return null;
 }
 
-/** Fermeture du commentaire — vide pour les types commentés ligne à ligne. */
+/** Comment closing — empty for types commented line by line. */
 export function commentSuffix(ext) {
   return BLOCK_EXT.has(ext) ? ' */' : '';
 }
 
-/** Vrai si l'en-tête SPDX est déjà présent dans les premières lignes. */
+/** True if the SPDX header is already present in the first lines. */
 export function hasHeader(content) {
   return content.split(/\r?\n/, 15).some((line) => line.includes('SPDX-License-Identifier'));
 }
 
-/** Fin de ligne dominante du fichier (celle de sa première ligne). */
+/** Dominant line ending of the file (that of its first line). */
 export function detectEol(content) {
   return content.includes('\r\n') ? '\r\n' : '\n';
 }
 
 /**
- * Retourne le contenu en-têté. Le shebang reste en première ligne ; l'en-tête se glisse
- * juste après. Rend le contenu inchangé s'il porte déjà un en-tête.
+ * Returns the content with the header. The shebang stays on the first line; the header slots in
+ * right after it. Returns the content unchanged if it already carries a header.
  */
 export function withHeader(content, ext) {
   const prefix = commentPrefix(ext);
@@ -99,7 +97,7 @@ export function withHeader(content, ext) {
   return `${header}${spacer}${content}`;
 }
 
-/** Liste récursive des fichiers éligibles sous `dir`. */
+/** Recursive list of the eligible files under `dir`. */
 async function collect(dir, out = []) {
   let entries;
   try {
@@ -118,7 +116,7 @@ async function collect(dir, out = []) {
   return out;
 }
 
-/** Tous les fichiers source du dépôt qui doivent porter l'en-tête. */
+/** All the repository's source files that must carry the header. */
 export async function listSourceFiles(repoRoot) {
   const files = [];
   for (const root of ROOTS) await collect(path.join(repoRoot, root), files);
@@ -162,7 +160,7 @@ async function main() {
   );
 }
 
-// Exécuté directement (et non importé par un test) → on lance.
+// Run directly (and not imported by a test) → launch it.
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   await main();
 }

@@ -7,23 +7,23 @@ import type { TaskStatus } from '../types/api';
 import { TASK_STATUSES, TASK_STATUS_LABEL_KEY } from './taskStatus';
 
 /**
- * Choix de statut d'une entité — logique pure, sans React ni réseau.
+ * Status choice of an entity — pure logic, no React and no network.
  *
- * Changer un statut demandait d'ouvrir la fiche puis un panneau de réglages ; le geste le
- * plus fréquent de la production était le plus coûteux. Il passe désormais par le menu
- * contextuel, partout où une entité est visible. Ce module décrit *quels* choix existent
- * et *quel corps* les traduit — le rendu et l'appel réseau vivent ailleurs.
+ * Changing a status used to require opening the record and then a settings panel; the most frequent
+ * gesture in production was the most expensive. It now goes through the context menu, wherever an
+ * entity is visible. This module describes *which* choices exist and *which body* translates them —
+ * rendering and the network call live elsewhere.
  */
 
-/** Sentinelle « aucun statut » : le groupe radio ne peut pas porter une valeur vide. */
+/** "No status" sentinel: the radio group cannot carry an empty value. */
 export const NO_STATUS = 'none';
 
-/** Préfixe des choix de repli, quand un projet n'a pas encore de référentiel. */
+/** Prefix of the fallback choices, when a project does not yet have a catalogue. */
 export const LEGACY_PREFIX = 'legacy:';
 
 export interface StatusChoice {
   value: string;
-  /** Nom du statut tel que le studio l'a écrit — une donnée, jamais traduite. */
+  /** Name of the status as the studio wrote it — data, never translated. */
   label: string;
   color: string | null;
   statusId: number | null;
@@ -33,12 +33,12 @@ export interface StatusChoice {
 export type { StatusScope };
 
 /**
- * Les choix offerts pour un périmètre donné.
+ * The choices offered for a given scope.
  *
- * Sans référentiel, une tâche retombe sur les six valeurs historiques — c'est ce que le
- * kanban manipule déjà. Un plan ou une séquence, lui, n'a pas de repli : leur `PATCH`
- * n'accepte que `pipelineStatusId`, proposer des valeurs qu'il refuserait donnerait un
- * menu qui échoue à tous les coups. Le menu disparaît alors, ce qui est honnête.
+ * Without a catalogue, a task falls back to the six historical values — which is what the kanban already
+ * manipulates. A shot or a sequence, on the other hand, has no fallback: their `PATCH` only accepts
+ * `pipelineStatusId`, and offering values it would refuse would give a menu that fails every time. The
+ * menu then disappears, which is honest.
  */
 export function statusChoices(
   statuses: PipelineStatus[],
@@ -65,12 +65,12 @@ export function statusChoices(
 }
 
 /**
- * La valeur cochée dans le groupe.
+ * The value ticked in the group.
  *
- * Le repli par famille compte : une entité peut porter un statut hérité d'un autre site
- * (ou d'un projet dont le vocabulaire a changé) qui n'est plus offert ici. Plutôt que de
- * n'afficher aucune coche, on montre le choix de même famille — l'utilisateur voit où il
- * en est au lieu d'un menu qui prétend qu'aucun statut n'est posé.
+ * The family fallback matters: an entity may carry a status inherited from another site (or from a
+ * project whose vocabulary changed) that is no longer offered here. Rather than showing no tick, we show
+ * the choice of the same family — the user sees where they stand, instead of a menu claiming that no
+ * status is set.
  */
 export function currentStatusValue(
   choices: StatusChoice[],
@@ -88,11 +88,10 @@ export function currentStatusValue(
 }
 
 /**
- * Le corps du `PATCH` correspondant à un choix.
+ * The body of the `PATCH` corresponding to a choice.
  *
- * Jamais `status` **et** `pipelineStatusId` ensemble : le serveur déduit le premier du
- * second et sa déduction prime, si bien qu'envoyer les deux ferait croire à un accord qui
- * n'existe pas.
+ * Never `status` **and** `pipelineStatusId` together: the server derives the first from the second and
+ * its derivation takes precedence, so sending both would suggest an agreement that does not exist.
  */
 export function bodyForChoice(
   choices: StatusChoice[],
@@ -105,7 +104,7 @@ export function bodyForChoice(
   return choice.legacyStatus ? { status: choice.legacyStatus } : null;
 }
 
-/** L'entité telle qu'elle sera après le changement — pour l'affichage optimiste. */
+/** The entity as it will be after the change — for the optimistic display. */
 export function withStatusOne<T extends { pipelineStatusId?: number | null; status?: TaskStatus }>(
   entity: T,
   choice: StatusChoice | null,
@@ -113,13 +112,13 @@ export function withStatusOne<T extends { pipelineStatusId?: number | null; stat
   return {
     ...entity,
     pipelineStatusId: choice?.statusId ?? null,
-    // Les deux champs bougent ensemble côté affichage : la colonne du kanban lit l'un,
-    // la pastille l'autre, et les laisser diverger ferait sauter la carte deux fois.
+    // Both fields move together on the display side: the kanban column reads one, the badge the other,
+    // and letting them diverge would make the card jump twice.
     ...(choice?.legacyStatus ? { status: choice.legacyStatus } : {}),
   };
 }
 
-/** Idem, dans une liste : seul l'élément visé change. */
+/** Same, in a list: only the targeted element changes. */
 export function withStatus<T extends { id: number; pipelineStatusId?: number | null; status?: TaskStatus }>(
   list: T[],
   id: number,

@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Alignement et répartition d'une sélection de prims (C2) — géométrie **pure et testable** :
- * chaque prim est réduit à sa boîte englobante monde, les fonctions renvoient l'offset à
- * ajouter sur l'axe demandé. La conversion en delta d'override (espace parent) et l'écriture
- * vivent dans `useUsdScene`.
+ * Alignment and distribution of a selection of prims (C2): **pure and testable** geometry.
+ * each prim is reduced to its world bounding box, the functions return the offset to add on the
+ * requested axis. The conversion into an override delta (parent space) and the write live in
+ * `useUsdScene`.
  */
 
 export type AlignAxis = 0 | 1 | 2;
@@ -21,8 +21,8 @@ const value = (item: AlignItem, axis: AlignAxis, mode: AlignMode): number =>
   mode === 'min' ? item.min[axis] : mode === 'max' ? item.max[axis] : (item.min[axis] + item.max[axis]) / 2;
 
 /**
- * Offsets alignant tous les prims sur la même valeur d'axe : le min des mins, le max des maxes,
- * ou le centre de l'ensemble.
+ * Offsets aligning all the prims on the same axis value: the min of the mins, the max of the maxes,
+ * or the centre of the set.
  */
 export function alignOffsets(
   items: readonly AlignItem[],
@@ -42,8 +42,8 @@ export function alignOffsets(
 }
 
 /**
- * Offsets répartissant les centres à intervalles réguliers sur l'axe : les deux extrêmes ne
- * bougent pas, les autres s'espacent entre eux (ordre actuel des centres conservé).
+ * Offsets spreading the centres at regular intervals along the axis: the two extremes do not
+ * move, the others space themselves out (current order of the centres kept).
  */
 export function distributeOffsets(
   items: readonly AlignItem[],

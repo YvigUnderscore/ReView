@@ -6,16 +6,16 @@ import type { LineGeometry } from 'three/addons/lines/LineGeometry.js';
 import type { LineMaterial } from 'three/addons/lines/LineMaterial.js';
 
 /**
- * Classes de « lignes épaisses » de Three (`Line2`), chargées **à la demande**.
+ * Classes for "thick lines" from Three (`Line2`), loaded **on demand**.
  *
- * Un trait de la brosse 3D est une polyligne dont l'épaisseur doit rester constante **à
- * l'écran** : c'est exactement ce que fait `LineMaterial` avec `worldUnits: false` (l'épaisseur
- * est en pixels CSS, la résolution de la vue lui étant donnée à chaque image). Le tube
- * `TubeGeometry` qu'on employait avant était en unités monde — il grossissait au zoom avant et
- * disparaissait au zoom arrière, alors que la barre d'options annonçait des « px ».
+ * A stroke of the 3D brush is a polyline whose thickness must stay constant **on screen**: this is
+ * exactly what `LineMaterial` does with `worldUnits: false` (the thickness is in CSS pixels, the
+ * view resolution being supplied to it on every frame). The `TubeGeometry` used before was in
+ * world units: it grew when zooming in and vanished when zooming out, while the options bar
+ * advertised "px".
  *
- * L'import est dynamique et mémorisé : le viewer splat charge déjà three et Spark de cette
- * façon, et un média plat n'a aucune raison d'embarquer ces trois modules.
+ * The import is dynamic and memoized: the splat viewer already loads three and Spark this way,
+ * and a flat media has no reason to embed these three modules.
  */
 export interface LineModules {
   Line2: typeof Line2;

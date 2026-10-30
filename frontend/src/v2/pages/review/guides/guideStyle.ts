@@ -2,72 +2,71 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Langage visuel **unique** des repères de review : tiers, croix centrale, safe areas et
- * liseré du cadre de livraison (letterbox) partagent d'ici leur trait, leur couleur et leur
- * ombre. Les valeurs vivaient jusqu'ici en dur dans chaque JSX — d'où des épaisseurs et des
- * couleurs qui divergeaient d'un repère à l'autre.
+ * The **single** visual language of the review guides: thirds, centre cross, safe areas and the
+ * border of the delivery frame (letterbox) share their stroke, colour and shadow from here. The
+ * values used to be hard-coded in each JSX, hence thicknesses and colours that diverged from one
+ * guide to the next.
  *
- * Toutes les longueurs sont exprimées en **pixels écran** : les repères sont dessinés dans
- * un SVG dont le `viewBox` est en pixels CSS de sa propre boîte, et les helpers divisent par
- * l'échelle du calque zoomé — un trait reste donc à 1 px à l'écran, que le lecteur soit
- * ajusté ou à 16×.
+ * All lengths are expressed in **screen pixels**: the guides are drawn in an SVG whose `viewBox`
+ * is in CSS pixels of its own box, and the helpers divide by the scale of the zoomed layer. A
+ * stroke therefore stays 1 px on screen whether the player is fitted or at 16×.
  */
 
-/** Épaisseur de tous les traits de repère, en pixels écran. */
+/** Thickness of all guide strokes, in screen pixels. */
 export const GUIDE_STROKE_PX = 1;
 
 /**
- * Blanc de mire. **Dérogation assumée aux tokens du thème** : un repère de cadrage est une
- * convention de mire (comme une charte ou une amorce), pas une couleur d'interface. Il doit
- * rester identique en thème clair comme en sombre, au-dessus d'un média dont on ne connaît
- * pas la luminosité ; sa lisibilité vient de l'ombre portée, pas d'un token de thème.
+ * Test-card white. **Deliberate exception to the theme tokens**: a framing guide is a convention
+ * of test cards (like a slate or a leader), not an interface colour. It must stay identical in
+ * light and dark themes, above a media whose brightness is unknown. Its legibility comes from the
+ * drop shadow, not from a theme token.
  */
 export const GUIDE_COLOR = '#ffffff';
 
-/** Opacité du trait : blanc franc mais non agressif au-dessus de l'image. */
+/** Stroke opacity: pure white, but not aggressive above the image. */
 export const GUIDE_OPACITY = 0.8;
 
-/** Ombre portée — c'est elle qui détache le trait d'un fond clair. */
+/** Drop shadow: it is what separates the stroke from a light background. */
 export const GUIDE_SHADOW_COLOR = '#000000';
 export const GUIDE_SHADOW_OPACITY = 0.6;
-/** Écart-type du flou, en pixels écran. */
+/** Standard deviation of the blur, in screen pixels. */
 export const GUIDE_SHADOW_BLUR_PX = 0.8;
-/** Décalage vertical de l'ombre, en pixels écran. */
+/** Vertical offset of the shadow, in screen pixels. */
 export const GUIDE_SHADOW_DY_PX = 0.5;
 
-/** Tirets (repère titre), en pixels écran : trait puis vide. */
+/** Dashes (title guide), in screen pixels: stroke, then gap. */
 export const GUIDE_DASH_PX: readonly [number, number] = [6, 4];
 
-/** Voile des zones hors cadre de livraison (letterbox). */
+/** Veil over the areas outside the delivery frame (letterbox). */
 export const GUIDE_SCRIM_OPACITY = 0.4;
 
-/** Safe area « action » : 90 % du cadre. */
+/** "Action" safe area: 90% of the frame. */
 export const ACTION_SAFE_RATIO = 0.9;
-/** Safe area « titre » : 80 % du cadre. */
+/** "Title" safe area: 80% of the frame. */
 export const TITLE_SAFE_RATIO = 0.8;
-/** Demi-longueur d'une branche de la croix centrale, en fraction du plus petit côté. */
+/** Half-length of an arm of the centre cross, as a fraction of the smaller side. */
 export const CENTER_CROSS_RATIO = 0.04;
 
-/** Échelle du calque zoomé, ramenée à une valeur exploitable (garde-fou). */
+/** Scale of the zoomed layer, brought back to a usable value (safeguard). */
 export const guideScale = (scale: number): number => (Number.isFinite(scale) && scale > 0 ? scale : 1);
 
-/** Épaisseur en unités du `viewBox` (pixels CSS) pour obtenir `GUIDE_STROKE_PX` à l'écran. */
+/** Thickness in `viewBox` units (CSS pixels) to obtain `GUIDE_STROKE_PX` on screen. */
 export const guideStrokeWidth = (scale: number): number => GUIDE_STROKE_PX / guideScale(scale);
 
-/** Motif de tirets compensé du zoom — même longueur apparente à toutes les échelles. */
+/** Dash pattern compensated for zoom: same apparent length at every scale. */
 export const guideDashArray = (scale: number): string =>
   GUIDE_DASH_PX.map((v) => v / guideScale(scale)).join(' ');
 
-/** Flou de l'ombre, compensé du zoom. */
+/** Shadow blur, compensated for zoom. */
 export const guideShadowBlur = (scale: number): number => GUIDE_SHADOW_BLUR_PX / guideScale(scale);
 
-/** Décalage de l'ombre, compensé du zoom. */
+/** Shadow offset, compensated for zoom. */
 export const guideShadowDy = (scale: number): number => GUIDE_SHADOW_DY_PX / guideScale(scale);
 
 /**
- * Attributs de trait posés **une seule fois**, sur le groupe qui porte tous les repères :
- * `stroke`, `stroke-width` et `stroke-opacity` sont hérités par les enfants, qui ne portent
- * donc que leur géométrie. C'est le point unique qui garantit l'uniformité.
+ * Stroke attributes set **once**, on the group that carries all the guides: `stroke`,
+ * `stroke-width` and `stroke-opacity` are inherited by the children, which therefore carry only
+ * their geometry. This is the single point that guarantees uniformity.
  */
 export interface GuideStrokeProps {
   fill: 'none';

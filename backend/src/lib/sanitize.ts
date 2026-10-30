@@ -4,7 +4,7 @@
 import xss from 'xss';
 
 /**
- * Nettoie une entrée HTML pour prévenir le XSS (strip scripts, iframes, on* events).
+ * Sanitises an HTML input to prevent XSS (strips scripts, iframes, on* events).
  */
 export const sanitizeHtml = (html?: string | null): string => {
   if (!html) return '';
@@ -12,7 +12,7 @@ export const sanitizeHtml = (html?: string | null): string => {
 };
 
 /**
- * Valide une URL de webhook Discord (anti-SSRF) : https + domaine en allowlist stricte.
+ * Validates a Discord webhook URL (anti-SSRF): https + domain on a strict allowlist.
  */
 export const isValidDiscordWebhook = (url?: string | null): boolean => {
   if (!url || typeof url !== 'string') return false;
@@ -26,7 +26,7 @@ export const isValidDiscordWebhook = (url?: string | null): boolean => {
 };
 
 /**
- * Valide une URL de webhook Slack entrant (anti-SSRF) : https + `hooks.slack.com` (42.B — №67).
+ * Validates an incoming Slack webhook URL (anti-SSRF): https + `hooks.slack.com` (42.B — №67).
  */
 export const isValidSlackWebhook = (url?: string | null): boolean => {
   if (!url || typeof url !== 'string') return false;

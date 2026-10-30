@@ -5,26 +5,26 @@ import { describe, it, expect } from 'vitest';
 import { toThumbnail } from './thumbnail';
 
 /**
- * `toThumbnail` est la seule pièce purement logique de la couche scène splat (les autres
- * helpers dépendent de WebGL/Spark, couverts par le typecheck/build). On vérifie ici les
- * gardes déterministes : un canvas sans dimension ne produit pas de miniature.
+ * `toThumbnail` is the only purely logical piece of the splat scene layer (the other helpers
+ * depend on WebGL/Spark, covered by typecheck/build). Here we check the deterministic guards:
+ * a canvas without dimensions produces no thumbnail.
  */
 describe('toThumbnail', () => {
-  it('renvoie null si le canvas a une largeur nulle', () => {
+  it('returns null if the canvas has a zero width', () => {
     const c = document.createElement('canvas');
     c.width = 0;
     c.height = 150;
     expect(toThumbnail(c)).toBeNull();
   });
 
-  it('renvoie null si le canvas a une hauteur nulle', () => {
+  it('returns null if the canvas has a zero height', () => {
     const c = document.createElement('canvas');
     c.width = 300;
     c.height = 0;
     expect(toThumbnail(c)).toBeNull();
   });
 
-  it('ne lève pas et renvoie string|null pour un canvas dimensionné', () => {
+  it('does not throw and returns string|null for a sized canvas', () => {
     const c = document.createElement('canvas');
     c.width = 300;
     c.height = 150;

@@ -9,11 +9,11 @@ beforeEach(() => vi.useFakeTimers());
 afterEach(() => vi.useRealTimers());
 
 const ago = (ms: number) => new Date(Date.now() - ms).toISOString();
-/** Intl insère des espaces insécables fines : on compare sur des espaces ordinaires. */
+/** Intl inserts thin non-breaking spaces: we compare against ordinary spaces. */
 const norm = (s: string) => s.replace(/\s/g, ' ');
 
 describe('timeAgo', () => {
-  it('gradue seconde → minute → heure → jour, en français', async () => {
+  it('steps from seconds → minutes → hours → days, in French', async () => {
     await setLocale('fr');
     vi.setSystemTime(new Date('2026-07-04T12:00:00Z'));
     expect(timeAgo(ago(30_000))).toBe('maintenant');
@@ -22,7 +22,7 @@ describe('timeAgo', () => {
     expect(timeAgo(ago(2 * 86_400_000))).toBe('avant-hier');
   });
 
-  it('suit la langue courante', async () => {
+  it('follows the current language', async () => {
     vi.setSystemTime(new Date('2026-07-04T12:00:00Z'));
     await setLocale('en');
     expect(norm(timeAgo(ago(5 * 60_000)))).toBe('5 min. ago');
@@ -30,7 +30,7 @@ describe('timeAgo', () => {
     expect(timeAgo(ago(5 * 60_000))).toContain('5');
   });
 
-  it('au-delà de 7 jours : date absolue dans la langue courante', async () => {
+  it('beyond 7 days: absolute date in the current language', async () => {
     await setLocale('fr');
     vi.setSystemTime(new Date('2026-07-04T12:00:00Z'));
     expect(timeAgo(ago(10 * 86_400_000))).toBe(new Date(ago(10 * 86_400_000)).toLocaleDateString('fr'));

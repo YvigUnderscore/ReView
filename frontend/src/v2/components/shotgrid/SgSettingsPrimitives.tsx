@@ -6,12 +6,12 @@ import { Loader2 } from 'lucide-react';
 import { Card, CardDescription, CardTitle } from '../ui/card';
 
 /**
- * Les briques des réglages ShotGrid.
+ * Building blocks for the ShotGrid settings.
  *
- * Le panneau empilait sept `<section>` nues dans un seul flux : rien ne disait où finissait
- * « médias » et où commençait « écritures », et il fallait lire tous les libellés pour
- * retrouver un réglage. Une carte par thème, avec son titre et sa phrase d'intention,
- * rend la page parcourable — c'est ce qui distingue une liste d'options d'un écran.
+ * The panel stacked seven bare `<section>` elements in a single flow: nothing said where
+ * "media" ended and "writes" began, and finding a setting meant reading every label. One
+ * card per theme, with its title and intent sentence, makes the page scannable: that is
+ * what separates a list of options from a screen.
  */
 
 export function SettingsCard({
@@ -23,7 +23,7 @@ export function SettingsCard({
 }: {
   icon: typeof Loader2;
   title: string;
-  /** Une phrase : à quoi sert ce groupe. Pas la répétition des libellés qui suivent. */
+  /** One sentence: what this group is for. Not a repeat of the labels that follow. */
   hint?: string;
   busy?: boolean;
   children: ReactNode;
@@ -44,17 +44,17 @@ export function SettingsCard({
 }
 
 /**
- * Le libellé d'une ligne nomme le contrôle qu'elle porte.
+ * A row label names the control it carries.
  *
- * Il était rendu dans un `<div>` : la ligne se lit à l'écran, mais rien ne rattachait le
- * texte au contrôle — le lecteur d'écran annonçait « liste déroulante » et rien d'autre,
- * dix fois de suite, sur une page où c'est justement le libellé qui distingue un réglage
- * du suivant. La ligne fabrique donc l'identifiant, le transmet au contrôle qu'elle
- * englobe et le désigne par un vrai `<label htmlFor>`.
+ * It was rendered in a `<div>`: the row reads on screen, but nothing tied the text to the
+ * control. The screen reader announced "dropdown" and nothing else, ten times in a row, on
+ * a page where the label is precisely what tells one setting from the next. The row
+ * therefore generates the id, passes it to the control it wraps, and points to it with a
+ * real `<label htmlFor>`.
  */
 const RowFieldId = createContext<string | undefined>(undefined);
 
-/** Une ligne « libellé + contrôle », le contrôle aligné à droite. */
+/** A "label + control" row, with the control aligned to the right. */
 export function Row({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   const id = useId();
   return (
@@ -102,7 +102,7 @@ export function Toggle({
   );
 }
 
-/** Sélecteur au format des réglages — même dimension partout, sans quoi la colonne danse. */
+/** Select in the settings format: same size everywhere, otherwise the column jumps. */
 export function SettingSelect({
   value,
   disabled,
@@ -128,7 +128,7 @@ export function SettingSelect({
   );
 }
 
-/** Champ numérique borné — même style que le sélecteur. */
+/** Bounded numeric field, same style as the select. */
 export function SettingNumber({
   value,
   min,
@@ -157,9 +157,9 @@ export function SettingNumber({
       disabled={disabled}
       placeholder={placeholder}
       /*
-       * Dans une `Row`, c'est le libellé de la ligne qui nomme le champ — « Taille
-       * maximale » plutôt que « Sans limite », le placeholder n'étant qu'un exemple de
-       * valeur. Hors d'une ligne, il reste le seul nom disponible.
+       * Inside a `Row`, the row's label names the field: "Max size" rather than
+       * "No limit", since the placeholder is only an example value. Outside a row it
+       * remains the only available name.
        */
       aria-label={id ? undefined : placeholder}
       onChange={(e) => onChange(e.target.value)}

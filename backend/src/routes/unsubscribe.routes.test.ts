@@ -32,40 +32,39 @@ beforeEach(() => {
 });
 
 /**
- * Les passerelles antivirus et les proxys de messagerie (SafeLinks et assimilés)
- * préchargent les liens des messages : un GET qui désabonne désabonne tout seul, sans
- * que le destinataire ait cliqué. Le lien reçu par mail reste valide, mais il n'affiche
- * qu'une demande de confirmation.
+ * Antivirus gateways and mail proxies (SafeLinks and the like) preload the links of messages: a GET that
+ * unsubscribes unsubscribes by itself, without the recipient having clicked. The link received by email
+ * remains valid, but it only shows a confirmation request.
  */
-describe('GET /api/unsubscribe/:token — ne modifie rien', () => {
-  it('n’écrit pas la préférence', async () => {
+describe('GET /api/unsubscribe/:token — changes nothing', () => {
+  it('does not write the preference', async () => {
     const res = await request(app).get(`/api/unsubscribe/${token}`);
     expect(res.status).toBe(200);
     expect(db.user.update).not.toHaveBeenCalled();
   });
 
-  it('propose un bouton qui POSTe vers la confirmation', async () => {
+  it('offers a button that POSTs to the confirmation', async () => {
     const res = await request(app).get(`/api/unsubscribe/${token}`);
     expect(res.text).toContain('method="post"');
     expect(res.text).toContain(`action="/api/unsubscribe/${token}/confirm"`);
   });
 
-  it('annonce un lien invalide sans rien écrire', async () => {
+  it('announces an invalid link without writing anything', async () => {
     const res = await request(app).get(`/api/unsubscribe/${forged}`);
     expect(res.status).toBe(400);
     expect(res.text).not.toContain('method="post"');
     expect(db.user.update).not.toHaveBeenCalled();
   });
 
-  // §13 AGPL : surface publique, donc lien vers le code source.
-  it('porte la mention du code source', async () => {
+  // AGPL §13: public surface, hence a link to the source code.
+  it('carries the source code notice', async () => {
     const res = await request(app).get(`/api/unsubscribe/${token}`);
     expect(res.text).toContain('https://example.test/src');
   });
 });
 
-describe('POST /api/unsubscribe/:token/confirm — le clic humain', () => {
-  it('éteint la préférence visée et rend une page', async () => {
+describe('POST /api/unsubscribe/:token/confirm — the human click', () => {
+  it('switches off the targeted preference and returns a page', async () => {
     const res = await request(app).post(`/api/unsubscribe/${token}/confirm`).send('');
     expect(res.status).toBe(200);
     expect(db.user.update).toHaveBeenCalledWith({
@@ -75,7 +74,7 @@ describe('POST /api/unsubscribe/:token/confirm — le clic humain', () => {
     expect(res.text).toContain('You are unsubscribed');
   });
 
-  it('refuse un jeton forgé', async () => {
+  it('rejects a forged token', async () => {
     const res = await request(app).post(`/api/unsubscribe/${forged}/confirm`).send('');
     expect(res.status).toBe(400);
     expect(db.user.update).not.toHaveBeenCalled();
@@ -83,12 +82,12 @@ describe('POST /api/unsubscribe/:token/confirm — le clic humain', () => {
 });
 
 /**
- * Le bouton natif des messageries (`List-Unsubscribe-Post`) : réponse immédiate et sans
- * page, et surtout indifférenciée — distinguer jeton valide et jeton forgé dirait à un
- * tiers si un compte existe.
+ * The mail clients' native button (`List-Unsubscribe-Post`): immediate response without a page, and above
+ * all undifferentiated: distinguishing a valid token from a forged one would tell a third party whether an
+ * account exists.
  */
-describe('POST /api/unsubscribe/:token — bouton natif (RFC 8058)', () => {
-  it('désabonne et répond 204', async () => {
+describe('POST /api/unsubscribe/:token — native button (RFC 8058)', () => {
+  it('unsubscribes and responds 204', async () => {
     const res = await request(app)
       .post(`/api/unsubscribe/${token}`)
       .type('form')
@@ -97,7 +96,7 @@ describe('POST /api/unsubscribe/:token — bouton natif (RFC 8058)', () => {
     expect(db.user.update).toHaveBeenCalled();
   });
 
-  it('répond 204 aussi sur un jeton forgé', async () => {
+  it('responds 204 on a forged token too', async () => {
     const res = await request(app).post(`/api/unsubscribe/${forged}`).send('');
     expect(res.status).toBe(204);
     expect(db.user.update).not.toHaveBeenCalled();

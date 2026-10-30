@@ -6,14 +6,14 @@ import type { SplatSceneHandle } from '../../useSplat';
 import { combineSelection, shapePredicate, type SelectCombine, type SelectionShape } from './shapes2d';
 
 /**
- * Sélection écran des splats (10.G, perf revue en V2) : les centres sont capturés **une seule
- * fois** en `Float32Array` (une passe `forEachSplat` au premier commit), puis chaque commit
- * projette ce tampon par la matrice combinée (objet → monde → clip → pixels) dans une boucle
- * plate — sans objets Three par splat ni redépaquetage. Les splats masqués (suppression
- * non-destructive) sont exclus via `isHidden` (le tampon, lui, ne bouge jamais).
+ * Screen-space selection of splats (10.G, perf review in V2): the centres are captured **only
+ * once** as a `Float32Array` (one `forEachSplat` pass on the first commit), then each commit
+ * projects this buffer through the combined matrix (object → world → clip → pixels) in a flat
+ * loop, without per-splat Three objects or repacking. Hidden splats (non-destructive deletion)
+ * are excluded via `isHidden` (the buffer itself never changes).
  */
 
-/** Capture les centres de tous les splats (une passe) — cache de sélection. */
+/** Captures the centres of all splats (one pass): selection cache. */
 export function captureCenters(mesh: SplatMesh): Float32Array {
   const n = mesh.packedSplats?.numSplats ?? 0;
   const out = new Float32Array(n * 3);
@@ -27,8 +27,8 @@ export function captureCenters(mesh: SplatMesh): Float32Array {
 }
 
 /**
- * Projette les centres par la matrice clip (colonne-major THREE) et collecte les indices dont
- * la projection écran satisfait le prédicat. Pur et testable (aucune dépendance Three).
+ * Projects the centres through the clip matrix (THREE column-major) and collects the indices
+ * whose screen projection satisfies the predicate. Pure and testable (no Three dependency).
  */
 export function collectHits(
   e: ArrayLike<number>,
@@ -46,9 +46,9 @@ export function collectHits(
     const y = centers[3 * i + 1];
     const z = centers[3 * i + 2];
     const w = e[3] * x + e[7] * y + e[11] * z + e[15];
-    if (w <= 0) continue; // derrière la caméra
+    if (w <= 0) continue; // behind the camera
     const cz = (e[2] * x + e[6] * y + e[10] * z + e[14]) / w;
-    if (cz >= 1 || cz <= -1) continue; // hors du frustum near/far
+    if (cz >= 1 || cz <= -1) continue; // outside the near/far frustum
     const sx = ((e[0] * x + e[4] * y + e[8] * z + e[12]) / w) * 0.5 + 0.5;
     const sy = ((e[1] * x + e[5] * y + e[9] * z + e[13]) / w) * -0.5 + 0.5;
     if (hit(sx * width, sy * height)) hits.push(i);
@@ -56,7 +56,7 @@ export function collectHits(
   return hits;
 }
 
-/** Applique une forme tracée à l'écran à la sélection courante (au lâcher du drag). */
+/** Applies a shape drawn on screen to the current selection (on drag release). */
 export function selectByShape(
   handle: SplatSceneHandle,
   centers: Float32Array,

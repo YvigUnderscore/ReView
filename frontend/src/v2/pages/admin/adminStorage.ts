@@ -4,9 +4,9 @@
 import type { StorageAgg } from '../../types/api';
 import type { MessageKey } from '../../i18n';
 
-/** Helpers purs de la page admin Stockage (libellés, pourcentages) — testés. */
+/** Pure helpers for the Storage admin page (labels, percentages) — tested. */
 
-/** Clés de libellé des catégories racines du bucket. */
+/** Label keys for the bucket's root categories. */
 export const CATEGORY_LABELS: Record<string, MessageKey> = {
   originals: 'storage.cat.originals',
   derived: 'storage.cat.derived',
@@ -19,7 +19,7 @@ export const CATEGORY_LABELS: Record<string, MessageKey> = {
   other: 'storage.cat.other',
 };
 
-/** Clés de libellé des sous-types de dérivés (worker FFmpeg & éditeurs). */
+/** Label keys for the derivative sub-types (FFmpeg worker & editors). */
 export const DERIVED_LABELS: Record<string, MessageKey> = {
   hls: 'storage.d.hls',
   thumbnails: 'storage.d.thumbnails',
@@ -32,20 +32,20 @@ export const DERIVED_LABELS: Record<string, MessageKey> = {
   other: 'storage.d.other',
 };
 
-/** Clés de libellé des bibliothèques studio. */
+/** Label keys for the studio libraries. */
 export const STUDIO_LABELS: Record<string, MessageKey> = {
   hdris: 'storage.s.hdris',
   ocio: 'storage.s.ocio',
   other: 'storage.s.other',
 };
 
-/** Pourcentage entier (0–100) d'une part sur un total (0 si total nul). */
+/** Integer percentage (0–100) of a share of a total (0 if the total is zero). */
 export function pctOf(part: number, total: number): number {
   if (total <= 0) return 0;
   return Math.min(100, Math.round((part / total) * 100));
 }
 
-/** Entrées d'un agrégat triées par poids décroissant, avec libellé et pourcentage. */
+/** Entries of an aggregate sorted by descending weight, with label and percentage. */
 export function sortedEntries(
   agg: Record<string, StorageAgg>,
   labels: Record<string, MessageKey>,

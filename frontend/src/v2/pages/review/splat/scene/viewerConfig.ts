@@ -4,29 +4,29 @@
 import type { SparkRenderer } from '@sparkjsdev/spark';
 
 /**
- * Réglages du renderer Spark (10.G-V1) : culling. Spark clippe les centres de gaussiennes à 40 %
- * hors cadre (`clipXY` 1.4) et borne le rayon écran d'un splat à 512 px — en zoom fort
- * (overscale), des splats peuvent disparaître en bord de vue.
+ * Spark renderer settings (10.G-V1): culling. Spark clips gaussian centres at 40% outside the frame
+ * (`clipXY` 1.4) and bounds a splat's screen radius at 512 px: at a strong zoom (overscale),
+ * splats can vanish at the edge of the view.
  *
- * La review garde ce culling **actif** par défaut (lot 8 ; elle le neutralisait depuis 10.G-V1) :
- * sur les scans réels, payer le rendu de gaussiennes hors cadre coûtait plus que le rare
- * clignotement qu'il évitait. Qui le constate le neutralise d'un clic — panneau *Scène* ou menu
- * clic droit du viewer — et son choix est mémorisé (`cullingDefault`).
+ * The review keeps this culling **active** by default (lot 8; it had disabled it since 10.G-V1):
+ * on real scans, paying for the rendering of out-of-frame gaussians cost more than the rare flicker
+ * it avoided. Whoever notices it disables it in one click (the *Scene* panel or the viewer's
+ * right-click menu), and their choice is remembered (`cullingDefault`).
  */
 export interface CullingConfig {
   clipXY: number;
   maxPixelRadius: number;
 }
 
-/** Défauts Spark (culling actif — plus rapide sur les très gros nuages) : le défaut de la review. */
+/** Spark defaults (culling active: faster on very large clouds): the review's default. */
 export const CULLING_SPARK: CullingConfig = { clipXY: 1.4, maxPixelRadius: 512 };
 
-/** Culling neutralisé (sur demande) : aucun centre clippé, rayon écran très large. */
+/** Culling disabled (on request): no centre clipped, very wide screen radius. */
 export const CULLING_OFF: CullingConfig = { clipXY: 100, maxPixelRadius: 4096 };
 
 type CullingTarget = Pick<SparkRenderer, 'clipXY' | 'maxPixelRadius'>;
 
-/** Applique la configuration de culling au SparkRenderer (live, sans reconstruire la scène). */
+/** Applies the culling configuration to the SparkRenderer (live, without rebuilding the scene). */
 export function applyCulling(spark: CullingTarget, off: boolean): void {
   const cfg = off ? CULLING_OFF : CULLING_SPARK;
   spark.clipXY = cfg.clipXY;

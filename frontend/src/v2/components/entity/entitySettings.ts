@@ -2,16 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Réglages d'une entité de pipe — séquence, plan, asset (C3), partie calculable.
+ * Settings of a pipe entity (sequence, shot, asset) (C3), the computable part.
  *
- * Chaque entité avait sa propre boîte d'édition, avec des champs différents sans raison :
- * une séquence n'avait ni description ni vignette, un plan n'avait pas de statut, un asset
- * ne pouvait pas nommer son type. Un seul formulaire les couvre désormais, et ce module
- * décrit ce qu'il contient et ce qu'il envoie.
+ * Each entity used to have its own edit box, with different fields for no reason: a sequence had neither a
+ * description nor a thumbnail, a shot had no status, and an asset could not name its type. A single form now covers
+ * them all, and this module describes what it contains and what it sends.
  *
- * Le PATCH n'emporte **que ce qui a changé** : sur un projet relié à ShotGrid, renvoyer
- * l'intégralité du formulaire republierait vers le site des valeurs que personne n'a
- * touchées, en écrasant au passage ce qui aurait bougé entre-temps.
+ * The PATCH carries **only what changed**: on a project linked to ShotGrid, sending the whole form back would
+ * republish to the site values nobody touched, overwriting in passing what had moved in the meantime.
  */
 
 export type EntityKind = 'sequence' | 'shot' | 'asset';
@@ -19,17 +17,17 @@ export type EntityKind = 'sequence' | 'shot' | 'asset';
 export interface EntityFormValues {
   name: string;
   code: string;
-  /** Libellé de type d'asset, tel que le studio le nomme. */
+  /** Asset type label, as the studio names it. */
   typeLabel: string;
   description: string;
-  /** Plage de frames d'un plan, saisie en texte (vide = non renseignée). */
+  /** Frame range of a shot, entered as text (empty = not filled in). */
   startFrame: string;
   endFrame: string;
   pipelineStatusId: number | null;
   departmentIds: number[];
 }
 
-/** Ce que porte réellement l'entité reçue de l'API. */
+/** What the entity received from the API actually carries. */
 export interface EntitySource {
   name?: string | null;
   code?: string | null;
@@ -41,7 +39,7 @@ export interface EntitySource {
   departments?: { id: number }[];
 }
 
-/** Les champs qu'une entité possède — le formulaire n'affiche que ceux-là. */
+/** The fields an entity owns: the form only shows those. */
 export const ENTITY_FIELDS: Record<EntityKind, ReadonlySet<keyof EntityFormValues>> = {
   sequence: new Set(['name', 'code', 'description', 'pipelineStatusId', 'departmentIds']),
   shot: new Set([
@@ -56,7 +54,7 @@ export const ENTITY_FIELDS: Record<EntityKind, ReadonlySet<keyof EntityFormValue
   asset: new Set(['name', 'typeLabel', 'description', 'departmentIds']),
 };
 
-/** Segment d'URL de l'API pour chaque entité. */
+/** API URL segment for each entity. */
 export const ENTITY_SEGMENT: Record<EntityKind, 'sequences' | 'shots' | 'assets'> = {
   sequence: 'sequences',
   shot: 'shots',
@@ -76,7 +74,7 @@ export function formFromEntity(source: EntitySource): EntityFormValues {
   };
 }
 
-/** Un entier, ou `null` si le champ est vide. Une saisie illisible vaut « vide ». */
+/** An integer, or `null` if the field is empty. An unreadable entry counts as empty. */
 function frameValue(raw: string): number | null {
   const trimmed = raw.trim();
   if (trimmed === '') return null;
@@ -85,9 +83,8 @@ function frameValue(raw: string): number | null {
 }
 
 /**
- * Ce qu'il faut envoyer : les seuls champs modifiés, et rien pour une entité qui ne les
- * possède pas. Les départements sont exclus — ils passent par leur propre route, qui
- * remplace la liste au lieu de la fusionner.
+ * What to send: only the modified fields, and nothing for an entity that does not own them. Departments are
+ * excluded: they go through their own route, which replaces the list instead of merging it.
  */
 export function payloadFromForm(
   kind: EntityKind,
@@ -108,7 +105,7 @@ export function payloadFromForm(
   return payload;
 }
 
-/** Les départements ont bougé (ordre indifférent) — inutile d'appeler leur route sinon. */
+/** The departments have moved (order irrelevant): no need to call their route otherwise. */
 export function departmentsChanged(initial: EntityFormValues, values: EntityFormValues): boolean {
   if (initial.departmentIds.length !== values.departmentIds.length) return true;
   const before = new Set(initial.departmentIds);
@@ -116,9 +113,8 @@ export function departmentsChanged(initial: EntityFormValues, values: EntityForm
 }
 
 /**
- * Le nom manquant est la seule saisie qui puisse casser une entité : tout le reste peut
- * être vide. Un code vide passerait la validation du serveur en `min(1)` et reviendrait
- * en erreur brute, autant le dire ici.
+ * A missing name is the only entry that can break an entity: everything else may be empty. An empty code would
+ * pass the server's `min(1)` validation and come back as a raw error, so better say so here.
  */
 export function formError(kind: EntityKind, values: EntityFormValues): 'name' | 'code' | null {
   if (values.name.trim() === '') return 'name';

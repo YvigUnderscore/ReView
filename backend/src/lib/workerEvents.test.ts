@@ -4,7 +4,7 @@
 import { describe, expect, it } from 'vitest';
 import { decodeWorkerEvent, encodeWorkerEvent, type WorkerHlsEvent } from './workerEvents';
 
-describe('workerEvents — canal worker → serveur (34.F)', () => {
+describe('workerEvents — worker → server channel (34.F)', () => {
   const evt: WorkerHlsEvent = {
     type: 'hls',
     mediaId: 42,
@@ -14,18 +14,18 @@ describe('workerEvents — canal worker → serveur (34.F)', () => {
     building: true,
   };
 
-  it('encode/decode aller-retour', () => {
+  it('encode/decode round trip', () => {
     expect(decodeWorkerEvent(encodeWorkerEvent(evt))).toEqual(evt);
   });
 
-  it('décode les événements markers (scene detection 34.H)', () => {
+  it('decodes marker events (scene detection 34.H)', () => {
     expect(decodeWorkerEvent(encodeWorkerEvent({ type: 'markers', mediaId: 9 }))).toEqual({
       type: 'markers',
       mediaId: 9,
     });
   });
 
-  it('ignore les messages corrompus ou inconnus', () => {
+  it('ignores corrupted or unknown messages', () => {
     expect(decodeWorkerEvent('pas du json')).toBeNull();
     expect(decodeWorkerEvent('{"type":"autre"}')).toBeNull();
     expect(decodeWorkerEvent('{"type":"hls","mediaId":"nope"}')).toBeNull();

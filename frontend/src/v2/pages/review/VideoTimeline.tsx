@@ -12,9 +12,9 @@ import { MarkerDialog, MarkerTicks } from './TimelineMarkers';
 import type { TimelineMarkersApi } from './useTimelineMarkers';
 import { useT } from '../../i18n';
 
-/** Timeline vidéo : scrub à la souris + miniature de survol (la vignette du sprite sous
- * le curseur, façon YouTube) + marqueurs de commentaires avec avatar de l'auteur +
- * marqueurs nommés/colorés partagés posés par clic droit (34.C). */
+/** Video timeline: mouse scrubbing + hover thumbnail (the sprite thumbnail under the cursor,
+ * YouTube-style) + comment markers with the author's avatar + shared named/colored markers
+ * placed by right-click (34.C). */
 export default function VideoTimeline({
   currentTime,
   duration,
@@ -37,17 +37,17 @@ export default function VideoTimeline({
   selectedId: number | null;
   onSeek: (t: number) => void;
   onSelectComment: (c: ReviewComment) => void;
-  /** Fenêtre de trim (secondes) — zones hors coupe grisées (10.G-V10). */
+  /** Trim window (seconds) — areas outside the cut grayed out (10.G-V10). */
   trimRange?: { start: number; end: number } | null;
-  /** Points de boucle I/O (secondes, 14.B) — région surlignée entre in et out. */
+  /** I/O loop points (seconds, 14.B) — region highlighted between in and out. */
   loop?: { in: number | null; out: number | null };
-  /** Sprite de miniatures (~1 vignette / 3 s) : celle sous le curseur s'affiche au survol. */
+  /** Thumbnail sprite (~1 thumbnail / 3 s): the one under the cursor is shown on hover. */
   sprite?: { url: string; meta: TimelineSpriteMeta } | null;
-  /** Marqueurs partagés (34.C) — absent : timeline sans marqueurs (comparaison B…). */
+  /** Shared markers (34.C) — absent: timeline without markers (B comparison…). */
   markersApi?: TimelineMarkersApi;
-  /** Affichage de la forme d'onde audio, réglé au clic droit sur la barre. */
+  /** Audio waveform display, set via right-click on the bar. */
   waveform?: TimelineToggle;
-  /** Enchaînement automatique de la playlist, réglé au même endroit. */
+  /** Automatic playlist chaining, set in the same place. */
   autoAdvance?: TimelineToggle;
   fps?: number;
   startFrame?: number;
@@ -56,17 +56,17 @@ export default function VideoTimeline({
   const barRef = useRef<HTMLDivElement>(null);
   const scrubbing = useRef(false);
   const [barWidth, setBarWidth] = useState(0);
-  // Marqueurs partagés (34.C) : frame visée par le clic droit + dialog création/édition.
+  // Shared markers (34.C): frame targeted by right-click + create/edit dialog.
   const ctxFrame = useRef(0);
   const [markerDialog, setMarkerDialog] = useState<{ frame: number; editing: TimelineMarker | null } | null>(
     null,
   );
-  // Abscisse du curseur (px, relative à la barre) — pilote la miniature de survol.
+  // Cursor abscissa (px, relative to the bar) — drives the hover thumbnail.
   const [hoverX, setHoverX] = useState<number | null>(null);
   const progress = duration > 0 ? Math.min(currentTime / duration, 1) : 0;
   const timedComments = comments.filter((c) => c.timestamp != null);
 
-  // Largeur de barre suivie pour dimensionner le filmstrip.
+  // Tracked bar width, used to size the filmstrip.
   useEffect(() => {
     const el = barRef.current;
     if (!el) return;
@@ -75,8 +75,8 @@ export default function VideoTimeline({
     return () => ro.disconnect();
   }, []);
 
-  // Miniature de survol : la vignette du sprite à l'instant pointé, centrée sur le
-  // curseur (clampée aux bords de la barre).
+  // Hover thumbnail: the sprite frame at the pointed instant, centered on the cursor
+  // (clamped to the bar's edges).
   const thumbH = 68;
   const thumb =
     sprite && duration > 0 && hoverX != null && barWidth > 0
@@ -103,7 +103,7 @@ export default function VideoTimeline({
     [duration, onSeek],
   );
 
-  // Scrub : maintien du clic + glissement = déplacement continu dans la vidéo.
+  // Scrub: hold the click + drag = continuous movement through the video.
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (e.button !== 0) return;
     scrubbing.current = true;
@@ -120,7 +120,7 @@ export default function VideoTimeline({
   };
   const onPointerUp = (e: React.PointerEvent<HTMLDivElement>) => {
     scrubbing.current = false;
-    // Fin de scrub hors de la barre (pointer capture) : la miniature se referme.
+    // End of scrub outside the bar (pointer capture): the thumbnail closes.
     const rect = barRef.current?.getBoundingClientRect();
     if (
       rect &&
@@ -129,13 +129,13 @@ export default function VideoTimeline({
       setHoverX(null);
   };
 
-  // Le clic droit n'est retenu que si la barre a quelque chose à proposer : sinon il doit
-  // remonter au menu du viewer, comme partout ailleurs dans la review.
+  // Right-click is only captured if the bar has something to offer: otherwise it must bubble
+  // up to the viewer menu, as everywhere else in the review.
   const hasMenu =
     markersApi?.canWrite === true || waveform?.available === true || autoAdvance?.available === true;
 
-  // Clic droit sur la barre : mémorise la frame pointée (menu « Ajouter un marqueur ici »)
-  // et ne remonte pas au menu contextuel global du viewer.
+  // Right-click on the bar: remembers the pointed frame ("Add a marker here" menu)
+  // and does not bubble up to the viewer's global context menu.
   const onBarContextMenu = (e: React.MouseEvent) => {
     e.stopPropagation();
     const rect = barRef.current?.getBoundingClientRect();
@@ -158,7 +158,7 @@ export default function VideoTimeline({
       onContextMenu={hasMenu ? onBarContextMenu : undefined}
       title={t('review.timeline.scrub')}
     >
-      {/* Miniature de survol : la vignette à l'instant pointé, suivant le curseur */}
+      {/* Hover thumbnail: the thumbnail at the pointed instant, following the cursor */}
       {thumb && (
         <div
           className="pointer-events-none absolute bottom-full z-30 mb-1.5 overflow-hidden rounded-md border border-border bg-card shadow-lg"
@@ -179,7 +179,7 @@ export default function VideoTimeline({
         </div>
       )}
 
-      {/* Fond progress */}
+      {/* Progress background */}
       <div className="absolute inset-y-0 left-1 right-1 overflow-hidden rounded">
         <div className="h-full rounded bg-secondary/40" />
         <div
@@ -188,7 +188,7 @@ export default function VideoTimeline({
         />
       </div>
 
-      {/* Zones hors trim (grisées) — la coupe non-destructive visible d'un coup d'œil */}
+      {/* Out-of-trim areas (grayed) — the non-destructive cut, visible at a glance */}
       {trimRange && duration > 0 && (
         <>
           {trimRange.start > 0 && (
@@ -206,7 +206,7 @@ export default function VideoTimeline({
         </>
       )}
 
-      {/* Région de boucle I/O (14.B) + poignées */}
+      {/* I/O loop region (14.B) + handles */}
       {loop && duration > 0 && (loop.in != null || loop.out != null) && (
         <>
           {loop.in != null && loop.out != null && (
@@ -231,13 +231,13 @@ export default function VideoTimeline({
         </>
       )}
 
-      {/* Curseur de lecture */}
+      {/* Playhead */}
       <div
         className="absolute top-0 bottom-0 w-0.5 rounded-full bg-primary z-10 pointer-events-none"
         style={{ left: `calc(${progress * 100}% * (100% - 8px) / 100% + 4px)` }}
       />
 
-      {/* Marqueurs de commentaires : avatar de l'auteur de la review */}
+      {/* Comment markers: the review author's avatar */}
       {timedComments.map((c) => {
         const pos = (c.timestamp! / duration) * 100;
         const selected = c.id === selectedId;
@@ -267,7 +267,7 @@ export default function VideoTimeline({
         );
       })}
 
-      {/* Plages annotées in→out (34.A) : segment fin à la couleur de l'auteur + poignées */}
+      {/* Annotated in→out ranges (34.A): thin segment in the author's color + handles */}
       <RangeSegments
         comments={comments}
         duration={duration}
@@ -276,7 +276,7 @@ export default function VideoTimeline({
         onSelectComment={onSelectComment}
       />
 
-      {/* Marqueurs nommés/colorés partagés (34.C) */}
+      {/* Shared named/colored markers (34.C) */}
       {markersApi && (
         <MarkerTicks
           api={markersApi}
@@ -287,7 +287,7 @@ export default function VideoTimeline({
         />
       )}
 
-      {/* Timecode affiché à droite */}
+      {/* Timecode shown on the right */}
       <span className="absolute right-2 top-1/2 -translate-y-1/2 font-mono text-2xs text-muted-foreground pointer-events-none">
         {formatTime(currentTime)} / {formatTime(duration)}
       </span>

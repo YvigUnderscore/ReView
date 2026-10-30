@@ -7,7 +7,7 @@ import { Panel } from './AdminPrimitives';
 import type { Nomenclature, ProjectSettings } from '../../types/api';
 import { useT } from '../../i18n';
 
-/** Un champ court des défauts : son libellé au-dessus, sa saisie en dessous. */
+/** A short default field: its label above, its input below. */
 function DefField({ label, children }: { label: string; children: ReactNode }) {
   return (
     <label className="flex flex-col gap-1 text-2xs section-label text-muted-foreground">
@@ -17,7 +17,7 @@ function DefField({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-/** Numérotation des séquences et des plans : préfixes, pas, nombre de chiffres. */
+/** Numbering of sequences and shots: prefixes, steps, number of digits. */
 export function NumberingPanel({
   value,
   onChange,
@@ -68,9 +68,9 @@ export function NumberingPanel({
 }
 
 /**
- * Format de livraison et cadence — et la **frame de départ**, qui traînait dans la section
- * fourre-tout alors qu'elle n'a de sens qu'à côté d'eux : ce sont les trois valeurs qu'un
- * nouveau plan reçoit à sa création.
+ * Delivery format and cadence — and the **start frame**, which was lingering in the catch-all section
+ * although it only makes sense next to them: they are the three values a
+ * new shot receives when it is created.
  */
 export function FormatPanel({
   value,
@@ -81,7 +81,7 @@ export function FormatPanel({
   value: Pick<ProjectSettings, 'resolution' | 'framerate'>;
   onResolution: (axis: 'width' | 'height', raw: string) => void;
   onFramerate: (raw: string) => void;
-  /** Les champs clé/valeur de la section, rendus sous les dimensions. */
+  /** The key/value fields of the section, rendered under the dimensions. */
   startFrame: ReactNode;
 }) {
   const t = useT();

@@ -11,7 +11,7 @@ import { requireScope } from '../middleware/scope';
 const noop = () => undefined;
 
 describe('joinPaths', () => {
-  it('assemble sans doubler ni laisser traîner de barre', () => {
+  it('assembles without doubling or leaving a stray slash', () => {
     expect(joinPaths('/api/v1', '/projects')).toBe('/api/v1/projects');
     expect(joinPaths('/api/v1/', '/', '/shots/')).toBe('/api/v1/shots');
     expect(joinPaths('/api/v1', '')).toBe('/api/v1');
@@ -20,7 +20,7 @@ describe('joinPaths', () => {
 });
 
 describe('toOpenApiPath', () => {
-  it('convertit les paramètres Express en gabarits OpenAPI', () => {
+  it('converts Express parameters into OpenAPI templates', () => {
     expect(toOpenApiPath('/shots/:id')).toBe('/shots/{id}');
     expect(toOpenApiPath('/media/:id/comments')).toBe('/media/{id}/comments');
     expect(toOpenApiPath('/projects/:ref/shots')).toBe('/projects/{ref}/shots');
@@ -29,7 +29,7 @@ describe('toOpenApiPath', () => {
 });
 
 describe('describeRouter', () => {
-  it('extrait méthode, chemin, schémas et scope de chaque route', () => {
+  it('extracts method, path, schemas and scope of each route', () => {
     const router = Router();
     const params = z.object({ id: z.coerce.number() });
     const body = z.object({ name: z.string() });
@@ -42,7 +42,7 @@ describe('describeRouter', () => {
     expect(route!.schemas.body).toBe(body);
   });
 
-  it('décrit une route sans validation ni scope', () => {
+  it('describes a route without validation or scope', () => {
     const router = Router();
     router.get('/', noop);
     expect(describeRouter(router, '/api/v1')).toEqual([
@@ -50,14 +50,14 @@ describe('describeRouter', () => {
     ]);
   });
 
-  it('produit une entrée par méthode déclarée', () => {
+  it('produces one entry per declared method', () => {
     const router = Router();
     router.route('/x').get(noop).delete(noop);
     const methods = describeRouter(router, '/base').map((r) => r.method);
     expect(methods.sort()).toEqual(['delete', 'get']);
   });
 
-  it('ignore les middlewares montés sans route', () => {
+  it('ignores middlewares mounted without a route', () => {
     const router = Router();
     router.use(noop);
     expect(describeRouter(router, '/base')).toEqual([]);
@@ -65,7 +65,7 @@ describe('describeRouter', () => {
 });
 
 describe('describeMounts', () => {
-  it('applique le préfixe de chaque montage', () => {
+  it('applies the prefix of each mount', () => {
     const a = Router();
     a.get('/', noop);
     const b = Router();

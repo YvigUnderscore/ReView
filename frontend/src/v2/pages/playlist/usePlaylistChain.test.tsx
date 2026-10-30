@@ -4,7 +4,7 @@
 import { useRef } from 'react';
 import { fireEvent, screen, waitFor } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
-import { renderWithProviders } from '../../../test/renderWithProviders';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import type { PlaylistItemEntry } from '../../types/api';
 import { usePlaylistChain } from './usePlaylistChain';
 
@@ -27,7 +27,7 @@ const playlist = {
   },
 };
 
-/** Lecteur minimal : le hook n'a besoin que d'un élément vidéo et d'un id de média. */
+/** Minimal player: the hook only needs a video element and a media id. */
 function Probe({ mediaId }: { mediaId: number }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const chain = usePlaylistChain(mediaId, videoRef);
@@ -49,21 +49,21 @@ const setup = (route: string) =>
   });
 
 describe('usePlaylistChain', () => {
-  it('la fin du plan ouvre le suivant lisible, contexte de playlist conservé', async () => {
+  it('the end of a shot opens the next playable one, playlist context kept', async () => {
     const { currentPath } = setup('/review/101?playlist=5');
     await waitFor(() => expect(screen.getByTestId('next')).toHaveTextContent('103'));
     fireEvent.ended(screen.getByTestId('player'));
     await waitFor(() => expect(currentPath()).toBe('/review/sh3-103?playlist=5'));
   });
 
-  it('hors playlist, rien ne s’enchaîne', async () => {
+  it('outside a playlist, nothing chains', async () => {
     const { currentPath } = setup('/review/101');
     await waitFor(() => expect(screen.getByTestId('state')).toHaveTextContent('false/true'));
     fireEvent.ended(screen.getByTestId('player'));
     await waitFor(() => expect(currentPath()).toBe('/review/101'));
   });
 
-  it('bascule désarmée : la lecture s’arrête en fin de plan', async () => {
+  it('toggle disarmed: playback stops at the end of the shot', async () => {
     const { currentPath, user } = setup('/review/101?playlist=5');
     await waitFor(() => expect(screen.getByTestId('next')).toHaveTextContent('103'));
     await user.click(screen.getByRole('button'));
@@ -72,7 +72,7 @@ describe('usePlaylistChain', () => {
     await waitFor(() => expect(currentPath()).toBe('/review/101?playlist=5'));
   });
 
-  it('un montage automatique mène : la playlist ne navigue pas en double', async () => {
+  it('an automatic edit leads: the playlist does not navigate twice', async () => {
     const { currentPath } = setup('/review/101?playlist=5&timeline=3');
     await waitFor(() => expect(screen.getByTestId('next')).toHaveTextContent('103'));
     fireEvent.ended(screen.getByTestId('player'));

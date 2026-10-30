@@ -5,25 +5,23 @@ import pino, { type LoggerOptions } from 'pino';
 import { env } from '../config/env';
 
 /**
- * Logger structuré unique de l'application (backend + workers).
+ * The single structured logger of the application (backend + workers).
  *
- * - Niveau : `LOG_LEVEL` explicite, sinon dérivé de `NODE_ENV`
- *   (`silent` en test, `info` en production, `debug` en développement).
- * - Sortie : JSON une ligne par événement (agrégation/observabilité), sauf en
- *   développement où `pino-pretty` colorise pour la lisibilité locale.
- * - Le request-id et la journalisation des requêtes HTTP sont ajoutés par
- *   `pino-http` (cf. `middleware/httpLogger`).
+ * - Level: explicit `LOG_LEVEL`, otherwise derived from `NODE_ENV`
+ *   (`silent` in test, `info` in production, `debug` in development).
+ * - Output: one-line JSON per event (aggregation/observability), except in development where
+ *   `pino-pretty` colourises for local readability.
+ * - The request-id and HTTP request logging are added by `pino-http` (see `middleware/httpLogger`).
  */
 const level =
   env.LOG_LEVEL ?? (env.NODE_ENV === 'test' ? 'silent' : env.NODE_ENV === 'production' ? 'info' : 'debug');
 
 /**
- * Champs jamais journalisés, où qu'ils apparaissent dans l'objet passé au logger.
+ * Fields never logged, wherever they appear in the object passed to the logger.
  *
- * La rédaction du journal HTTP couvre les en-têtes ; celle-ci couvre le reste — un
- * enregistrement de site ShotGrid, un formulaire SMTP, une entité relue depuis la base.
- * Un secret n'a aucune raison d'atteindre un fichier de log, et l'oubli se produit au
- * moment où l'on ajoute un `logger.error({ site })` pour déboguer.
+ * HTTP log redaction covers the headers; this covers the rest — a ShotGrid site record, an SMTP form, an entity read
+ * back from the database. A secret has no reason to reach a log file, and the oversight happens when one adds a
+ * `logger.error({ site })` to debug something.
  */
 const REDACTED_FIELDS = [
   'password',
@@ -45,19 +43,17 @@ const REDACTED_FIELDS = [
 ];
 
 /**
- * Embellisseur de sortie — **seulement s'il est réellement là**.
+/**
+ * Output pretty-printer — **only if it is really there**.
  *
- * `pino-pretty` est une devDependency, et l'image d'exécution est construite avec
- * `npm ci --omit=dev` : elle ne l'embarque pas. Or la pile docker de développement pose
- * `NODE_ENV=development` sur cette même image (c'est ce qui désactive les garde-fous de
- * production : secrets forts, CORS strict). Les deux décisions sont bonnes séparément, et
- * leur rencontre faisait lever à pino « unable to determine transport target for
- * "pino-pretty" » **au chargement du module** : le conteneur ne démarrait pas du tout, et le
- * message ne parlait ni de docker ni de NODE_ENV.
+ * `pino-pretty` is a devDependency, and the runtime image is built with `npm ci --omit=dev`: it does not ship it.
+ * Yet the development docker stack sets `NODE_ENV=development` on this same image (which disables the production
+ * guards: strong secrets, strict CORS). Both decisions are sound on their own, but their meeting made pino throw
+ * "unable to determine transport target for \"pino-pretty\"" **at module load**: the container did not start at
+ * all, and the message said nothing about docker or NODE_ENV.
  *
- * Un embellisseur de logs ne peut pas être la raison pour laquelle un processus refuse de
- * démarrer. On ne le demande donc que si le paquet est installé, et on retombe sinon sur le
- * JSON — qui est de toute façon ce qu'on veut dès qu'on agrège.
+ * A log pretty-printer must never be the reason a process refuses to start. It is therefore requested only if the
+ * package is installed, and otherwise we fall back to JSON — which is in any case what we want once aggregating.
  */
 export function prettyTransport(
   nodeEnv: string,
@@ -70,7 +66,7 @@ export function prettyTransport(
   };
 }
 
-/** Le paquet est-il résolvable depuis ce module ? `require.resolve` ne l'exécute pas. */
+/** Is the package resolvable from this module? `require.resolve` does not execute it. */
 const isInstalled = (name: string): boolean => {
   try {
     require.resolve(name);

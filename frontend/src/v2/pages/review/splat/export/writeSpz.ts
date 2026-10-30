@@ -4,13 +4,13 @@
 import type { BakedSplat } from './bakeSplats';
 
 /**
- * Écriture d'un fichier **.spz** (format compact Spark, conteneur gzip ~10× plus petit que le
- * PLY, chargé nativement) depuis des splats cuits — 41.C. Glue mince sur `SpzWriter` de Spark
- * (importé dynamiquement, hors bundle initial).
+ * Writing a **.spz** file (Spark's compact format: a gzip container ~10× smaller than the PLY,
+ * loaded natively) from baked splats, 41.C. Thin glue over Spark's `SpzWriter` (imported
+ * dynamically, out of the initial bundle).
  *
- * SH degré 0 : `PackedSplats.getSplat` ne restitue que la couleur de base (les harmoniques
- * sphériques vivent dans des textures séparées) — l'export conserve donc la couleur diffuse
- * mais pas la couleur vue-dépendante. Limite assumée et documentée.
+ * SH degree 0: `PackedSplats.getSplat` only returns the base colour (the spherical harmonics live
+ * in separate textures), so the export keeps the diffuse colour but not the view-dependent colour.
+ * This limit is accepted and documented.
  */
 export async function writeSpz(splats: readonly BakedSplat[]): Promise<Uint8Array> {
   const { SpzWriter } = await import('@sparkjsdev/spark');

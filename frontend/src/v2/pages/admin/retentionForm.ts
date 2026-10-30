@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Formulaire de rétention : formes et bornes partagées avec `lib/retention` côté serveur.
+ * Retention form: shapes and bounds shared with `lib/retention` on the server side.
  *
- * Le serveur assainit de toute façon ce qu'il reçoit ; ces bornes-ci existent pour que le
- * champ ne laisse jamais partir une valeur que l'API corrigerait en silence — l'admin
- * verrait alors autre chose que ce qu'il a tapé.
+ * The server sanitises whatever it receives in any case; these bounds exist so that the
+ * field never lets through a value the API would silently correct — the admin
+ * would then see something other than what they typed.
  */
 
 export const RETENTION_FAMILIES = [
@@ -23,10 +23,10 @@ export const RETENTION_FAMILIES = [
 
 export type RetentionFamily = (typeof RETENTION_FAMILIES)[number];
 
-/** Durées en jours (`0` = conservation illimitée) + taille des tranches de suppression. */
+/** Durations in days (`0` = unlimited retention) + size of the deletion batches. */
 export type RetentionPolicy = Record<RetentionFamily, number> & { batchSize: number };
 
-/** Familles dont seules les lignes déjà mortes (expirées ou révoquées) sont supprimées. */
+/** Families of which only already dead rows (expired or revoked) are deleted. */
 export const DEAD_ONLY_FAMILIES: ReadonlySet<RetentionFamily> = new Set<RetentionFamily>([
   'userSession',
   'passwordReset',
@@ -41,13 +41,13 @@ export const MAX_BATCH = 20_000;
 const clamp = (value: number, min: number, max: number): number =>
   Math.min(Math.max(Math.trunc(value), min), max);
 
-/** Durée saisie → jours valides. Champ vidé ou illisible = `0`, soit « conserver ». */
+/** Entered duration → valid days. Empty or unreadable field = `0`, i.e. "keep". */
 export function clampDays(raw: string | number): number {
   const n = Number(raw);
   return Number.isFinite(n) ? clamp(n, 0, MAX_DAYS) : 0;
 }
 
-/** Taille de tranche saisie → valeur valide. Champ vidé = le plancher, jamais `0`. */
+/** Entered batch size → valid value. Empty field = the floor, never `0`. */
 export function clampBatchSize(raw: string | number): number {
   const n = Number(raw);
   if (!Number.isFinite(n) || n <= 0) return MIN_BATCH;
@@ -55,11 +55,11 @@ export function clampBatchSize(raw: string | number): number {
 }
 
 /**
- * La politique a-t-elle bougé depuis le chargement ?
+ * Has the policy changed since loading?
  *
- * C'est ce qui arme la barre d'enregistrement de l'écran : sans cela le bouton restait
- * offert en permanence, et rien ne distinguait « je n'ai rien touché » de « j'ai touché et
- * je n'ai pas encore validé ».
+ * This is what arms the screen's save bar: without it the button stayed
+ * permanently offered, and nothing distinguished "I have touched nothing" from "I have changed
+ * something and not yet validated it".
  */
 export function policyChanged(saved: RetentionPolicy, draft: RetentionPolicy): boolean {
   if (saved.batchSize !== draft.batchSize) return true;

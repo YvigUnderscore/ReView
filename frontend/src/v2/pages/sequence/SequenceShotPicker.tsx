@@ -16,13 +16,12 @@ import { attachableShots, attachRefusal, movedFromOtherSequence } from './shotAs
 import { useT } from '../../i18n';
 
 /**
- * Rattacher des plans existants à la séquence ouverte.
+ * Attaches existing shots to the open sequence.
  *
- * On choisit à la vignette, comme pour l'assignation d'un asset : « SH0120 » ne dit pas
- * quel plan c'est, l'image si. Les deux provenances restent séparées — les plans libres
- * d'un côté, ceux qui appartiennent à une autre séquence de l'autre — et le pied de page
- * annonce combien vont *quitter* leur séquence, parce que le geste défait un montage
- * ailleurs sans qu'on l'ait ouvert.
+ * Selection is by thumbnail, as for assigning an asset: "SH0120" does not say which shot it is,
+ * the image does. The two origins stay separate — free shots on one side, shots belonging to
+ * another sequence on the other — and the footer announces how many will *leave* their sequence,
+ * because the gesture undoes a sequence assignment elsewhere without the user having opened it.
  */
 export default function SequenceShotPicker({
   projectId,
@@ -39,7 +38,7 @@ export default function SequenceShotPicker({
 }) {
   const t = useT();
   const qc = useQueryClient();
-  // Toutes les pages : sinon le 101e plan du projet resterait irrattachable.
+  // All pages: otherwise the 101st shot of the project would stay unattachable.
   const shotsQ = useShotsQuery(projectId, projectId > 0, { all: true });
   const [query, setQuery] = useState('');
   const [picked, setPicked] = useState<Set<number>>(new Set());
@@ -70,8 +69,8 @@ export default function SequenceShotPicker({
     try {
       const { count } = await bulkMoveShots([...picked], sequenceId);
       toast.success(t('sequenceShots.attached', { count }));
-      // Le déplacement touche aussi la séquence de départ et les compteurs du projet :
-      // invalider la seule séquence ouverte laisserait l'autre mentir.
+      // The move also touches the origin sequence and the project counters: invalidating only
+      // the open sequence would leave the other one lying.
       await Promise.all([
         qc.invalidateQueries({ queryKey: ['sequence'] }),
         qc.invalidateQueries({ queryKey: qk.shots(projectId) }),
@@ -105,8 +104,8 @@ export default function SequenceShotPicker({
       {shotsQ.error && <p className="mb-2 text-xs text-destructive">{shotsQ.error.message}</p>}
 
       <div className="min-h-0 flex-1 overflow-y-auto pr-1">
-        {/* `isComplete` plutôt que `isPending` : tant que les pages s'enchaînent, « aucun
-            plan à rattacher » serait un mensonge sur une liste à moitié arrivée. */}
+        {/* `isComplete` rather than `isPending`: while the pages are still chaining, "no shot to
+            attach" would be a lie about a half-loaded list. */}
         {!shotsQ.isComplete ? (
           <SkeletonRows count={3} />
         ) : nothingToAttach ? (
@@ -131,8 +130,8 @@ export default function SequenceShotPicker({
         )}
       </div>
 
-      {/* Dire ce qui va se passer, pas seulement combien : un plan pris ailleurs sort du
-          montage de sa séquence, et rien à l'écran ne le montrerait autrement. */}
+      {/* Say what is going to happen, not just how many: a shot taken from elsewhere leaves its
+          sequence, and nothing on screen would show it otherwise. */}
       {leaving > 0 && (
         <p className="mt-3 flex items-start gap-1.5 text-xs text-warning">
           <AlertTriangle size={13} className="mt-0.5 shrink-0" />
@@ -152,7 +151,7 @@ export default function SequenceShotPicker({
   );
 }
 
-/** Un groupe de provenance : son titre, ses vignettes, son propre vide. */
+/** One origin group: its title, its thumbnails, its own empty state. */
 function PickerGroup({
   title,
   items,

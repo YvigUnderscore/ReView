@@ -10,15 +10,15 @@ import type { PoiDraftState } from './usePoiDraft';
 import { usePoiPlacement, type PoiViewer } from './usePoiPlacement';
 
 /**
- * Parité 3D / splat : les deux viewers remplissent LE MÊME contrat (`PoiViewer`) et passent par
- * LE MÊME hook. Les deux stubs ne diffèrent donc que par leur nom et par la façon de répondre au
- * rayon — exactement ce qui les distingue en vrai (triangles d'un côté, nuage de l'autre).
+ * 3D / splat parity: the two viewers fulfil THE SAME contract (`PoiViewer`) and go through THE SAME hook.
+ * The two stubs therefore differ only by their name and by the way they answer the ray: exactly what
+ * distinguishes them in reality (triangles on one side, a cloud on the other).
  */
 function viewerStub(name: string) {
   const dom = document.createElement('div');
   document.body.appendChild(dom);
-  // Le splat rend un point en espace objet, le modèle 3D aussi : c'est la règle du rejeu pour
-  // tous. Le stub encode la position du pointeur pour que le test la reconnaisse.
+  // The splat renders a point in object space, and so does the 3D model: that is the replay rule for
+  // everyone. The stub encodes the pointer position so that the test can recognise it.
   const pick = vi.fn((x: number, y: number): Hotspot3D | null =>
     x < 0 ? null : { position: `${x} ${y} 0`, normal: '0 0 1', space: 'object' },
   );
@@ -37,9 +37,9 @@ function viewerStub(name: string) {
 }
 
 /**
- * Le hook prend le composer ENTIER (`ann`), pas seulement le brouillon : c'est lui qui sait que les
- * pastilles à l'écran sont celles d'un commentaire relu, et qui les relâche quand on arme l'outil.
- * Le harnais monte donc le vrai `useAnnotations` — les deux viewers n'en dérivaient rien d'autre.
+ * The hook takes the WHOLE composer (`ann`), not only the draft: it is what knows that the hotspots on
+ * screen are those of a reviewed comment, and what releases them when the tool is armed. The harness
+ * therefore mounts the real `useAnnotations`: the two viewers derived nothing else from it.
  */
 function mount(stub: ReturnType<typeof viewerStub>, armed = true) {
   const onExit = vi.fn();
@@ -55,10 +55,10 @@ function mount(stub: ReturnType<typeof viewerStub>, armed = true) {
   return { hook, onExit, ann, poi: (): PoiDraftState => hook.result.current.poi };
 }
 
-/** Point tel qu'un commentaire relu l'affiche — les pastilles de la scène sont alors les siennes. */
+/** Point as a reviewed comment displays it: the scene's hotspots are then its own. */
 const viewedPoint: Hotspot3D = { position: '5 5 0', normal: '0 0 1', space: 'object' };
 
-/** Clic gauche immobile dans la vue — le geste qui pose un point. */
+/** Still left click in the view: the gesture that places a point. */
 function clickAt(dom: HTMLElement, x: number, y: number) {
   fireEvent.pointerDown(dom, { button: 0, clientX: x, clientY: y });
   fireEvent.pointerUp(dom, { button: 0, clientX: x, clientY: y });
@@ -67,28 +67,28 @@ function clickAt(dom: HTMLElement, x: number, y: number) {
 describe.each([viewerStub('modèle 3D'), viewerStub('splat')])(
   'usePoiPlacement — $name : armer l’outil, c’est être en placement',
   (stub) => {
-    it('le clic dans la vue pose un point, sans bouton intermédiaire', () => {
+    it('a click in the view places a point, without an intermediate button', () => {
       const { poi } = mount(stub);
       expect(poi().points).toHaveLength(0);
       act(() => clickAt(stub.dom, 40, 60));
       expect(stub.pick).toHaveBeenCalledWith(40, 60);
       expect(poi().points).toHaveLength(1);
       expect(poi().points[0].position).toBe('40 60 0');
-      // Espace objet : le point se rejoue pour tout spectateur, transformation comprise.
+      // Object space: the point is replayed for every viewer, transformation included.
       expect(poi().points[0].space).toBe('object');
     });
 
-    it('plusieurs points dans un même geste de rédaction, numérotés dans l’ordre de pose', () => {
+    it('several points in one drafting gesture, numbered in placement order', () => {
       const { poi } = mount(stub);
       act(() => clickAt(stub.dom, 10, 10));
       act(() => clickAt(stub.dom, 20, 20));
       act(() => clickAt(stub.dom, 30, 30));
       expect(poi().points.map((p) => p.position)).toEqual(['10 10 0', '20 20 0', '30 30 0']);
-      // Le dernier posé est celui qu'on édite, et la scène le signale au même rang.
+      // The last one placed is the one being edited, and the scene signals it at the same rank.
       expect(poi().activeKey).toBe(poi().points[2].key);
     });
 
-    it('ne pose rien au clic dans le vide, et un glissement reste une orbite', () => {
+    it('places nothing on a click in the void, and a drag remains an orbit', () => {
       const { poi } = mount(stub);
       act(() => clickAt(stub.dom, -1, -1));
       expect(poi().points).toHaveLength(0);
@@ -99,7 +99,7 @@ describe.each([viewerStub('modèle 3D'), viewerStub('splat')])(
       expect(poi().points).toHaveLength(0);
     });
 
-    it('outil au repos : le clic ne pose plus rien', () => {
+    it('tool at rest: a click no longer places anything', () => {
       const { poi, hook } = mount(stub, false);
       act(() => clickAt(stub.dom, 15, 15));
       expect(poi().points).toHaveLength(0);
@@ -108,18 +108,18 @@ describe.each([viewerStub('modèle 3D'), viewerStub('splat')])(
       expect(poi().points).toHaveLength(1);
     });
 
-    it('armer l’outil rend l’écran au brouillon : les points relus sont relâchés', () => {
+    it('arming the tool returns the screen to the draft: the reviewed points are released', () => {
       const { ann, hook } = mount(stub, false);
       act(() => ann().setViewedPoi([viewedPoint]));
       expect(ann().viewedPoi).toHaveLength(1);
-      // L'outil s'arme alors qu'un commentaire est à l'écran : ses points cèdent la place, sinon
-      // on poserait des points sans les voir (les pastilles affichées seraient les siennes). Un
-      // mouvement de vue ne les efface plus — plus rien d'autre ne leur cède la place.
+      // The tool is armed while a comment is on screen: its points give way, otherwise we would place
+      // points without seeing them (the hotspots displayed would be its own). A view movement no longer
+      // erases them: nothing else gives way to them.
       hook.rerender({ isArmed: true });
       expect(ann().viewedPoi).toEqual([]);
     });
 
-    it('Échap rend l’outil de repos au rail', () => {
+    it('Escape returns the tool to rest on the rail', () => {
       const { onExit } = mount(stub);
       act(() => {
         fireEvent.keyDown(window, { key: 'Escape' });
@@ -127,35 +127,35 @@ describe.each([viewerStub('modèle 3D'), viewerStub('splat')])(
       expect(onExit).toHaveBeenCalledTimes(1);
     });
 
-    it('les pastilles ne deviennent manipulables qu’avec un point en préparation', () => {
+    it('hotspots only become manipulable with a point in preparation', () => {
       const { poi } = mount(stub);
       expect(stub.markerHandlers()).toBeNull();
       act(() => clickAt(stub.dom, 12, 12));
       expect(stub.markerHandlers()).not.toBeNull();
-      // Tirée ailleurs, la pastille repose son point ; cliquée, elle le désigne.
+      // Pulled elsewhere, the hotspot puts its point back; clicked, it designates it.
       act(() => stub.markerHandlers()!.onMove(0, 90, 70));
       expect(poi().points[0].position).toBe('90 70 0');
       act(() => poi().setActiveKey(null));
       act(() => stub.markerHandlers()!.onSelect(0));
       expect(poi().activeKey).toBe(poi().points[0].key);
-      // Le rang mis en avant est publié à la scène : la rangée et la pastille disent le même point.
+      // The rank put forward is published to the scene: the row and the hotspot say the same point.
       expect(stub.active.at(-1)).toBe(0);
     });
 
-    it('les pastilles d’un commentaire RELU restent inertes, brouillon ou pas', () => {
-      // Réécrit avec le nouveau contrat : le drapeau `showingDraft` n'est plus passé par le
-      // viewer, le hook le dérive de `ann.viewedPoi`. L'outil reste au repos ici, sinon armer
-      // relâcherait justement ces points — c'est le test suivant.
+    it('the hotspots of a REVIEWED comment remain inert, draft or not', () => {
+      // Rewritten for the new contract: the `showingDraft` flag is no longer passed by the viewer; the hook
+      // derives it from `ann.viewedPoi`. The tool stays at rest here, otherwise arming it would release
+      // precisely these points: that is the next test.
       const { poi, ann } = mount(stub, false);
       act(() => ann().setViewedPoi([viewedPoint]));
       act(() => poi().add({ position: '1 1 0', normal: '0 0 1', space: 'object' }));
       expect(poi().points).toHaveLength(1);
-      // Ce sont les points du commentaire sélectionné qui sont à l'écran : tirer la pastille
-      // n° 1 déplacerait un point du brouillon que l'on ne voit pas.
+      // These are the points of the selected comment that are on screen: pulling hotspot no. 1 would move
+      // a draft point that one does not see.
       expect(stub.markerHandlers()).toBeNull();
     });
 
-    it('un point se supprime tant que le commentaire n’est pas envoyé', () => {
+    it('a point is deleted as long as the comment is not sent', () => {
       const { poi } = mount(stub);
       act(() => clickAt(stub.dom, 1, 1));
       act(() => clickAt(stub.dom, 2, 2));

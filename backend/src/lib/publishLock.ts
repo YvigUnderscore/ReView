@@ -5,87 +5,73 @@ import { MediaStatus } from '@prisma/client';
 import { forbidden } from './errors';
 
 /**
- * Verrou de publication — ce qu'il gèle, et ce qu'il ne gèle plus (Phase 50).
+ * Publication lock — what it freezes, and what it no longer freezes (Phase 50).
  *
- * La Phase 11 avait posé une règle d'un seul mot : publié = figé. Elle tenait parce que la
- * publication était un geste de fin de course. Depuis que le média est publié **dès son
- * upload** (réglage `draftMode` désactivé par défaut), la même règle gèlerait le média au
- * moment où l'artiste commence à peine à travailler dessus : recomposer une scène USD ou
- * relancer un transcodage raté deviendraient impossibles sans réuploader.
+ * Phase 11 laid down a one-word rule: published = frozen. It held because publication was an end-of-line gesture. Since the media is
+ * published **as soon as it is uploaded** (`draftMode` setting disabled by default), the same rule would freeze the media at the moment
+ * the artist is only starting to work on it: recomposing a USD scene or relaunching a failed transcode would become impossible without
+ * re-uploading.
  *
- * Le verrou est donc **conservé, et sa table d'exceptions écrite noir sur blanc**. Ce qui
- * reste verrouillé l'est par choix, pas par oubli — c'est précisément pour cela que chaque
- * entrée de la table porte sa raison, et qu'aucun appel n'a été simplement retiré : le
- * service demande au verrou, et le verrou répond selon la table.
+ * The lock is therefore **kept, and its table of exceptions written in black and white**. What remains locked is so by choice, not by
+ * oversight — which is precisely why each entry of the table carries its reason, and why no call was simply removed: the service asks
+ * the lock, and the lock answers according to the table.
  *
- * Ligne de partage : est permise l'écriture qui **corrige la lecture** d'un média sans
- * réécrire ce qui a été livré (éditions non destructives, mise en scène, rattrapage d'un
- * traitement échoué) ; est refusée celle qui **change la livraison** sous les yeux de ceux
- * qui l'ont déjà vue et commentée. Pour changer la livraison, il reste une seule voie :
- * une nouvelle version.
+ * Dividing line: a write that **corrects the reading** of a media without rewriting what was delivered (non-destructive edits, staging,
+ * recovery of a failed processing) is allowed; one that **changes the delivery** under the eyes of those who have already seen and
+ * commented on it is refused. To change the delivery, there remains only one route: a new version.
  */
 
-/** Les écritures qui se présentent devant le verrou, nommées une fois pour toutes. */
+/** The writes that come before the lock, named once and for all. */
 export type PublishedWrite =
   'splatEdit' | 'usdOverride' | 'usdRecompose' | 'versionTransform' | 'uploadFinalize';
 
 /**
- * La table. `true` = l'écriture reste permise sur un média publié ; la raison est à côté.
+ * The table. `true` = the write remains allowed on a published media; the reason is alongside.
  *
- * Elle est exhaustive par construction (`Record<PublishedWrite, …>`) : ajouter une écriture
- * au type oblige à trancher son cas ici, au lieu de le laisser retomber sur un défaut que
- * personne n'a choisi.
+ * It is exhaustive by construction (`Record<PublishedWrite, …>`): adding a write to the type forces its case to be decided here, instead
+ * of letting it fall back on a default nobody chose.
  */
 const ALLOWED_WHILE_PUBLISHED: Record<PublishedWrite, boolean> = {
-  // Éditions splat écrites POUR TOUT LE MONDE (splat-edits JSON, masque de suppression,
-  // sous-ensembles) : refermées en Phase 50, lot 14. Elles avaient été ouvertes pour que
-  // nettoyer un nuage reste possible après une publication d'office — le résultat était
-  // qu'un studio sans brouillons voyait un bouton « Enregistrer » permanent au-dessus du
-  // viewer, qui réécrivait sous les yeux de tous ce qu'ils étaient en train de commenter.
+  // Splat edits written FOR EVERYONE (splat-edits JSON, deletion mask, subsets): closed in phase 50, batch 14. They had been opened so that
+  // cleaning a cloud remained possible after an automatic publication — the result was that a studio without drafts saw a permanent "Save"
+  // button above the viewer, which rewrote under everyone's eyes what they were commenting on.
   //
-  // Le nettoyage n'est pas perdu pour autant : il part désormais DANS un commentaire, comme
-  // la proposition de mise en scène 3D (part `splat-edit` de `lib/commentPayload`), et n'est
-  // rejoué qu'à la lecture de ce commentaire. Le splat s'aligne ainsi sur le modèle 3D : la
-  // base commune se fixe avant publication, la proposition après.
+  // The cleaning is not lost for all that: it now travels INSIDE a comment, like the 3D staging proposal (`splat-edit` part of
+  // `lib/commentPayload`), and is replayed only when reading that comment. The splat thus aligns with the 3D model: the common base is
+  // fixed before publication, the proposal after.
   //
-  // Ce qui RESTE permis après publication, et ne passe volontairement pas par cette table :
-  // `splatPresentation` (mise en scène — caméra de base, DoF, reveal, LOD, éclairage), qui
-  // est de la présentation et non du contenu.
+  // What REMAINS allowed after publication, and deliberately does not go through this table: `splatPresentation` (staging — base camera,
+  // DoF, reveal, LOD, lighting), which is presentation and not content.
   splatEdit: false,
-  // Override de scène USD (46.D) : une mise en scène rejouée au chargement du viewer. Même
-  // nature que `splatPresentation`, qui était déjà une exception depuis la Phase 11.
+  // USD scene override (46.D): a staging replayed when the viewer loads. Same nature as `splatPresentation`, which was already an exception since phase 11.
   usdOverride: true,
-  // Recomposition USD (46) : choisir les variantes et le purpose à cuire. C'est le geste
-  // qui rend une scène lisible ; il ne remplace pas le fichier livré, il en dérive une
-  // représentation.
+  // USD recomposition (46): choosing the variants and the purpose to bake. It is the gesture that makes a scene readable; it does not replace
+  // the delivered file, it derives a representation of it.
   usdRecompose: true,
-  // Transform d'une version publiée : c'est l'assise de la comparaison A/B et des
-  // annotations ancrées au cadre. La déplacer après coup fausse tout ce qui s'y réfère.
+  // Transform of a published version: it is the foundation of the A/B comparison and of annotations anchored to the frame. Moving it afterwards
+  // falsifies everything that refers to it.
   versionTransform: false,
-  // Finalisation d'un upload déjà finalisé : réécrirait statut, taille et pipeline d'un
-  // média dont le contenu a été diffusé. L'appelant garde sa nuance pour le média encore
-  // en UPLOADING, qui n'a jamais été servi à personne (cf. MediaService.finalize).
+  // Finalisation of an already finalised upload: would rewrite the status, size and pipeline of a media whose content has been broadcast.
+  // The caller keeps its nuance for the media still in UPLOADING, which was never served to anyone (cf. MediaService.finalize).
   uploadFinalize: false,
 };
 
 /**
- * Les écritures que le verrou connaît, énumérées — c'est ce qui rend son PÉRIMÈTRE vérifiable.
+ * The writes the lock knows, enumerated — this is what makes its SCOPE verifiable.
  *
- * Le verrou ne garde que des écritures du CONTENU d'un média. Commenter et annoter n'en font pas
- * partie et n'ont pas à y entrer : une remarque n'est pas une édition du média, et un média publié
- * est précisément celui qu'on est en train de reviewer. Un ajout à cette liste se voit donc en
- * test, au lieu de fermer en silence une porte que personne n'a voulu fermer.
+ * The lock only keeps writes to the CONTENT of a media. Commenting and annotating are not part of it and need not enter it: a remark is not
+ * an edit of the media, and a published media is precisely the one being reviewed. An addition to this list is therefore visible in a test,
+ * instead of silently closing a door nobody meant to close.
  */
 export const PUBLISHED_WRITES = Object.keys(ALLOWED_WHILE_PUBLISHED) as PublishedWrite[];
 
-/** L'écriture est-elle permise sur un média publié ? Lecture de la table, sans lever. */
+/** Is the write allowed on a published media? Reads the table, without throwing. */
 export function isAllowedWhilePublished(write: PublishedWrite): boolean {
   return ALLOWED_WHILE_PUBLISHED[write];
 }
 
 /**
- * Garde d'écriture : laisse passer un brouillon, et un média publié dont l'écriture figure
- * à la table des exceptions. Refuse le reste en 403 `PUBLISHED_LOCKED`.
+ * Write guard: lets a draft through, and a published media whose write appears in the table of exceptions. Refuses the rest with 403 `PUBLISHED_LOCKED`.
  */
 export function assertWritable(entity: { published: boolean }, write: PublishedWrite): void {
   if (!entity.published || ALLOWED_WHILE_PUBLISHED[write]) return;
@@ -93,29 +79,26 @@ export function assertWritable(entity: { published: boolean }, write: PublishedW
 }
 
 /**
- * Relances de traitement accordées à un média **publié** dont le traitement a échoué.
+ * Processing retries granted to a **published** media whose processing failed.
  *
- * Une seule, et c'est un cul-de-sac réel qu'elle débouche : un média publié d'office dont
- * le transcodage échoue serait mort à jamais — ni relançable (verrou), ni remplaçable sur
- * place. Une relance suffit à rattraper l'incident d'infrastructure ; au-delà, l'échec est
- * dans le fichier, et c'est une nouvelle version qu'il faut, pas une quatrième tentative
- * qui occupe la file.
+ * One only, and it leads to a real dead end: a media published by default whose transcode fails would be dead for good — neither reprocessable
+ * (lock) nor replaceable in place. One retry is enough to recover from the infrastructure incident; beyond that, the failure lies in the file, and
+ * what is needed is a new version, not a fourth attempt occupying the queue.
  */
 export const PUBLISHED_REPROCESS_ALLOWANCE = 1;
 
 /**
- * Champ de `metadata` qui porte le compteur. Dans `metadata` et non en colonne : l'exception
- * est bornée à un cas d'exploitation et ne vaut pas une migration de schéma.
+ * `metadata` field carrying the counter. In `metadata` and not in a column: the exception is bounded to one operational case and is not worth a schema migration.
  */
 const REPROCESS_COUNT_KEY = 'publishedReprocessCount';
 
-/** Relances déjà consommées par ce média publié — absent, illisible ou négatif ⇒ zéro. */
+/** Retries already consumed by this published media — absent, unreadable or negative ⇒ zero. */
 export function publishedReprocessCount(metadata: unknown): number {
   const raw = (metadata as Record<string, unknown> | null | undefined)?.[REPROCESS_COUNT_KEY];
   return typeof raw === 'number' && Number.isFinite(raw) && raw > 0 ? Math.floor(raw) : 0;
 }
 
-/** `metadata` avec une relance de plus au compteur — le reste intact. */
+/** `metadata` with one more retry on the counter — the rest intact. */
 export function withPublishedReprocess(metadata: unknown): Record<string, unknown> {
   return {
     ...((metadata ?? {}) as Record<string, unknown>),
@@ -123,7 +106,7 @@ export function withPublishedReprocess(metadata: unknown): Record<string, unknow
   };
 }
 
-/** Ce qu'il faut savoir d'un média pour trancher une relance. */
+/** What is needed to know about a media in order to decide a retry. */
 export interface ReprocessCandidate {
   published: boolean;
   status: MediaStatus;
@@ -131,12 +114,10 @@ export interface ReprocessCandidate {
 }
 
 /**
- * Le traitement de ce média peut-il être relancé ?
+ * Can this media's processing be reprocessed?
  *
- * Un brouillon : toujours. Un média publié : seulement si son traitement a ÉCHOUÉ, et une
- * seule fois. Les deux refus portent leur propre code — un 403 générique laisserait
- * l'interface dire « verrouillé » là où la vraie réponse est « ce média va bien » ou
- * « la relance a déjà été consommée ».
+ * A draft: always. A published media: only if its processing has FAILED, and only once. The two refusals carry their own code — a generic 403
+ * would let the interface say "locked" where the true answer is "this media is fine" or "the retry has already been consumed".
  */
 export function assertReprocessable(media: ReprocessCandidate): void {
   if (!media.published) return;

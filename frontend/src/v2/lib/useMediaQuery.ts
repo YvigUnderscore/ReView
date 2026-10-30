@@ -3,7 +3,7 @@
 
 import { useSyncExternalStore } from 'react';
 
-/** Une seule MediaQueryList par requête : sinon chaque appelant ouvre son propre abonnement. */
+/** A single MediaQueryList per query: otherwise each caller opens its own subscription. */
 const registry = new Map<string, MediaQueryList>();
 
 function listFor(query: string): MediaQueryList {
@@ -16,8 +16,8 @@ function listFor(query: string): MediaQueryList {
 }
 
 /**
- * Abonnement à une media query, sans effet ni rendu intermédiaire (useSyncExternalStore).
- * Renvoie `false` au rendu serveur / avant hydratation.
+ * Subscribes to a media query, without effect or intermediate render (useSyncExternalStore).
+ * Returns `false` on the server render / before hydration.
  */
 export function useMediaQuery(query: string): boolean {
   return useSyncExternalStore(
@@ -32,9 +32,9 @@ export function useMediaQuery(query: string): boolean {
 }
 
 /**
- * Seuil de fenêtre étroite (A1) : navigateur en demi-écran à côté d'un logiciel 3D.
- * En dessous, la barre latérale se replie d'elle-même — 240 px de rail sur 1000 px de
- * fenêtre ne laissent pas de quoi lire une liste.
+ * Narrow-window threshold (A1): browser in half-screen next to a 3D application.
+ * Below it, the sidebar folds itself away — 240 px of rail on a 1000 px
+ * window leave no room to read a list.
  */
 export const NARROW_WIDTH_QUERY = '(max-width: 1100px)';
 

@@ -12,7 +12,7 @@ const members = [
 ];
 
 describe('departmentsOf', () => {
-  it('réunit les étapes déclarées et celles portées par les tâches', () => {
+  it('gathers the declared steps and those carried by the tasks', () => {
     const departments = departmentsOf(
       [
         { id: 1, name: 'Modeling' },
@@ -26,7 +26,7 @@ describe('departmentsOf', () => {
     ]);
   });
 
-  it('ignore une tâche sans département', () => {
+  it('ignores a task without a department', () => {
     const departments = departmentsOf(
       [{ id: 1, name: 'Modeling' }],
       [{ departmentId: null, assignee: null }],
@@ -34,7 +34,7 @@ describe('departmentsOf', () => {
     expect(departments[0].hasTask).toBe(false);
   });
 
-  it('garde le premier assigné quand plusieurs tâches partagent l’étape', () => {
+  it('keeps the first assignee when several tasks share the step', () => {
     const departments = departmentsOf(
       [{ id: 1, name: 'Modeling' }],
       [
@@ -52,35 +52,35 @@ describe('assignGroups', () => {
     { id: 2, name: 'Compositing', hasTask: false, assigneeId: null },
   ];
 
-  it('coche la personne déjà sur la tâche', () => {
+  it('ticks the person already on the task', () => {
     const [modeling] = assignGroups(departments, members, { linked: false, t });
     expect(modeling.value).toBe('3');
-    // Chaque personne, plus le retrait.
+    // Each person, plus the removal.
     expect(modeling.items).toHaveLength(3);
     expect(modeling.items.at(-1)?.value).toBe(UNASSIGNED);
   });
 
-  it('n’active pas une étape sans tâche sur un projet piloté depuis ShotGrid', () => {
-    // La tâche doit naître sur le site ; masquer l'étape laisserait croire que le pipe
-    // ne la prévoit pas.
+  it('does not enable a step without a task on a project driven from ShotGrid', () => {
+    // The task must be born on the site; hiding the step would suggest the pipeline
+    // does not plan it.
     const [, compositing] = assignGroups(departments, members, { linked: true, t });
     expect(compositing.disabled).toBe(true);
     const [modeling] = assignGroups(departments, members, { linked: true, t });
     expect(modeling.disabled).toBe(false);
   });
 
-  it('laisse tout actif hors projet relié — la tâche manquante sera créée', () => {
+  it('leaves everything active off a linked project — the missing task will be created', () => {
     const groups = assignGroups(departments, members, { linked: false, t });
     expect(groups.every((g) => !g.disabled)).toBe(true);
   });
 });
 
 describe('assignBody', () => {
-  it('cible le département choisi', () => {
+  it('targets the chosen department', () => {
     expect(assignBody(2, '4')).toEqual({ userId: 4, departmentIds: [2] });
   });
 
-  it('traduit le retrait en assigné nul', () => {
+  it('translates the removal into a null assignee', () => {
     expect(assignBody(2, UNASSIGNED)).toEqual({ userId: null, departmentIds: [2] });
   });
 });

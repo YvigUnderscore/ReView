@@ -6,16 +6,14 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import type { Request, Response, NextFunction } from 'express';
 
 /**
- * Réception des webhooks ShotGrid.
+ * Receiving ShotGrid webhooks.
  *
- * Cette suite existe à cause d'une panne complète et silencieuse : la connexion naissait
- * avec un secret de signature aléatoire que rien n'affichait, le site signait donc avec
- * une autre valeur, et **toutes** les livraisons repartaient en 404 — y compris le test
- * de connexion. Les deux invariants gardés ici sont donc :
+ * This suite exists because of a complete and silent outage: the connection was born with a random
+ * signing secret that nothing displayed, so the site signed with another value, and **all** deliveries
+ * came back as 404, including the connection test. The two invariants guarded here are therefore:
  *
- *  1. le secret que ReView montre à l'administrateur est bien celui qu'il vérifie ;
- *  2. un jeton inconnu et une signature fausse répondent la même chose, pour qu'aucun
- *     appelant ne puisse deviner qu'un jeton existe.
+ *  1. the secret that ReView shows the administrator is indeed the one it verifies;
+ *  2. an unknown token and a wrong signature get the same answer, so that no caller can guess that a token exists.
  */
 
 const { db, secretOf, enqueue } = vi.hoisted(() => ({
@@ -48,7 +46,7 @@ const app = express().use('/api/shotgrid/webhook', webhookRoutes);
 const TOKEN = 'MkAiuQeyvTHDCCe8fm5E-HSYp0pb90Gu';
 const SECRET = 'un-secret-de-signature';
 
-/** Charge utile du test de connexion, telle que ShotGrid l'envoie. */
+/** Payload of the connection test, as ShotGrid sends it. */
 const TEST_CONNECTION = JSON.stringify({
   data: {
     id: '1925227.145830.0',
@@ -60,7 +58,7 @@ const TEST_CONNECTION = JSON.stringify({
   timestamp: '2026-09-12T14:14:09Z',
 });
 
-/** Signature ShotGrid : HMAC-SHA1 des octets du corps, préfixée de l'algorithme. */
+/** ShotGrid signature: HMAC-SHA1 of the body bytes, prefixed with the algorithm. */
 const sign = (body: string, secret = SECRET) =>
   `sha1=${createHmac('sha1', secret).update(Buffer.from(body, 'utf8')).digest('hex')}`;
 
@@ -84,17 +82,17 @@ const post = (body: string, signature?: string) => {
 
 describe('POST /api/shotgrid/webhook/:token', () => {
   /**
-   * Le test de connexion est le tout premier échange : c'est lui qui disait « Failed »
-   * dans la console du site pendant que rien n'expliquait pourquoi.
+   * The connection test is the very first exchange: it is what said "Failed" in the site's console while
+   * nothing explained why.
    */
-  it('accepte le test de connexion signé avec le secret de la connexion', async () => {
+  it("accepts the connection test signed with the connection's secret", async () => {
     const res = await post(TEST_CONNECTION, sign(TEST_CONNECTION));
 
     expect(res.status).toBe(202);
     expect(res.body).toEqual({ accepted: true });
   });
 
-  it('accepte un événement signé et le met en file', async () => {
+  it('accepts a signed event and queues it', async () => {
     const body = JSON.stringify({
       data: { event_type: 'Shotgun_Shot_Change', entity: { id: 25564, type: 'Shot' } },
     });
@@ -107,29 +105,29 @@ describe('POST /api/shotgrid/webhook/:token', () => {
     });
   });
 
-  it('refuse une signature calculée avec un autre secret', async () => {
+  it('rejects a signature computed with another secret', async () => {
     const res = await post(TEST_CONNECTION, sign(TEST_CONNECTION, 'le-secret-du-site'));
 
     expect(res.status).toBe(404);
     expect(enqueue).not.toHaveBeenCalled();
   });
 
-  it('refuse une livraison non signée quand la connexion porte un secret', async () => {
+  it('rejects an unsigned delivery when the connection carries a secret', async () => {
     const res = await post(TEST_CONNECTION);
 
     expect(res.status).toBe(404);
     expect(enqueue).not.toHaveBeenCalled();
   });
 
-  /** La signature porte sur les octets : un corps modifié après coup ne passe plus. */
-  it('refuse un corps altéré après signature', async () => {
+  /** The signature covers the bytes: a body altered after signing no longer passes. */
+  it('rejects a body altered after signing', async () => {
     const signature = sign(TEST_CONNECTION);
     const res = await post(TEST_CONNECTION.replace('test_connection', 'autre_chose'), signature);
 
     expect(res.status).toBe(404);
   });
 
-  it('répond exactement pareil pour un jeton inconnu', async () => {
+  it('answers exactly the same for an unknown token', async () => {
     db.shotgridConnection.findUnique.mockResolvedValue(null);
     const unknown = await post(TEST_CONNECTION, sign(TEST_CONNECTION));
 
@@ -141,11 +139,11 @@ describe('POST /api/shotgrid/webhook/:token', () => {
   });
 
   /**
-   * Une clé de chiffrement changée rend le secret illisible. C'est une panne de
-   * configuration, pas une panne du site : la faire remonter en 500 ferait croire à
-   * ShotGrid que ReView est cassé, et l'inviterait à réessayer indéfiniment.
+   * A changed encryption key makes the secret unreadable. That is a configuration outage, not a site
+   * outage: surfacing it as a 500 would make ShotGrid believe ReView is broken, and would invite it to
+   * retry indefinitely.
    */
-  it('ne laisse pas un secret illisible remonter en erreur serveur', async () => {
+  it('does not let an unreadable secret surface as a server error', async () => {
     secretOf.mockImplementation(() => {
       throw new Error('clé de chiffrement invalide');
     });
@@ -154,7 +152,7 @@ describe('POST /api/shotgrid/webhook/:token', () => {
     expect(res.status).toBe(404);
   });
 
-  it('refuse un corps qui n’est pas du JSON', async () => {
+  it('rejects a body that is not JSON', async () => {
     const body = 'pas du json';
     const res = await post(body, sign(body));
 
@@ -162,10 +160,10 @@ describe('POST /api/shotgrid/webhook/:token', () => {
   });
 
   /**
-   * Sans secret enregistré, la signature n'est pas exigée : c'est le mode d'une connexion
-   * dont l'administrateur a effacé le secret, et il doit rester traitable.
+   * Without a stored secret, the signature is not required: this is the mode of a connection whose
+   * secret the administrator has erased, and it must remain workable.
    */
-  it('accepte sans signature quand la connexion n’a pas de secret', async () => {
+  it('accepts without a signature when the connection has no secret', async () => {
     secretOf.mockReturnValue(null);
     const res = await post(TEST_CONNECTION);
 

@@ -10,11 +10,11 @@ import { SettingsCard } from './settings/SettingsCard';
 import { SETTINGS_KEYWORDS } from './settings/settingsKeywords';
 
 /**
- * Nomenclature du projet : préfixes de séquence et de plan, pas de numérotation, nombre de
- * chiffres. Override des défauts du studio, édité dans le brouillon de réglages.
+ * Project nomenclature: sequence and shot prefixes, no numbering, number of
+ * digits. Override of the studio defaults, edited in the settings draft.
  *
- * `value` peut être nul le temps que les réglages effectifs arrivent : la carte garde sa
- * place avec son squelette.
+ * `value` may be null while the effective settings arrive: the card keeps its
+ * place with its skeleton.
  */
 export default function ProjectNomenclatureSection({
   value,
@@ -25,7 +25,7 @@ export default function ProjectNomenclatureSection({
 }) {
   const t = useT();
 
-  /** `padding` et `step` sont des nombres — un préfixe vidé, lui, reste une chaîne vide. */
+  /** `padding` and `step` are numbers; an emptied prefix, however, remains an empty string. */
   const set = (k: keyof Nomenclature, raw: string) => {
     if (!value) return;
     onChange({ ...value, [k]: k === 'padding' || k === 'step' ? Number(raw) || 1 : raw });

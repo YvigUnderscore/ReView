@@ -3,19 +3,19 @@
 
 import { useCallback, useEffect } from 'react';
 import { toast } from 'sonner';
-import { t } from '../../../i18n';
-import { isEditable } from '../../../lib/shortcuts';
+import { t } from '@/v2/i18n';
+import { isEditable } from '@/v2/lib/shortcuts';
 import type { MediaResp, SplatEditsPatch, SplatPresentation } from '../reviewTypes';
 import { useCameraPresentation } from '../camera/useCameraPresentation';
 import { appendBookmark, bookmarkShortcutIndex, removeBookmarkAt, MAX_BOOKMARKS } from './cameraBookmarks';
 import type { Model3DThreeState } from './useModel3DThree';
 
 /**
- * Bookmarks caméra **partagés** du viewer 3D (39.D) : vues nommées persistées dans la présentation
- * (`splatPresentation.bookmarks`), rejouées/rappelables pour tous. Le gestionnaire enregistre la vue
- * courante ou en retire une ; tout spectateur les rappelle (clic sur la pastille du panneau Caméra,
- * ou **Alt+1** à **Alt+9**). Persistance via `useCameraPresentation` (fusion sur la présentation
- * existante, comme l'éclairage/l'animation).
+ * **Shared** camera bookmarks of the 3D viewer (39.D): named views persisted in the presentation
+ * (`splatPresentation.bookmarks`), replayed/recallable for everyone. The manager saves the current
+ * view or removes one; any viewer recalls them (click on the dot of the Camera panel, or **Alt+1**
+ * to **Alt+9**). Persistence via `useCameraPresentation` (merged over the existing presentation,
+ * like lighting/animation).
  */
 export function useModel3DBookmarks(
   model3d: Model3DThreeState,
@@ -56,8 +56,8 @@ export function useModel3DBookmarks(
     [data.splatPresentation, persist],
   );
 
-  // Alt+1 à Alt+9 : rappel d'un bookmark (hors saisie de texte, hors frappe déjà consommée).
-  // Les chiffres nus restent à la bascule de mode du chrome — cf. `bookmarkShortcutIndex`.
+  // Alt+1 to Alt+9: recalls a bookmark (outside text entry, outside a keystroke already consumed).
+  // Bare digits remain the chrome's mode switch — see `bookmarkShortcutIndex`.
   useEffect(() => {
     if (bookmarks.length === 0) return;
     const onKey = (e: KeyboardEvent) => {

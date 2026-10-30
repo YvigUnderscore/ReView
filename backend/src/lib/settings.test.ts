@@ -17,22 +17,22 @@ import {
 } from './settings';
 
 describe('safeSourceUrl', () => {
-  it('accepte http et https', () => {
+  it('accepts http and https', () => {
     expect(safeSourceUrl('https://git.studio.tld/review')).toBe('https://git.studio.tld/review');
     expect(safeSourceUrl('http://192.168.1.10:3000/sources')).toBe('http://192.168.1.10:3000/sources');
   });
 
-  it('ignore les espaces autour de la valeur', () => {
+  it('ignores the spaces around the value', () => {
     expect(safeSourceUrl('  https://example.org/review  ')).toBe('https://example.org/review');
   });
 
-  it('retombe sur l’amont quand le réglage est vide', () => {
+  it('falls back on upstream when the setting is empty', () => {
     for (const value of [null, undefined, '', '   ']) {
       expect(safeSourceUrl(value)).toBe(UPSTREAM_SOURCE_URL);
     }
   });
 
-  it('refuse les schémas dangereux : la valeur finit dans un href', () => {
+  it('refuses dangerous schemes: the value ends up in an href', () => {
     for (const value of [
       'javascript:alert(1)',
       'data:text/html,<script>alert(1)</script>',
@@ -43,22 +43,21 @@ describe('safeSourceUrl', () => {
     }
   });
 
-  it('refuse une chaîne qui n’est pas une URL', () => {
+  it('refuses a string that is not a URL', () => {
     expect(safeSourceUrl('nos sources sont sur le NAS')).toBe(UPSTREAM_SOURCE_URL);
   });
 });
 
 /**
- * Le mode brouillon (Phase 50) est un réglage de studio, et la table `Setting` ne stocke que
- * du texte. Tout l'enjeu est là : « false » est une chaîne vraie, et un réglage absent doit
- * donner le comportement par défaut — la publication d'office — et non l'inverse.
+ * Draft mode (Phase 50) is a studio setting, and the `Setting` table stores only text. The whole stake lies there: "false" is a true string, and an absent
+ * setting must give the default behaviour — automatic publication — and not the reverse.
  */
 describe('getBooleanSetting / isDraftModeEnabled', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  it('lit « true » comme vrai, et TOUT le reste comme faux', async () => {
+  it('reads "true" as true, and EVERYTHING else as false', async () => {
     for (const [value, expected] of [
       ['true', true],
       ['false', false],
@@ -71,12 +70,12 @@ describe('getBooleanSetting / isDraftModeEnabled', () => {
     }
   });
 
-  it('retombe sur faux quand le réglage n’existe pas — base fraîche comprise', async () => {
+  it('falls back on false when the setting does not exist — fresh database included', async () => {
     db.setting.findUnique.mockResolvedValue(null);
     expect(await isDraftModeEnabled()).toBe(false);
   });
 
-  it('lit `draftMode` sous ce nom exact — contrat partagé avec l’interface', async () => {
+  it('reads `draftMode` under this exact name — contract shared with the interface', async () => {
     db.setting.findUnique.mockResolvedValue({ value: 'true' });
     expect(await isDraftModeEnabled()).toBe(true);
     expect(db.setting.findUnique).toHaveBeenCalledWith({ where: { key: 'draftMode' } });
@@ -84,7 +83,7 @@ describe('getBooleanSetting / isDraftModeEnabled', () => {
     expect(BOOLEAN_SETTING_KEYS).toContain('draftMode');
   });
 
-  it('refuse à l’écriture toute valeur qui n’est pas l’un des deux mots', () => {
+  it('refuses on write any value that is not one of the two words', () => {
     expect(booleanSettingSchema.safeParse('true').success).toBe(true);
     expect(booleanSettingSchema.safeParse('false').success).toBe(true);
     for (const value of ['True', '1', 'oui', '', 'yes']) {

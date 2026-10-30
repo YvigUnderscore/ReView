@@ -16,13 +16,11 @@ import {
 import type { SyncJournal } from './ShotgridSyncJournal';
 
 /**
- * Import du référentiel de statuts ShotGrid.
+ * Import of the ShotGrid status reference.
  *
- * Deux sources sont nécessaires et ni l'une ni l'autre ne suffit : l'entité `Status`
- * du site donne l'apparence (nom complet, couleur, ordre) de tous les statuts
- * existants ; le schéma de `sg_status_list` dit lesquels sont réellement proposés sur
- * Shot, Task ou Version. Importer sans le schéma remplirait ReView de statuts qu'un
- * artiste ne verra jamais ; importer sans l'entité Status donnerait des codes nus.
+ * Two sources are needed and neither suffices alone: the `Status` entity of the site gives the appearance (full name, colour, order) of all existing statuses;
+ * the schema of `sg_status_list` says which ones are actually offered on Shot, Task or Version. Importing without the schema would fill ReView with statuses an artist
+ * will never see; importing without the Status entity would give bare codes.
  */
 
 export interface SgStatusInfo {
@@ -32,7 +30,7 @@ export interface SgStatusInfo {
   order: number;
 }
 
-/** Statuts du site, indexés par code. */
+/** Site statuses, indexed by code. */
 export async function fetchSiteStatuses(client: ShotgridClient): Promise<Map<string, SgStatusInfo>> {
   const records = await client.search('Status', {
     fields: ['code', 'name', 'bg_color', 'list_order'],
@@ -52,7 +50,7 @@ export async function fetchSiteStatuses(client: ShotgridClient): Promise<Map<str
   return out;
 }
 
-/** Codes réellement proposés pour `sg_status_list` sur une entité donnée. */
+/** Codes actually offered for `sg_status_list` on a given entity. */
 export async function fetchValidStatusCodes(client: ShotgridClient, entity: string): Promise<string[]> {
   const field = await client.schemaField(entity, 'sg_status_list');
   if (!field) return [];
@@ -62,11 +60,10 @@ export async function fetchValidStatusCodes(client: ShotgridClient, entity: stri
 }
 
 /**
- * Met à jour le référentiel `PipelineStatus` d'un scope (task ou shot).
+ * Updates the `PipelineStatus` reference of a scope (task or shot).
  *
- * Les statuts existants sont mis à jour, les nouveaux créés ; aucun n'est supprimé —
- * une tâche ReView peut encore porter un statut retiré du site, et lui faire perdre
- * son statut serait pire que de garder une entrée obsolète.
+ * Existing statuses are updated, new ones created; none is deleted — a ReView task may still carry a status removed from the site, and making it lose its status
+ * would be worse than keeping an obsolete entry.
  */
 export async function syncPipelineStatuses(
   client: ShotgridClient,
@@ -74,8 +71,7 @@ export async function syncPipelineStatuses(
   siteStatuses: Map<string, SgStatusInfo>,
   journal?: SyncJournal,
 ): Promise<Map<string, PipelineStatus>> {
-  // Chaque entité a SA liste : quatre statuts sur une sequence, quinze sur un shot.
-  // Les confondre proposerait des états que le site refuserait à l'écriture.
+  // Each entity has ITS list: four statuses on a sequence, fifteen on a shot. Confusing them would offer states the site would refuse on writing.
   const entity =
     scope === 'task' ? 'Task' : scope === 'shot' ? 'Shot' : scope === 'asset' ? 'Asset' : 'Sequence';
   const codes = await fetchValidStatusCodes(client, entity);
@@ -83,10 +79,8 @@ export async function syncPipelineStatuses(
 
   if (codes.length === 0) {
     await journal?.log('warn', 'shotgrid.log.noStatusSchema', { entity });
-    // Même filtre que le chemin nominal : sans `projectId: null` ni `origin: 'shotgrid'`,
-    // ce repli ramassait les statuts locaux du studio — et ceux d'autres projets — puis
-    // les collait aux entités du site. Un plan pouvait recevoir le statut d'un projet
-    // voisin portant le même code. Mieux vaut une carte vide qu'une carte fausse.
+    // Same filter as the nominal path: without `projectId: null` or `origin: 'shotgrid'`, this fallback picked up the studio's local statuses — and those of other
+    // projects — then stuck them onto the site's entities. A shot could receive the status of a neighbouring project carrying the same code. A blank map is better than a wrong one.
     const existing = await prisma.pipelineStatus.findMany({
       where: { projectId: null, scope, origin: 'shotgrid' },
     });
@@ -100,10 +94,8 @@ export async function syncPipelineStatuses(
       color: '#6B7280',
       order: index,
     };
-    // Les statuts importés vivent au niveau du studio (`projectId: null`) et se
-    // distinguent des statuts locaux par leur origine (B2) : un même code, « wtg » par
-    // exemple, existe des deux côtés. Sans le filtre d'origine, la synchronisation
-    // écraserait le vocabulaire local du studio par celui du site.
+    // Imported statuses live at studio level (`projectId: null`) and are told apart from local statuses by their origin (B2): one and the same code, "wtg" for
+    // example, exists on both sides. Without the origin filter, the synchronization would overwrite the studio's local vocabulary with the site's.
     const existing = await prisma.pipelineStatus.findFirst({
       where: { projectId: null, scope, code, origin: 'shotgrid' },
     });
@@ -113,8 +105,7 @@ export async function syncPipelineStatuses(
       order: info.order || index,
       isDone: sgStatusIsDone(code),
       isInactive: sgStatusIsInactive(code),
-      // Ce statut vient du site : il ne sera proposé que sur les projets qui y sont
-      // reliés. Le poser ici évite d'avoir à deviner l'origine après coup.
+      // This status comes from the site: it will only be offered on the projects linked to it. Setting it here avoids having to guess the origin afterwards.
       origin: 'shotgrid',
       legacyStatus: sgStatusToEnum(code),
     };
@@ -127,8 +118,7 @@ export async function syncPipelineStatuses(
     journal?.count(`statuses.${scope}`, existing ? 'updated' : 'created');
   }
 
-  // Statuts importés absents du site : conservés, mais signalés une fois. Le vocabulaire
-  // purement local n'est pas concerné — il ne prétend pas refléter le site.
+  // Imported statuses absent from the site: kept, but flagged once. Purely local vocabulary is not concerned — it does not claim to reflect the site.
   const orphans = await prisma.pipelineStatus.findMany({
     where: { projectId: null, scope, origin: 'shotgrid', code: { notIn: codes } },
   });
@@ -140,11 +130,10 @@ export async function syncPipelineStatuses(
 }
 
 /**
- * Statuts de Version → `ReviewStatus` de ReView.
+ * Version statuses -> ReView's `ReviewStatus`.
  *
- * Les décisions de review existent déjà côté ReView avec leur propre référentiel :
- * on ne le remplace pas, on complète ce qui manque et on renvoie la correspondance
- * code ShotGrid → identifiant local, que les réglages de la connexion mémorisent.
+ * Review decisions already exist on the ReView side with their own reference: we do not replace it, we complete what is missing and return the match
+ * ShotGrid code -> local identifier, which the connection's settings remember.
  */
 export async function syncVersionStatuses(
   client: ShotgridClient,
@@ -165,7 +154,7 @@ export async function syncVersionStatuses(
   const unmapped: string[] = [];
 
   for (const [index, code] of codes.entries()) {
-    // Une correspondance déjà réglée à la main prime sur toute déduction.
+    // A match already set by hand takes precedence over any deduction.
     const configured = existingMap[code];
     if (configured && byId.has(configured)) {
       map[code] = configured;
@@ -178,20 +167,15 @@ export async function syncVersionStatuses(
       continue;
     }
     /*
-     * Aucune création automatique.
+     * No automatic creation.
      *
-     * `fetchValidStatusCodes(client, 'Version')` rend les `valid_values` du champ statut de
-     * Version — sur un site de studio, c'est la liste de statuts du site ENTIER, partagée
-     * avec Task et Shot. En créer un `ReviewStatus` par code remplissait la table des
-     * décisions de review de statuts de tâche : le studio de démonstration en comptait
-     * vingt-deux, dont « Waiting to Start », « In Progress » et « Complete », avec cinq
-     * doublons d'approbation et « Omit » à côté de « Omitted ». Le filtre « Toutes
-     * décisions » de la page Reviews en devenait inutilisable.
+     * `fetchValidStatusCodes(client, 'Version')` returns the `valid_values` of the Version status field — on a studio site, this is the status list of the WHOLE site,
+     * shared with Task and Shot. Creating one `ReviewStatus` per code filled the review-decision table with task statuses: the demo studio counted twenty-two of them,
+     * including "Waiting to Start", "In Progress" and "Complete", with five approval duplicates and "Omit" next to "Omitted". The "All decisions" filter of the
+     * Reviews page became unusable as a result.
      *
-     * Une décision de review est un choix de studio, pas un import : le code inconnu est
-     * signalé au journal, et l'administrateur le rattache lui-même depuis
-     * Admin › Statuts de review. La correspondance déjà réglée à la main, elle, continue
-     * d'être respectée (voir plus haut) — c'est le chemin normal.
+     * A review decision is a studio choice, not an import: the unknown code is flagged in the journal, and the administrator attaches it themselves from
+     * Admin > Review statuses. A match already set by hand, for its part, continues to be respected (see above) — that is the normal path.
      */
     unmapped.push(code);
     journal?.count('statuses.version', 'skipped');
@@ -200,13 +184,13 @@ export async function syncVersionStatuses(
   if (unmapped.length > 0) {
     logger.info(
       { codes: unmapped },
-      '[ShotGrid] statuts de Version sans décision de review correspondante — à rattacher dans Admin › Statuts',
+      '[ShotGrid] Version statuses with no matching review decision — map them in Admin › Statuses',
     );
   }
   return map;
 }
 
-/** Correspondance inverse (identifiant ReviewStatus → code ShotGrid) pour l'écriture. */
+/** Reverse map (ReviewStatus identifier -> ShotGrid code) for writing. */
 export function inverseVersionStatusMap(map: Record<string, number>): Map<number, string> {
   const out = new Map<number, string>();
   for (const [code, id] of Object.entries(map)) if (!out.has(id)) out.set(id, code);
@@ -214,15 +198,11 @@ export function inverseVersionStatusMap(map: Record<string, number>): Map<number
 }
 
 /**
- * Retrouve le code de statut ShotGrid correspondant à une décision de review, **sans
- * rien créer ni écrire**.
+ * Finds the ShotGrid status code matching a review decision, **without creating or writing anything**.
  *
- * `versionStatusMap` n'est alimentée que par la synchronisation, et seulement quand la
- * lecture du « Référentiel de statuts » est ouverte. Décocher ce réglage vidait donc la
- * carte, et l'envoi des décisions de review s'arrêtait — sans message, sans rapport
- * évident entre la case décochée et le symptôme. Ici, on redéduit la correspondance à la
- * volée par le nom, exactement comme `syncVersionStatuses`, mais en lecture seule : une
- * décision d'artiste n'a pas à créer un statut dans le référentiel du studio.
+ * `versionStatusMap` is only fed by the synchronization, and only when the reading of the "Status reference" is open. Unticking this setting therefore emptied the map,
+ * and the sending of review decisions stopped — with no message, and no obvious link between the unticked box and the symptom. Here, the match is re-deduced on the fly by name,
+ * exactly as in `syncVersionStatuses`, but read-only: an artist's decision has no business creating a status in the studio's reference.
  */
 export async function resolveVersionStatusCode(
   client: ShotgridClient,
@@ -241,7 +221,7 @@ export async function resolveVersionStatusCode(
   return null;
 }
 
-/** Statuts d'un scope, indexés par code — utilisé par le moteur de synchronisation. */
+/** Statuses of a scope, indexed by code — used by the synchronization engine. */
 export async function loadPipelineStatuses(
   scope: 'task' | 'shot' | 'sequence' | 'asset',
 ): Promise<Map<string, PipelineStatus>> {

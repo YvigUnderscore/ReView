@@ -9,9 +9,9 @@ import { overrideKey, type ProjectSettingsOverrideView } from '../lib/projectInh
 import type { ProjectSettings } from '../types/api';
 
 /**
- * Ce que le panneau doit dire : quelles sections le projet s'est appropriées, et laquelle
- * on peut rendre au studio. Les assertions portent sur les branches (état affiché, présence
- * de la commande de retour), jamais sur le texte traduit.
+ * What the panel must say: which sections the project has taken over, and which
+ * can be handed back to the studio. The assertions target the branches (displayed state, presence
+ * of the return command), never the translated text.
  */
 
 const STUDIO: ProjectSettings = {
@@ -33,20 +33,20 @@ function render(view: ProjectSettingsOverrideView | undefined) {
   );
 }
 
-/** Nombre de commandes « rendre au studio » offertes. */
+/** Number of "hand back to studio" commands offered. */
 const revertCount = (html: string) => (html.match(/<button/g) ?? []).length;
 
 describe('ProjectSettingsInheritance', () => {
-  it('n’offre AUCUN retour quand le projet hérite de tout', () => {
+  it('offers NO return when the project inherits everything', () => {
     expect(revertCount(render({ override: {}, studio: STUDIO, overrides: [] }))).toBe(0);
   });
 
-  it('n’offre le retour que sur les sections réellement surchargées', () => {
+  it('offers the return only on the sections actually overridden', () => {
     const html = render({ override: { framerate: 25 }, studio: STUDIO, overrides: ['framerate'] });
     expect(revertCount(html)).toBe(1);
   });
 
-  it('regroupe résolution et cadence en une seule ligne de format', () => {
+  it('groups resolution and frame rate into a single format line', () => {
     const html = render({
       override: { framerate: 25, resolution: { width: 4096, height: 2160 } },
       studio: STUDIO,
@@ -55,21 +55,21 @@ describe('ProjectSettingsInheritance', () => {
     expect(revertCount(html)).toBe(1);
   });
 
-  it('liste une ligne par groupe de sections', () => {
+  it('lists one row per group of sections', () => {
     const html = render({ override: {}, studio: STUDIO, overrides: [] });
-    // `<li` tout court comptait aussi les `<line>` des icônes SVG : la carte de réglages
-    // porte désormais une icône, et le compte passait à neuf sans qu'une ligne s'ajoute.
-    // Le motif exige donc un séparateur après la balise.
+    // A bare `<li` also counted the `<line>` elements of the SVG icons: the settings card
+    // now carries an icon, and the count went up to nine without a line being added.
+    // The pattern therefore requires a separator after the tag.
     expect((html.match(/<li[\s>]/g) ?? []).length).toBe(8);
   });
 
-  it('affiche un squelette tant que la vue d’héritage n’est pas arrivée', () => {
+  it('shows a skeleton until the inheritance view has arrived', () => {
     const html = render(undefined);
     expect(revertCount(html)).toBe(0);
     expect(html).toContain('animate-pulse');
   });
 
-  it('marque une section surchargée d’un état distinct de l’hérité', () => {
+  it('marks an overridden section with a state distinct from the inherited one', () => {
     const inherited = render({ override: {}, studio: STUDIO, overrides: [] });
     const overridden = render({
       override: { color: { configId: 'aces' } },

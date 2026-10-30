@@ -11,11 +11,11 @@ import { useDeleteSgConnection, useSgConnection } from '../../lib/shotgridApi';
 import SgConnectionSetup from './SgConnectionSetup';
 
 /**
- * Liaison ShotGrid dans les réglages du projet.
+ * ShotGrid link in the project settings.
  *
- * C'est ici qu'on relie ou délie, pas dans un onglet : un projet non relié n'a aucune
- * raison de porter un onglet ShotGrid en permanence. Une fois la liaison faite,
- * l'onglet apparaît et prend le relais pour tout le reste.
+ * This is where a project is linked or unlinked, not in a tab: an unlinked project has no
+ * reason to carry a ShotGrid tab all the time. Once linked, the tab appears and takes over
+ * for everything else.
  */
 export default function SgProjectSection({
   projectId,

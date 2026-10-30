@@ -5,30 +5,27 @@ import type { AssetType, TaskType } from '../types/api';
 import { hasMessage, type t as translate } from '../i18n';
 
 /**
- * Libellés lisibles des deux enums que l'interface montrait tels quels.
+ * Readable labels for the two enums the interface used to display as-is.
  *
- * Les filtres de l'onglet Assets et du kanban affichaient `CHARACTER`, `PROP`,
- * `ENVIRONMENT`, `LOOKDEV` — des identifiants de base de données, en capitales, au milieu
- * d'une interface par ailleurs rédigée. Deux traitements différents, parce que ces deux
- * enums ne sont pas de même nature :
+ * The Assets tab and kanban filters displayed `CHARACTER`, `PROP`, `ENVIRONMENT`, `LOOKDEV` — database
+ * identifiers, in capitals, in the middle of an otherwise written interface. Two different treatments,
+ * because these two enums are not of the same nature:
  *
- * - un **type d'asset** est un mot de la langue courante (personnage, accessoire, décor) :
- *   il se traduit ;
- * - un **type de tâche** est un nom de département, c'est-à-dire du vocabulaire de
- *   production que le glossaire du dépôt garde en anglais — et que le studio retrouve
- *   déjà écrit ainsi dans ses propres départements (« Look Dev », « Modeling »). On ne
- *   corrige donc que la casse, pour qu'il se lise comme le reste.
+ * - an **asset type** is a word of the current language (character, prop, set): it is translated;
+ * - a **task type** is a department name, that is production vocabulary the repository glossary keeps
+ *   in English — and that the studio already writes this way in its own departments ("Look Dev",
+ *   "Modeling"). We therefore only correct the casing, so that it reads like the rest.
  */
 
-/** `CHARACTER` → « Personnage » / « Character », selon la langue du lecteur. */
+/** `CHARACTER` → "Personnage" / "Character", depending on the reader's language. */
 export function assetTypeLabel(t: typeof translate, type: AssetType | string): string {
-  // Clé construite : un type inconnu (ancien projet, import) ne doit pas afficher la clé
-  // elle-même — la casse normale du code reste plus lisible que `assetType.MACHIN`.
+  // Constructed key: an unknown type (old project, import) must not display the key itself —
+  // normal casing of the code remains more readable than `assetType.MACHIN`.
   const key = `assetType.${type}`;
   return hasMessage(key) ? t(key) : titleCase(type);
 }
 
-/** Noms de département : jamais traduits, seulement remis en casse normale. */
+/** Department names: never translated, only put back into normal casing. */
 const TASK_TYPE_LABEL: Record<string, string> = {
   ANIMATION: 'Animation',
   FX: 'FX',
@@ -41,12 +38,12 @@ const TASK_TYPE_LABEL: Record<string, string> = {
 };
 
 export function taskTypeLabel(t: typeof translate, type: TaskType | string): string {
-  // « Autre » n'est pas un nom de département : c'est un mot de la langue courante.
+  // "Other" is not a department name: it is a word of the current language.
   if (type === 'OTHER') return t('assetType.OTHER');
   return TASK_TYPE_LABEL[type] ?? titleCase(type);
 }
 
-/** `LOOK_DEV` → « Look Dev ». Repli pour tout code que ces tables ne connaissent pas. */
+/** `LOOK_DEV` → "Look Dev". Fallback for any code these tables do not know. */
 export function titleCase(value: string): string {
   return value
     .toLocaleLowerCase()

@@ -15,27 +15,25 @@ import { departmentFields, departmentLabel, matchDepartments } from './ShotgridC
 import type { SessionUser } from '../../lib/shotgridAccess';
 
 /**
- * L'équipe du projet ShotGrid, et son entrée dans ReView.
+ * The project's ShotGrid team, and its entry into ReView.
  *
- * Relier un projet apportait ses plans, ses tâches et ses médias — mais pas les gens.
- * Il fallait ressaisir chaque adresse à la main dans l'écran d'administration, puis
- * rattacher chacun au projet : c'est long, et une faute de frappe suffit pour qu'un
- * artiste ne reçoive jamais ses notifications.
+ * Linking a project brought its shots, tasks and media, but not the people. Every address had to be re-entered by hand in the
+ * administration screen, then each person attached to the project: it is slow, and a single typo is enough for an artist never to
+ * receive their notifications.
  *
- * La liste vient de `Project.users` du projet lié — l'équipe de CE projet, pas l'annuaire
- * du site. Rien n'est créé à la lecture : c'est un geste explicite, compte par compte ou
- * par lot.
+ * The list comes from `Project.users` of the linked project: the team of THIS project, not the site directory. Nothing is created
+ * on reading: it is an explicit gesture, account by account or in batch.
  */
 
-/** Ce que ReView sait déjà de cette personne. */
+/** What ReView already knows about this person. */
 export type CrewState =
-  /** Déjà membre du projet. */
+  /** Already a member of the project. */
   | 'member'
-  /** Un compte existe (même adresse), mais il n'est pas sur ce projet. */
+  /** An account exists (same address), but it is not on this project. */
   | 'account'
-  /** Aucun compte : l'inviter en créera un. */
+  /** No account: inviting will create one. */
   | 'none'
-  /** Sans adresse, ou désactivé côté site : rien à faire. */
+  /** No address, or deactivated on the site: nothing to do. */
   | 'ineligible';
 
 export interface CrewPerson {
@@ -43,40 +41,39 @@ export interface CrewPerson {
   name: string;
   login: string | null;
   email: string | null;
-  /** `act`, `dis`… tel que le site le déclare. */
+  /** `act`, `dis`... as the site declares it. */
   sgStatus: string | null;
   state: CrewState;
   userId: number | null;
   /**
-   * Vrai quand le rapprochement vient d'un lien **posé à la main**, pas de l'adresse.
-   * L'écran le dit : une correspondance choisie ne se défait pas par accident.
+   * True when the matching comes from a link **set by hand**, not from the address.
+   * The screen says so: a chosen match is not undone by accident.
    */
   linkedByHand: boolean;
-  /** Rôle sur ce projet, quand la personne y est déjà. */
+  /** Role on this project, when the person is already on it. */
   projectRole: Role | null;
   userRole: Role | null;
   /**
-   * Département tel que le site le nomme — affiché même sans correspondance locale : il
-   * dit à qui on a affaire, ce que l'adresse ne dit pas toujours.
+   * Department as the site names it: displayed even without a local match: it tells who we are dealing with, which the address
+   * does not always say.
    */
   sgDepartment: string | null;
-  /** Département ReView correspondant, quand le studio en a déjà un sous ce nom. */
+  /** Matching ReView department, when the studio already has one under this name. */
   department: { id: number; name: string } | null;
 }
 
 /**
- * Une personne peut-elle recevoir un accès ?
+ * Can a person receive access?
  *
- * Sans adresse, il n'y a rien à quoi envoyer l'invitation. Désactivée sur le site, elle a
- * quitté le studio — lui ouvrir un accès serait exactement le contraire de ce que le site
- * exprime.
+ * Without an address, there is nothing to send the invitation to. Deactivated on the site, the person has left the studio: giving
+ * them access would be exactly the opposite of what the site expresses.
  */
 export function eligibility(record: { email: string | null; sgStatus: string | null }): boolean {
   if (!record.email) return false;
   return record.sgStatus === null || record.sgStatus === 'act';
 }
 
-/** L'état d'une personne, une fois croisée avec la base locale. */
+/** A person's state, once cross-checked with the local database. */
 export function crewState(
   person: { email: string | null; sgStatus: string | null },
   local: { userId: number | null; isMember: boolean },
@@ -87,9 +84,8 @@ export function crewState(
 }
 
 /**
- * Deux `HumanUser` peuvent porter la même adresse sur un site ancien. On garde le premier
- * actif — inviter deux fois la même personne créerait un doublon que l'index unique de
- * l'adresse refuserait de toute façon, mais avec une erreur incompréhensible.
+ * Two `HumanUser` records may carry the same address on an old site. We keep the first active one: inviting the same person twice
+ * would create a duplicate that the unique index on the address would refuse anyway, but with an incomprehensible error.
  */
 export function dedupeCrew<T extends { email: string | null; sgStatus: string | null }>(people: T[]): T[] {
   const seen = new Set<string>();
@@ -105,7 +101,7 @@ export function dedupeCrew<T extends { email: string | null; sgStatus: string | 
   return out;
 }
 
-/** L'équipe du projet distant, croisée avec les comptes et les membres locaux. */
+/** The remote project's team, cross-checked with the accounts and local members. */
 export async function listCrew(projectId: number): Promise<CrewPerson[]> {
   const ctx = await openConnection(projectId);
   const project = await ctx.client.findById('Project', ctx.connection.sgProjectId, ['users']);
@@ -113,8 +109,8 @@ export async function listCrew(projectId: number): Promise<CrewPerson[]> {
   const ids = refs.map((r) => Number(r.id)).filter((id) => Number.isFinite(id));
   if (ids.length === 0) return [];
 
-  // Le département ne se demande qu'une fois le schéma consulté : un champ que le site ne
-  // déclare pas ne renvoie pas « vide », il fait échouer la requête entière.
+  // The department is only requested once the schema has been consulted: a field the site does not declare does not return
+  // "empty"; it makes the whole request fail.
   const deptFields = await departmentFields(ctx.client);
   const people = await ctx.client.search('HumanUser', {
     fields: ['name', 'email', 'login', 'sg_status_list', ...deptFields],
@@ -140,17 +136,16 @@ export async function listCrew(projectId: number): Promise<CrewPerson[]> {
   const emails = raw.map((p) => p.email?.toLowerCase()).filter((e): e is string => Boolean(e));
   const locals = emails.length
     ? await prisma.user.findMany({
-        // Insensible à la casse : un compte enregistré « Alice@studio.com » passerait
-        // autrement pour inexistant, et l'inviter buterait sur l'index unique.
+        // Case-insensitive: an account registered as "Alice@studio.com" would otherwise look nonexistent, and inviting
+        // her would run into the unique index.
         where: { email: { in: emails, mode: 'insensitive' } },
         select: { id: true, email: true, role: true },
       })
     : [];
   const byEmail = new Map(locals.map((u) => [u.email.toLowerCase(), u]));
 
-  // Liens explicites : ils priment sur la correspondance par adresse, qui n'est qu'une
-  // déduction. Sans eux, une personne reliée à la main réapparaissait « sans compte » à
-  // chaque lecture, faute d'adresse commune.
+  // Explicit links: they take precedence over the address match, which is only a deduction. Without them, a person linked by
+  // hand reappeared as "no account" on every read, for lack of a common address.
   const links = await prisma.shotgridLink.findMany({
     where: { connection: { projectId }, localType: 'user', sgType: 'HumanUser' },
     select: { localId: true, sgId: true },
@@ -199,16 +194,14 @@ export async function listCrew(projectId: number): Promise<CrewPerson[]> {
 }
 
 /**
- * Relie **à la main** un compte ShotGrid à un compte ReView.
+ * Links **by hand** a ShotGrid account to a ReView account.
  *
- * La correspondance automatique se fait par adresse, et c'est le cas courant. Mais un
- * studio a toujours quelques personnes dont l'adresse diffère d'un outil à l'autre —
- * `prenom.nom@studio.com` d'un côté, l'adresse personnelle de l'autre. Sans ce geste,
- * ces comptes restaient à jamais non reliés : leurs écritures repartaient vers le site en
- * « ReView » anonyme, et l'équipe importée les proposait indéfiniment.
+ * The automatic match is done by address, and that is the common case. But a studio always has a few people whose address differs
+ * from one tool to the other: `first.last@studio.com` on one side, a personal address on the other. Without this gesture, these
+ * accounts stayed unlinked forever: their writes went back to the site as an anonymous "ReView", and the imported team proposed them
+ * indefinitely.
  *
- * `userId` à null défait le lien — pour corriger une association posée par erreur, qui
- * attribuerait sinon le travail de quelqu'un à quelqu'un d'autre.
+ * `userId` set to null undoes the link: to correct an association set by mistake, which would otherwise assign someone's work to someone else.
  */
 export async function linkCrewMember(projectId: number, sgId: number, userId: number | null): Promise<void> {
   const connection = await prisma.shotgridConnection.findUnique({
@@ -227,9 +220,8 @@ export async function linkCrewMember(projectId: number, sgId: number, userId: nu
   const user = await prisma.user.findUnique({ where: { id: userId }, select: { id: true, email: true } });
   if (!user) throw notFound('User not found');
 
-  // Un compte ReView ne peut pointer qu'un seul compte du site, et réciproquement : les
-  // deux unicités de `ShotgridLink` le garantissent, mais un lien préexistant ferait
-  // échouer l'écriture au lieu de la remplacer. On nettoie donc les deux côtés d'abord.
+  // A ReView account can only point to one site account, and vice versa: the two uniqueness constraints of `ShotgridLink` guarantee
+  // it, but a pre-existing link would make the write fail instead of replacing it. We therefore clean up both sides first.
   await prisma.shotgridLink.deleteMany({
     where: {
       connectionId: connection.id,
@@ -261,11 +253,10 @@ export interface InviteResult {
 }
 
 /**
- * Ce que fera l'invitation, avant de faire quoi que ce soit.
+ * What the invitation will do, before doing anything.
  *
- * Pure : l'écran s'en sert pour annoncer « 3 comptes seront créés » avant de demander
- * confirmation, et le service pour refuser tout le lot d'un coup si l'acteur n'a pas le
- * droit de créer des comptes — plutôt que d'en créer trois puis d'échouer au quatrième.
+ * Pure: the screen uses it to announce "3 accounts will be created" before asking for confirmation, and the service uses it to refuse
+ * the whole batch at once if the actor is not allowed to create accounts, rather than creating three and failing on the fourth.
  */
 export function planInvites(
   crew: CrewPerson[],
@@ -287,11 +278,10 @@ export function planInvites(
 }
 
 /**
- * Donne l'accès à ReView, en une fois.
+ * Grants ReView access, in one go.
  *
- * Un compte manquant est créé par le circuit d'invitation habituel — celui qui envoie le
- * courriel et se rétracte si le relais ne répond pas. On ne réimplémente rien : un compte
- * créé sans son courriel d'activation n'est joignable par personne et réserve l'adresse.
+ * A missing account is created through the usual invitation circuit, the one that sends the e-mail and withdraws if the relay does not
+ * answer. Nothing is reimplemented here: an account created without its activation e-mail is reachable by nobody and reserves the address.
  */
 export async function inviteCrew(
   actor: SessionUser,
@@ -309,25 +299,24 @@ export async function inviteCrew(
   const results: InviteResult[] = [];
 
   /**
-   * Le département que le site déclare, posé sur le membre — **ajouté**, jamais substitué :
-   * la personne peut déjà en porter d'autres, et le site n'en connaît qu'un.
+   * The department the site declares, set on the member: **added**, never substituted: the person may already carry others, and the site
+   * knows only one.
    *
-   * L'échec ne fait pas tomber l'import : on vient de donner un accès, le perdre pour une
-   * étiquette serait absurde. Il est consigné, l'écran permet de corriger à la main.
+   * A failure does not bring down the import: we have just granted access, and losing it over a label would be absurd. It is logged, and the
+   * screen allows correcting it by hand.
    */
   const attachDepartment = async (person: CrewPerson, userId: number) => {
     if (!person.department) return;
     try {
       await setMemberDepartments(actor, projectId, userId, { add: [person.department.id] });
     } catch (err) {
-      logger.warn({ err, sgId: person.sgId }, 'Département ShotGrid non appliqué');
+      logger.warn({ err, sgId: person.sgId }, 'ShotGrid department not applied');
     }
   };
 
   const link = async (person: CrewPerson, userId: number) => {
     if (!connection) return;
-    // Le lien sert à l'attribution : sans lui, une écriture faite au nom de cette
-    // personne repart en « ReView » anonyme côté site.
+    // The link serves attribution: without it, a write made in this person's name goes back to the site as an anonymous "ReView".
     await upsertLink({
       connectionId: connection.id,
       localType: 'user',
@@ -343,8 +332,8 @@ export async function inviteCrew(
       const user = await UserService.createUser(actor.id, {
         email: person.email!,
         name: person.name,
-        // ARTIST par défaut : c'est le rôle qui donne accès au travail sans rien ouvrir
-        // d'autre. Un superviseur se promeut ensuite, explicitement.
+        // ARTIST by default: it is the role that gives access to the work without opening anything else. A supervisor is promoted
+        // afterwards, explicitly.
         role: Role.ARTIST,
       });
       await ProjectService.addMember(projectId, user.id);
@@ -352,7 +341,7 @@ export async function inviteCrew(
       await attachDepartment(person, user.id);
       results.push({ sgId: person.sgId, outcome: 'created' });
     } catch (err) {
-      logger.warn({ err, sgId: person.sgId }, 'Invitation ShotGrid en échec');
+      logger.warn({ err, sgId: person.sgId }, 'ShotGrid invitation failed');
       results.push({
         sgId: person.sgId,
         outcome: 'skipped',
@@ -362,7 +351,7 @@ export async function inviteCrew(
   }
 
   for (const person of plan.add) {
-    // Compte existant : on l'ajoute au projet sans toucher à son rôle global.
+    // Existing account: we add it to the project without touching its global role.
     await ProjectService.addMember(projectId, person.userId!);
     await link(person, person.userId!);
     await attachDepartment(person, person.userId!);
@@ -370,8 +359,7 @@ export async function inviteCrew(
   }
 
   for (const person of plan.skip) {
-    // Déjà membre : on pose tout de même le lien, qui manque souvent — c'est lui qui
-    // permet d'écrire sur le site au nom de cette personne.
+    // Already a member: we still set the link, which is often missing: it is what allows writing to the site in this person's name.
     if (person.state === 'member' && person.userId) {
       await link(person, person.userId);
       await attachDepartment(person, person.userId);

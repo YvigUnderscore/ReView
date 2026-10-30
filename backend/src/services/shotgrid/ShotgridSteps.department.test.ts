@@ -3,8 +3,7 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Créer une tâche depuis une étape du site n'écrivait que la chaîne `department` : la
-// tâche naissait sans relation, donc invisible à l'assignation par département.
+// Creating a task from a site step only wrote the `department` string: the task was born without a relation, hence invisible to assignment by department.
 vi.mock('../../lib/prisma', () => ({
   prisma: { shotgridLink: { findFirst: vi.fn() }, task: { create: vi.fn() } },
 }));
@@ -32,8 +31,7 @@ const ctx = {
     findById: vi.fn(),
     search: vi.fn(),
   },
-  // La création passe par le writer : c'est lui qui pose le projet lié et relit ce que le
-  // site a écrit. Sa propre suite l'éprouve ; ici on ne double que l'écriture.
+  // Creation goes through the writer: it is the one that sets the linked project and re-reads what the site wrote. Its own suite tests it; here we only double the write.
   writer: { create: vi.fn() },
 };
 
@@ -50,7 +48,7 @@ beforeEach(() => {
 });
 
 describe('createTaskFromStep', () => {
-  it('rattache la tâche au département du projet, relation comprise', async () => {
+  it('attaches the task to the project department, relation included', async () => {
     const out = await createTaskFromStep(
       7,
       { stepSgId: 14, parentType: 'asset', parentId: 12 },
@@ -62,8 +60,8 @@ describe('createTaskFromStep', () => {
     expect(data).toMatchObject({ department: 'LOOK_DEVELOPMENT', departmentId: 5, assetId: 12 });
   });
 
-  it('garde dans le lien le nom d’étape tel que le site l’écrit', async () => {
-    // Le lien décrit le côté distant : la clé normalisée n'y désignerait plus rien.
+  it('keeps in the link the step name as the site writes it', async () => {
+    // The link describes the remote side: the normalized key would no longer designate anything there.
     await createTaskFromStep(7, { stepSgId: 14, parentType: 'shot', parentId: 4 }, null);
     const call = vi.mocked(upsertLink).mock.calls[0]![0];
     expect(call.data).toMatchObject({ stepName: 'Look Development' });

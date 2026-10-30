@@ -1,35 +1,35 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { isImageAttachment, type CommentAttachment } from '../../../lib/commentAttachments';
+import { isImageAttachment, type CommentAttachment } from '../../lib/commentAttachments';
 
 /**
- * Pièces jointes d'un composeur : celles déjà stockées (édition d'un commentaire) et les
- * fichiers encore locaux, ramenées à une seule liste affichable.
+ * Attachments of a composer: those already stored (when editing a comment) and the local files
+ * still pending, merged into a single displayable list.
  *
- * Avant envoi, une pièce jointe n'était identifiée que par son nom de fichier : impossible
- * de vérifier ce qu'on envoie quand la capture s'appelle « image (3).png ». On lui donne
- * donc une URL — présignée pour l'existant, `blob:` pour le fichier en attente.
+ * Before sending, an attachment was only identified by its file name, so there was no way to
+ * check what was being sent when the capture was named "image (3).png". Each item is therefore
+ * given a URL: presigned for existing ones, `blob:` for a pending file.
  */
 export interface AttachmentDraft {
-  /** Identifiant de retrait : la clé MinIO d'une pièce déjà stockée, `file:<index>` sinon. */
+  /** Removal identifier: the MinIO key of an already stored attachment, otherwise `file:<index>`. */
   id: string;
   name: string;
   contentType?: string;
-  /** URL d'affichage, ou `null` tant que la vignette locale n'est pas prête. */
+  /** Display URL, or `null` until the local thumbnail is ready. */
   url: string | null;
 }
 
-/** Un fichier encore local n'a pas de clé, seulement une place dans la liste d'attente. */
+/** A local file has no key, only a place in the pending list. */
 export const fileDraftId = (index: number): string => `file:${index}`;
 
-/** Index du fichier local désigné, ou `null` si l'identifiant vise une pièce déjà stockée. */
+/** Index of the designated local file, or `null` if the identifier targets an already stored attachment. */
 export function fileIndexOf(id: string): number | null {
   const match = /^file:(\d+)$/.exec(id);
   return match ? Number(match[1]) : null;
 }
 
-/** Fusionne les deux lots dans l'ordre d'affichage : l'existant d'abord, l'ajout ensuite. */
+/** Merges the two batches in display order: existing items first, additions after. */
 export function toDrafts(
   existing: readonly CommentAttachment[],
   files: readonly File[],
@@ -51,7 +51,7 @@ export function toDrafts(
   ];
 }
 
-/** Retire la pièce désignée du bon lot, sans toucher à l'autre. */
+/** Removes the designated item from its batch, leaving the other one untouched. */
 export function removeDraft(
   id: string,
   files: readonly File[],
@@ -63,6 +63,6 @@ export function removeDraft(
     : { files: files.filter((_, i) => i !== index), existing: [...existing] };
 }
 
-/** Vignettes ouvrables en carrousel : les images dont on a effectivement une URL. */
+/** Thumbnails openable in the carousel: the images for which a URL is actually available. */
 export const imageDrafts = (drafts: readonly AttachmentDraft[]): AttachmentDraft[] =>
   drafts.filter((d) => !!d.url && isImageAttachment(d.contentType));

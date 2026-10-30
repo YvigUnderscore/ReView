@@ -28,12 +28,11 @@ beforeEach(() => {
 });
 
 /**
- * La sélection multiple n'offrait que « Assigner » et « Supprimer », alors que le geste
- * quotidien d'une production consiste à passer trente plans en retake d'un coup — et que le
- * clic droit sur un seul plan propose bien le statut.
+ * The multiple selection only offered "Assign" and "Delete", whereas the daily gesture of a production is to
+ * move thirty shots into retake at once, and right-clicking a single shot does offer the status.
  */
 describe('bulkPatchShotStatus', () => {
-  it('applique le statut à chaque plan, par le même chemin qu’au singulier', async () => {
+  it('applies the status to each shot, through the same path as the singular action', async () => {
     findMany.mockResolvedValue([
       { id: 1, projectId: 461 },
       { id: 2, projectId: 461 },
@@ -50,7 +49,7 @@ describe('bulkPatchShotStatus', () => {
     });
   });
 
-  it('accepte le retrait du statut', async () => {
+  it('accepts clearing the status', async () => {
     findMany.mockResolvedValue([{ id: 1, projectId: 461 }]);
     await bulkPatchShotStatus(user, [1], null);
     expect(update).toHaveBeenCalledWith(1, 461, { pipelineStatusId: null }, 5, {
@@ -58,8 +57,8 @@ describe('bulkPatchShotStatus', () => {
     });
   });
 
-  /** Un plan verrouillé par ShotGrid ne doit pas faire perdre les quarante-neuf autres. */
-  it('compte les refus à part au lieu de faire tomber le lot', async () => {
+  /** A shot locked by ShotGrid must not make the other forty-nine fail. */
+  it('counts refusals separately instead of failing the batch', async () => {
     findMany.mockResolvedValue([
       { id: 1, projectId: 461 },
       { id: 2, projectId: 461 },
@@ -72,7 +71,7 @@ describe('bulkPatchShotStatus', () => {
     });
   });
 
-  it('refuse une sélection qui traverse deux projets', async () => {
+  it('refuses a selection spanning two projects', async () => {
     findMany.mockResolvedValue([
       { id: 1, projectId: 461 },
       { id: 2, projectId: 999 },
@@ -81,24 +80,24 @@ describe('bulkPatchShotStatus', () => {
     expect(update).not.toHaveBeenCalled();
   });
 
-  it('refuse un compte étranger au projet', async () => {
+  it('refuses an account that does not belong to the project', async () => {
     findMany.mockResolvedValue([{ id: 1, projectId: 461 }]);
     checkAccess.mockResolvedValue(false);
     await expect(bulkPatchShotStatus(user, [1], 12)).rejects.toMatchObject({ statusCode: 403 });
     expect(update).not.toHaveBeenCalled();
   });
 
-  it('refuse une sélection dont aucun plan ne subsiste', async () => {
+  it('refuses a selection in which no shot remains', async () => {
     findMany.mockResolvedValue([]);
     await expect(bulkPatchShotStatus(user, [42], 12)).rejects.toMatchObject({ statusCode: 404 });
   });
 
   /**
-   * La mesure du correctif : un lot de trente plans émettait trente `shot:update` et
-   * trente `timeline:update`, chacun rechargeant le kanban ENTIER chez chaque client
-   * connecté. Il en émet désormais UN, qui porte les trente identifiants.
+   * The measure of the fix: a batch of thirty shots emitted thirty `shot:update` and thirty
+   * `timeline:update`, each reloading the WHOLE kanban on every connected client. It now emits ONE, carrying
+   * the thirty identifiers.
    */
-  it('n’émet qu’un seul événement pour tout le lot', async () => {
+  it('emits only one event for the whole batch', async () => {
     const ids = Array.from({ length: 30 }, (_, i) => i + 1);
     findMany.mockResolvedValue(ids.map((id) => ({ id, projectId: 461 })));
 
@@ -109,8 +108,8 @@ describe('bulkPatchShotStatus', () => {
     expect(emitShotsUpdated).toHaveBeenCalledWith(461, ids);
   });
 
-  /** Un plan refusé n'a pas changé : l'annoncer ferait recharger sa fiche pour rien. */
-  it('n’annonce que les plans réellement modifiés', async () => {
+  /** A refused shot did not change: announcing it would reload its detail view for nothing. */
+  it('announces only the shots that were actually modified', async () => {
     findMany.mockResolvedValue([
       { id: 1, projectId: 461 },
       { id: 2, projectId: 461 },
@@ -128,7 +127,7 @@ describe('bulkPatchShotStatus', () => {
     expect(emitShotsUpdated).toHaveBeenCalledWith(461, [1, 3]);
   });
 
-  it('laisse une trace d’audit avec le compte des refus', async () => {
+  it('leaves an audit trace with the count of refusals', async () => {
     findMany.mockResolvedValue([{ id: 1, projectId: 461 }]);
     await bulkPatchShotStatus(user, [1], 12);
     expect(logAudit).toHaveBeenCalledWith(

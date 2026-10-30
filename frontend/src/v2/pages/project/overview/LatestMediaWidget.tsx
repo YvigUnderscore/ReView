@@ -4,22 +4,22 @@
 import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { FileVideo, Play } from 'lucide-react';
-import { api } from '../../../../lib/apiClient';
-import { qk } from '../../../lib/query';
-import { reviewPath } from '../../../lib/slug';
-import { Skeleton } from '../../../components/ui/skeleton';
-import type { MediaRef } from '../../../types/api';
-import { tileCapacity, tileGridClass, type OverviewRows } from './overviewSizing';
-import type { WidgetSpan } from '../../../lib/widgetLayout';
-import { useT } from '../../../i18n';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
+import { reviewPath } from '@/v2/lib/slug';
+import { Skeleton } from '@/v2/components/ui/skeleton';
+import type { MediaRef } from '@/v2/types/api';
+import { tileCapacity, tileGridClass, type WidgetRows } from '@/v2/components/widgets/widgetSizing';
+import type { WidgetSpan } from '@/v2/lib/widgetLayout';
+import { useT } from '@/v2/i18n';
 
 /**
- * Les derniers médias publiés du projet, en vignettes cliquables vers la review.
+ * The project's latest published media, as thumbnails clickable through to the review.
  *
- * C'est le bloc que l'utilisatrice a entouré en premier : huit vignettes sur une ligne, et
- * du vide sous elles quelle que soit la place. La grille de vignettes suit maintenant
- * l'emprise du bloc — la largeur décide du nombre de colonnes, la hauteur du nombre de
- * lignes — et un bloc plus grand montre réellement plus de médias.
+ * This is the block the user circled first: eight thumbnails on one line, and empty space beneath
+ * them whatever the room. The thumbnail grid now follows the footprint of the block: the width
+ * decides the number of columns, the height the number of rows, and a larger block really shows
+ * more media.
  */
 
 type RecentMedia = MediaRef & { thumbnailUrl: string | null };
@@ -30,7 +30,7 @@ export default function LatestMediaWidget({
   span,
 }: {
   projectId: number;
-  rows: OverviewRows;
+  rows: WidgetRows;
   span: WidgetSpan;
 }) {
   const t = useT();

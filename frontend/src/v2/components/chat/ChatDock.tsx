@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { Bell, BellOff, LogOut, Pencil, UserPlus, X } from 'lucide-react';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { useAuth } from '../../stores/useAuth';
 import { useChat, conversationLabel } from '../../stores/useChat';
 import Avatar from '../Avatar';
@@ -16,8 +16,8 @@ import { Input } from '../ui/input';
 import { useT } from '../../i18n';
 
 /**
- * Fenêtre de conversation, ancrée au-dessus du pied de sidebar — la messagerie suit la
- * navigation au lieu d'occuper une page : on écrit à quelqu'un sans quitter sa review.
+ * Chat window anchored above the sidebar footer. Messaging follows navigation instead
+ * of taking over a page, so you can write to someone without leaving your review.
  */
 export default function ChatDock({ sidebarHidden }: { sidebarHidden: boolean }) {
   const t = useT();
@@ -122,8 +122,8 @@ export default function ChatDock({ sidebarHidden }: { sidebarHidden: boolean }) 
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
           onKeyDown={(e) => {
-            // Entrée envoie, Maj+Entrée passe à la ligne : la convention de toutes les
-            // messageries, et le seul moyen d'écrire vite sans viser un bouton.
+            // Enter sends, Shift+Enter inserts a newline: the convention of all messaging
+            // apps, and the only way to type quickly without aiming for a button.
             if (e.key === 'Enter' && !e.shiftKey) {
               e.preventDefault();
               void submit();
@@ -137,7 +137,7 @@ export default function ChatDock({ sidebarHidden }: { sidebarHidden: boolean }) 
         />
       </div>
 
-      {/* `key` : le champ repart du titre courant si le groupe a été renommé entre-temps. */}
+      {/* `key`: the field resets to the current title if the group was renamed in the meantime. */}
       <RenameDialog
         key={conversation.title ?? ''}
         open={renaming}
@@ -145,8 +145,8 @@ export default function ChatDock({ sidebarHidden }: { sidebarHidden: boolean }) 
         current={conversation.title ?? ''}
         onSubmit={(title) => useChat.getState().rename(conversation.id, title)}
       />
-      {/* Monté à l'ouverture seulement : le sélecteur lit l'annuaire de présence, inutile
-          d'en tenir un second abonnement ouvert derrière chaque fenêtre de conversation. */}
+      {/* Mounted only when opened: the picker reads the presence directory, so there is no
+          need to keep a second subscription open behind every chat window. */}
       {inviting && (
         <PeoplePicker
           open

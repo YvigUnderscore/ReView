@@ -25,14 +25,13 @@ const findFirst = vi.mocked(prisma.project.findFirst);
 const findUnique = vi.mocked(prisma.project.findUnique);
 const admin = { id: 1, role: 'ADMIN' as const };
 
-// Formes minimales des créations capturées : le service ne lit que id + colonnes copiées.
+// Minimal shapes of the captured creations: the service only reads id + copied columns.
 type Row = { id: number } & Record<string, unknown>;
 type CreateManyArgs = { data: Record<string, unknown>[] };
 
 /**
- * tx factice : ids séquentiels par entité, capture des écritures groupées.
- * `createManyAndReturn` rend les lignes DANS LE DÉSORDRE volontairement — le service ne
- * doit se raccrocher qu'à `(sequenceId, code)`, jamais à l'ordre de retour.
+ * Fake tx: sequential ids per entity, capture of grouped writes. `createManyAndReturn` deliberately returns
+ * rows OUT OF ORDER — the service must only hold on to `(sequenceId, code)`, never to the return order.
  */
 function makeTx() {
   const created = { sequences: [] as Row[], shots: [] as Row[], tasks: [] as Record<string, unknown>[] };
@@ -63,12 +62,12 @@ function makeTx() {
 beforeEach(() => vi.clearAllMocks());
 
 describe('ProjectService.duplicateProject (38.A)', () => {
-  it('404 si le projet source est introuvable', async () => {
+  it('404 if the source project is not found', async () => {
     findFirst.mockResolvedValue(null);
     await expect(duplicateProject(admin, 5, 'Copie', false)).rejects.toMatchObject({ statusCode: 404 });
   });
 
-  it('400 SLUG_TAKEN si un projet porte déjà ce nom', async () => {
+  it('400 SLUG_TAKEN if a project already carries this name', async () => {
     findFirst.mockResolvedValue({ studioId: 1, sequences: [], shots: [], settings: {} } as never);
     findUnique.mockResolvedValue({ id: 9 } as never);
     await expect(duplicateProject(admin, 5, 'Existant', false)).rejects.toMatchObject({
@@ -77,7 +76,7 @@ describe('ProjectService.duplicateProject (38.A)', () => {
     });
   });
 
-  it('recrée séquences+shots en remappant la séquence, sans tâches quand includeTasks=false', async () => {
+  it('recreates sequences+shots remapping the sequence, without tasks when includeTasks=false', async () => {
     findFirst.mockResolvedValue({
       studioId: 1,
       description: 'd',
@@ -115,22 +114,22 @@ describe('ProjectService.duplicateProject (38.A)', () => {
 
     await duplicateProject(admin, 5, 'Nouveau', false);
 
-    // Le marqueur isTemplate est retiré des réglages copiés.
+    // The isTemplate marker is removed from the copied settings.
     expect(tx.project.create).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ settings: { departments: ['comp'] } }) }),
     );
-    // Shot rattaché à la nouvelle séquence (id remappé), shot hors séquence reste null.
+    // Shot attached to the new sequence (id remapped), shot outside any sequence stays null.
     const seqNewId = created.sequences[0]!.id;
     expect(created.shots.find((s) => s.code === 'SH01')!.sequenceId).toBe(seqNewId);
     expect(created.shots.find((s) => s.code === 'SH02')!.sequenceId).toBeNull();
-    // Pas de tâches copiées.
+    // No tasks copied.
     expect(created.tasks).toHaveLength(0);
-    // Écritures groupées : un appel par entité, pas un par ligne (P2028 à 5 s sinon).
+    // Grouped writes: one call per entity, not one per row (P2028 at 5 s otherwise).
     expect(tx.sequence.createManyAndReturn).toHaveBeenCalledTimes(1);
     expect(tx.shot.createManyAndReturn).toHaveBeenCalledTimes(1);
   });
 
-  it('donne un délai explicite à la transaction (les 5 s par défaut de Prisma ne suffisent pas)', async () => {
+  it("gives an explicit deadline to the transaction (Prisma's default 5 s is not enough)", async () => {
     findFirst.mockResolvedValue({
       studioId: 1,
       description: null,
@@ -150,7 +149,7 @@ describe('ProjectService.duplicateProject (38.A)', () => {
     expect(options?.timeout).toBeGreaterThan(5_000);
   });
 
-  it('copie les tâches des shots quand includeTasks=true (statut par défaut, sans assigné)', async () => {
+  it("copies the shots' tasks when includeTasks=true (default status, no assignee)", async () => {
     findFirst.mockResolvedValue({
       studioId: 1,
       description: null,
@@ -181,12 +180,12 @@ describe('ProjectService.duplicateProject (38.A)', () => {
     expect(created.tasks).toHaveLength(1);
     expect(created.tasks[0]).toMatchObject({ name: 'comp', checklist: [{ text: 'a', done: false }] });
     expect(created.tasks[0]).not.toHaveProperty('assigneeId');
-    // La tâche vise le NOUVEAU plan, retrouvé par (sequenceId, code) et non par ordre de retour.
+    // The task targets the NEW shot, found by (sequenceId, code) and not by return order.
     expect(created.tasks[0]!.shotId).toBe(created.shots[0]!.id);
     expect(tx.task.createMany).toHaveBeenCalledTimes(1);
   });
 
-  it('rattache chaque tâche à son plan quand deux séquences portent le même code de plan', async () => {
+  it('attaches each task to its shot when two sequences carry the same shot code', async () => {
     findFirst.mockResolvedValue({
       studioId: 1,
       description: null,

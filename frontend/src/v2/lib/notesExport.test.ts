@@ -8,8 +8,8 @@ vi.mock('../../lib/apiClient', () => ({ getToken: () => 'jeton' }));
 import { downloadNotes, notesExportPath } from './notesExport';
 
 /**
- * Le téléchargement d'un export : la route appelée, le jeton porté (une navigation ne le
- * porterait pas), le nom de fichier retenu et l'avertissement de troncature relayé.
+ * Downloading an export: the route called, the token carried (a navigation would not carry it),
+ * the file name retained and the truncation warning relayed.
  */
 
 const clicks: Array<{ href: string; download: string }> = [];
@@ -45,7 +45,7 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe('notesExportPath', () => {
-  it('compose la route de la portée demandée', () => {
+  it('builds the route for the requested scope', () => {
     expect(notesExportPath({ scope: 'playlist', id: 3, format: 'otio' })).toBe(
       '/api/comments/export?scope=playlist&id=3&format=otio',
     );
@@ -53,7 +53,7 @@ describe('notesExportPath', () => {
 });
 
 describe('downloadNotes', () => {
-  it('appelle la route avec le jeton et déclenche le téléchargement', async () => {
+  it('calls the route with the token and triggers the download', async () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValue(
@@ -61,26 +61,29 @@ describe('downloadNotes', () => {
       );
     vi.stubGlobal('fetch', fetchMock);
     const result = await downloadNotes({ scope: 'media', id: 7, format: 'csv' });
-    expect(fetchMock).toHaveBeenCalledWith('/api/comments/export?scope=media&id=7&format=csv', {
-      headers: { Authorization: 'Bearer jeton' },
-    });
+    expect(fetchMock).toHaveBeenCalledWith(
+      '/api/comments/export?scope=media&id=7&format=csv',
+      expect.anything(),
+    );
+    const init = fetchMock.mock.calls[0][1] as RequestInit;
+    expect(new Headers(init.headers).get('Authorization')).toBe('Bearer jeton');
     expect(result).toEqual({ filename: 'notes-media-7.csv', truncated: false });
     expect(clicks).toEqual([{ href: 'blob:1', download: 'notes-media-7.csv' }]);
   });
 
-  it('construit un nom de fichier quand le serveur n’en annonce pas', async () => {
+  it('builds a file name when the server does not announce one', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response()));
     const result = await downloadNotes({ scope: 'shot', id: 42, format: 'sheet' });
     expect(result.filename).toBe('notes-shot-42.html');
     expect(clicks[0]?.download).toBe('notes-shot-42.html');
   });
 
-  it('relaie l’avertissement de troncature', async () => {
+  it('relays the truncation warning', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response({ headers: { 'x-notes-truncated': '1' } })));
     expect((await downloadNotes({ scope: 'media', id: 7, format: 'csv' })).truncated).toBe(true);
   });
 
-  it('remonte le message d’erreur du serveur sans rien télécharger', async () => {
+  it('surfaces the server error message without downloading anything', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn().mockResolvedValue(response({ ok: false, body: { error: 'No access to this project' } })),
@@ -91,7 +94,7 @@ describe('downloadNotes', () => {
     expect(clicks).toHaveLength(0);
   });
 
-  it('libère l’URL objet une fois le clic parti', async () => {
+  it('releases the object URL once the click has gone through', async () => {
     vi.useFakeTimers();
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(response()));
     await downloadNotes({ scope: 'media', id: 7, format: 'csv' });

@@ -20,17 +20,15 @@ import {
 } from './socketRateLimit';
 
 /**
- * Deux propriétés à tenir en même temps, et elles tirent en sens contraire :
+ * Two properties to hold at the same time, and they pull in opposite directions:
  *
- * - le trafic légitime passe **toujours** (une salle de dailies émet `live:sync` à 30 Hz,
- *   et le front émet `activity` à chaque frappe) ;
- * - le scénario de l'audit — `join_review` en boucle sur des identifiants inexistants,
- *   deux requêtes Postgres par refus — est arrêté AVANT le gestionnaire.
+ * - legitimate traffic ALWAYS passes (a dailies room emits `live:sync` at 30 Hz, and the front end emits `activity` on each keystroke);
+ * - the audit scenario — `join_review` in a loop on nonexistent identifiers, two Postgres queries per refusal — is stopped BEFORE the handler.
  */
 
 const options = resolveOptions();
 
-/** Émet `count` fois l'événement à `t` et rend le décompte des verdicts. */
+/** Emits the event `count` times at `t` and returns the tally of the verdicts. */
 function burst(budget: SocketBudget, event: string, count: number, at: number, bytes = 16) {
   const seen = { allow: 0, drop: 0, disconnect: 0 };
   for (let i = 0; i < count; i += 1) seen[admitPacket(budget, event, bytes, options, at)] += 1;
@@ -39,11 +37,11 @@ function burst(budget: SocketBudget, event: string, count: number, at: number, b
 
 beforeEach(() => vi.clearAllMocks());
 
-describe('socketRateLimit — le trafic légitime passe', () => {
-  it('laisse passer une minute de salle live à 30 Hz avec les frappes du clavier', () => {
+describe('socketRateLimit — legitimate traffic passes', () => {
+  it('lets a minute of a live room at 30 Hz through alongside keyboard input', () => {
     const budget = createBudget(0);
     let dropped = 0;
-    // 60 s à 30 trames/s, plus un `activity` toutes les 200 ms (frappe soutenue).
+    // 60 s at 30 frames/s, plus an `activity` every 200 ms (sustained typing).
     for (let tick = 0; tick < 1800; tick += 1) {
       const now = tick * 33;
       if (admitPacket(budget, 'live:sync', 120, options, now) !== 'allow') dropped += 1;
@@ -52,97 +50,93 @@ describe('socketRateLimit — le trafic légitime passe', () => {
     expect(dropped).toBe(0);
   });
 
-  it("absorbe la rafale d'ouverture d'un écran (plusieurs joins d'un coup)", () => {
+  it('absorbs the opening burst of a screen (several joins at once)', () => {
     const budget = createBudget(0);
     expect(burst(budget, 'join_review', 12, 0)).toMatchObject({ allow: 12, drop: 0 });
   });
 });
 
-describe('socketRateLimit — le scénario de l’audit est arrêté', () => {
-  it('borne une boucle de `join_review` à une poignée de passages par rafale', () => {
+describe('socketRateLimit — the audit scenario is stopped', () => {
+  it('bounds a loop of `join_review` to a handful of passes per burst', () => {
     const budget = createBudget(0);
     const seen = burst(budget, 'join_review', 500, 0);
-    // 240 jetons / 12 par join = 20 passages, puis plus rien tant que le seau ne recharge pas.
+    // 240 tokens / 12 per join = 20 passes, then nothing until the bucket refills.
     expect(seen.allow).toBe(20);
     expect(seen.drop + seen.disconnect).toBe(480);
   });
 
   /**
-   * Le calibrage a doublé la recharge (le régime légitime du pilote la frôlait), mais la
-   * borne qui compte est celle des requêtes Postgres : elle ne doit PAS avoir bougé. Dix
-   * `join_review` par seconde en régime permanent, soit vingt requêtes — c'est le contrat.
+   * The calibration doubled the refill (the pilot's legitimate regime was brushing against it), but the bound that counts is that of the Postgres queries: it must NOT
+   * have moved. Ten `join_review` per second in steady state, i.e. twenty queries — that is the contract.
    */
-  it('tient dix `join_review` par seconde en régime permanent, pas davantage', () => {
+  it('holds ten `join_review` per second in steady state, no more', () => {
     const budget = createBudget(0);
-    burst(budget, 'join_review', 100, 0); // vide le seau
+    burst(budget, 'join_review', 100, 0); // empties the bucket
     let allowed = 0;
-    // Dix secondes de martèlement, vingt tentatives par tranche de 100 ms.
+    // Ten seconds of hammering, twenty attempts per 100 ms slice.
     for (let ms = 100; ms <= 10_000; ms += 100) allowed += burst(budget, 'join_review', 20, ms).allow;
     expect(allowed).toBe(100);
   });
 
-  it('ferme la connexion sur un dépassement soutenu', () => {
+  it('closes the connection on a sustained overrun', () => {
     const budget = createBudget(0);
     const seen = burst(budget, 'join_review', 500, 0);
     expect(seen.disconnect).toBeGreaterThan(0);
   });
 
-  it('ne compte pas comme abus une rafale suivie d’un retour au calme', () => {
+  it('does not count as abuse a burst followed by a return to calm', () => {
     const budget = createBudget(0);
     burst(budget, 'join_review', 100, 0);
     expect(budget.drops).toBeGreaterThan(0);
-    // Deux secondes de silence : le seau se remplit, le compteur d'abus retombe.
+    // Two seconds of silence: the bucket refills, the abuse counter falls back.
     admitPacket(budget, 'activity', 8, options, 2000);
     expect(budget.drops).toBe(0);
   });
 
-  it('recharge exactement au régime annoncé', () => {
+  it('refills exactly at the announced rate', () => {
     const budget = createBudget(0);
-    burst(budget, 'live:sync', 300, 0); // vide le seau
+    burst(budget, 'live:sync', 300, 0); // empties the bucket
     expect(admitPacket(budget, 'live:sync', 8, options, 0)).not.toBe('allow');
-    // 100 ms plus tard : 12 jetons rechargés, douze trames passent, la treizième non.
+    // 100 ms later: 12 tokens refilled, twelve frames pass, the thirteenth does not.
     expect(burst(budget, 'live:sync', 20, 100)).toMatchObject({ allow: 12 });
   });
 });
 
-describe('socketRateLimit — amplification par la taille', () => {
-  it('refuse une trame démesurée sans jamais la relayer', () => {
+describe('socketRateLimit — amplification by size', () => {
+  it('refuses an oversized frame without ever relaying it', () => {
     const budget = createBudget(0);
     const verdict = admitPacket(budget, 'live:sync', DEFAULT_MAX_PAYLOAD_BYTES + 1, options, 0);
     expect(verdict).not.toBe('allow');
     expect(budget.tokens).toBe(DEFAULT_CAPACITY);
   });
 
-  it('facture la charge utile en plus du coût de l’événement', () => {
+  it('charges the payload on top of the cost of the event', () => {
     expect(packetCost('live:sync', 0, options)).toBe(1);
-    // Un `LiveSyncPayload` réel (playhead, pause, caméra, wipe) pèse quelques centaines
-    // d'octets : il ne doit RIEN payer de plus, sinon le pilote se ferait étrangler.
+    // A real `LiveSyncPayload` (playhead, pause, camera, wipe) weighs a few hundred bytes: it must pay NOTHING more, otherwise the pilot would be strangled.
     expect(packetCost('live:sync', 900, options)).toBe(1);
     expect(packetCost('live:sync', DEFAULT_MAX_PAYLOAD_BYTES, options)).toBe(5);
     expect(packetCost('inconnu', 0, options)).toBe(options.defaultCost);
   });
 
   /**
-   * Doubler la recharge ne doit pas doubler l'amplification : ce qui entre ici ressort
-   * multiplié par le nombre de participants de la salle. Le plafond de charge utile et la
-   * tranche facturée ont été resserrés d'autant — le débit d'octets relayables par une
-   * connexion reste sous celui qu'autorisaient les réglages d'origine (32 Kio à 6,6 trames/s,
-   * soit ~213 Kio/s).
+   * Doubling the refill must not double the amplification: what enters here comes out multiplied by the number of participants in the room. The payload ceiling and
+   * the charged slice were tightened accordingly — the throughput of relayable bytes through a connection stays below what the original settings allowed (32 KiB at 6.6 frames/s,
+   * i.e. ~213 KiB/s).
    */
-  it('ne relaie pas plus d’octets qu’avant le relèvement de la recharge', () => {
+  it('does not relay more bytes than before the refill increase', () => {
     const budget = createBudget(0);
     const bytes = DEFAULT_MAX_PAYLOAD_BYTES;
-    // Réserve vidée : on mesure le régime PERMANENT, pas la rafale d'ouverture.
+    // Reserve emptied: we measure the PERMANENT regime, not the opening burst.
     burst(budget, 'live:sync', 100, 0, bytes);
     let relayed = 0;
-    // Une seconde de martèlement à la taille maximale acceptée, par tranches de 10 ms.
+    // One second of hammering at the maximum accepted size, in 10 ms slices.
     for (let ms = 10; ms <= 1000; ms += 10)
       relayed += burst(budget, 'live:sync', 50, ms, bytes).allow * bytes;
-    // Réglages d'origine : 32 Kio à 60/9 trames par seconde, soit ~211 Kio/s.
+    // Original settings: 32 KiB at 60/9 frames per second, i.e. ~211 KiB/s.
     expect(relayed).toBeLessThan((60 / 9) * 32 * 1024);
   });
 
-  it('mesure les formes usuelles, et compte une structure circulaire comme démesurée', () => {
+  it('measures the usual shapes, and counts a circular structure as oversized', () => {
     expect(estimatePayloadBytes(['abc'])).toBe(3);
     expect(estimatePayloadBytes([42, true, null])).toBe(24);
     expect(estimatePayloadBytes([{ playhead: 12.5 }])).toBe(17);
@@ -153,7 +147,7 @@ describe('socketRateLimit — amplification par la taille', () => {
   });
 });
 
-describe('attachSocketRateLimit — branchement sur une connexion', () => {
+describe('attachSocketRateLimit — wiring onto a connection', () => {
   function fakeSocket() {
     let middleware: ((packet: unknown[], next: (err?: Error) => void) => void) | null = null;
     const disconnect = vi.fn();
@@ -176,18 +170,17 @@ describe('attachSocketRateLimit — branchement sur une connexion', () => {
     };
   }
 
-  it("n'appelle pas le gestionnaire d'un paquet rejeté", () => {
+  it('does not call the handler of a refused packet', () => {
     const clock = { t: 0 };
     const fake = fakeSocket();
     attachSocketRateLimit(fake.socket, { now: () => clock.t });
-    // Vingt joins passent, le vingt-et-unième n'atteint jamais le gestionnaire —
-    // c'est-à-dire aucune requête Postgres.
+    // Twenty joins pass, the twenty-first never reaches the handler — that is to say no Postgres query.
     for (let i = 0; i < 20; i += 1) expect(fake.emit('join_review', i)).toHaveBeenCalledOnce();
     expect(fake.emit('join_review', 21)).not.toHaveBeenCalled();
     expect(fake.disconnect).not.toHaveBeenCalled();
   });
 
-  it('ferme la connexion et le journalise sur un abus soutenu', () => {
+  it('closes the connection and logs it on a sustained abuse', () => {
     const fake = fakeSocket();
     attachSocketRateLimit(fake.socket, { now: () => 0 });
     for (let i = 0; i < 500; i += 1) fake.emit('join_review', i);
@@ -198,7 +191,7 @@ describe('attachSocketRateLimit — branchement sur une connexion', () => {
     );
   });
 
-  it('refuse une trame démesurée sans fermer une connexion par ailleurs honnête', () => {
+  it('refuses an oversized frame without closing an otherwise honest connection', () => {
     const fake = fakeSocket();
     attachSocketRateLimit(fake.socket, { now: () => 0 });
     expect(

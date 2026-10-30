@@ -6,28 +6,28 @@ import { existsSync, mkdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
 /**
- * Captures d'écran de la documentation.
+ * Documentation screenshots.
  *
- * Ce n'est pas un test : c'est le **générateur** des images de `DOCUMENTATION/assets/`.
- * Les prendre à la main condamnait la documentation à vieillir — une capture périmée
- * ment plus qu'elle n'explique, et personne ne refait quarante captures après un
- * changement de thème.
+ * This is not a test: it is the **generator** of the images in `DOCUMENTATION/assets/`.
+ * Taking them by hand would condemn the documentation to age: an outdated screenshot
+ * misleads more than it explains, and nobody redoes forty screenshots after a
+ * theme change.
  *
- * Deux exigences en découlent :
+ * Two requirements follow:
  *
- * - **Données de démonstration neutres.** Le dépôt est public : une capture ne doit
- *   montrer ni le nom d'un client, ni un plan de production réel. Le script fabrique donc
- *   son propre projet, et le laisse en place pour la prochaine exécution.
- * - **Interface en anglais**, comme la documentation. La langue est forcée avant le
- *   premier rendu, sinon l'application prend celle du compte.
+ * - **Neutral demo data.** The repo is public: a screenshot must not
+ *   show a client's name or a real production shot. The script therefore builds
+ *   its own project and leaves it in place for the next run.
+ * - **English interface**, like the documentation. The language is forced before the
+ *   first render, otherwise the application takes the account's language.
  *
  * Lancer : `npx playwright test e2e/docs-capture.spec.ts --project=chromium`
- * (ou `E2E_CHANNEL=msedge` en local, comme le smoke).
+ * (or `E2E_CHANNEL=msedge` locally, like the smoke test).
  */
 
 /**
- * Navigateur sans extensions : celles du profil de l'utilisateur (bloqueurs, widgets
- * flottants) se dessinent par-dessus la page et se retrouvent dans les captures.
+ * Browser without extensions: the profile's own ones (ad blockers, floating widgets)
+ * draw over the page and end up in the screenshots.
  */
 test.use({
   launchOptions: { args: ['--disable-extensions', '--disable-component-extensions-with-background-pages'] },
@@ -37,7 +37,7 @@ const EMAIL = process.env.E2E_EMAIL ?? 'admin@review.local';
 const PASSWORD = process.env.E2E_PASSWORD ?? 'admin1234';
 const OUT = join(process.cwd(), '..', 'DOCUMENTATION', 'assets');
 
-/** Projet de démonstration, stable d'une exécution à l'autre. */
+/** Demo project, stable from one run to the next. */
 const DEMO = {
   project: 'Nebula Rising',
   sequence: { code: 'SQ010', name: 'Landing bay' },
@@ -50,11 +50,11 @@ const DEMO = {
 };
 
 /**
- * Masque les autres projets du studio dans la barre latérale.
+ * Hides the other studio projects in the sidebar.
  *
- * Le dépôt est public : une capture ne doit pas laisser lire le nom d'un projet client
- * parce qu'il se trouvait épinglé sur le compte qui a lancé le script. On masque à
- * l'affichage plutôt que de toucher aux favoris de la personne.
+ * The repo is public: a screenshot must not let the name of a client project be read
+ * because it was pinned on the account that ran the script. We hide it in the
+ * display rather than touching the person's favorites.
  */
 async function hideOtherProjects(page: Page) {
   await page.evaluate((name) => {
@@ -65,27 +65,27 @@ async function hideOtherProjects(page: Page) {
       const text = link.textContent?.trim() ?? '';
       if (text && !text.includes(name)) link.setAttribute('data-docs-hide', '');
     }
-    // Surcouches propres au compte qui lance le script (brouillons en attente, envois en
-    // cours) : elles n'apprennent rien au lecteur et datent la capture.
+    // Overlays specific to the account running the script (pending drafts, uploads in
+    // progress): they teach the reader nothing and date the screenshot.
     for (const node of document.querySelectorAll('.fixed.bottom-4')) {
       node.setAttribute('data-docs-hide', '');
     }
-    // Bouton des devtools TanStack Query : il n'existe qu'en développement, et une
-    // documentation qui le montre décrit un écran que personne n'aura jamais.
+    // TanStack Query devtools button: it only exists in development, and a
+    // documentation page showing it would describe a screen nobody will ever see.
     for (const node of document.querySelectorAll('[class*="tsqd-"]')) {
       node.setAttribute('data-docs-hide', '');
     }
-    // Pas d'observateur : marquer pose un attribut, qui déclenche une mutation, qui
-    // relance le marquage — la page se fige. On re-marque à chaque capture, c'est tout.
+    // No observer: marking sets an attribute, which triggers a mutation, which
+    // re-runs the marking, and the page freezes. We simply re-mark at each capture.
   }, DEMO.project);
 }
 
 /**
- * Attend que l'écran soit vraiment là.
+ * Waits until the screen is really there.
  *
- * Un délai fixe ne suffit pas : les pages lourdes (kanban, production) se chargent en
- * différé, et la capture attrapait un « Loading… » sur fond vide — une image inutile, et
- * pire, une image qui a l'air d'être l'écran.
+ * A fixed delay is not enough: heavy pages (kanban, production) load in a
+ * deferred way, and the capture caught a "Loading…" on an empty background: a useless
+ * image and, worse, one that looks like the screen.
  */
 async function settle(page: Page) {
   await page.waitForLoadState('networkidle').catch(() => undefined);
@@ -104,7 +104,7 @@ async function shot(page: Page, section: string, name: string) {
   await page.screenshot({ path: join(OUT, section, `${name}.png`) });
 }
 
-/** Connexion, langue anglaise forcée, fenêtre au format des captures. */
+/** Login, English language forced, window sized to the screenshots. */
 async function signIn(page: Page) {
   await page.addInitScript(() => {
     window.localStorage.setItem('locale', 'en');
@@ -124,19 +124,28 @@ async function signIn(page: Page) {
   await page.waitForURL((url) => !/\/(login|setup)/.test(url.pathname), { timeout: 30_000 });
 }
 
-/** Jeu de démonstration, créé une seule fois puis réutilisé. */
+/** Demo dataset, created only once and then reused. */
 async function ensureDemoData(page: Page): Promise<number> {
   return page.evaluate(async (demo) => {
-    const token = window.localStorage.getItem('token');
+    // The access token lives in the page's memory only: ask for one through the refresh cookie.
+    const token = (
+      (await (
+        await fetch('/api/auth/refresh', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'X-Requested-With': 'ReView' },
+        })
+      ).json()) as { token?: string }
+    ).token;
     const h = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
     const get = async (url: string) => (await fetch(url, { headers: h })).json();
     const post = async (url: string, body: unknown) =>
       (await fetch(url, { method: 'POST', headers: h, body: JSON.stringify(body) })).json();
 
-    // Idempotent entité par entité, pas seulement sur le projet : une exécution
-    // interrompue laissait un projet à demi peuplé que la suivante croyait complet.
-    // `/api/projects` répond en page (`items`), pas en `projects` : la confondre avec la
-    // forme des séquences faisait recréer le projet à chaque exécution.
+    // Idempotent per entity, not just per project: an interrupted run
+    // left a half-populated project that the next run took for complete.
+    // `/api/projects` responds with a page (`items`), not `projects`: confusing it with the
+    // sequence shape made the project get recreated on every run.
     const projects = (await get('/api/projects')) as { items?: { id: number; name: string }[] };
     let pid = projects.items?.find((p) => p.name === demo.project)?.id;
     if (!pid) {
@@ -189,9 +198,9 @@ async function ensureDemoData(page: Page): Promise<number> {
 }
 
 /**
- * Téléverse les médias de démonstration s'ils manquent, et rend l'identifiant du média
- * vidéo prêt à être passé en review. Rend `null` si les fixtures ne sont pas là — le
- * script continue alors sans les captures de viewer plutôt que d'échouer.
+ * Uploads the demo media if they are missing, and returns the ID of the video media
+ * ready to be opened in review. Returns `null` if the fixtures are missing: the
+ * script then continues without the viewer screenshots rather than failing.
  */
 async function uploadDemoMedia(
   page: Page,
@@ -206,13 +215,22 @@ async function uploadDemoMedia(
 
   return page.evaluate(
     async ({ pid, base64, name, shotCode, kind, mime }) => {
-      const token = window.localStorage.getItem('token');
+      // The access token lives in the page's memory only: ask for one through the refresh cookie.
+      const token = (
+        (await (
+          await fetch('/api/auth/refresh', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'ReView' },
+          })
+        ).json()) as { token?: string }
+      ).token;
       const h = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
       const json = async (url: string, init?: RequestInit) =>
         (await fetch(url, { headers: h, ...init })).json();
 
-      // Une tâche du plan de démonstration porte la version : c'est le chemin normal
-      // d'un publish, et il exerce la présignature MinIO comme un vrai dépôt.
+      // One task of the demo plan carries the version: it is the normal path
+      // of a publish, and it exercises MinIO presigning like a real upload.
       const shots = (await json(`/api/shots?projectId=${pid}`)) as {
         items?: { id: number; code: string }[];
       };
@@ -223,11 +241,11 @@ async function uploadDemoMedia(
       if (!taskId) return null;
 
       /**
-       * Un média déjà là ? On le réutilise.
+       * Media already there? We reuse it.
        *
-       * `GET /api/media?projectId=` ne liste que les médias **publiés** — c'est justement
-       * ce que le script produit à la fin, donc la recherche aboutit dès la deuxième
-       * exécution. Sans elle, chaque passe empilait une version de plus (V02, V03, V04…).
+       * `GET /api/media?projectId=` only lists **published** media, which is exactly
+       * what the script produces at the end, so the search succeeds from the second
+       * run on. Without it, every pass piled up one more version (V02, V03, V04...).
        */
       const media = (await json(`/api/media?projectId=${pid}&kind=${kind}`)) as {
         items?: { id: number; kind: string }[];
@@ -253,8 +271,8 @@ async function uploadDemoMedia(
       const binary = Uint8Array.from(atob(base64), (c) => c.charCodeAt(0));
       await fetch(url, { method: 'PUT', body: binary, headers: { 'Content-Type': mime } });
       await json(`/api/media/${mediaId}/finalize`, { method: 'POST' });
-      // Publié : une review se lit sur un média publié, et l'en-tête de la capture le
-      // montre alors tel que l'équipe le voit.
+      // Published: a review is read on a published media, and the screenshot's header
+      // then shows it the way the team sees it.
       await json(`/api/media/${mediaId}/publish`, { method: 'POST' });
       return mediaId;
     },
@@ -269,16 +287,25 @@ async function uploadDemoMedia(
   );
 }
 
-/** Relie le projet de démonstration à un site de simulation, le temps des captures. */
+/** Links the demo project to a simulator site for the duration of the captures. */
 async function linkDemoToShotgrid(page: Page, projectId: number, siteId: number) {
   await page.evaluate(
     async ({ pid, site }) => {
-      const token = window.localStorage.getItem('token');
+      // The access token lives in the page's memory only: ask for one through the refresh cookie.
+      const token = (
+        (await (
+          await fetch('/api/auth/refresh', {
+            method: 'POST',
+            credentials: 'same-origin',
+            headers: { 'X-Requested-With': 'ReView' },
+          })
+        ).json()) as { token?: string }
+      ).token;
       const h = { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
       await fetch(`/api/shotgrid/projects/${pid}/connection`, {
         method: 'POST',
         headers: h,
-        // Le projet du simulateur : la documentation ne doit montrer aucun nom réel.
+        // The simulator project: the documentation must not show any real name.
         body: JSON.stringify({ siteId: site, sgProjectId: 70, sgProjectName: 'Demo Project' }),
       });
     },
@@ -288,7 +315,16 @@ async function linkDemoToShotgrid(page: Page, projectId: number, siteId: number)
 
 async function unlinkDemoFromShotgrid(page: Page, projectId: number) {
   await page.evaluate(async (pid) => {
-    const token = window.localStorage.getItem('token');
+    // The access token lives in the page's memory only: ask for one through the refresh cookie.
+    const token = (
+      (await (
+        await fetch('/api/auth/refresh', {
+          method: 'POST',
+          credentials: 'same-origin',
+          headers: { 'X-Requested-With': 'ReView' },
+        })
+      ).json()) as { token?: string }
+    ).token;
     await fetch(`/api/shotgrid/projects/${pid}/connection`, {
       method: 'DELETE',
       headers: { Authorization: `Bearer ${token}` },
@@ -296,7 +332,7 @@ async function unlinkDemoFromShotgrid(page: Page, projectId: number) {
   }, projectId);
 }
 
-test('captures de la documentation', async ({ page }) => {
+test('documentation captures', async ({ page }) => {
   test.setTimeout(300_000);
   await page.setViewportSize({ width: 1440, height: 900 });
   await signIn(page);
@@ -313,7 +349,7 @@ test('captures de la documentation', async ({ page }) => {
   await expect(page.getByText(DEMO.project).first()).toBeVisible();
   await shot(page, 'user-guide', 'projects-list');
 
-  // ── Vue d'ensemble, séquences, plans ──────────────────────────────────────
+  // ── Overview, sequences, shots ──────────────────────────────────────────
   await page.goto(`/projects/${projectId}`);
   await page.waitForTimeout(1200);
   await shot(page, 'user-guide', 'project-overview');
@@ -326,8 +362,8 @@ test('captures de la documentation', async ({ page }) => {
   await expect(page.getByText(DEMO.shots[0]!.code).first()).toBeVisible();
   await shot(page, 'user-guide', 'project-shots');
 
-  // Menu contextuel d'une carte de plan, sous-menu « Status » déplié : c'est le geste
-  // que la documentation décrit, il vaut mieux le montrer que le paraphraser.
+  // Context menu of a shot card, with the "Status" submenu expanded: it is the gesture
+  // the documentation describes, better shown than paraphrased.
   await page.getByText(DEMO.shots[0]!.code).first().click({ button: 'right' });
   const statusEntry = page.getByRole('menuitem', { name: /^(Status|Statut)$/ });
   if (await statusEntry.isVisible().catch(() => false)) {
@@ -352,20 +388,20 @@ test('captures de la documentation', async ({ page }) => {
   await page.waitForTimeout(1500);
   await shot(page, 'user-guide', 'production-reporting');
 
-  // ── Membres (et équipe ShotGrid quand le projet est relié) ────────────────
+  // ── Members (and ShotGrid team when the project is linked) ──────────────
   await page.goto(`/projects/${projectId}?tab=members`);
   await page.waitForTimeout(800);
   await shot(page, 'admin-guide', 'project-members');
 
-  // ── Réglages du projet ────────────────────────────────────────────────────
+  // ── Project settings ─────────────────────────────────────────────────────
   await page.goto(`/projects/${projectId}?tab=settings`);
   await page.waitForTimeout(1000);
   await shot(page, 'admin-guide', 'project-settings');
 
-  // ── Review d'un média ─────────────────────────────────────────────────────
-  // Les médias de démonstration sont générés hors du dépôt (FFmpeg, mires de test) : une
-  // capture de review sans média montrerait une page vide, et embarquer une vidéo dans le
-  // dépôt le ferait grossir pour rien.
+  // ── Media review ─────────────────────────────────────────────────────────
+  // The demo media is generated outside the repo (FFmpeg, test patterns): a review
+  // screenshot without media would show an empty page, and embedding a video in the
+  // repo would only bloat it.
   const uploaded = await uploadDemoMedia(page, projectId, {
     shotCode: 'SH010',
     file: 'SH010_comp_v001.mp4',
@@ -378,7 +414,7 @@ test('captures de la documentation', async ({ page }) => {
     await page.waitForTimeout(2500); // décodage de la première image
     await shot(page, 'user-guide', 'review-video');
 
-    // Panneau de commentaires ouvert : c'est là que se joue la review.
+    // Comments panel open: that is where the review takes place.
     const comments = page.getByRole('button', { name: /^(Comments|Commentaires)$/ }).first();
     if (await comments.isVisible().catch(() => false)) {
       await comments.click();
@@ -386,7 +422,7 @@ test('captures de la documentation', async ({ page }) => {
     }
   }
 
-  // ── Review d'image ────────────────────────────────────────────────────────
+  // ── Image review ────────────────────────────────────────────────────────
   const image = await uploadDemoMedia(page, projectId, {
     shotCode: 'SH020',
     file: 'SH020_matte_v001.png',
@@ -409,9 +445,9 @@ test('captures de la documentation', async ({ page }) => {
   await shot(page, 'user-guide', 'shares');
 
   // ── ShotGrid ──────────────────────────────────────────────────────────────
-  // Sans connexion, l'onglet montre l'écran de liaison — utile en soi, c'est la première
-  // chose que voit un administrateur. Avec `DOCS_SG_SITE_ID` (un simulateur local), on
-  // relie le projet de démonstration le temps des captures, puis on le délie.
+  // Without a connection, the tab shows the linking screen, which is useful in itself: it is the first
+  // thing an administrator sees. With `DOCS_SG_SITE_ID` (a local simulator), we
+  // link the demo project for the duration of the captures, then unlink it.
   const sgSiteId = process.env.DOCS_SG_SITE_ID ? Number(process.env.DOCS_SG_SITE_ID) : null;
   if (sgSiteId) await linkDemoToShotgrid(page, projectId, sgSiteId);
   await page.goto(`/projects/${projectId}?tab=shotgrid`);
@@ -428,7 +464,7 @@ test('captures de la documentation', async ({ page }) => {
     await unlinkDemoFromShotgrid(page, projectId);
   }
 
-  // ── Administration du studio ──────────────────────────────────────────────
+  // ── Studio administration ────────────────────────────────────────────────
   await page.goto('/admin');
   await page.waitForTimeout(1500);
   await shot(page, 'admin-guide', 'admin-overview');

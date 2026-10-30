@@ -4,7 +4,7 @@
 import { Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { badRequest, conflict, forbidden, notFound } from '../lib/errors';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 import { effectiveThumbnailUrl } from '../lib/thumbnails';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
 
@@ -12,25 +12,25 @@ type SessionUser = { id: number; role: Role };
 
 const isManager = (role: Role) => role === Role.ADMIN || role === Role.SUPERVISOR;
 
-/** Peut modifier/supprimer : créateur de la playlist ou superviseur/admin. */
+/** May modify/delete: the playlist's creator or a supervisor/admin. */
 const assertCanEdit = (user: SessionUser, playlist: { createdById: number | null }) => {
   if (!isManager(user.role) && playlist.createdById !== user.id)
     throw forbidden('Only the creator or a supervisor can change this');
 };
 
-/** Playlists d'un projet (liste légère : compteur d'items, créateur). */
+/** Playlists of a project (light list: item counter, creator). */
 export async function listForProject(projectId: number) {
   const playlists = await prisma.playlist.findMany({
     where: { projectId },
     orderBy: { updatedAt: 'desc' },
     include: {
       createdBy: { select: { id: true, name: true } },
-      // Le compteur ne comptait pas ce que la playlist montre : une version mise à la
-      // corbeille restait dans le total, et la playlist annonçait « 12 » pour dix items.
+      // The counter did not count what the playlist shows: a version moved to the trash remained in the
+      // total, and the playlist announced "12" for ten items.
       _count: { select: { items: { where: { version: { deletedAt: null } } } } },
-      // Les premières images de la playlist : une liste de dailies s'identifie à ce
-      // qu'elle contient, pas à son nom — « Dailies mardi » et « Dailies mercredi » ne se
-      // distinguent qu'à l'image. Quatre suffisent à faire une bande reconnaissable.
+      // The first images of the playlist: a dailies list is identified by what it contains, not by its name —
+      // "Dailies Tuesday" and "Dailies Wednesday" are only told apart by the image. Four suffice to make a
+      // recognisable strip.
       items: {
         where: { version: { deletedAt: null } },
         orderBy: { order: 'asc' },
@@ -63,12 +63,12 @@ export async function listForProject(projectId: number) {
   );
 }
 
-/** Vignettes montrées sur une carte de playlist. Au-delà, la bande cesse d'être lisible. */
+/** Thumbnails shown on a playlist card. Beyond that, the strip stops being legible. */
 const PREVIEW_COUNT = 4;
 
 /**
- * Résout les versions à ajouter : `versionIds` directs et/ou `mediaIds` (chaque média
- * → sa version). Toutes doivent appartenir au projet de la playlist (cross-shots OK).
+ * Resolves the versions to add: direct `versionIds` and/or `mediaIds` (each media → its version). All of them
+ * must belong to the playlist's project (cross-shot OK).
  */
 async function resolveVersionIds(projectId: number, versionIds: number[], mediaIds: number[]) {
   const fromMedia =
@@ -90,7 +90,7 @@ async function resolveVersionIds(projectId: number, versionIds: number[], mediaI
   });
   if (versions.length !== ids.length)
     throw badRequest('Some versions do not belong to the project of this playlist');
-  // L'ordre d'entrée est conservé (l'utilisateur a ordonné sa sélection).
+  // The input order is kept (the user ordered their selection).
   const valid = new Set(versions.map((v) => v.id));
   return ids.filter((id) => valid.has(id));
 }
@@ -116,14 +116,14 @@ export async function create(
     },
     include: { _count: { select: { items: { where: { version: { deletedAt: null } } } } } },
   });
-  // Ajouter et retirer remontaient vers le site ; créer et renommer, non. Une playlist
-  // née dans ReView n'existait donc nulle part sur ShotGrid, et la première tentative
-  // d'y pousser un item n'avait aucune destination.
+  // Adding and removing used to propagate up to the site; creating and renaming did not. A playlist born in
+  // ReView therefore existed nowhere on ShotGrid, and the first attempt
+  // to push an item there had no destination.
   await syncToShotgrid(playlist.id, projectId, user.id);
   return playlist;
 }
 
-/** Charge une playlist (ou 404) et renvoie aussi son projectId pour le RBAC des routes. */
+/** Loads a playlist (or 404) and also returns its projectId for the routes' RBAC. */
 export async function getOwning(id: number) {
   const playlist = await prisma.playlist.findUnique({
     where: { id },
@@ -134,9 +134,9 @@ export async function getOwning(id: number) {
 }
 
 /**
- * Détail : items ordonnés, chaque item avec sa version (nom, décision, localisation
- * lisible) et son premier média visible (même règle brouillon que MediaService :
- * publié, ou uploadé par le demandeur) — support de la lecture enchaînée.
+ * Detail: ordered items, each item with its version (name, decision, readable location) and its first visible
+ * media (same draft rule as MediaService: published, or uploaded by the
+ * requester) — support for sequential playback.
  */
 export async function getDetail(user: SessionUser, id: number) {
   const playlist = await prisma.playlist.findUnique({
@@ -234,7 +234,7 @@ export async function rename(user: SessionUser, id: number, name: string) {
   return updated;
 }
 
-/** Ajoute des versions en fin de playlist (déduplique celles déjà présentes). */
+/** Adds versions at the end of the playlist (de-duplicates those already present). */
 export async function addItems(
   user: SessionUser,
   id: number,
@@ -261,18 +261,18 @@ export async function addItems(
   return { added: toAdd.length, skipped: resolved.length - toAdd.length };
 }
 
-/** Remonte la playlist vers ShotGrid après une modification (contenu ou ordre). */
+/** Pushes the playlist up to ShotGrid after a change (content or order). */
 async function syncToShotgrid(playlistId: number, projectId: number, actorId: number) {
   await enqueuePush(projectId, { type: 'playlist', playlistId, actorId });
 }
 
 /**
- * Réordonne la playlist : `itemIds` donne le nouvel ordre des items **visibles**.
+ * Reorders the playlist: `itemIds` gives the new order of the **visible** items.
  *
- * L'exhaustivité était exigée, et le détail masque les items dont la version est en
- * corbeille : dès qu'une seule version était supprimée, réordonner devenait impossible —
- * l'écran renvoyait la liste qu'il affichait, le serveur la refusait. Les items non cités
- * conservent donc leur place relative, à la suite de ceux qu'on vient d'ordonner.
+ * Completeness was required, and the detail hides the items whose version is in the trash: as soon as a
+ * single version had been deleted, reordering became impossible — the screen
+ * returned the list it displayed, and the server refused it. The items not cited therefore keep their
+ * relative place, following those just ordered.
  */
 export async function reorder(user: SessionUser, id: number, itemIds: number[]) {
   const playlist = await getOwning(id);

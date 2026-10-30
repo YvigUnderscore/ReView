@@ -3,15 +3,15 @@
 
 import { Worker } from 'bullmq';
 import { redisConnectionOptions } from '../lib/redis';
-import { QUEUE_NAMES, type WebhookJobData } from '../services/JobService';
+import { QUEUE_NAMES, type WebhookJobData } from '../lib/queues';
 import { deliver } from '../services/WebhookService';
 import { logger } from '../lib/logger';
 import { registerWorkerShutdown } from './shutdown';
 
 /**
- * Worker de livraison des webhooks (36.D) — tourne dans le process worker (comme le
- * nettoyage storage) : les requêtes sortantes ne partent pas du serveur web.
- * Échec → BullMQ retente (5 tentatives, backoff exponentiel).
+ * Webhook delivery worker (36.D): runs in the worker process (like
+ * storage cleanup), so outgoing requests do not leave from the web server.
+ * Failure → BullMQ retries (5 attempts, exponential backoff).
  */
 export const webhookWorker = new Worker<WebhookJobData, void, string>(
   QUEUE_NAMES.WEBHOOKS,
@@ -29,5 +29,5 @@ webhookWorker.on('failed', (job, err) =>
 export function startWebhookWorker(): void {
   void webhookWorker.run();
   registerWorkerShutdown('webhook.worker', webhookWorker);
-  logger.info('[webhook.worker] démarré.');
+  logger.info('[webhook.worker] started.');
 }

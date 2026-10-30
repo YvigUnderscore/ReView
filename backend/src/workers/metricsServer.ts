@@ -10,29 +10,29 @@ import { registerShutdownTask, SHUTDOWN_PHASE } from '../lib/gracefulShutdown';
 import { appVersion } from '../lib/version';
 
 /**
- * Observabilité du process worker.
+ * Observability for the worker process.
  *
- * Prometheus ne scrutait que `backend:3000` : la durée d'un encodage, les échecs par type
- * de job et l'existence même du process worker n'étaient mesurés nulle part. Un worker mort
- * ne se voyait qu'indirectement — une file `waiting` qui monte pendant que `active` reste à
- * zéro — et jamais avant qu'un artiste ne se plaigne.
+ * Prometheus only scraped `backend:3000`: encode durations, failures per job type, and
+ * the very existence of the worker process were measured nowhere. A dead worker only
+ * showed up indirectly, as a `waiting` queue growing while `active` stays at
+ * zero, and never before an artist complained.
  *
- * Le worker ouvre donc son propre point de collecte HTTP, sur le réseau interne du compose
- * (`worker:9101/metrics`, aucun port publié sur l'hôte). Registre distinct de celui de
- * l'API : les deux process exportent `process_*`/`nodejs_*` et Prometheus les distingue par
- * l'étiquette `job` du scrape, pas par le nom des séries.
+ * The worker therefore opens its own HTTP metrics endpoint, on the internal compose
+ * network (`worker:9101/metrics`, no port published on the host). Registry separate from
+ * the API's: both processes export `process_*`/`nodejs_*`, and Prometheus tells them apart by
+ * the `job` label of the scrape, not by the series names.
  *
- * Règle de fond : **la métrique ne doit jamais mettre le worker en défaut**. Port déjà pris,
- * client qui coupe, sérialisation en erreur — on journalise et on continue de transcoder.
+ * Guiding rule: **the metric must never take the worker down**. Port already taken,
+ * client disconnects, serialization error: we log it and keep transcoding.
  */
 
-/** Port d'écoute interne. Jamais publié sur l'hôte : Prometheus est sur le même réseau. */
+/** Internal listen port. Never published on the host: Prometheus is on the same network. */
 export const WORKER_METRICS_PORT = 9101;
 
 export const workerRegistry = new Registry();
 collectDefaultMetrics({ register: workerRegistry });
 
-/** Version de l'instance, en série constante : « quelle version tourne ? » se lit en PromQL. */
+/** Instance version, as a constant series: "which version is running?" can be read in PromQL. */
 const workerInfo = new Gauge({
   name: 'review_worker_info',
   help: 'Informations de build du worker (valeur constante 1)',
@@ -49,8 +49,8 @@ const jobsTotal = new Counter({
 });
 
 /**
- * Buckets étalés jusqu'à l'heure : un transcodage HLS multi-rendition d'un plan long ne se
- * mesure pas avec l'échelle d'une requête HTTP.
+ * Buckets spread out to one hour: a multi-rendition HLS transcode of a long clip does not
+ * measure on the scale of an HTTP request.
  */
 const jobDuration = new Histogram({
   name: 'review_worker_job_duration_seconds',
@@ -62,7 +62,7 @@ const jobDuration = new Histogram({
 
 export type JobOutcome = 'completed' | 'failed';
 
-/** Type de travail d'un job BullMQ : `data.kind` s'il existe, sinon son nom. */
+/** Work type of a BullMQ job: `data.kind` if present, otherwise its name. */
 export function jobKind(job: unknown): string {
   const candidate = job as { data?: { kind?: unknown }; name?: unknown } | null | undefined;
   const kind = candidate?.data?.kind;
@@ -71,8 +71,8 @@ export function jobKind(job: unknown): string {
 }
 
 /**
- * Durée de traitement en secondes. BullMQ horodate `processedOn` et `finishedOn` ; un job
- * calé (worker tué) n'a pas de `finishedOn` — on rend `null` plutôt qu'une durée inventée.
+ * Processing duration in seconds. BullMQ timestamps `processedOn` and `finishedOn`; a job
+ * that stalled (worker killed) has no `finishedOn`, so we return `null` rather than an invented duration.
  */
 export function jobDurationSec(job: unknown, now: number = Date.now()): number | null {
   const stamps = job as { processedOn?: unknown; finishedOn?: unknown } | null | undefined;
@@ -82,7 +82,7 @@ export function jobDurationSec(job: unknown, now: number = Date.now()): number |
   return Math.max(0, ((finished ?? now) - started) / 1000);
 }
 
-/** Enregistre l'issue d'un job (exporté pour les tests et pour un appel direct). */
+/** Records the outcome of a job (exported for tests and for direct calls). */
 export function observeWorkerJob(
   queue: string,
   kind: string,
@@ -93,23 +93,23 @@ export function observeWorkerJob(
   if (durationSec !== null) jobDuration.observe({ queue, kind }, durationSec);
 }
 
-/** Surface minimale d'un `Worker` BullMQ vue d'ici : ses deux événements terminaux. */
+/** Minimal surface of a BullMQ `Worker` as seen from here: its two terminal events. */
 export interface JobEventSource {
   on(event: 'completed', listener: (job: unknown) => void): unknown;
   on(event: 'failed', listener: (job: unknown, err: unknown) => void): unknown;
 }
 
 /**
- * Branche les compteurs sur un consommateur de file. À appeler pour chacun des sept
- * consommateurs démarrés par le bootstrap du process worker : sans cela, seul l'état du
- * process est mesuré, pas son travail.
+ * Hooks the counters onto a queue consumer. To be called for each of the seven
+ * consumers started by the worker process bootstrap: without it, only the process
+ * state is measured, not its work.
  */
 export function attachWorkerMetrics(queue: string, worker: JobEventSource): void {
   worker.on('completed', (job) => observeWorkerJob(queue, jobKind(job), 'completed', jobDurationSec(job)));
   worker.on('failed', (job) => observeWorkerJob(queue, jobKind(job), 'failed', jobDurationSec(job)));
 }
 
-/** Jeton attendu, lu dans l'URL ou dans l'en-tête `Authorization` (même règle que l'API). */
+/** Expected token, read from the URL or the `Authorization` header (same rule as the API). */
 export function providedToken(
   url: string | undefined,
   authorization: string | undefined,
@@ -124,8 +124,8 @@ export function providedToken(
 }
 
 /**
- * Ouvre le point de collecte et enregistre lui-même son extinction. Le serveur est rendu
- * pour les tests ; l'appelant de production n'en fait rien.
+ * Opens the scrape endpoint and registers its own shutdown. The server is returned
+ * for tests; the production caller does nothing with it.
  */
 export function startWorkerMetricsServer(port: number = WORKER_METRICS_PORT): Server {
   const server = createServer((req, res) => {
@@ -147,17 +147,17 @@ export function startWorkerMetricsServer(port: number = WORKER_METRICS_PORT): Se
         res.writeHead(200, { 'Content-Type': workerRegistry.contentType }).end(body);
       })
       .catch((err: unknown) => {
-        logger.warn({ err }, '[worker.metrics] sérialisation impossible');
+        logger.warn({ err }, '[worker.metrics] serialization failed');
         res.writeHead(500).end();
       });
   });
 
-  // Une métrique ne fait pas tomber un worker : port déjà pris, on le dit et on continue.
-  server.on('error', (err) => logger.warn({ err, port }, '[worker.metrics] écoute impossible'));
+  // A metric must not bring the worker down: port already taken, we say so and carry on.
+  server.on('error', (err) => logger.warn({ err, port }, '[worker.metrics] listen failed'));
   server.listen(port, () => {
     const bound = server.address();
     const actual = typeof bound === 'object' && bound ? bound.port : port;
-    logger.info(`[worker.metrics] /metrics sur le port ${actual}`);
+    logger.info(`[worker.metrics] /metrics on port ${actual}`);
   });
 
   registerShutdownTask({

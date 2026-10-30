@@ -4,9 +4,9 @@
 import registry from './locales.json';
 
 /**
- * Registre des langues côté serveur — copie stricte de `frontend/src/v2/i18n/locales.json`
- * (l'écart est refusé par `scripts/check-translations.mjs`). Le backend en a besoin pour
- * les surfaces qu'il rend lui-même : emails, notifications, messages d'erreur.
+ * Server-side language registry: a strict copy of `frontend/src/v2/i18n/locales.json`
+ * (any divergence is rejected by `scripts/check-translations.mjs`). The backend needs it for
+ * the surfaces it renders itself: emails, notifications, error messages.
  */
 export type Locale =
   'en' | 'fr' | 'es' | 'de' | 'pt' | 'zh-Hans' | 'ko' | 'ja' | 'hi' | 'br' | 'eu' | 'co' | 'gsw-FR' | 'oc';
@@ -21,7 +21,7 @@ export type LocaleInfo = {
   intl: { plural: string[]; format: string[] };
 };
 
-/** Langue de référence : elle définit l'ensemble des clés et sert de repli universel. */
+/** Reference language: it defines the set of keys and serves as the universal fallback. */
 export const BASE_LOCALE: Locale = registry.base as Locale;
 
 export const LOCALES = registry.locales as readonly LocaleInfo[];
@@ -34,15 +34,15 @@ export function isLocale(value: unknown): value is Locale {
   return typeof value === 'string' && BY_CODE.has(value);
 }
 
-/** Métadonnées d'une langue (repli sur la langue de base si le code est inconnu). */
+/** Metadata for a language (falls back to the base language if the code is unknown). */
 export function localeInfo(code: Locale): LocaleInfo {
   return BY_CODE.get(code) ?? BY_CODE.get(BASE_LOCALE)!;
 }
 
 /**
- * Première étiquette candidate réellement connue d'`Intl`. Sans ce filtre,
- * `Intl.PluralRules('co')` retombe sur la locale par défaut du processus — donc sur une
- * langue qui n'a rien à voir, et les singuliers seraient rendus au pluriel.
+ * First candidate tag actually known to `Intl`. Without this filter,
+ * `Intl.PluralRules('co')` falls back to the process's default locale, i.e. to an unrelated
+ * language, and singulars would be rendered as plurals.
  */
 function firstSupported(
   api: { supportedLocalesOf(tags: string[]): string[] },
@@ -52,18 +52,18 @@ function firstSupported(
     try {
       if (api.supportedLocalesOf([tag]).length > 0) return tag;
     } catch {
-      /* étiquette mal formée : on passe à la candidate suivante */
+      /* malformed tag: move on to the next candidate */
     }
   }
   return BASE_LOCALE;
 }
 
-/** Étiquette à passer à `Intl.PluralRules` pour cette langue. */
+/** Tag to pass to `Intl.PluralRules` for this language. */
 export function pluralTag(code: Locale): string {
   return firstSupported(Intl.PluralRules, localeInfo(code).intl.plural);
 }
 
-/** Étiquette à passer aux formateurs de dates et de nombres. */
+/** Tag to pass to date and number formatters. */
 export function formatTag(code: Locale): string {
   return firstSupported(Intl.NumberFormat, localeInfo(code).intl.format);
 }

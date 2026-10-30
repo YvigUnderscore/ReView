@@ -21,7 +21,7 @@ VERSION_TOKEN = re.compile(r"^v\d+$", re.IGNORECASE)
 def _tokens(filepath: str, separator: str) -> list[str]:
     stem = os.path.splitext(os.path.basename(filepath))[0]
     parts = [part for part in stem.split(separator) if part]
-    # « …_v003 » nomme la version, pas une étape : la version est décidée par le serveur.
+    # "…_v003" names the version, not a step: the server decides the version.
     return parts[:-1] if parts and VERSION_TOKEN.match(parts[-1]) else parts
 
 

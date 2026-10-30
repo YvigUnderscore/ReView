@@ -5,13 +5,13 @@ import type { ReactNode } from 'react';
 import { cn } from '../../lib/utils';
 
 /**
- * Largeur de page (A1). Le conteneur porte la gouttière : `Shell` n'en met plus,
- * sinon la variante `flush` ne pourrait pas occuper tout l'espace.
+ * Page width (A1). The container carries the gutter: `Shell` no longer adds one, otherwise
+ * the `flush` variant could not take up all the space.
  *
- * - `default` : centré et borné — toutes les pages de données (listes, tableaux, réglages).
- *   Au-delà de ~1600 px l'œil doit traverser l'écran d'un bord à l'autre pour lire une ligne.
- * - `fluid`   : pleine largeur, même gouttière — kanban, board (la largeur y est utile).
- * - `flush`   : pleine largeur sans gouttière ni bornage — review, montage (plein espace assumé).
+ * - `default`: centred and bounded — all data pages (lists, tables, settings).
+ *   Beyond ~1600 px the eye has to travel across the screen to read a row.
+ * - `fluid`: full width, same gutter — kanban, board (width is useful there).
+ * - `flush`: full width without gutter or bounds — review, editing (full space by design).
  */
 export type PageWidth = 'default' | 'fluid' | 'flush';
 
@@ -34,8 +34,8 @@ export function PageContainer({
 }
 
 /**
- * En-tête de page : titre à gauche, actions à droite, passage à la ligne systématique.
- * Sans `flex-wrap`, une fenêtre étroite comprime le titre au lieu d'empiler les deux blocs.
+ * Page header: title on the left, actions on the right, always wrapping.
+ * Without `flex-wrap`, a narrow window squeezes the title instead of stacking the two blocks.
  */
 export function PageHeader({
   title,

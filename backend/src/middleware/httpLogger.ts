@@ -7,35 +7,35 @@ import { randomUUID } from 'node:crypto';
 import type { IncomingMessage } from 'node:http';
 import { logger } from '../lib/logger';
 
-/** Marqueur posé à la place d'un secret — même forme que la redaction native de pino. */
+/** Marker placed in place of a secret, same form as pino's native redaction. */
 const REDACTED = '[Redacted]';
 
 /**
- * Jetons portés par le CHEMIN, et non par la query : quatre surfaces publiques
- * s'identifient par un segment d'URL qui EST le secret.
+ * Tokens carried by the PATH rather than by the query: four public surfaces identify themselves by a
+ * URL segment that IS the secret.
  *
- * - `/api/shotgrid/webhook/<jeton>` — droit d'écrire de faux événements ;
- * - `/api/auth/invitation/<jeton>` — pose un mot de passe et ouvre une session (7 j) ;
- * - `/api/client/<jeton>` — accès invité au partage d'un projet ;
- * - `/api/unsubscribe/<jeton>` — éteint une préférence d'envoi.
+ * - `/api/shotgrid/webhook/<token>`: the right to write fake events;
+ * - `/api/auth/invitation/<token>`: sets a password and opens a session (7 days);
+ * - `/api/client/<token>`: guest access to a project share;
+ * - `/api/unsubscribe/<token>`: switches off a mailing preference.
  *
- * Sans ce masquage, quiconque lit les journaux applicatifs prend le compte avant son
- * destinataire : c'est le même réflexe que pour un en-tête d'autorisation.
+ * Without this masking, whoever reads the application logs takes the account before its recipient:
+ * it is the same reflex as for an authorization header.
  *
- * `/api/share/<id>` n'y figure pas volontairement : son segment est l'identifiant
- * numérique d'un lien, pas son jeton — le masquer ne retirerait aucun secret et
- * priverait le journal de la seule information utile au diagnostic.
+ * `/api/share/<id>` is deliberately not listed: its segment is the numeric identifier of a link, not
+ * its token. Masking it would remove no secret and would deprive the log of the only information
+ * useful for diagnosis.
  */
 const TOKEN_IN_PATH = /^(\/api\/(?:shotgrid\/webhook|auth\/invitation|client|unsubscribe)\/)[^/?#]+/i;
 
 /**
- * Noms de paramètres de query dont la VALEUR est un secret. On raisonne par nom plutôt
- * que par liste close : le paramètre inventé demain (`sessionToken`, `apiKey`…) est ainsi
- * masqué d'office, quitte à masquer de temps en temps une valeur anodine.
+ * Names of query parameters whose VALUE is a secret. We reason by name rather than by a closed list:
+ * a parameter invented tomorrow (`sessionToken`, `apiKey`…) is thus masked by default, even if this
+ * occasionally masks a harmless value.
  */
 const SECRET_PARAM_SUBSTRING = /token|secret|password|passwd|signature|credential|key|auth/i;
 
-/** Noms courts qu'aucune sous-chaîne ne rattrape (`?code=` du retour OIDC, par exemple). */
+/** Short names that no substring catches (`?code=` of the OIDC callback, for example). */
 const SECRET_PARAM_EXACT = new Set(['code', 'state', 'sig', 'jwt', 'pwd', 'otp']);
 
 function isSecretParam(rawName: string): boolean {
@@ -43,12 +43,12 @@ function isSecretParam(rawName: string): boolean {
   try {
     name = decodeURIComponent(rawName);
   } catch {
-    // Nom mal encodé : on juge la forme brute plutôt que d'abandonner le masquage.
+    // Badly encoded name: we judge the raw form rather than giving up on masking.
   }
   return SECRET_PARAM_SUBSTRING.test(name) || SECRET_PARAM_EXACT.has(name.toLowerCase());
 }
 
-/** Remplace la valeur des paramètres sensibles, en conservant les autres tels quels. */
+/** Replaces the value of sensitive parameters, keeping the others as they are. */
 function redactQuery(query: string): string {
   return query
     .split('&')
@@ -62,10 +62,10 @@ function redactQuery(query: string): string {
 }
 
 /**
- * URL journalisable : chemin et query débarrassés de tout jeton.
+ * Loggable URL: path and query stripped of any token.
  *
- * Exportée pour être testée — c'est la seule barrière entre un secret à usage unique et
- * un fichier de journal conservé des mois.
+ * Exported so it can be tested: this is the only barrier between a single-use secret and a log file
+ * kept for months.
  */
 export function redactUrl(url: string): string {
   const qi = url.indexOf('?');
@@ -75,13 +75,13 @@ export function redactUrl(url: string): string {
 }
 
 /**
- * Chemins des sondes automatiques : vivacité/disponibilité du conteneur et collecte
- * Prometheus, montés hors `/api` comme sous `/api` (app.ts monte `healthRoutes` aux deux).
+ * Paths of the automatic probes: container liveness and availability, and Prometheus scraping,
+ * mounted outside `/api` as well as under it (app.ts mounts `healthRoutes` at both).
  *
- * Le healthcheck docker interroge `/health` toutes les 10 s et Prometheus `/metrics`
- * toutes les 15 s : ~14 400 lignes par jour qui ne portent aucune information de
- * diagnostic, imputées sur les 50 Mo de rotation docker. `/health/ready` y figure parce
- * que le compose prévoit explicitement de l'utiliser comme sonde (HEALTH_PATH).
+ * The docker healthcheck polls `/health` every 10 s and Prometheus `/metrics` every 15 s: about
+ * 14,400 lines per day carrying no diagnostic information, charged against the 50 MB docker rotation
+ * budget. `/health/ready` is listed because the compose file explicitly plans to use it as a probe
+ * (HEALTH_PATH).
  */
 const PROBE_PATHS = new Set([
   '/health',
@@ -94,11 +94,11 @@ const PROBE_PATHS = new Set([
 ]);
 
 /**
- * La requête est-elle une sonde automatique ?
+ * Is the request an automatic probe?
  *
- * On compare le CHEMIN seul : Prometheus ajoute `?token=…` quand METRICS_TOKEN est posé,
- * et une comparaison sur l'URL entière laisserait alors passer tout le bruit. La barre
- * oblique finale est tolérée (`/health/` est la même route côté Express).
+ * We compare the PATH alone: Prometheus appends `?token=…` when METRICS_TOKEN is set, and a comparison
+ * on the whole URL would then let all the noise through. The trailing slash is tolerated (`/health/`
+ * is the same route on the Express side).
  */
 export function isProbeRequest(url: string | undefined): boolean {
   if (!url) return false;
@@ -108,15 +108,15 @@ export function isProbeRequest(url: string | undefined): boolean {
 }
 
 /**
- * Options de journalisation HTTP, exportées SANS le logger de l'application.
+ * HTTP logging options, exported WITHOUT the application's logger.
  *
- * Le logger réel est `silent` en environnement de test : compter des lignes à travers lui
- * ne prouverait rien. La suite recrée donc un `pinoHttp` avec ces mêmes options et un flux
- * qu'elle peut lire — c'est la configuration de production qui est mesurée, pas une copie.
+ * The real logger is `silent` in the test environment: counting lines through it would prove nothing.
+ * The suite therefore recreates a `pinoHttp` with these same options and a stream it can read: it is
+ * the production configuration that gets measured, not a copy.
  */
 export const httpLoggerOptions: Options = {
-  // Réutilise un `x-request-id` fourni en amont (reverse proxy) sinon en génère un,
-  // et le renvoie au client pour la corrélation bout-en-bout.
+  // Reuse an `x-request-id` supplied upstream (reverse proxy), otherwise generate one, and return it
+  // to the client for end-to-end correlation.
   genReqId: (req, res) => {
     const header = req.headers['x-request-id'];
     const id = (Array.isArray(header) ? header[0] : header) || randomUUID();
@@ -126,24 +126,21 @@ export const httpLoggerOptions: Options = {
   customLogLevel: (req, res, err) => {
     if (err || res.statusCode >= 500) return 'error';
     if (res.statusCode >= 400) return 'warn';
-    // Sonde aboutie : rien à en dire. Le silence est posé ICI et non dans
-    // `autoLogging.ignore`, qui retire les écouteurs de réponse et emporterait donc AUSSI
-    // l'échec de la sonde (pino-http/logger.js : `shouldLogSuccess` conditionne
-    // `res.on('finish', …)`). Or l'échec d'un healthcheck est précisément ce qu'un
-    // exploitant vient chercher dans le journal — il reste journalisé par les deux
-    // lignes ci-dessus.
+    // Successful probe: nothing to say. Silence is set HERE rather than in `autoLogging.ignore`, which
+    // removes the response listeners and would therefore ALSO drop the probe's failure (pino-http/logger.js:
+    // `shouldLogSuccess` gates `res.on('finish', …)`). Yet a healthcheck failure is exactly what an
+    // operator comes to the log for: it stays logged by the two lines above.
     if (isProbeRequest(req.url)) return 'silent';
     return 'info';
   },
-  // Ne jamais journaliser les secrets transitant en en-tête.
+  // Never log secrets passing through a header.
   redact: {
     paths: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
     remove: true,
   },
-  // La redaction des en-têtes ne protège pas `req.url` : tout ce que l'URL porte part en
-  // clair dans les journaux, où pino tourne en `info` jusqu'en production. On enveloppe
-  // donc le sérialiseur standard (surtout pas de passthrough : il exposerait l'objet
-  // requête entier).
+  // Header redaction does not protect `req.url`: everything the URL carries goes in clear into the logs,
+  // where pino runs at `info` up to production. So we wrap the standard serializer (above all no
+  // passthrough: it would expose the whole request object).
   serializers: {
     req(req: IncomingMessage) {
       const serialized = stdSerializers.req(req);
@@ -154,8 +151,8 @@ export const httpLoggerOptions: Options = {
 };
 
 /**
- * Journalisation HTTP structurée (pino-http) : une ligne JSON par requête avec
- * request-id, méthode, URL, statut et durée. Attache `req.log` (logger enfant
- * corrélé au request-id) réutilisable dans les handlers et le middleware d'erreur.
+ * Structured HTTP logging (pino-http): one JSON line per request, with request id, method, URL, status
+ * and duration. Attaches `req.log` (a child logger correlated with the request id), reusable in handlers
+ * and in the error middleware.
  */
 export const httpLogger = pinoHttp({ ...httpLoggerOptions, logger });

@@ -4,10 +4,10 @@
 import type { SparkRenderer } from '@sparkjsdev/spark';
 
 /**
- * LOD du viewer splat (10.G-V7) : mode réglable **auto** (défaut) / activé / désactivé /
- * streaming. En auto, une machine à états surveille le FPS : sous 15 fps pendant 5 s le LOD
- * s'active ; il ne se désactive qu'au-dessus de 25 fps pendant 5 s (hystérésis — pas de
- * battement). Le défaut est persisté par média (`splatPresentation.lodDefault`).
+ * LOD of the splat viewer (10.G-V7): adjustable mode **auto** (default) / enabled / disabled /
+ * streaming. In auto, a state machine watches the FPS: below 15 fps for 5 s the LOD turns on; it
+ * only turns off above 25 fps for 5 s (hysteresis, so no flicker). The default is persisted per
+ * media (`splatPresentation.lodDefault`).
  */
 export type LodMode = 'auto' | 'on' | 'off' | 'streaming';
 
@@ -19,7 +19,7 @@ export interface AutoLodOptions {
 }
 
 export interface AutoLod {
-  /** Avance la machine avec un échantillon de FPS ; renvoie l'état engagé. */
+  /** Advances the machine with an FPS sample; returns the engaged state. */
   step(fps: number, dtMs: number): boolean;
   readonly engaged: boolean;
 }
@@ -57,7 +57,7 @@ export function createAutoLod({
 
 type LodTarget = Pick<SparkRenderer, 'enableLod' | 'enableLodFetching'>;
 
-/** Applique l'état LOD au SparkRenderer (streaming = LOD + fetch de pages à la demande). */
+/** Applies the LOD state to the SparkRenderer (streaming = LOD and on-demand page fetching). */
 export function applyLod(spark: LodTarget, active: boolean, streaming: boolean): void {
   spark.enableLod = active;
   spark.enableLodFetching = streaming;

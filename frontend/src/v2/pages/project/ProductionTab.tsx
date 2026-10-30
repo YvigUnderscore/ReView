@@ -4,7 +4,7 @@
 import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { AlertTriangle, BarChart3, CalendarClock, Repeat, Users } from 'lucide-react';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import type { ProjectSchedule } from '../../types/api';
 import type { ProductionOverview } from '../../types/production';
@@ -23,18 +23,18 @@ import { useProjectRole } from '../../lib/useProjectRole';
 import { useT, type MessageKey } from '../../i18n';
 
 /**
- * Onglet « Production ».
+ * The "Production" tab.
  *
- * Six panneaux étaient empilés, chacun juste, mais il fallait tous les lire pour répondre à
- * la seule question qu'on se pose en ouvrant la page : **est-ce que ça va ?** Et les
- * atteindre demandait de faire défiler trois écrans.
+ * Six panels were stacked, each one correct, but one had to read them all to answer the only
+ * question one asks on opening the page: **is it going well?** Reaching them meant scrolling
+ * through three screens.
  *
- * D'où deux niveaux. Une **ligne de synthèse**, toujours visible, qui répond en quatre
- * chiffres. Puis des **onglets** — avancement, ce qui bloque, les retakes, l'équipe, le
- * planning — parce que ces questions ne se posent pas en même temps : un superviseur ouvre
- * « ce qui bloque » le matin, la production ouvre « planning » en fin de semaine.
+ * Hence two levels. A **summary line**, always visible, which answers in four figures. Then
+ * **tabs**: progress, what is blocking, retakes, the team, the schedule. These questions do not
+ * arise at the same time: a supervisor opens "what is blocking" in the morning, while production
+ * opens "schedule" at the end of the week.
  *
- * Les badges des onglets portent le nombre d'alertes : on sait où aller sans y aller.
+ * The tab badges carry the number of alerts: one knows where to go without going there.
  */
 
 const WINDOWS = [4, 8, 13, 26] as const;
@@ -94,14 +94,14 @@ export default function ProductionTab({ projectId }: { projectId: number }) {
 
       {panel === 'progress' && (
         <>
-          {/* La grille plans × départements remplace la matrice séquences × départements :
-              la maille séquence n'a pas disparu, elle est devenue l'état replié des
-              groupes — mais on peut enfin descendre au plan, qui est l'unité de travail. */}
+          {/* The shots × departments grid replaces the sequences × departments matrix: the
+              sequence level has not disappeared, it has become the collapsed state of the groups,
+              but one can finally drill down to the shot, the unit of work. */}
           <Section titleKey="production.grid.title">
             <ProductionGrid projectId={projectId} />
           </Section>
-          {/* La cadence répond au « à quel rythme », qui prolonge le « où en est-on » :
-              les deux se lisent ensemble, pas dans deux onglets séparés. */}
+          {/* Cadence answers "at what pace", which extends "where are we": the two are read
+              together, not in two separate tabs. */}
           <section className="rounded-lg border border-border bg-card p-4">
             <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
               <h2 className="text-sm font-semibold">{t('production.section.pace')}</h2>

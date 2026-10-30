@@ -23,15 +23,14 @@ import { collectClips, type ClipContext } from './CommentExportScope';
 import { createSheetImages, sheetLabels } from './CommentExportSheet';
 
 /**
- * Sortie des notes de review hors de l'application (CSV, EDL, OTIO, planche imprimable).
+ * Export of review notes outside the application (CSV, EDL, OTIO, printable sheet).
  *
- * Le fil de review contient déjà tout ce qu'une salle de montage ou un tableur attend —
- * horodatage à la frame, auteur, état, décision, annotation — mais rien ne permettait de
- * l'en sortir. Chaque format vise un lecteur précis : le CSV pour la production, l'EDL et
- * l'OTIO pour le montage, la planche pour la relecture papier ou le client.
+ * The review thread already holds everything an editing room or a spreadsheet expects (timestamp at the
+ * frame, author, state, decision, annotation), but nothing allowed getting it out. Each format targets a
+ * specific reader: CSV for production, EDL and OTIO for editing, the sheet for paper review or the client.
  *
- * L'accès projet est asserté PAR LA ROUTE, à partir de `resolveScopeProject` : ces
- * fonctions reçoivent une portée déjà autorisée (même contrat que `CommentService`).
+ * Project access is asserted BY THE ROUTE, based on `resolveScopeProject`: these functions receive a scope
+ * that is already authorized (same contract as `CommentService`).
  */
 
 export type NotesScope = 'media' | 'version' | 'shot' | 'playlist' | 'timeline';
@@ -46,17 +45,17 @@ export interface ExportedFile {
   filename: string;
   contentType: string;
   body: string;
-  /** Le plafond de notes a mordu : le fichier ne contient pas tout. */
+  /** The note cap was hit: the file does not contain everything. */
   truncated: boolean;
 }
 
-/** Plafond de notes par export — au-delà, le fichier n'est plus lisible par personne. */
+/** Note cap per export: beyond it, the file is no longer readable by anyone. */
 export const MAX_NOTES = 5000;
 
-/** Plafond de la planche : chaque note y embarque une image, donc quelques dizaines de Ko. */
+/** Sheet cap: each note embeds an image, so a few tens of KB. */
 export const MAX_SHEET_NOTES = 200;
 
-/** Un montage et une playlist se posent sur une timeline ; un média isolé, non. */
+/** An edit and a playlist sit on a timeline; a single media does not. */
 const EDITORIAL_SCOPES: ReadonlySet<NotesScope> = new Set<NotesScope>(['playlist', 'timeline']);
 
 const CONTENT_TYPES: Record<NotesFormat, string> = {
@@ -68,7 +67,7 @@ const CONTENT_TYPES: Record<NotesFormat, string> = {
 
 const EXTENSIONS: Record<NotesFormat, string> = { csv: 'csv', edl: 'edl', otio: 'otio', sheet: 'html' };
 
-/** Couleur de marqueur par état de note — la même des deux côtés (EDL et OTIO). */
+/** Marker colour per note state — the same on both sides (EDL and OTIO). */
 const STATE_COLOR: Record<CommentState, EdlColor & OtioColor> = {
   [CommentState.OPEN]: 'RED',
   [CommentState.WIP]: 'YELLOW',
@@ -81,7 +80,7 @@ const userSelect = {
   select: { id: true, name: true, email: true, firstName: true, lastName: true, username: true },
 } as const;
 
-/** Une note telle que l'export la manipule : texte à plat et identités déjà résolues. */
+/** A note as the export handles it: flat text and identities already resolved. */
 interface ExportNote {
   id: number;
   parentId: number | null;
@@ -100,7 +99,7 @@ interface ExportNote {
   assignee: string;
 }
 
-/** Projet porteur d'une portée d'export — la route en fait l'assertion RBAC. */
+/** Owning project of an export scope — the route asserts RBAC on it. */
 export async function resolveScopeProject(scope: NotesScope, id: number): Promise<number | null> {
   if (scope === 'media') return resolveProjectIdForMedia(id);
   if (scope === 'version') return resolveProjectIdForVersion(id);
@@ -112,7 +111,7 @@ export async function resolveScopeProject(scope: NotesScope, id: number): Promis
   return row?.projectId ?? null;
 }
 
-/** Notes de la portée, à plat, dans l'ordre des clips puis du fil. */
+/** Notes of the scope, flattened, in clip order then thread order. */
 async function collectNotes(
   scope: NotesScope,
   scopeId: number,
@@ -125,14 +124,14 @@ async function collectNotes(
   const rows = await prisma.comment.findMany({
     where: {
       mediaObjectId: { in: mediaIds },
-      // Un retour de montage reste au montage tant que personne ne l'a renvoyé sur la
-      // review du plan : même règle que `CommentService.listThread`, sans quoi l'export
-      // d'un shot déverserait des notes de coupe que l'artiste n'a jamais vues.
+      // A edit feedback stays in the edit as long as no one has sent it back to the shot's review: same rule
+      // as `CommentService.listThread`, otherwise exporting a shot would spill cut notes the artist never
+      // saw.
       ...(scope === 'timeline'
         ? { timelineId: scopeId }
         : { OR: [{ timelineId: null }, { sharedToShot: true }] }),
-      // Un compte CLIENT ne lit que ce qui lui est destiné : un fichier téléchargé se
-      // transmet, et la review interne n'a pas à voyager avec.
+      // A CLIENT account only reads what is meant for them: a downloaded file gets passed around, and the
+      // internal review has no business travelling with it.
       ...(viewer.role === Role.CLIENT ? { isVisibleToClient: true } : {}),
     },
     orderBy: [{ mediaObjectId: 'asc' }, { createdAt: 'asc' }],
@@ -161,9 +160,8 @@ async function collectNotes(
 }
 
 /**
- * Remet les notes dans l'ordre de lecture : clip par clip, racines par timecode croissant,
- * chaque réponse à la suite de sa racine. Une note sans timecode (3D, image) passe après
- * celles qui en portent un, dans l'ordre d'écriture.
+ * Puts the notes back in reading order: clip by clip, roots by increasing timecode, each reply following its
+ * root. A note without a timecode (3D, image) goes after those that carry one, in writing order.
  */
 export function orderThread<T extends ExportNote>(notes: T[], mediaOrder: number[]): T[] {
   const rank = new Map(mediaOrder.map((id, index) => [id, index]));
@@ -195,7 +193,7 @@ export function orderThread<T extends ExportNote>(notes: T[], mediaOrder: number
   return out;
 }
 
-/** Frame affichée d'une note : celle que la review montre, base `startFrame` du projet. */
+/** Displayed frame of a note: the one the review shows, based on the project's `startFrame`. */
 const displayFrame = (note: ExportNote, clip: ClipContext, startFrame: number): number | null =>
   note.timestamp === null ? null : startFrame + Math.round(note.timestamp * clip.fps);
 
@@ -229,14 +227,14 @@ function csvRows(notes: ExportNote[], byMedia: Map<number, ClipContext>, startFr
   });
 }
 
-/** Position d'une note dans SON clip — le montage la range sur la timeline, pas le média. */
+/** Position of a note within ITS clip — the edit places it on the timeline, not the media. */
 function offsetInClip(note: ExportNote, clipStart: number): number {
   if (note.timestamp !== null) return note.timestamp;
   if (note.timelineTime !== null) return Math.max(0, note.timelineTime - clipStart);
   return 0;
 }
 
-/** Libellé d'un marqueur : qui parle, puis ce qui est dit. */
+/** Marker label: who speaks, then what is said. */
 const markerLabel = (note: ExportNote): string =>
   note.author ? `${note.author}: ${flattenNoteText(note.text)}` : flattenNoteText(note.text);
 
@@ -292,7 +290,7 @@ export interface ExportRequest {
   viewer: ExportViewer;
 }
 
-/** Produit le fichier demandé. Le projet a déjà été autorisé par la route. */
+/** Produces the requested file. The route has already authorized the project. */
 export async function exportNotes(req: ExportRequest): Promise<ExportedFile> {
   const { scope, id, format, viewer } = req;
   if (format !== 'csv' && format !== 'sheet' && !EDITORIAL_SCOPES.has(scope))

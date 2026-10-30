@@ -8,15 +8,15 @@ import { outlineRect } from './guides/guideGeometry';
 import { GUIDE_SCRIM_OPACITY, guideStrokeWidth } from './guides/guideStyle';
 
 /**
- * Cadre de review (Phase 25 — viewer plein espace). Les enfants (canvas WebGL + HUD) occupent
- * TOUT le conteneur ; le **cadre de livraison** (aspect fixe issu de la présentation) est
- * matérialisé par un **guide letterbox** (zones hors-cadre assombries + liseré). Les éléments
- * passés en `frame` (overlay d'annotation) sont ancrés au guide : les annotations normalisées
- * 0..1 restent alignées pour tous les écrans — le cadre ne se resize plus selon la fenêtre
- * (la caméra est étendue au conteneur par `setViewOffset`, cf. `resizeRendererCamera`).
+ * Review frame (Phase 25 — full-space viewer). The children (WebGL canvas + HUD) fill the
+ * WHOLE container; the **delivery frame** (fixed aspect from the presentation) is shown as a
+ * **letterbox guide** (out-of-frame areas darkened + a border line). Elements passed as
+ * `frame` (annotation overlay) are anchored to the guide: normalized annotations 0..1 stay
+ * aligned for every screen — the frame no longer resizes with the window (the camera is
+ * extended to the container by `setViewOffset`, see `resizeRendererCamera`).
  *
- * Le liseré partage le langage visuel des repères de composition (`guides/guideStyle`) : même
- * blanc, même épaisseur, même ombre portée — il avait jusqu'ici sa propre bordure CSS.
+ * The border line shares the visual language of the composition guides (`guides/guideStyle`):
+ * same white, same thickness, same drop shadow — it previously had its own CSS border.
  */
 export default function ReviewFrame({
   aspect = DEFAULT_REVIEW_ASPECT,
@@ -25,7 +25,7 @@ export default function ReviewFrame({
 }: {
   aspect?: number;
   children: ReactNode;
-  /** Contenu ancré au cadre de livraison (overlay d'annotation 2D). */
+  /** Content anchored to the delivery frame (2D annotation overlay). */
   frame?: ReactNode;
 }) {
   const a = Number.isFinite(aspect) && aspect > 0 ? aspect : DEFAULT_REVIEW_ASPECT;
@@ -44,15 +44,15 @@ export default function ReviewFrame({
 
   const guide: FrameRect | null = size ? reviewFrame(a, size.w, size.h) : null;
   const showGuide = !!guide && !!size && (guide.width < size.w - 1 || guide.height < size.h - 1);
-  // Voile des zones hors cadre — même valeur pour les quatre bandes, depuis les constantes.
+  // Veil over the out-of-frame areas — same value for the four bands, from the constants.
   const scrim = { backgroundColor: `rgb(0 0 0 / ${GUIDE_SCRIM_OPACITY})` };
 
   return (
     <div ref={outerRef} className="relative h-full w-full">
-      {/* Viewer plein espace */}
+      {/* Full-space viewer */}
       <div className="absolute inset-0">{children}</div>
 
-      {/* Guide letterbox : hors-cadre assombri + liseré du cadre de livraison */}
+      {/* Letterbox guide: darkened out-of-frame + delivery frame border line */}
       {showGuide && guide && size && (
         <div className="pointer-events-none absolute inset-0 z-[5]">
           <div className="absolute left-0 top-0 w-full" style={{ ...scrim, height: guide.top }} />
@@ -73,8 +73,8 @@ export default function ReviewFrame({
               width: size.w - guide.left - guide.width,
             }}
           />
-          {/* Liseré du cadre de livraison : aucun ancêtre transformé ici (le zoom 3D/splat
-              passe par la caméra), l'échelle du calque vaut donc 1. */}
+          {/* Delivery frame border line: no transformed ancestor here (the 3D/splat zoom
+              goes through the camera), so the layer's scale is 1. */}
           <GuideLayer
             w={guide.width}
             h={guide.height}
@@ -86,7 +86,7 @@ export default function ReviewFrame({
         </div>
       )}
 
-      {/* Contenu ancré au cadre de livraison (annotations) */}
+      {/* Content anchored to the delivery frame (annotations) */}
       {frame && (
         <div
           className="absolute z-[6]"

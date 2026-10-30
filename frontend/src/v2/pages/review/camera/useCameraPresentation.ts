@@ -3,15 +3,15 @@
 
 import { useCallback, useState } from 'react';
 import { toast } from 'sonner';
-import { api } from '../../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import type { SplatEditsPatch, SplatPresentation } from '../reviewTypes';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
- * Persistance de la présentation caméra (Phase 17), commune 3D/splat : PATCH
- * `/api/media/:id/splat-presentation`, mise à jour du cache (`onSaved`), toasts et état `busy`.
- * Les deux viewers construisent leur objet `SplatPresentation` (le splat ajoute dof/reveal/lod)
- * puis appellent `persist` — un seul chemin réseau, plus de duplication.
+ * Persistence of the camera presentation (Phase 17), shared by 3D/splat: PATCH
+ * `/api/media/:id/splat-presentation`, cache update (`onSaved`), toasts and `busy` state.
+ * Both viewers build their `SplatPresentation` object (the splat adds dof/reveal/lod) and then
+ * call `persist` — a single network path, no more duplication.
  */
 export function useCameraPresentation(mediaId: number, onSaved: (patch: SplatEditsPatch) => void) {
   const t = useT();

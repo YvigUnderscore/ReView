@@ -5,7 +5,7 @@ import { Star } from 'lucide-react';
 import { useFavorites, type FavType } from '../stores/useFavorites';
 import { useT } from '../i18n';
 
-/** Bouton étoile pour (dé)favoriser une entité (projet/séquence/shot/asset). */
+/** Star button to (un)favorite an entity (project/sequence/shot/asset). */
 export default function FavoriteButton({
   type,
   entityId,

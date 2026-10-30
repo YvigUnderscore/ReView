@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Invariants de la chaîne de publication : workflow de release, CHANGELOG racine, pile
- * d'images publiées, et supervision (cibles, règles d'alerte, tableau de bord).
+ * Invariants of the publication chain: release workflow, root CHANGELOG, stack
+ * of published images, and monitoring (targets, alert rules, dashboard).
  *
- * Ce qui est verrouillé ici est ce qui rend une version *installable par un tiers* : rien
- * ne se publie sans la suite de validation, aucune version ne sort sans notes, aucune image
- * ne s'exécute en production sous une étiquette mouvante, et les alertes existent vraiment
- * au lieu d'être suggérées dans une page de documentation.
+ * What is locked down here is what makes a version *installable by a third party*: nothing
+ * is published without the validation suite, no version ships without notes, no image
+ * runs in production under a moving tag, and the alerts really exist
+ * instead of being suggested in a documentation page.
  */
 
 import { readFileSync } from 'node:fs';
@@ -26,7 +26,7 @@ const PROMETHEUS = read('monitoring/prometheus.yml');
 const RULES = read('monitoring/rules/alerts.yml');
 const DASHBOARD = JSON.parse(read('monitoring/grafana/provisioning/dashboards/review-dashboard.json'));
 
-/** Blocs d'alerte du fichier de règles, découpés sur « - alert: ». */
+/** Alert blocks of the rules file, split on "- alert:". */
 export function alertBlocks(rules) {
   const parts = rules.split(/^\s*- alert: /m).slice(1);
   return parts.map((part) => ({ name: part.split('\n')[0].trim(), body: part }));
@@ -43,7 +43,7 @@ describe('workflow de release', () => {
   });
 
   it('rejoue la suite de validation entière, sans la neutraliser', () => {
-    // Hors commentaires : c'est la commande exécutée qu'on contrôle, pas ce qu'elle raconte.
+    // Outside comments: it is the executed command that is checked, not what it says about itself.
     const invocations = RELEASE.split('\n').filter(
       (l) => !l.trim().startsWith('#') && l.includes('scripts/validate.sh'),
     );
@@ -60,7 +60,7 @@ describe('workflow de release', () => {
     for (const image of ['review-backend', 'review-worker', 'review-frontend']) {
       expect(RELEASE, image).toContain(`image: ${image}`);
     }
-    // Le worker est la seule image à embarquer Blender + USD.
+    // The worker is the only image to bundle Blender + USD.
     expect(RELEASE).toMatch(
       /image: review-worker\n +context: \.\/backend\n +dockerfile: \.\/backend\/Dockerfile\n +usd: '1'/,
     );
@@ -74,9 +74,9 @@ describe('workflow de release', () => {
   });
 
   it('publie sous une référence d’image valide : aucune majuscule dans le chemin', () => {
-    // Une référence OCI n'accepte pas de majuscule : « ghcr.io/YvigUnderscore/review-backend »
-    // est invalide. Le workflow interpolait `github.repository_owner`, qui rend le login tel
-    // qu'il est écrit — le mode registre n'avait donc jamais pu publier une seule image.
+    // An OCI reference does not accept an uppercase letter: "ghcr.io/YvigUnderscore/review-backend"
+    // is invalid. The workflow interpolated `github.repository_owner`, which renders the login as
+    // it is written — so the registry mode had never been able to publish a single image.
     const tagLines = RELEASE.split('\n')
       .map((line) => line.trim())
       .filter((line) => line.startsWith('${{ env.REGISTRY }}/'));
@@ -88,9 +88,9 @@ describe('workflow de release', () => {
   });
 
   it('déclare dans l’image les build-args de version qu’il lui passe', () => {
-    // Un build-arg non déclaré est ignoré SANS un mot. Sans ces trois `ARG`, toute image
-    // publiée répondait « commit: null, builtAt: null » sur /api/version : une instance
-    // incapable de se nommer, alors que l'AGPL §13 suppose de savoir à quel commit elle
+    // An undeclared build-arg is ignored WITHOUT a word. Without these three `ARG`s, every image
+    // published answered "commit: null, builtAt: null" on /api/version: an instance
+    // unable to name itself, whereas AGPL §13 assumes knowing which commit it
     // correspond.
     const backendDockerfile = read('backend/Dockerfile');
     for (const arg of ['APP_VERSION', 'GIT_SHA', 'BUILD_DATE']) {

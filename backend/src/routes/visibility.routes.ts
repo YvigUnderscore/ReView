@@ -6,24 +6,24 @@ import { z } from 'zod';
 import { Role } from '@prisma/client';
 import { prisma } from '../lib/prisma';
 import { notFound } from '../lib/errors';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { MATCH_TYPES, VISIBILITY_TYPES } from '../lib/visibility';
 import * as VisibilityService from '../services/VisibilityService';
 
 /**
- * Masquage d'éléments — réservé aux ADMIN.
+ * Hiding items: reserved to ADMIN.
  *
- * Un SUPERVISOR administre son projet ; faire disparaître un plan de tous les écrans de
- * tout le monde est d'un autre ordre. La lecture des règles l'est aussi : elles exposent
- * les conventions internes du studio, et un artiste n'a rien à en faire.
+ * A SUPERVISOR administers their project; making a shot disappear from everyone's screens is a
+ * different matter. So is reading the rules: they expose the studio's internal conventions, which an
+ * artist has no use for.
  */
 const router = Router();
 
 /**
- * ⚠ Routeur monté sur `/api` : pas de `router.use(authenticate)` — Express l'exécuterait
- * pour toute requête traversant le point de montage, routes publiques comprises.
+ * ⚠ Router mounted on `/api`: no `router.use(authenticate)`, since Express would run it for every
+ * request passing through the mount point, public routes included.
  */
 const auth = authenticate;
 const admin = requireRole(Role.ADMIN);
@@ -44,7 +44,7 @@ const ruleBody = z.object({
   enabled: z.boolean().optional(),
 });
 
-/** Le studio de l'instance — une instance = un studio (cf. CLAUDE.md). */
+/** The studio of this instance: one instance = one studio (see CLAUDE.md). */
 async function currentStudioId(): Promise<number> {
   const project = await prisma.project.findFirst({ select: { studioId: true } });
   if (!project) throw notFound('No studio yet');
@@ -65,7 +65,7 @@ router.get(
 
 router.post('/visibility/rules', auth, admin, validate({ body: ruleBody }), async (req, res) => {
   const studioId = await currentStudioId();
-  const { rule, applied } = await VisibilityService.createRule(studioId, req.user!.id, req.body);
+  const { rule, applied } = await VisibilityService.createRule(studioId, requireUser(req).id, req.body);
   res.status(201).json({ rule, applied });
 });
 
@@ -87,11 +87,10 @@ router.delete('/visibility/rules/:id', auth, admin, validate({ params: idParam }
 });
 
 /**
- * Rejouer les règles à la demande.
+ * Replay the rules on demand.
  *
- * Elles le sont déjà à chaque changement et après chaque import, mais un studio qui vient
- * d'en écrire une série veut pouvoir constater le résultat sans attendre la prochaine
- * synchronisation.
+ * They already run on every change and after every import, but a studio that has just written a
+ * batch of them wants to check the result without waiting for the next sync.
  */
 router.post(
   '/visibility/apply',
@@ -104,7 +103,7 @@ router.post(
   },
 );
 
-/** Masquer ou révéler un élément précis, sans écrire de règle. */
+/** Hide or reveal one specific item, without writing a rule. */
 router.put(
   '/visibility/:kind/:id',
   auth,

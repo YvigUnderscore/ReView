@@ -14,15 +14,15 @@ import { useT } from '../i18n';
 import type { MenuEntry } from './menuSpec';
 
 /**
- * Sous-menus « Assigner » et « Département » d'**une** tâche.
+ * "Assign" and "Department" submenus for **one** task.
  *
- * `useAssignMenu` travaille à l'échelle d'un plan ou d'un asset : il choisit une étape,
- * puis une personne, et écrit sur la tâche correspondante. C'est le bon geste depuis une
- * liste — mais devant les cartes d'un plan, on ne cherche pas l'étape, on l'a sous les
- * yeux : on veut mettre quelqu'un sur *cette* tâche-là.
+ * `useAssignMenu` works at the scale of a shot or an asset: it picks a step,
+ * then a person, and writes to the matching task. That is the right gesture from a
+ * list — but in front of a shot's cards, one does not search for the step, it is in
+ * view: one wants to put someone on *this* task.
  *
- * Aucune route nouvelle : `PATCH /api/tasks/:id` accepte l'assigné et le département
- * depuis toujours, et c'est le service qui tient la relation et la clé alignées.
+ * No new route: `PATCH /api/tasks/:id` has always accepted the assignee and the department,
+ * and the service keeps the relation and the key aligned.
  */
 export function useTaskAssignMenu(projectId: number) {
   const t = useT();
@@ -31,7 +31,7 @@ export function useTaskAssignMenu(projectId: number) {
   const members = useProjectMembers(projectId);
   const { data: departments = [] } = useDepartments(projectId, projectId > 0);
 
-  /** Ce que la modification touche : l'arbre du parent, le kanban, les listes de tâches. */
+  /** What the change touches: the parent's tree, the kanban, the task lists. */
   const refresh = () => {
     void qc.invalidateQueries({ queryKey: ['shot'] });
     void qc.invalidateQueries({ queryKey: ['asset'] });
@@ -39,19 +39,19 @@ export function useTaskAssignMenu(projectId: number) {
     void qc.invalidateQueries({ queryKey: qk.projectBoard(projectId) });
   };
 
-  /** L'écriture nue : elle laisse remonter son échec, pour que l'annulation puisse le dire. */
+  /** The bare write: lets its failure bubble up, so that undo can report it. */
   const write = async (taskId: number, body: Record<string, unknown>): Promise<void> => {
     await api.patch(`/api/tasks/${taskId}`, body);
     refresh();
   };
 
   /**
-   * Écrit, puis confirme avec « Annuler ».
+   * Writes, then confirms with "Undo".
    *
-   * `previous` est l'état d'avant, lu sur la tâche au moment du clic : assigner quelqu'un par
-   * mégarde dans un menu de quinze noms est l'erreur la plus banale de l'écran, et rien ne
-   * disait qui était là avant. Une écriture serveur ne se défait pas d'un Ctrl+Z (elle est
-   * déjà chez les autres, et ShotGrid a pu arbitrer) : c'est un cran nommé, pas un historique.
+   * `previous` is the state from before, read on the task at click time: assigning someone by
+   * mistake in a menu of fifteen names is the most common error on the screen, and nothing
+   * said who was there before. A server write cannot be undone with Ctrl+Z (it is already
+   * with the others, and ShotGrid may have arbitrated): it is a named step, not a history.
    */
   const patch = async (taskId: number, body: Record<string, unknown>, previous: Record<string, unknown>) => {
     try {
@@ -62,7 +62,7 @@ export function useTaskAssignMenu(projectId: number) {
     }
   };
 
-  /** « Assigner » : les membres du projet, celui en place étant coché. */
+  /** "Assign": project members, the current one being checked. */
   const assignEntry = (
     task: { id: number; assigneeId: number | null },
     canManage: boolean,
@@ -99,11 +99,11 @@ export function useTaskAssignMenu(projectId: number) {
   };
 
   /**
-   * « Département » : l'étape que la tâche occupe dans le pipe.
+   * "Department": the step the task occupies in the pipe.
    *
-   * C'est elle qui décide de la colonne du kanban, de l'ordre du pipe et de qui a le droit
-   * d'y écrire — la changer n'est donc pas un simple étiquetage, et le menu la montre au
-   * même endroit que l'assignation parce que les deux se règlent dans le même mouvement.
+   * It decides the kanban column, the pipe order and who has the right
+   * to write there — changing it is therefore not a simple label, and the menu shows it
+   * in the same place as the assignment because both are set in the same movement.
    */
   const departmentEntry = (
     task: { id: number; department: string | null },
@@ -141,12 +141,12 @@ export function useTaskAssignMenu(projectId: number) {
   };
 
   /**
-   * Signature de ce que ces deux entrées lisent : les personnes et les étapes.
+   * Signature of what these two entries read: people and steps.
    *
-   * Les deux constructeurs sont neufs à chaque rendu (ce sont des fermetures) : un écran qui
-   * mémoïse ses cartes ne peut pas les lister en dépendance sans tout re-rendre à chaque
-   * frappe. Il liste cette chaîne à leur place — elle change quand le menu change, et à ce
-   * moment-là seulement. Le kanban en dépend pour ne pas rejouer mille cartes par lettre.
+   * Both builders are new on every render (they are closures): a screen that
+   * memoises its cards cannot list them as a dependency without re-rendering everything on each
+   * keystroke. It lists this string in their place — it changes when the menu changes, and at
+   * that moment only. The kanban depends on it so as not to replay a thousand cards per letter.
    */
   const epoch = [
     projectId,

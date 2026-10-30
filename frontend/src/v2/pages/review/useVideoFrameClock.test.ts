@@ -7,13 +7,13 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { hasFrameCallback, useVideoFrameClock } from './useVideoFrameClock';
 
 /**
- * Faux lecteur : `EventTarget` suffit — le hook n'attend du média que ses événements, son
- * `currentTime` et, quand il existe, son annonce d'image présentée.
+ * Fake player: `EventTarget` is enough — the hook only expects from the media its events, its
+ * `currentTime` and, when it exists, its presented-frame announcement.
  */
 class FakeVideo extends EventTarget {
   currentTime = 0;
   paused = true;
-  /** File des rappels `requestVideoFrameCallback` en attente. */
+  /** Queue of pending `requestVideoFrameCallback` callbacks. */
   pending: ((now: number, meta: { mediaTime: number }) => void)[] = [];
   cancelled: number[] = [];
 
@@ -29,7 +29,7 @@ class FakeVideo extends EventTarget {
     return this;
   }
 
-  /** Le décodeur présente l'image dont l'horodatage est `mediaTime`. */
+  /** The decoder presents the frame whose timestamp is `mediaTime`. */
   present(mediaTime: number): void {
     const cbs = this.pending;
     this.pending = [];
@@ -48,19 +48,19 @@ const mount = (video: FakeVideo, fps = 24) => {
 };
 
 afterEach(() => {
-  // `globals` désactivé dans la config vitest : le démontage est à notre charge.
+  // `globals` disabled in the vitest config: teardown is our responsibility.
   cleanup();
   vi.restoreAllMocks();
 });
 
-describe('useVideoFrameClock — image par image plutôt que quatre fois par seconde', () => {
-  it('suit chaque image présentée, sans attendre timeupdate', () => {
+describe('useVideoFrameClock — frame by frame rather than four times per second', () => {
+  it('follows each presented frame, without waiting for timeupdate', () => {
     const video = new FakeVideo().withFrameCallback();
     const { result } = mount(video);
     expect(result.current).toBe(0);
 
-    // Trois images consécutives à 24 fps : le compteur suit chacune d'elles alors qu'aucun
-    // `timeupdate` n'a été émis — c'est précisément ce qui manquait.
+    // Three consecutive frames at 24 fps: the counter follows each of them although no `timeupdate`
+    // was emitted — that is precisely what was missing.
     act(() => video.present(1 / 24));
     expect(result.current).toBe(1);
     act(() => video.present(2 / 24));
@@ -69,15 +69,15 @@ describe('useVideoFrameClock — image par image plutôt que quatre fois par sec
     expect(result.current).toBe(3);
   });
 
-  it('dérive le numéro de la cadence corrigée, pas de son arrondi', () => {
+  it('derives the number from the corrected rate, not from its rounding', () => {
     const video = new FakeVideo().withFrameCallback();
-    // 23.976 : la frame 6000 d'un plan de quatre minutes à 24000/1001.
+    // 23.976: frame 6000 of a four-minute shot at 24000/1001.
     const { result } = mount(video, 23.976);
     act(() => video.present((6000 * 1001) / 24000));
     expect(result.current).toBe(6000);
   });
 
-  it('garde timeupdate et seeked comme filet : pause, scrub, pas-à-pas', () => {
+  it('keeps timeupdate and seeked as a safety net: pause, scrub, frame stepping', () => {
     const video = new FakeVideo().withFrameCallback();
     const { result } = mount(video);
     video.currentTime = 10;
@@ -88,7 +88,7 @@ describe('useVideoFrameClock — image par image plutôt que quatre fois par sec
     expect(result.current).toBe(48);
   });
 
-  it('sans requestVideoFrameCallback, tourne en rAF pendant la lecture seulement', () => {
+  it('without requestVideoFrameCallback, runs on rAF during playback only', () => {
     const video = new FakeVideo();
     expect(hasFrameCallback(video as unknown as HTMLVideoElement)).toBe(false);
     const frames: FrameRequestCallback[] = [];
@@ -97,7 +97,7 @@ describe('useVideoFrameClock — image par image plutôt que quatre fois par sec
       return frames.length;
     });
     const { result } = mount(video);
-    // À l'arrêt, aucune boucle : rien ne réveille l'onglet.
+    // When stopped, there is no loop: nothing wakes the tab.
     expect(frames).toHaveLength(0);
 
     video.paused = false;
@@ -107,12 +107,12 @@ describe('useVideoFrameClock — image par image plutôt que quatre fois par sec
     expect(result.current).toBe(24);
   });
 
-  it('libère le rappel d’image au démontage', () => {
+  it('releases the frame callback on unmount', () => {
     const video = new FakeVideo().withFrameCallback();
     const { unmount } = mount(video);
     unmount();
     expect(video.cancelled).toHaveLength(1);
-    // Plus aucun écouteur : une image présentée après coup ne relance pas la boucle.
+    // No listeners left: a frame presented afterwards does not restart the loop.
     act(() => video.present(1));
     expect(video.pending).toHaveLength(0);
   });

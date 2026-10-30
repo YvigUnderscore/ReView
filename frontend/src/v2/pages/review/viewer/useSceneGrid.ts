@@ -9,56 +9,54 @@ import { EXCLUDE_FROM_CAPTURE } from './viewCapture';
 const STORAGE_KEY = 'review-grid-visible';
 
 /**
- * Ordre de rendu de la grille : **première de la passe transparente**, donc dessinée avant le
- * nuage de gaussiennes (lot 15).
+ * Render order of the grid: **first of the transparent pass**, so it is drawn before the
+ * Gaussian splat cloud (lot 15).
  *
- * POURQUOI. Le quadrillage se voyait AU TRAVERS des splats. Spark ne dessine pas les `SplatMesh`
- * un par un — ce sont des `Object3D` sans matériau : tout le nuage (comparaison A/B comprise) sort
- * d'un seul `SparkRenderer`, un `THREE.Mesh` `transparent: true` / `depthTest: true` /
- * `depthWrite: false`, d'ordre de rendu 0. La grille est elle aussi transparente et n'écrit pas la
- * profondeur : rien ne les sépare que le tri de la passe transparente
- * (`reversePainterSortStable`), qui compare l'ordre de rendu, puis la distance, puis l'`id` de
- * l'objet. Les deux géométries sont centrées sur l'origine — leur distance de tri est donc
- * EXACTEMENT la même — et la grille naît après le renderer Spark : son `id` est plus grand, elle
- * passait donc en dernier, par-dessus le nuage. Rien de « selon l'angle » là-dedans : c'était faux
- * à chaque image, ce qui est bien ce que l'utilisateur constate.
+ * WHY. The grid used to show THROUGH the splats. Spark does not draw `SplatMesh` objects one by
+ * one — they are `Object3D`s without material: the whole cloud (A/B comparison included) comes
+ * out of a single `SparkRenderer`, a `THREE.Mesh` with `transparent: true` / `depthTest: true` /
+ * `depthWrite: false`, render order 0. The grid is also transparent and does not write depth:
+ * nothing separates them except the sort of the transparent pass (`reversePainterSortStable`),
+ * which compares render order, then distance, then the object's `id`. Both geometries are centred
+ * on the origin — their sort distance is therefore EXACTLY the same — and the grid is created
+ * after the Spark renderer: its `id` is larger, so it was drawn last, over the cloud. Nothing
+ * "angle-dependent" about it: it was wrong on every frame, which is what the user observed.
  *
- * CE QUE ÇA COÛTE. La grille passe désormais sous TOUT ce qui est transparent, et il n'y a
- * toujours aucun test de profondeur entre elle et le nuage (qui n'en écrit pas) : un nuage très
- * translucide la laisse voir en filigrane, et une ligne de grille tendue DEVANT le nuage est
- * recouverte par lui. C'est le prix d'un nuage sans profondeur, et le seul levier à notre portée :
- * faire écrire la profondeur au nuage casserait son propre fondu arrière→avant, et les traits de
- * brosse s'appuient explicitement sur le contraire (`splat/paint/strokes.ts` : « au-dessus des
- * splats (qui n'écrivent pas la profondeur) »).
+ * WHAT IT COSTS. The grid now draws under EVERYTHING transparent, and there is still no depth
+ * test between it and the cloud (which does not write depth): a very translucent cloud lets it
+ * show through faintly, and a grid line stretched IN FRONT of the cloud is covered by it. This is
+ * the price of a cloud without depth, and the only lever within reach: making the cloud write
+ * depth would break its own back-to-front fade, and the brush strokes explicitly rely on the
+ * opposite (`splat/paint/strokes.ts`: "above the splats (which do not write depth)").
  *
- * Les autres repères restent au-dessus, et c'est voulu : traits de brosse (5), caméra du plan,
- * gizmo de mesure et overlay de squelette (999), gizmo de transformation (`Infinity`, posé par
- * `TransformControls`). Les pastilles de POI et le guide letterbox sont du DOM, hors de ce tri.
- * Le filaire des volumes de coupe est opaque : il est dessiné avant toute la passe transparente.
+ * The other markers stay above, deliberately: brush strokes (5), plan camera, measure gizmo and
+ * skeleton overlay (999), transform gizmo (`Infinity`, set by `TransformControls`). POI pins and
+ * the letterbox guide are DOM, outside this sort. The cut volumes' wireframe is opaque: it is
+ * drawn before the whole transparent pass.
  */
 export const GRID_RENDER_ORDER = -1;
 
-/** Ce qu'il faut d'un viewer pour y poser la grille : les modules Three et la scène. */
+/** What a viewer must provide to place the grid: the Three modules and the scene. */
 export type SceneGridTarget = Pick<ViewerSceneHandle, 'THREE' | 'scene'>;
 
 export interface MountedSceneGrid {
   grid: THREE.GridHelper;
-  /** Retire la grille de la scène et libère sa géométrie/son matériau. */
+  /** Removes the grid from the scene and frees its geometry/material. */
   dispose: () => void;
 }
 
 /**
- * Pose la grille de sol dans une scène montée et rend son démontage. Séparé du hook : tout ce qui
- * décide de l'aspect et de l'ORDRE de dessin se teste ainsi sans React ni WebGL.
+ * Places the floor grid in a mounted scene and returns its teardown. Kept separate from the hook:
+ * everything that decides the look and the drawing ORDER can thus be tested without React or WebGL.
  */
 export function createSceneGrid(target: SceneGridTarget): MountedSceneGrid {
   const grid = new target.THREE.GridHelper(20, 40, 0x8888aa, 0x444455);
-  grid.userData[EXCLUDE_FROM_CAPTURE] = true; // repère d'écran : hors capture de vue
+  grid.userData[EXCLUDE_FROM_CAPTURE] = true; // screen-space marker: excluded from the view capture
   const mat = grid.material;
   mat.transparent = true;
   mat.opacity = 0.25;
   mat.depthWrite = false;
-  grid.renderOrder = GRID_RENDER_ORDER; // sous le nuage : cf. le commentaire ci-dessus
+  grid.renderOrder = GRID_RENDER_ORDER; // under the cloud: see the comment above
   target.scene.add(grid);
   return {
     grid,
@@ -70,12 +68,12 @@ export function createSceneGrid(target: SceneGridTarget): MountedSceneGrid {
 }
 
 /**
- * Grille de sol des viewers 3D/splat : repère d'orientation de la scène (plan Y=0),
- * togglable depuis le HUD, préférence persistée en localStorage. Un seul code pour les
- * deux viewers via la poignée commune `SceneViewer` (Phase 17).
+ * Floor grid of the 3D/splat viewers: orientation marker for the scene (plane Y=0), toggleable
+ * from the HUD, preference persisted in localStorage. One code path for both viewers via the
+ * shared `SceneViewer` handle (Phase 17).
  *
- * C'est un repère d'ÉCRAN : la capture de vue la retire (cf. `viewCapture`), une image qui
- * repart dans une compo n'a que faire du quadrillage qui aide à s'orienter.
+ * It is a SCREEN-space marker: the view capture removes it (see `viewCapture`), since an image
+ * headed into a composition has no use for the grid that helps orient the viewer.
  */
 export function useSceneGrid(viewer: SceneViewer): { visible: boolean; toggle: () => void } {
   const [visible, setVisible] = useState(() => localStorage.getItem(STORAGE_KEY) !== '0');

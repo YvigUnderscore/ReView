@@ -40,7 +40,7 @@ function harness(mode = 'wireframe') {
 }
 
 describe('useModel3DViewState', () => {
-  it('capture le mode d’affichage, le plan de coupe et l’éclairage', () => {
+  it('captures the display mode, the section plane and the lighting', () => {
     const { provider } = harness();
     expect(provider.capture()).toEqual({
       display: 'wireframe',
@@ -49,7 +49,7 @@ describe('useModel3DViewState', () => {
     });
   });
 
-  it('rejoue l’état d’un commentaire sur les trois hooks', () => {
+  it('replays a comment state on the three hooks', () => {
     const { provider, inspect, section, lighting } = harness();
     const next = {
       display: 'uv' as const,
@@ -62,14 +62,14 @@ describe('useModel3DViewState', () => {
     expect(lighting.setCfg).toHaveBeenCalledWith(DEFAULT_LIGHTING);
   });
 
-  it('capture l’état courant après un nouveau rendu, sans se réenregistrer', () => {
+  it('captures the current state after a new render, without re-registering', () => {
     const { view, provider, registerViewState } = harness('shaded');
     view.rerender({ mode: 'matcap' });
     expect(provider.capture().display).toBe('matcap');
     expect(registerViewState).toHaveBeenCalledTimes(1);
   });
 
-  it('se retire au démontage (aucun état de vue joint sans viewer 3D)', () => {
+  it('unregisters on unmount (no view state attached without a 3D viewer)', () => {
     const { view, registerViewState } = harness();
     view.unmount();
     expect(registerViewState).toHaveBeenLastCalledWith(null);

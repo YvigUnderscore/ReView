@@ -5,14 +5,14 @@ import { Router } from 'express';
 import { z } from 'zod';
 import type { Queue } from 'bullmq';
 import { Role } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
-import { mediaQueue, storageCleanupQueue, webhookQueue } from '../services/JobService';
+import { mediaQueue, storageCleanupQueue, webhookQueue } from '../lib/queues';
 import { logAudit } from '../services/AuditService';
 import { badRequest, notFound } from '../lib/errors';
 
-/** Dashboard BullMQ (37.C) — monté sous /api/admin/jobs (admin). */
+/** BullMQ dashboard (37.C), mounted under /api/admin/jobs (admin). */
 const router = Router();
 router.use(authenticate, requireRole(Role.ADMIN));
 
@@ -41,7 +41,7 @@ const jobView = (j: {
   createdAt: j.timestamp ? new Date(j.timestamp).toISOString() : null,
 });
 
-// GET /api/admin/jobs — compteurs par file + jobs récents (actifs, en attente, échoués)
+// GET /api/admin/jobs — counters per queue + recent jobs (active, waiting, failed)
 router.get('/', async (_req, res) => {
   const queues = await Promise.all(
     Object.entries(QUEUES).map(async ([key, q]) => {
@@ -63,7 +63,7 @@ router.get('/', async (_req, res) => {
   res.json({ queues });
 });
 
-// POST /api/admin/jobs/:queue/:id/retry — relance un job échoué
+// POST /api/admin/jobs/:queue/:id/retry — re-runs a failed job
 router.post(
   '/:queue/:id/retry',
   validate({ params: queueParam.extend({ id: z.string().max(100) }) }),
@@ -74,7 +74,7 @@ router.post(
     if (!(await job.isFailed())) throw badRequest('Only a failed job can be retried');
     await job.retry();
     logAudit({
-      userId: req.user!.id,
+      userId: requireUser(req).id,
       action: 'JOB_RETRY',
       entityType: 'Job',
       metadata: { queue: req.params.queue, id: job.id, name: job.name },
@@ -83,12 +83,12 @@ router.post(
   },
 );
 
-// POST /api/admin/jobs/:queue/clean-failed — purge les jobs échoués de la file
+// POST /api/admin/jobs/:queue/clean-failed — purges the failed jobs of the queue
 router.post('/:queue/clean-failed', validate({ params: queueParam }), async (req, res) => {
   const q = QUEUES[String(req.params.queue)]!;
   const removed = await q.clean(0, 1000, 'failed');
   logAudit({
-    userId: req.user!.id,
+    userId: requireUser(req).id,
     action: 'JOBS_CLEAN_FAILED',
     entityType: 'Job',
     metadata: { queue: req.params.queue, removed: removed.length },

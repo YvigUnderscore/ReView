@@ -10,35 +10,33 @@ const ici = path.dirname(fileURLToPath(import.meta.url));
 const lire = (fichier: string) => readFileSync(path.join(ici, fichier), 'utf8');
 
 /**
- * Garde-fou d'architecture, pas de comportement.
+ * Architecture guard, not behaviour.
  *
- * `IconButton` est sur le chemin d'entrée : tout ce qu'il importe statiquement entre dans le
- * **premier chargement**. Quand Radix Tooltip y était, le budget passait de 419 à 429,8 ko
- * pour un plafond de 430 — 0,2 ko de marge, et le changement suivant, quel qu'il soit,
- * faisait échouer la suite.
+ * `IconButton` is on the entry path: everything it imports statically goes into the
+ * **first load**. When Radix Tooltip was there, the budget went from 419 to 429.8 kB against
+ * a ceiling of 430 — 0.2 kB of margin, and the next change, whatever it was, made the suite fail.
  *
- * La façade existe pour cela et pour rien d'autre. Elle est courte, elle a l'air d'une
- * indirection gratuite, et quelqu'un la « simplifiera » un jour en réimportant Radix
- * directement — le budget ne se plaindra qu'au commit d'après, sur un changement sans
- * rapport. Ce test-ci le dit tout de suite, et dit pourquoi.
+ * The facade exists for this and for nothing else. It is short, it looks like a pointless
+ * indirection, and someone will one day "simplify" it by importing Radix directly — the budget
+ * would only complain at the next commit, about an unrelated change. This test says so at once, and says why.
  */
-describe('la façade d’infobulle tient Radix hors du premier chargement', () => {
-  it('n’importe Radix que dynamiquement', () => {
+describe('the tooltip facade keeps Radix out of the first load', () => {
+  it('imports Radix only dynamically', () => {
     const facade = lire('tooltip.tsx');
     expect(facade).not.toMatch(/import\s+[^;]*from\s+['"]@radix-ui\/react-tooltip['"]/);
-    // L'import dynamique, lui, est attendu : c'est le mécanisme même.
+    // The dynamic import, on the other hand, is expected: it is the mechanism itself.
     expect(facade).toMatch(/import\(['"]\.\/tooltip\.radix['"]\)/);
   });
 
-  it('garde l’implémentation Radix dans un module séparé', () => {
+  it('keeps the Radix implementation in a separate module', () => {
     expect(lire('tooltip.radix.tsx')).toMatch(/from ['"]@radix-ui\/react-tooltip['"]/);
   });
 
   /**
-   * `IconButton` est le seul point d'entrée universel : s'il importait l'implémentation, la
-   * façade ne servirait plus à rien.
+   * `IconButton` is the only universal entry point: if it imported the implementation, the
+   * facade would be pointless.
    */
-  it('n’est jamais court-circuitée par IconButton', () => {
+  it('is never short-circuited by IconButton', () => {
     const bouton = lire('icon-button.tsx');
     expect(bouton).toMatch(/from ['"]\.\/tooltip['"]/);
     expect(bouton).not.toMatch(/tooltip\.radix/);

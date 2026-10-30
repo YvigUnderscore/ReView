@@ -4,11 +4,10 @@
 import type { AssigneeRef } from '../types/entities';
 
 /**
- * Le nom qu'on affiche pour une personne assignée : pseudo, nom complet, puis prénom+nom.
+ * The name displayed for an assigned person: nickname, full name, then first name + last name.
  *
- * Même ordre que `displayName` côté serveur (`lib/userView.ts`) — les deux doivent nommer
- * la même personne de la même façon, sans quoi un avatar et une liste d'équipe se
- * contrediraient sur le même écran.
+ * Same order as `displayName` on the server side (`lib/userView.ts`) — both must name the same
+ * person the same way, otherwise an avatar and a team list would contradict each other on the same screen.
  */
 export function assigneeName(person: AssigneeRef): string {
   if (person.username) return person.username;

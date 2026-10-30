@@ -4,11 +4,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * E1 de l'audit du 2026-08-21 : `POST /api/push/subscribe` acceptait n'importe quelle URL,
- * et `web-push` allait ensuite y poster depuis le réseau applicatif — où MinIO, Redis,
- * Postgres et 169.254.169.254 répondent sans authentification réseau. La primitive était
- * ouverte à toute session, CLIENT compris. Ces tests fixent le refus, à l'enregistrement
- * comme à l'envoi.
+ * Audit E1 (2026-08-21): `POST /api/push/subscribe` accepted any URL, and `web-push` would then
+ * POST to it from the application network, where MinIO, Redis, Postgres and 169.254.169.254
+ * answer without network authentication. The primitive was open to any session, CLIENT included.
+ * These tests pin the refusal, both at registration and at send time.
  */
 vi.mock('node:dns/promises', () => ({ lookup: vi.fn() }));
 
@@ -57,8 +56,8 @@ beforeEach(() => {
   vi.mocked(lookup).mockResolvedValue(PUBLIC_ADDRESS as never);
 });
 
-describe('saveSubscription — garde anti-SSRF (E1)', () => {
-  it('refuse une adresse interne littérale sans rien enregistrer', async () => {
+describe('saveSubscription: anti-SSRF guard (E1)', () => {
+  it('refuses a literal internal address without storing anything', async () => {
     await expect(saveSubscription(7, { endpoint: 'http://10.0.0.5/push', keys })).rejects.toMatchObject({
       statusCode: 400,
       code: 'PUSH_ENDPOINT_REFUSED',
@@ -66,21 +65,21 @@ describe('saveSubscription — garde anti-SSRF (E1)', () => {
     expect(prisma.pushSubscription.upsert).not.toHaveBeenCalled();
   });
 
-  it('refuse le service de métadonnées du fournisseur cloud', async () => {
+  it('refuses the cloud provider metadata service', async () => {
     await expect(
       saveSubscription(7, { endpoint: 'http://169.254.169.254/latest/meta-data/', keys }),
     ).rejects.toMatchObject({ statusCode: 400 });
   });
 
-  it('refuse un schéma qui n’est pas http(s)', async () => {
+  it('refuses a scheme that is not http(s)', async () => {
     await expect(saveSubscription(7, { endpoint: 'redis://cache:6379', keys })).rejects.toMatchObject({
       statusCode: 400,
     });
   });
 
-  // Le contrôle porte sur l'adresse résolue : un nom parfaitement public peut pointer
-  // vers la boucle locale.
-  it('refuse un nom public qui résout vers une adresse interne', async () => {
+  // The check applies to the resolved address: a perfectly public name can point to
+  // the loopback interface.
+  it('refuses a public name that resolves to an internal address', async () => {
     vi.mocked(lookup).mockResolvedValue([{ address: '127.0.0.1', family: 4 }] as never);
     await expect(
       saveSubscription(7, { endpoint: 'https://push.exemple.com/abc', keys }),
@@ -88,7 +87,7 @@ describe('saveSubscription — garde anti-SSRF (E1)', () => {
     expect(prisma.pushSubscription.upsert).not.toHaveBeenCalled();
   });
 
-  it('enregistre un abonnement vers un service de push public', async () => {
+  it('stores a subscription to a public push service', async () => {
     await saveSubscription(7, { endpoint: 'https://fcm.googleapis.com/fcm/send/xyz', keys });
     expect(prisma.pushSubscription.upsert).toHaveBeenCalledWith(
       expect.objectContaining({ where: { endpoint: 'https://fcm.googleapis.com/fcm/send/xyz' } }),
@@ -96,10 +95,10 @@ describe('saveSubscription — garde anti-SSRF (E1)', () => {
   });
 });
 
-describe('sendToUser — second contrôle à l’envoi', () => {
-  it('n’émet pas vers une ligne devenue interne, et sert les autres', async () => {
-    // Les lignes créées avant la garde sont toujours en base : le refus doit valoir
-    // aussi au moment de l'envoi.
+describe('sendToUser: second check at send time', () => {
+  it('does not send to a row that became internal, and serves the others', async () => {
+    // Rows created before the guard are still in the database: the refusal must also
+    // hold at send time.
     vi.mocked(prisma.pushSubscription.findMany).mockResolvedValue([
       { id: 1, endpoint: 'http://192.168.1.20:9001/', p256dh: 'p', auth: 'a' },
       { id: 2, endpoint: 'https://fcm.googleapis.com/fcm/send/xyz', p256dh: 'p', auth: 'a' },

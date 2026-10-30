@@ -8,15 +8,15 @@ import { applySplatTransform } from './meshPose';
 
 const mesh = () => new THREE.Object3D() as unknown as SplatMesh;
 
-describe('applySplatTransform — TRS enregistré → mesh', () => {
-  it('applique position/quaternion/échelle', () => {
+describe('applySplatTransform — saved TRS → mesh', () => {
+  it('applies position/quaternion/scale', () => {
     const m = mesh();
     applySplatTransform(m, { position: [1, 2, 3], quaternion: [0, 0, 0, 1], scale: [2, 2, 2] });
     expect(m.position.toArray()).toEqual([1, 2, 3]);
     expect(m.scale.toArray()).toEqual([2, 2, 2]);
   });
 
-  it('revient à l’identité si la valeur est absente ou invalide', () => {
+  it('reverts to identity if the value is missing or invalid', () => {
     const m = mesh();
     m.position.set(5, 5, 5);
     applySplatTransform(m, null);

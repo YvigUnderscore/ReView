@@ -5,12 +5,12 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { collectModelStats } from './modelStats';
 
-describe('collectModelStats — fiche technique du modèle (39.C)', () => {
-  it('compte triangles/sommets/meshes et déduplique les matériaux', () => {
+describe('collectModelStats — tech sheet of the model (39.C)', () => {
+  it('counts triangles/vertices/meshes and deduplicates materials', () => {
     const root = new THREE.Group();
     const mat = new THREE.MeshStandardMaterial({ name: 'Body' });
-    root.add(new THREE.Mesh(new THREE.BoxGeometry(), mat)); // 12 tris, 24 sommets
-    root.add(new THREE.Mesh(new THREE.BoxGeometry(), mat)); // même matériau partagé
+    root.add(new THREE.Mesh(new THREE.BoxGeometry(), mat)); // 12 tris, 24 vertices
+    root.add(new THREE.Mesh(new THREE.BoxGeometry(), mat)); // same shared material
 
     const stats = collectModelStats(root);
     expect(stats.meshes).toBe(2);
@@ -19,7 +19,7 @@ describe('collectModelStats — fiche technique du modèle (39.C)', () => {
     expect(stats.materials[0]).toEqual({ name: 'Body', type: 'MeshStandardMaterial' });
   });
 
-  it('liste les jeux d’UV et les textures par canal (dédupliquées)', () => {
+  it('lists the UV sets and the textures per channel (deduplicated)', () => {
     const root = new THREE.Group();
     const tex = new THREE.DataTexture(new Uint8Array([1, 2, 3, 4]), 1, 1);
     tex.name = 'albedo';
@@ -35,10 +35,10 @@ describe('collectModelStats — fiche technique du modèle (39.C)', () => {
     expect(stats.textures[0].width).toBe(1);
   });
 
-  it('relève aussi les textures des extensions KHR_materials_*', () => {
-    // Le chargeur glTF de Three résout ces extensions en `MeshPhysicalMaterial` : le viewer
-    // les RENDAIT déjà, mais la fiche technique ne balayait que les neuf slots de base — un
-    // shader de verre ou de vernis n'affichait donc aucune texture.
+  it('also picks up textures from the KHR_materials_* extensions', () => {
+    // Three's glTF loader resolves these extensions into `MeshPhysicalMaterial`: the viewer
+    // already RENDERED them, but the tech sheet only scanned the nine base slots — a glass or
+    // varnish shader therefore showed no texture.
     const root = new THREE.Group();
     const mat = new THREE.MeshPhysicalMaterial({ name: 'Glass' });
     mat.clearcoatMap = new THREE.DataTexture(new Uint8Array(4), 1, 1);
@@ -62,7 +62,7 @@ describe('collectModelStats — fiche technique du modèle (39.C)', () => {
     );
   });
 
-  it('modèle vide : compteurs à zéro, listes vides', () => {
+  it('empty model: counters at zero, empty lists', () => {
     const stats = collectModelStats(new THREE.Group());
     expect(stats).toMatchObject({ meshes: 0, triangles: 0, vertices: 0, materials: [], textures: [] });
   });

@@ -5,8 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import type * as THREE from 'three';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
-import { api } from '../../../../lib/apiClient';
-import { qk } from '../../../lib/query';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
 import { DEFAULT_TRANSFORM, type MediaResp, type Transform } from '../reviewTypes';
 import { applyEulerTransform } from './applyTransform';
 import { updateOrbitKeepingRoll } from './cameraRoll';
@@ -34,33 +34,33 @@ export interface SceneRuntime {
   scene: ModelScene;
   mixer: THREE.AnimationMixer | null;
   clips: THREE.AnimationClip[];
-  /** Caméra « layout » du PiP (mode layout) — pilotée par le lecteur keyframe quand actif. */
+  /** Layout camera of the PiP (layout mode) — driven by the keyframe reader when active. */
   layoutCam: THREE.PerspectiveCamera;
-  /** Rayon englobant du modèle chargé — vue d'origine (H) et recadrages. */
+  /** Bounding radius of the loaded model — original view (H) and reframing. */
   modelRadius: number;
-  /** Centre du modèle normalisé (posé sur `y = 0`) — cible de la vue d'origine et du turntable. */
+  /** Center of the normalized model (resting on `y = 0`) — target of the original view and the turntable. */
   modelCenter: THREE.Vector3;
-  /** Objet du modèle principal chargé (enfant de `root`) — cible de la comparaison A/B (39.E). */
+  /** Object of the main loaded model (child of `root`) — target of the A/B comparison (39.E). */
   modelObject: THREE.Object3D;
-  /** Racine glTF (cible du mixer, distincte du wrapper de normalisation — 40.A) ; hôte du
-   *  SkeletonHelper (debug squelette 40.B). */
+  /** glTF root (mixer target, distinct from the normalization wrapper — 40.A); host of the
+   *  SkeletonHelper (skeleton debug 40.B). */
   animRoot: THREE.Object3D;
-  /** Nombre de `SkinnedMesh` du modèle (>0 → debug squelette disponible — 40.B). */
+  /** Number of `SkinnedMesh` in the model (>0 → skeleton debug available — 40.B). */
   skinnedCount: number;
-  /** glTF chargé — variantes de matériaux & caméras embarquées (40.C). */
+  /** Loaded glTF — embedded material variants and cameras (40.C). */
   gltf: GLTF;
-  /** Boîte englobante brute du modèle (unités du fichier) — dimensions réelles et mesure. */
+  /** Raw bounding box of the model (file units) — real dimensions and measurement. */
   modelBox: THREE.Box3;
-  /** Facteur de normalisation calculé au chargement — conservé pour la bascule taille réelle. */
+  /** Normalization factor computed at load time — kept for the real-size toggle. */
   normScale: number;
 }
 
 /**
- * Viewer modèle 3D **Three.js** (Phase 15) : socle `createModelScene`, chargement GLB, boucle de
- * rendu (damping + mixer), transformation utilisateur, hotspots espace-objet, caméra
- * (capture/restauration, tilt, focale), **navigation unifiée avec le splat** (Phase 17 : orbite +
- * pan, vol clic droit + ZQSD, raccourcis F/H) et **mode layout** (PiP « in/out camera » via
- * `useModelLayout`). Animations extraites dans `useModelAnimations`.
+ * **Three.js** 3D model viewer (Phase 15): `createModelScene` base, GLB loading, render loop
+ * (damping + mixer), user transform, object-space hotspots, camera (capture/restore, tilt, focal
+ * length), **navigation unified with the splat** (Phase 17: orbit + pan, right-click flight +
+ * ZQSD, F/H shortcuts) and **layout mode** (PiP "in/out camera" via `useModelLayout`). Animations
+ * are extracted into `useModelAnimations`.
  */
 export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
   const active = data?.media.kind === 'MODEL_3D';
@@ -69,24 +69,24 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
   const runtimeRef = useRef<SceneRuntime | null>(null);
   const threeRef = useRef<typeof import('three') | null>(null);
   const actionRef = useRef<THREE.AnimationAction | null>(null);
-  // Compteurs de performance (FPS, draw calls, triangles) — alimentés par la boucle de rendu,
-  // lus par le panneau Scène. Rien n'est mesuré tant que personne n'est abonné.
+  // Performance counters (FPS, draw calls, triangles) — fed by the render loop and read by the
+  // Scene panel. Nothing is measured while nobody is subscribed.
   const statsRef = useRef<Sampler<ModelPerfSample> | null>(null);
-  // Points d'intérêt : le MÊME hook que le splat (`poi/usePoiMarkers`), via son adaptateur.
+  // Points of interest: the SAME hook as the splat (`poi/usePoiMarkers`), through its adapter.
   const { mountMarker, project, hotspotAtPointer, showPoiPoints, setPoiHandlers, setPoiActive, focusPoi } =
     useModelPoi(runtimeRef, threeRef);
   const frameCbs = useRef(new Set<(dt: number) => void>());
-  // Rendu à la demande (F14) — porte l'invalidation, les abonnements passifs et la boucle.
+  // On-demand rendering (F14) — carries invalidation, passive subscriptions and the loop.
   const gate = useRenderGate();
-  // Miniature (Phase 20) : la capture suit un rendu — le hook en redemande un à chaque demande.
+  // Thumbnail (Phase 20): the capture follows a render — the hook requests one on each request.
   const { onFrame: captureFrame, capture: captureThumbnail } = useThumbnailCapture(gate);
   const flyRef = useRef<FlyControls | null>(null);
-  // Aspect du cadre de livraison (réglages pipeline hérités, ou aspect gelé par une présentation
-  // — cf. `reviewAspect`) : la caméra le garde quel que soit l'écran, la vue étant étendue au
-  // conteneur entier (Phase 25, cf. resizeRendererCamera).
+  // Aspect of the delivery frame (inherited pipeline settings, or aspect frozen by a presentation
+  // — see `reviewAspect`): the camera keeps it whatever the screen, the view being extended to the
+  // whole container (Phase 25, see resizeRendererCamera).
   const frameAspectRef = useRef<number>(DEFAULT_REVIEW_ASPECT);
   frameAspectRef.current = mediaReviewAspect(data).value;
-  // Capture de vue du panneau Export : rendu dédié au cadre de livraison, sans la grille de sol.
+  // View capture for the Export panel: a render dedicated to the delivery frame, without the floor grid.
   const captureView = viewCapturer(
     () => runtimeRef.current?.scene,
     () => frameAspectRef.current,
@@ -94,12 +94,12 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
   );
   const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState(false);
-  // Extensions glTF déclarées par le fichier chargé (fiche technique — 39.C).
+  // glTF extensions declared by the loaded file (tech sheet — 39.C).
   const [extensions, setExtensions] = useState<string[]>([]);
-  // Dimensions brutes de la boîte englobante, dans les unités du fichier (mesure, 39.G).
+  // Raw bounding box dimensions, in the file's units (measurement, 39.G).
   const [modelSize, setModelSize] = useState<[number, number, number] | null>(null);
 
-  // Transformation enregistrée sur la version, surchargée par l'édition locale non sauvegardée.
+  // Transform recorded on the version, overridden by the unsaved local edit.
   const versionQ = useQuery({
     queryKey: qk.version(versionId ?? 0),
     queryFn: () =>
@@ -115,13 +115,13 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     [tfEdit, savedTransform],
   );
 
-  // ── Contrôleur caméra (commun avec le splat) : boucle, canvas, capture/restauration ──
+  // ── Camera controller (shared with the splat): loop, canvas, capture/restore ──
   const subscribeFrame = useCallback((cb: (dt: number) => void) => {
     frameCbs.current.add(cb);
     return () => frameCbs.current.delete(cb);
   }, []);
   const getDom = useCallback(() => runtimeRef.current?.scene.renderer.domElement ?? containerRef.current, []);
-  // Capture/restauration de la vue (état de vue compris), focale et tilt.
+  // View capture/restore (view state included), focal length and tilt.
   const { captureCamera, restoreCamera, registerViewState, fov, setFov, roll, setRoll } =
     useModelCameraHandles({ runtimeRef, threeRef });
   const subscribeStats = useCallback(
@@ -131,7 +131,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
   );
   const isFlying = useCallback(() => flyRef.current?.flying ?? false, []);
 
-  /** Poignée impérative commune (gizmos, caméra-objet, cadrage) — cf. `viewer/sceneHandle`. */
+  /** Common imperative handle (gizmos, object camera, framing) — see `viewer/sceneHandle`. */
   const getSceneHandle = useCallback((): ViewerSceneHandle | null => {
     const rt = runtimeRef.current;
     const THREE = threeRef.current;
@@ -149,10 +149,10 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     };
   }, []);
 
-  // `setFrameTarget` (46.I) : la review y branche le prim sélectionné pour que `F` le cadre.
+  // `setFrameTarget` (46.I): review plugs the selected prim in there so that `F` frames it.
   const { frameView, homeView, setFrameTarget } = useModelFraming({ runtimeRef, threeRef, ready, isFlying });
-  // Bascule « taille réelle » (39.G) : le modèle reprend les unités de son fichier. La
-  // préférence est rejouée sur chaque modèle chargé via `reapplyScaleRef`.
+  // Real-size toggle (39.G): the model takes back the units of its file. The preference is
+  // replayed on every loaded model via `reapplyScaleRef`.
   const reapplyScaleRef = useRef<(() => void) | null>(null);
   const { realScale, setRealScale } = useModelScale({
     runtimeRef,
@@ -162,7 +162,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
   });
 
   const anim = useModelAnimations(runtimeRef, actionRef, threeRef, gate.subscribeIdle);
-  // `init` reste privé (appelé au chargement) ; le reste du transport est exposé tel quel.
+  // `init` stays private (called at load time); the rest of the transport is exposed as is.
   const { init: animInit, ...animApi } = anim;
   const layout = useModelLayout({ runtimeRef, threeRef, subscribeFrame, getDom, captureCamera });
   const { renderPip } = layout;
@@ -179,11 +179,11 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
       if (cancelled || !containerRef.current) return;
       threeRef.current = THREE;
       const scene = createModelScene({ THREE, OrbitControls }, container);
-      // Pastilles des points d'intérêt (DOM, projetées à l'écran) — leur cycle de vie et leur
-      // état appartiennent au hook partagé, le viewer ne fait que les monter et les projeter.
+      // Points-of-interest markers (DOM, projected on screen) — their lifecycle and state belong
+      // to the shared hook; the viewer only mounts and projects them.
       const unmountMarker = mountMarker(THREE, container);
-      // Compteurs de rendu : `renderer.info` est remis à zéro à chaque frame par Three, on le
-      // lit donc à la fin de la boucle, pas à l'abonnement.
+      // Render counters: `renderer.info` is reset by Three on every frame, so we read it at the
+      // end of the loop, not at subscription time.
       statsRef.current = createSampler<ModelPerfSample>(() => ({
         calls: scene.renderer.info.render.calls,
         triangles: scene.renderer.info.render.triangles,
@@ -205,11 +205,11 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
         return;
       }
       scene.root.add(model.object);
-      // Le mixer cible la racine glTF (pas le wrapper de normalisation) : une piste sur le nœud
-      // racine ne casse plus le cadrage (40.A).
+      // The mixer targets the glTF root (not the normalization wrapper): a track on the root node
+      // no longer breaks the framing (40.A).
       const mixer = model.animations.length ? new THREE.AnimationMixer(model.animRoot) : null;
-      // Focale de départ = celle de la vue courante, comme côté splat : un PiP qui s'ouvre sur
-      // une autre focale que la scène n'a jamais rien à voir avec le plan que l'on règle.
+      // Starting focal length = that of the current view, as on the splat side: a PiP that opens
+      // with a different focal length than the scene has nothing to do with the plane being set.
       const layoutCam = new THREE.PerspectiveCamera(scene.camera.fov, 16 / 9, 0.01, 1000);
       runtimeRef.current = {
         scene,
@@ -226,25 +226,25 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
         normScale: model.scale,
       };
       setExtensions(model.extensions);
-      // Dimensions **brutes** du fichier : c'est la seule mesure que la normalisation détruirait
-      // si on ne la relevait pas ici (le wrapper, lui, sera rescalé à la demande).
+      // **Raw** file dimensions: the only measurement that normalization would destroy if it were
+      // not recorded here (the wrapper, for its part, will be rescaled on demand).
       const raw = model.box.getSize(new THREE.Vector3());
       setModelSize([raw.x, raw.y, raw.z]);
       animInit(model.animations);
-      // Navigation unifiée avec le splat (Phase 17) : vol clic droit + ZQSD/WASD + A/E,
-      // pan sur le bouton du milieu (réglé par createFlyControls), orbite au clic gauche.
+      // Navigation unified with the splat (Phase 17): right-click flight + ZQSD/WASD + A/E,
+      // middle-button pan (set by createFlyControls), orbit on left click.
       const fly = createFlyControls(THREE, scene.camera, scene.controls, scene.renderer.domElement);
       flyRef.current = fly;
 
       const resize = () => {
-        gate.invalidate(); // `setSize` vide le tampon de dessin : il faut redessiner tout de suite
+        gate.invalidate(); // `setSize` clears the drawing buffer: it must be redrawn right away
         const { clientWidth: w, clientHeight: h } = container;
         resizeRendererCamera(scene.renderer, scene.camera, w, h, frameAspectRef.current);
       };
       resize();
-      // Cadrage initial (une fois l'aspect connu) + near/far partagés avec la caméra layout. Le
-      // modèle repose sur `y = 0` : la caméra vise son centre, pas l'origine (sinon elle regarde
-      // le sol et le modèle sort par le haut du cadre).
+      // Initial framing (once the aspect is known) + near/far shared with the layout camera. The
+      // model rests on `y = 0`: the camera aims at its center, not the origin (otherwise it would look
+      // at the ground and the model would leave the frame at the top).
       const dist = fitDistance(model.radius, scene.camera.fov, scene.camera.aspect || 1);
       if (dist > 0) {
         scene.camera.position.set(model.center.x, model.center.y, model.center.z + dist);
@@ -255,22 +255,22 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
         layoutCam.updateProjectionMatrix();
         scene.controls.update();
       }
-      // Préférence « taille réelle » en cours : rejouée sur ce modèle-ci, cadrage compris — le
-      // wrapper vient d'être posé normalisé, l'interrupteur mentirait sinon.
+      // Current real-size preference: replayed on this model, framing included — the wrapper has just
+      // been set normalized, the toggle would otherwise lie.
       reapplyScaleRef.current?.();
       const ro = new ResizeObserver(resize);
       ro.observe(container);
 
-      // `update` est joué à chaque tour ; seul `draw` (passes GPU + mesures de mise en page)
-      // est sauté quand l'image serait identique — cf. `renderScheduler` pour les garde-fous.
+      // `update` runs on every tick; only `draw` (GPU passes + layout measurements) is skipped when
+      // the image would be identical — see `renderScheduler` for the safeguards.
       const stopLoop = gate.start({
         renderer: scene.renderer,
         controls: scene.controls,
         isBusy: () => fly.flying || frameCbs.current.size > 0 || actionRef.current?.isRunning() === true,
         update: (dt) => {
-          // En vol, la caméra est pilotée par flyControls ; OrbitControls (gelé) ne doit pas
-          // la recadrer sur sa cible — sinon le déplacement clavier serait annulé. Hors vol,
-          // l'orbite conserve le tilt réglé (cf. `cameraRoll.updateOrbitKeepingRoll`).
+          // In flight, the camera is driven by flyControls; OrbitControls (frozen) must not reframe
+          // it on its target — otherwise keyboard movement would be cancelled. Outside flight, the
+          // orbit keeps the tilt that was set (see `cameraRoll.updateOrbitKeepingRoll`).
           if (fly.flying) fly.update(dt);
           else updateOrbitKeepingRoll(THREE, scene.camera, scene.controls);
           mixer?.update(dt);
@@ -278,11 +278,11 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
         },
         draw: (now) => {
           scene.renderer.render(scene.scene, scene.camera);
-          renderPip(); // PiP de la caméra layout (no-op hors mode layout)
+          renderPip(); // PiP of the layout camera (no-op outside layout mode)
           const { clientWidth: w, clientHeight: h } = container;
           project(scene.camera, scene.root, w, h);
           statsRef.current?.frame(now);
-          captureFrame(scene.renderer.domElement); // miniature auto (Phase 20)
+          captureFrame(scene.renderer.domElement); // auto thumbnail (Phase 20)
         },
       });
       setReady(true);
@@ -298,11 +298,10 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     return () => {
       cancelled = true;
       cleanup?.();
-      // `ready` doit rester **fidèle** à la présence du runtime : les hooks qui s'abonnent à la
-      // scène impérative (scenegraph USD, sélection au clic, caméra-objet) ne peuvent pas
-      // deviner que les refs viennent d'être vidées. Sans ce retour à `false`, un changement de
-      // `glbSrc` les laisserait branchés sur une scène disparue, et leur effet ne serait jamais
-      // rejoué sur la nouvelle.
+      // `ready` must stay **faithful** to the presence of the runtime: hooks subscribing to the
+      // imperative scene (USD scenegraph, click selection, object camera) cannot guess that the refs
+      // have just been emptied. Without this switch back to `false`, a change of `glbSrc` would leave
+      // them wired to a vanished scene, and their effect would never be replayed on the new one.
       setReady(false);
       runtimeRef.current = null;
       threeRef.current = null;
@@ -311,7 +310,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     };
   }, [active, glbSrc, animInit, renderPip, captureFrame, mountMarker, project, gate]);
 
-  // Applique la transformation (orientation + échelle) au groupe parent, en live.
+  // Applies the transform (orientation + scale) to the parent group, live.
   useEffect(() => {
     const rt = runtimeRef.current;
     if (!rt || !ready) return;
@@ -341,11 +340,11 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     transform,
     updateTransform,
     saveTransform,
-    /** Transformation modifiée localement et pas encore enregistrée sur la version. */
+    /** Transform modified locally and not yet saved on the version. */
     tfDirty: tfEdit !== null,
     loadError,
     clearLoadError,
-    // Transport d'animation GLB (40.A) : animations, currentAnim, playing, timeMs, durationMs,
+    // Animation transport of the GLB (40.A): animations, currentAnim, playing, timeMs, durationMs,
     // speed, loop, play, pause, selectAnim, scrub, setSpeed, setLoop.
     ...animApi,
     hotspotAtPointer,
@@ -354,16 +353,16 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     setPoiActive,
     focusPoi,
     captureThumbnail,
-    /** PNG plein cadre de la vue courante (panneau Export) — `null` si la capture a échoué. */
+    /** Full-frame PNG of the current view (Export panel) — `null` if the capture failed. */
     captureView,
     captureCamera,
     restoreCamera,
     registerViewState,
     subscribeStats,
     subscribeFrame,
-    /** Dimensions brutes du modèle (unités du fichier) — `null` tant qu'il n'est pas chargé. */
+    /** Raw dimensions of the model (file units) — `null` until it is loaded. */
     modelSize,
-    /** Facteur de normalisation courant : 1 en taille réelle, sinon `TARGET_SIZE / maxDim`. */
+    /** Current normalization factor: 1 at real size, otherwise `TARGET_SIZE / maxDim`. */
     realScale,
     setRealScale,
     getDom,
@@ -380,7 +379,7 @@ export function useModel3DThree(data: MediaResp | null, glbSrc: string | null) {
     setLayoutMode: layout.setLayoutMode,
     layoutController: layout.layoutController,
     setPipRect: layout.setPipRect,
-    /** État complet du « dans / hors caméra » — consommé tel quel par la caméra-objet. */
+    /** Full state of the "in / out of camera" — consumed as is by the object camera. */
     layout,
   };
 }

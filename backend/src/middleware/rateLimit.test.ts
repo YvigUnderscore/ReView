@@ -8,12 +8,12 @@ import { signAccessToken, signRefreshToken, signTwoFaToken } from '../lib/jwt';
 import { Role } from '@prisma/client';
 
 /**
- * Le comptage lui-même vit dans Redis (script Lua de `rate-limit-redis`) : ces tests
- * substituent le compteur pour vérifier ce qui nous appartient — le choix de la clé, le
- * plafond, l'isolation entre limiteurs, et l'échec **fermé** quand le compteur est muet.
+ * The counting itself lives in Redis (Lua script of `rate-limit-redis`): these tests substitute the
+ * counter to verify what is ours: the choice of the key, the ceiling, isolation between limiters, and
+ * **fail-closed** behavior when the counter is silent.
  */
 
-/** Compteur en mémoire, une fenêtre unique : suffit pour éprouver la logique du middleware. */
+/** In-memory counter, a single window: enough to exercise the middleware's logic. */
 function memoryCounters() {
   const hits = new Map<string, number>();
   const opened: { name: string; windowMs: number }[] = [];
@@ -50,7 +50,7 @@ afterEach(() => {
   __rateLimitTesting.setCounterFactory(null);
 });
 
-/** Joue une requête à travers le middleware et rend ce qu'il en a fait. */
+/** Plays a request through the middleware and returns what it did with it. */
 async function call(
   mw: ReturnType<typeof rateLimit>,
   req: Partial<Request>,
@@ -74,8 +74,8 @@ async function call(
   return { passed: (next as unknown as ReturnType<typeof vi.fn>).mock.calls.length > 0, statusCode };
 }
 
-describe('rateLimit — plafond', () => {
-  it('laisse passer jusqu’à la limite puis répond 429', async () => {
+describe('rateLimit — ceiling', () => {
+  it('lets requests through up to the limit, then responds 429', async () => {
     const mw = rateLimit({ name: 't1', max: 3, windowMs: 60_000 });
     for (let i = 0; i < 3; i++) expect((await call(mw, { ip: '1.2.3.4' })).passed).toBe(true);
     const blocked = await call(mw, { ip: '1.2.3.4' });
@@ -83,14 +83,14 @@ describe('rateLimit — plafond', () => {
     expect(blocked.statusCode).toBe(429);
   });
 
-  it('compte séparément deux clients', async () => {
+  it('counts two clients separately', async () => {
     const mw = rateLimit({ name: 't2', max: 1, windowMs: 60_000 });
     expect((await call(mw, { ip: '1.1.1.1' })).passed).toBe(true);
     expect((await call(mw, { ip: '2.2.2.2' })).passed).toBe(true);
     expect((await call(mw, { ip: '1.1.1.1' })).passed).toBe(false);
   });
 
-  it('accepte un plafond calculé par requête', async () => {
+  it('accepts a ceiling computed per request', async () => {
     const mw = rateLimit({
       name: 't3',
       windowMs: 60_000,
@@ -103,9 +103,9 @@ describe('rateLimit — plafond', () => {
     expect((await call(mw, { ip: 'autre' })).passed).toBe(false);
   });
 
-  // Certains limiteurs (déverrouillage d'un partage) s'exécutent AVANT la validation Zod :
-  // la clé incorpore alors une valeur de requête arbitraire et de longueur libre.
-  it('borne la longueur de la clé', async () => {
+  // Some limiters (unlocking a share) run BEFORE Zod validation: the key then incorporates an arbitrary
+  // request value of free length.
+  it('caps the length of the key', async () => {
     const mw = rateLimit({
       name: 't4',
       max: 1,
@@ -114,16 +114,16 @@ describe('rateLimit — plafond', () => {
     });
     const long = 'a'.repeat(50_000);
     expect((await call(mw, { params: { token: long } } as Partial<Request>)).passed).toBe(true);
-    // Même préfixe → même compteur : la clé a bien été tronquée, pas laissée entière.
+    // Same prefix, same counter: the key was indeed truncated, not left whole.
     expect((await call(mw, { params: { token: long + 'DIFFERENT' } } as Partial<Request>)).passed).toBe(
       false,
     );
   });
 
-  // Le compteur d'un client ne doit jamais être rendu par l'activité d'un autre : la clé de
-  // ce limiteur incorpore une donnée de requête, un même client peut donc en forger autant
-  // qu'il veut. Chaque clé est indépendante dans Redis et s'efface à l'échéance de SA fenêtre.
-  it('ne rend pas ses tentatives à un client qui forge des milliers de clés', async () => {
+  // A client's counter must never be affected by another's activity: this limiter's key incorporates a
+  // request datum, so the same client can forge as many as it likes. Each key is independent in Redis
+  // and expires at the end of ITS window.
+  it('does not give attempts back to a client forging thousands of keys', async () => {
     const mw = rateLimit({
       name: 't5',
       max: 1,
@@ -138,17 +138,17 @@ describe('rateLimit — plafond', () => {
   });
 });
 
-describe('rateLimit — isolation et panne', () => {
-  it('deux limiteurs distincts ne partagent pas leur compteur', async () => {
+describe('rateLimit — isolation and failure', () => {
+  it('two distinct limiters do not share their counter', async () => {
     const global = rateLimit({ name: 'global', max: 2, windowMs: 60_000 });
     const share = rateLimit({ name: 'share', max: 1, windowMs: 60_000 });
     expect((await call(share, { ip: '9.9.9.9' })).passed).toBe(true);
     expect((await call(share, { ip: '9.9.9.9' })).passed).toBe(false);
-    // Le limiteur global n'a rien consommé pour cette IP.
+    // The global limiter consumed nothing for this IP.
     expect((await call(global, { ip: '9.9.9.9' })).passed).toBe(true);
   });
 
-  it('sans nom explicite, l’empreinte sépare des limiteurs aux options différentes', () => {
+  it('without an explicit name, the fingerprint separates limiters with different options', () => {
     const a = __rateLimitTesting.fingerprint({ windowMs: 900_000, max: 10 });
     const b = __rateLimitTesting.fingerprint({ windowMs: 900_000, max: 5000 });
     const c = __rateLimitTesting.fingerprint({ windowMs: 900_000, max: 10 });
@@ -156,7 +156,7 @@ describe('rateLimit — isolation et panne', () => {
     expect(a).toBe(c);
   });
 
-  it('échec fermé : compteur muet ⇒ 429, jamais un passage silencieux', async () => {
+  it('fail closed: silent counter ⇒ 429, never a silent pass', async () => {
     const mw = rateLimit({ name: 't6', max: 100, windowMs: 60_000 });
     expect((await call(mw, { ip: '1.2.3.4' })).passed).toBe(true);
     counters.break();
@@ -165,9 +165,9 @@ describe('rateLimit — isolation et panne', () => {
     expect(blocked.statusCode).toBe(429);
   });
 
-  // Sous NODE_ENV=test le stockage est un compteur de process : la suite ne doit ni exiger
-  // un Redis vivant, ni hériter des compteurs de l'exécution précédente.
-  it('le compteur par défaut compte, puis rouvre sa fenêtre à l’échéance', async () => {
+  // Under NODE_ENV=test the storage is a process counter: the suite must neither require a live Redis
+  // nor inherit the counters of the previous run.
+  it('the default counter counts, then reopens its window at expiry', async () => {
     __rateLimitTesting.setCounterFactory(null);
     vi.useFakeTimers({ toFake: ['Date'] });
     try {
@@ -181,7 +181,7 @@ describe('rateLimit — isolation et panne', () => {
     }
   });
 
-  it('ouvre un compteur par limiteur, avec son nom et sa fenêtre', async () => {
+  it('opens one counter per limiter, with its name and window', async () => {
     await call(rateLimit({ name: 'alpha', windowMs: 1_000 }), { ip: 'a' });
     await call(rateLimit({ name: 'beta', windowMs: 2_000 }), { ip: 'a' });
     expect(counters.opened).toEqual([
@@ -194,42 +194,42 @@ describe('rateLimit — isolation et panne', () => {
 describe('identityRateKey', () => {
   const bearer = (token: string) => ({ headers: { authorization: `Bearer ${token}` }, ip: '5.5.5.5' });
 
-  it('indexe sur le compte quand le jeton d’accès est valide', () => {
+  it('indexes on the account when the access token is valid', () => {
     const token = signAccessToken({ id: 42, email: 'a@b.c', role: Role.ARTIST, sid: 'sid-test' });
     expect(identityRateKey(bearer(token) as unknown as Request)).toBe('u:42');
   });
 
-  it('retombe sur l’IP sans jeton, ou avec un jeton illisible', () => {
+  it('falls back to the IP without a token, or with an unreadable token', () => {
     expect(identityRateKey({ headers: {}, ip: '5.5.5.5' } as unknown as Request)).toBe('ip:5.5.5.5');
     expect(identityRateKey(bearer('nimportequoi') as unknown as Request)).toBe('ip:5.5.5.5');
   });
 
-  // Un jeton de rafraîchissement ou de 2FA n'authentifie pas une requête : lui accorder un
-  // compteur propre offrirait une deuxième réserve de quota à qui possède déjà un compte.
-  it('n’accepte que le jeton d’accès, pas les autres types signés du même secret', () => {
+  // A refresh or 2FA token does not authenticate a request: giving it its own counter would offer a
+  // second quota reserve to whoever already owns an account.
+  it('accepts only the access token, not the other types signed with the same secret', () => {
     const refresh = signRefreshToken({ id: 7, email: 'a@b.c', role: Role.ARTIST, sid: 'sid-test' });
     const twofa = signTwoFaToken(7);
     expect(identityRateKey(bearer(refresh) as unknown as Request)).toBe('ip:5.5.5.5');
     expect(identityRateKey(bearer(twofa) as unknown as Request)).toBe('ip:5.5.5.5');
   });
 
-  it('mémoïse la clé sur la requête : une seule vérification de signature', () => {
+  it('memoizes the key on the request: a single signature check', () => {
     const token = signAccessToken({ id: 8, email: 'a@b.c', role: Role.ARTIST, sid: 'sid-test' });
     const req = bearer(token) as unknown as Request;
     expect(identityRateKey(req)).toBe('u:8');
-    // La signature est effacée : sans mémoïsation, la clé retomberait sur l'IP.
+    // The signature is erased: without memoization the key would fall back to the IP.
     (req.headers as Record<string, string>)['authorization'] = 'Bearer casse';
     expect(identityRateKey(req)).toBe('u:8');
   });
 
-  it('identityMax distingue le plafond du compte de celui de la sortie NAT', () => {
+  it('identityMax distinguishes the account ceiling from the NAT exit ceiling', () => {
     const max = identityMax(6_000, 5_000);
     const token = signAccessToken({ id: 3, email: 'a@b.c', role: Role.ARTIST, sid: 'sid-test' });
     expect(max(bearer(token) as unknown as Request)).toBe(6_000);
     expect(max({ headers: {}, ip: '5.5.5.5' } as unknown as Request)).toBe(5_000);
   });
 
-  it('deux comptes derrière la même IP ne partagent plus de compteur', async () => {
+  it('two accounts behind the same IP no longer share a counter', async () => {
     const mw = rateLimit({ name: 'nat', max: 1, windowMs: 60_000, keyGenerator: identityRateKey });
     const un = signAccessToken({ id: 1, email: 'a@b.c', role: Role.ARTIST, sid: 'sid-test' });
     const deux = signAccessToken({ id: 2, email: 'd@b.c', role: Role.ARTIST, sid: 'sid-test' });

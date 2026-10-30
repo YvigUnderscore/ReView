@@ -2,20 +2,20 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Harnais ShotGrid de bout en bout — démarrage, scénario, arrêt.
+ * End-to-end ShotGrid harness — start-up, scenario, shutdown.
  *
- * `fake-shotgrid.mjs` (simulateur de site) et `test-shotgrid-e2e.mjs` (scénario) étaient
- * écrits mais n'avaient jamais tourné autrement qu'à la main : aucune commande, aucune
- * étape de validation ne les appelait. Or c'est le seul dispositif qui vérifie l'invariant
- * le plus coûteux de l'intégration — ne jamais déborder sur le projet voisin, puisque
- * « écrire dans le mauvais projet ne se rattrape pas ».
+ * `fake-shotgrid.mjs` (site simulator) and `test-shotgrid-e2e.mjs` (scenario) were
+ * written but had never run other than by hand: no command, no
+ * validation step called them. Yet this is the only mechanism that verifies the most costly
+ * invariant of the integration — never spilling over into the neighbouring project, since
+ * "writing into the wrong project cannot be undone".
  *
- * Ce lanceur allume le simulateur, attend qu'il réponde, joue le scénario, puis l'éteint
- * quoi qu'il arrive. Il rend le code de sortie du scénario.
+ * This launcher switches on the simulator, waits for it to respond, plays the scenario, then switches it off
+ * whatever happens. It returns the exit code of the scenario.
  *
- * **Il écrit dans la base servie par le backend en cours d'exécution** (le scénario parle à
- * l'API HTTP, pas à une app montée en mémoire) : il vise donc la stack docker de
- * développement, et laisse derrière lui le projet de test qu'il a créé.
+ * **It writes into the database served by the running backend** (the scenario talks to
+ * the HTTP API, not to an in-memory app): it therefore targets the docker stack of
+ * development, and leaves behind the test project it created.
  *
  * Usage :
  *   node scripts/run-shotgrid-e2e.mjs
@@ -32,13 +32,13 @@ const PORT = Number.parseInt(process.env.FAKE_SG_PORT ?? '8890', 10);
 const CONTROL = process.env.FAKE_SG_CONTROL ?? `http://localhost:${PORT}`;
 const API = process.env.REVIEW_API ?? 'http://localhost:3430';
 
-/** Délai d'attente du simulateur : il n'ouvre qu'un port, une seconde suffit largement. */
+/** Simulator timeout: it only opens one port, a second is more than enough. */
 const READY_TIMEOUT_MS = 15_000;
 const POLL_MS = 250;
 
 const say = (message) => console.log(message);
 
-/** Le simulateur répond-il ? Sert au démarrage comme à la détection d'une instance déjà là. */
+/** Does the simulator respond? Used at start-up as well as to detect an instance already running. */
 async function simulatorAnswers() {
   try {
     const res = await fetch(`${CONTROL}/_control/state`, { signal: AbortSignal.timeout(1_000) });
@@ -97,7 +97,7 @@ async function main() {
     process.exit(1);
   }
 
-  // Un simulateur déjà lancé (mise au point en cours) est réutilisé, et surtout pas tué.
+  // A simulator already running (work in progress) is reused, and certainly not killed.
   const borrowed = await simulatorAnswers();
   let simulator = null;
   if (borrowed) {

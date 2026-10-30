@@ -9,13 +9,13 @@ import { usePreferences, useUpdatePreferences } from '../lib/usePreferences';
 import { useT, type MessageKey } from '../i18n';
 
 /**
- * Tour d'onboarding (42.B — №69) : présenté une fois au premier accès (préférence compte
- * `onboardingSeen`). Multi-étapes, ignorable ; réouvrable plus tard depuis « Nouveautés » n'est
- * pas nécessaire — le tour reste léger (pas de spotlight DOM fragile, règle UI simple).
+ * Onboarding tour (42.B, №69): presented once, on first access (account preference
+ * `onboardingSeen`). Multi-step, skippable; reopening it later from "What's new" is
+ * not necessary: the tour stays light (no fragile DOM spotlight, simple UI rule).
  */
 interface Step {
   icon: ReactNode;
-  /** Racine des clés de l'étape : `<id>.title` et `<id>.body`. */
+  /** Root of the step keys: `<id>.title` and `<id>.body`. */
   id: 'welcome' | 'keyboard' | 'review' | 'personalise' | 'help';
 }
 
@@ -34,7 +34,7 @@ export default function OnboardingTour() {
   const [step, setStep] = useState(0);
   const [dismissed, setDismissed] = useState(false);
 
-  // Attendre le chargement des préférences ; ne rien montrer si déjà vu.
+  // Wait for the preferences to load; show nothing if already seen.
   const open = !dismissed && prefsQ.data !== undefined && prefsQ.data.onboardingSeen !== true;
 
   const finish = () => {

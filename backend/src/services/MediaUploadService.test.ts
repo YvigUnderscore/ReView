@@ -13,7 +13,7 @@ vi.mock('../lib/prisma', () => ({
     },
   },
 }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: {
     abortMultipartUpload: vi.fn().mockResolvedValue(undefined),
     deleteObject: vi.fn().mockResolvedValue(undefined),
@@ -33,7 +33,7 @@ vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
 import { abortUpload, initMultipart, partSizeFor, MULTIPART_PART_SIZE } from './MediaUploadService';
 import { createUpload } from './MediaService';
 import { prisma } from '../lib/prisma';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 import { Role } from '@prisma/client';
 
 const findFirst = vi.mocked(prisma.mediaObject.findFirst);
@@ -50,34 +50,34 @@ beforeEach(() => {
 const GB = 1024 * 1024 * 1024;
 const MB = 1024 * 1024;
 
-describe('partSizeFor — découpe multipart', () => {
-  it('garde la part de 16 Mo tant que le fichier tient en mille parts', () => {
+describe('partSizeFor: multipart splitting', () => {
+  it('keeps the 16 MB part as long as the file fits within a thousand parts', () => {
     expect(partSizeFor(20 * MB)).toBe(MULTIPART_PART_SIZE);
     expect(partSizeFor(8 * GB)).toBe(MULTIPART_PART_SIZE);
-    // Exactement mille parts (15,6 Go) : la limite est incluse.
+    // Exactly a thousand parts (15.6 GB): the limit is inclusive.
     expect(partSizeFor(MULTIPART_PART_SIZE * 1000)).toBe(MULTIPART_PART_SIZE);
   });
 
-  it('agrandit la part au-delà, pour que le master de 20 Go reste sous mille parts', () => {
+  it('enlarges the part beyond that, so that the 20 GB master stays under a thousand parts', () => {
     const size = 20 * GB;
     const part = partSizeFor(size);
     expect(part).toBeGreaterThan(MULTIPART_PART_SIZE);
-    expect(part % MB).toBe(0); // multiple du Mo : lisible et aligné
+    expect(part % MB).toBe(0); // a multiple of MB: readable and aligned
     expect(Math.ceil(size / part)).toBeLessThanOrEqual(1000);
   });
 
-  it('reste déterministe : une reprise retrouve la même découpe', () => {
+  it('remains deterministic: a resumption finds the same split', () => {
     expect(partSizeFor(37 * GB)).toBe(partSizeFor(37 * GB));
   });
 
-  it('ne descend jamais sous le minimum S3 de 5 Mo', () => {
+  it('never goes below the S3 minimum of 5 MB', () => {
     expect(partSizeFor(1)).toBeGreaterThanOrEqual(5 * MB);
     expect(partSizeFor(200 * GB)).toBeGreaterThanOrEqual(5 * MB);
   });
 });
 
-describe('abortUpload — annulation réelle côté serveur', () => {
-  it('abandonne le multipart (les parts déposées cessent d’être facturées) et supprime la ligne', async () => {
+describe('abortUpload: real cancellation on the server side', () => {
+  it('abandons the multipart (the deposited parts cease to be billed) and deletes the row', async () => {
     findFirst.mockResolvedValue({
       id: 12,
       storageKey: 'media/12/source.mov',
@@ -90,7 +90,7 @@ describe('abortUpload — annulation réelle côté serveur', () => {
     expect(remove).toHaveBeenCalledWith({ where: { id: 12 } });
   });
 
-  it('supprime l’objet tronqué quand l’upload était un PUT simple (pas de multipart)', async () => {
+  it('deletes the truncated object when the upload was a simple PUT (no multipart)', async () => {
     findFirst.mockResolvedValue({ id: 13, storageKey: 'media/13/source.png', metadata: {} } as never);
 
     await expect(abortUpload(user, 13)).resolves.toEqual({ aborted: true });
@@ -99,7 +99,7 @@ describe('abortUpload — annulation réelle côté serveur', () => {
     expect(remove).toHaveBeenCalledWith({ where: { id: 13 } });
   });
 
-  it('supprime la ligne même si le stockage refuse l’abandon (upload déjà expiré)', async () => {
+  it('deletes the row even if the storage refuses the abort (upload already expired)', async () => {
     findFirst.mockResolvedValue({
       id: 14,
       storageKey: 'media/14/source.mov',
@@ -111,7 +111,7 @@ describe('abortUpload — annulation réelle côté serveur', () => {
     expect(remove).toHaveBeenCalledWith({ where: { id: 14 } });
   });
 
-  it('vide le préfixe d’une séquence abandonnée : 80 Go de frames ne restent pas facturés', async () => {
+  it('empties the prefix of an abandoned sequence: 80 GB of frames do not remain billed', async () => {
     findFirst.mockResolvedValue({
       id: 15,
       storageKey: 'projects/demo/shots/sh0100/v01/15/sequence.json',
@@ -126,7 +126,7 @@ describe('abortUpload — annulation réelle côté serveur', () => {
     expect(remove).toHaveBeenCalledWith({ where: { id: 15 } });
   });
 
-  it('refuse d’annuler l’upload d’un autre compte (la requête filtre déjà uploaderId)', async () => {
+  it('refuses to cancel the upload of another account (the request already filters on uploaderId)', async () => {
     findFirst.mockResolvedValue(null);
     await expect(abortUpload(user, 99)).rejects.toThrow('Upload not found');
     expect(remove).not.toHaveBeenCalled();
@@ -134,26 +134,26 @@ describe('abortUpload — annulation réelle côté serveur', () => {
 });
 
 /**
- * INFRA-04, second trou. `listUploadedParts` échoue aussi sur un incident passager de MinIO,
- * alors que le multipart, lui, est bien vivant. La ligne partie, son `uploadId` n'est plus
- * nulle part : les parts déjà déposées deviennent de l'espace invisible et définitif.
+ * INFRA-04, second hole. `listUploadedParts` also fails on a passing MinIO incident, while the multipart is
+ * indeed still alive. The row gone, its `uploadId` is no longer anywhere: the parts already deposited become
+ * invisible and permanent space.
  */
-describe('initMultipart — reprise impossible', () => {
-  it('abandonne le multipart avant de jeter la ligne dont dépendait son identifiant', async () => {
+describe('initMultipart: resumption impossible', () => {
+  it('abandons the multipart before throwing away the row its identifier depended on', async () => {
     findFirst.mockResolvedValueOnce({
       id: 31,
       storageKey: 'projects/demo/shots/sh0300/v02/31/master.mov',
       metadata: { multipartUploadId: 'up-orphan', multipartPartSize: MULTIPART_PART_SIZE },
     } as never);
     vi.mocked(storage.listUploadedParts).mockRejectedValueOnce(new Error('MinIO timeout'));
-    // Pas de jumeau à dédupliquer : on retombe sur la création d'un envoi neuf.
+    // No twin to deduplicate: we fall back on the creation of a new upload.
     findFirst.mockResolvedValueOnce(null);
     vi.mocked(createUpload).mockResolvedValue({
       mediaObjectId: 32,
       storageKey: 'projects/demo/shots/sh0300/v02/32/master.mov',
       uploadUrl: 'https://minio.invalid/put',
       namingWarning: false,
-      // Publication d'office (Phase 50) : `createUpload` rend désormais l'état de naissance.
+      // Automatic publication (Phase 50): `createUpload` now returns the state at birth.
       published: true,
     });
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue({ metadata: {} } as never);

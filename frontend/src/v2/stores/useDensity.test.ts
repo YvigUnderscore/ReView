@@ -6,22 +6,22 @@ import { useDensity } from './useDensity';
 
 const attr = () => document.documentElement.getAttribute('data-density');
 
-describe("useDensity — densité d'affichage (42.A1)", () => {
+describe('useDensity — display density (42.A1)', () => {
   afterEach(() => useDensity.getState().setDensity('comfortable'));
 
   it('applique data-density sur <html>', () => {
-    // L'attribut est posé dès l'import (valeur initiale confortable par défaut).
+    // The attribute is set as soon as the module is imported (initial value: comfortable by default).
     expect(attr()).toBe('comfortable');
   });
 
-  it('passe en compact : attribut + persistance + état', () => {
+  it('switches to compact: attribute + persistence + state', () => {
     useDensity.getState().setDensity('compact');
     expect(useDensity.getState().density).toBe('compact');
     expect(attr()).toBe('compact');
     expect(localStorage.getItem('review:density')).toBe('compact');
   });
 
-  it('revient en confortable', () => {
+  it('goes back to comfortable', () => {
     useDensity.getState().setDensity('compact');
     useDensity.getState().setDensity('comfortable');
     expect(useDensity.getState().density).toBe('comfortable');

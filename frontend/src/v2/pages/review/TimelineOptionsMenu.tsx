@@ -13,7 +13,7 @@ import {
 } from '../../components/ui/context-menu';
 import { useT } from '../../i18n';
 
-/** Bascule d'affichage proposée au clic droit (forme d'onde, enchaînement). */
+/** Display toggle offered on right-click (waveform, chaining). */
 export interface TimelineToggle {
   available: boolean;
   enabled: boolean;
@@ -21,12 +21,12 @@ export interface TimelineToggle {
 }
 
 /**
- * Menu clic droit de la barre de transport — la porte d'entrée des réglages du lecteur.
+ * Right-click menu of the transport bar — the entry point to the player settings.
  *
- * La règle « UI simple » du projet vaut aussi pour la playbar : la forme d'onde et
- * l'enchaînement automatique se règlent ici, pas dans deux boutons de plus au-dessus de
- * la timeline. Sans aucune entrée disponible, la barre est rendue nue — un menu vide au
- * clic droit vaut moins que le menu du viewer, qui reprend alors la main.
+ * The project's "simple UI" rule also applies to the playbar: the waveform and automatic
+ * chaining are set here, not in two more buttons above the timeline. With no entry available,
+ * the bar is rendered bare — an empty menu on right-click is worth less than the viewer's
+ * menu, which then takes over.
  */
 export default function TimelineOptionsMenu({
   children,
@@ -38,9 +38,9 @@ export default function TimelineOptionsMenu({
   children: ReactNode;
   canAddMarker: boolean;
   onAddMarker: () => void;
-  /** Forme d'onde audio du média — absente quand il n'a pas de son. */
+  /** Audio waveform of the media — absent when it has no sound. */
   waveform?: TimelineToggle;
-  /** Enchaînement de la playlist — absent hors contexte de playlist. */
+  /** Playlist chaining — absent outside a playlist context. */
   autoAdvance?: TimelineToggle;
 }) {
   const t = useT();

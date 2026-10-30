@@ -5,7 +5,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import type { ReactNode } from 'react';
-import { mockApi } from '../../../test/apiMock';
+import { mockApi } from '@/test/apiMock';
 import { splitAnnotationParts, type MediaResp } from './reviewTypes';
 import type { SplatPaintState } from './splat/paint/useSplatPaint';
 import { useAnnotations } from './useAnnotations';
@@ -15,14 +15,13 @@ import { animPlayDuration } from './camera/channels/model';
 import { sampleAnimV2 } from './camera/channels/hermite';
 
 /**
- * L'animation caméra jointe à un commentaire doit ARRIVER au serveur et se REJOUER à
- * l'identique à la relecture.
+ * The camera animation attached to a comment must ARRIVE at the server and REPLAY identically on
+ * read-back.
  *
- * Ce que ces tests verrouillent : la part `camera-anim` part **entière**. Elle était
- * recopiée champ par champ à l'envoi (`version`, `loop`, `channels`), ce qui laissait
- * `durationMs` — la durée de lecture réglable, Phase 27 — sur le quai : l'animation arrivait,
- * mais bouclait sur le dernier temps de clé au lieu de la durée voulue. Un rejeu qui n'est pas
- * à l'identique est une présentation perdue, pas un détail d'affichage.
+ * What these tests lock down: the `camera-anim` part is sent **in full**. It used to be copied field by
+ * field on send (`version`, `loop`, `channels`), which left `durationMs` — the adjustable playback
+ * duration, Phase 27 — on the dock: the animation arrived, but looped on its last key time instead of
+ * the wanted duration. A replay that is not identical is a lost presentation, not a display detail.
  */
 
 const media = { media: { id: 7, kind: 'MODEL_3D' } } as unknown as MediaResp;
@@ -34,7 +33,7 @@ const paint = {
 
 const key = (t: number, v: number) => ({ t, v, mode: 'auto' as const });
 
-/** Un travelling simple : la position s'éloigne, la cible reste, et la boucle dure 4 s. */
+/** A simple dolly shot: the position moves away, the target stays, and the loop lasts 4 s. */
 const anim = (): CameraAnimV2 => ({
   version: 2,
   loop: true,
@@ -77,8 +76,8 @@ function harness() {
 let current: ReturnType<typeof harness> | null = null;
 afterEach(() => current?.api.restore());
 
-describe('useSubmitComment — animation caméra jointe au commentaire', () => {
-  it('envoie la part camera-anim entière, durée de lecture comprise', async () => {
+describe('useSubmitComment — camera animation attached to the comment', () => {
+  it('sends the camera-anim part in full, playback duration included', async () => {
     current = harness();
     const { hook, body } = current;
     act(() => hook.result.current.ann.setCameraAnim(anim()));
@@ -91,12 +90,12 @@ describe('useSubmitComment — animation caméra jointe au commentaire', () => {
     expect(part).toBeDefined();
     expect(part?.version).toBe(2);
     expect(part?.loop).toBe(true);
-    // La durée de lecture réglable fait partie de l'animation : sans elle, le rejeu boucle ailleurs.
+    // The adjustable playback duration is part of the animation: without it, the replay loops elsewhere.
     expect(part?.durationMs).toBe(4_000);
     expect(Object.keys(part?.channels as object).sort()).toEqual(['px', 'py', 'pz', 'tx', 'ty', 'tz']);
   });
 
-  it('se relit et se rejoue à l’identique depuis l’annotation reçue', async () => {
+  it('reads back and replays identically from the received annotation', async () => {
     current = harness();
     const { hook, body } = current;
     const source = anim();
@@ -105,7 +104,7 @@ describe('useSubmitComment — animation caméra jointe au commentaire', () => {
       await hook.result.current.submit('check PIP animation', []);
     });
 
-    // Relecture par le chemin réel du fil de commentaires.
+    // Read-back through the real path of the comment thread.
     const read = splitAnnotationParts(body().annotation).cameraAnim;
     expect(read).not.toBeNull();
     expect(animPlayDuration(read as CameraAnimV2)).toBe(animPlayDuration(source));
@@ -115,21 +114,21 @@ describe('useSubmitComment — animation caméra jointe au commentaire', () => {
     }
   });
 
-  it('n’envoie plus rien quand on l’a détachée', async () => {
-    // Le bouton du transport est une bascule : détacher doit vraiment vider la part, sinon
-    // l'utilisateur croirait avoir retiré ce qui part quand même.
+  it('no longer sends anything once it has been detached', async () => {
+    // The transport button is a toggle: detaching must really empty the part, otherwise the user
+    // would believe they removed what is still sent.
     current = harness();
     const { hook, body } = current;
     act(() => hook.result.current.ann.setCameraAnim(anim()));
     act(() => hook.result.current.ann.setCameraAnim(null));
     await act(async () => {
-      await hook.result.current.submit('sans animation', []);
+      await hook.result.current.submit('no animation', []);
     });
     const parts = (body().annotation ?? []) as Array<Record<string, unknown>>;
     expect(parts.some((p) => p.type === 'camera-anim')).toBe(false);
   });
 
-  it('oublie l’animation une fois le commentaire parti', async () => {
+  it('forgets the animation once the comment has left', async () => {
     current = harness();
     const { hook } = current;
     act(() => hook.result.current.ann.setCameraAnim(anim()));

@@ -5,8 +5,8 @@ import type { TaskStatus } from '../types/api';
 import type { MessageKey } from '../i18n';
 
 /**
- * Statuts de tâche — source unique des clés de libellé et des couleurs.
- * Ne jamais redéclarer ces mappings dans une page : importer d'ici.
+ * Task statuses — single source of the label keys and colours.
+ * Never redeclare these mappings in a page: import them from here.
  */
 export const TASK_STATUSES = [
   'TODO',
@@ -35,7 +35,7 @@ export const TASK_STATUS_COLOR: Record<string, string> = {
   RETAKE: 'bg-accent2/15 text-accent2',
 };
 
-// Couleurs pleines pour les jauges/barres de progression (mêmes teintes que les badges).
+// Solid colours for the gauges and progress bars (same tints as the badges).
 export const TASK_STATUS_BAR: Record<string, string> = {
   TODO: 'bg-muted-foreground/40',
   IN_PROGRESS: 'bg-info',
@@ -45,7 +45,7 @@ export const TASK_STATUS_BAR: Record<string, string> = {
   RETAKE: 'bg-accent2',
 };
 
-// Priorité décroissante : ce qui demande une action remonte en haut des listes.
+// Decreasing priority: whatever needs action rises to the top of the lists.
 export const TASK_STATUS_PRIORITY: Record<string, number> = {
   RETAKE: 0,
   REJECTED: 1,

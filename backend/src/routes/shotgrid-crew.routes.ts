@@ -3,20 +3,20 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { assertProjectManager, canCreateStudioAccounts } from '../lib/shotgridAccess';
 import { isMailerConfigured } from '../lib/mailer';
 import * as Crew from '../services/shotgrid/ShotgridCrewService';
 
 /**
- * L'équipe du projet ShotGrid, et son entrée dans ReView.
+ * The ShotGrid project's crew, and its entry into ReView.
  *
- * Ce routeur est monté sous `/api/shotgrid` — un segment qui lui est propre — et peut donc
- * poser l'authentification une fois pour toutes.
+ * This router is mounted under `/api/shotgrid`, a segment of its own, and can therefore set
+ * authentication once and for all.
  *
- * La liste expose des adresses et l'absence de compte : elle est réservée aux gestionnaires
- * du projet, sans `allowMembers`.
+ * The list exposes addresses and the absence of an account: it is reserved to the project's managers,
+ * without `allowMembers`.
  */
 const router = Router();
 router.use(authenticate);
@@ -25,13 +25,13 @@ const projectParam = z.object({ projectId: z.coerce.number().int().positive() })
 
 router.get('/projects/:projectId/crew', validate({ params: projectParam }), async (req, res) => {
   const projectId = Number(req.params.projectId);
-  await assertProjectManager(req.user!, projectId);
+  await assertProjectManager(requireUser(req), projectId);
   const crew = await Crew.listCrew(projectId);
   res.json({
     crew,
-    // L'écran a besoin des deux pour dire ce qui est possible AVANT de proposer le geste :
-    // sans relais courriel, aucune invitation ne partira.
-    canCreateAccounts: canCreateStudioAccounts(req.user!),
+    // The screen needs both to say what is possible BEFORE offering the gesture: without an email relay,
+    // no invitation would be sent.
+    canCreateAccounts: canCreateStudioAccounts(requireUser(req)),
     smtpReady: await isMailerConfigured(),
   });
 });
@@ -40,26 +40,25 @@ router.post(
   '/projects/:projectId/crew/invite',
   validate({
     params: projectParam,
-    // Plafond volontaire : au-delà, c'est un import massif qui mérite d'être fait en
-    // plusieurs fois, et chaque création envoie un courriel.
+    // Deliberate ceiling: beyond it, this is a mass import that deserves to be done in several runs,
+    // since each creation sends an email.
     body: z.object({ sgIds: z.array(z.number().int().positive()).min(1).max(50) }),
   }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId);
-    const results = await Crew.inviteCrew(req.user!, projectId, req.body.sgIds, {
-      canCreateAccounts: canCreateStudioAccounts(req.user!),
+    await assertProjectManager(requireUser(req), projectId);
+    const results = await Crew.inviteCrew(requireUser(req), projectId, req.body.sgIds, {
+      canCreateAccounts: canCreateStudioAccounts(requireUser(req)),
     });
     res.json({ results });
   },
 );
 
 /**
- * Relier à la main un compte du site à un compte ReView.
+ * Manually links a site account to a ReView account.
  *
- * La correspondance automatique passe par l'adresse, ce qui couvre le cas courant mais
- * laisse de côté les personnes dont l'adresse diffère d'un outil à l'autre. `userId: null`
- * défait le lien.
+ * Automatic matching goes through the address, which covers the usual case but leaves aside the people
+ * whose address differs from one tool to another. `userId: null` undoes the link.
  */
 router.put(
   '/projects/:projectId/crew/:sgId/link',
@@ -69,7 +68,7 @@ router.put(
   }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId);
+    await assertProjectManager(requireUser(req), projectId);
     await Crew.linkCrewMember(projectId, Number(req.params.sgId), req.body.userId);
     res.status(204).end();
   },

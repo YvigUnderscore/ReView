@@ -4,12 +4,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * Cloisonnement de la recherche globale : ce que chaque rôle a le droit de trouver.
+ * Scope of the global search: what each role is allowed to find.
  *
- * C'est le seul point du produit où quinze tables sont interrogées d'un coup, sans qu'aucune
- * route ne repasse derrière : un filtre manquant sur UN type suffit à publier le pipe entier
- * à un intervenant extérieur. Chaque type est donc vérifié séparément, sur la clause `where`
- * réellement transmise à Prisma — pas sur le résultat, qu'un mock rendrait toujours vide.
+ * It is the only point of the product where fifteen tables are queried at once, with no route going back over the results: a missing filter on ONE
+ * type is enough to publish the whole pipe to an external contributor. Each type is therefore checked separately, on the `where` clause actually
+ * passed to Prisma — not on the result, which a mock would always return empty.
  */
 
 vi.mock('./prisma', () => {
@@ -34,9 +33,8 @@ vi.mock('./prisma', () => {
     },
   };
 });
-// Mock partiel : seule la requête plein texte est simulée. Le découpage en tokens et le
-// fenêtrage d'extrait servent aussi aux fiches d'entité (`searchExtras`) — les remplacer par
-// des mocks ferait passer un test sur un extrait que personne ne produit.
+// Partial mock: only the full-text query is simulated. The tokenisation and snippet windowing also serve the entity sheets (`searchExtras`) — replacing
+// them with mocks would make a test pass on a snippet nobody produces.
 vi.mock('./searchComments', async (importOriginal) => ({
   ...(await importOriginal<typeof import('./searchComments')>()),
   searchComments: vi.fn().mockResolvedValue([]),
@@ -50,24 +48,22 @@ import { prisma } from './prisma';
 const ARTIST_ID = 7;
 const MEMBER_SCOPE = { deletedAt: null, memberships: { some: { userId: ARTIST_ID } } };
 
-/** Arguments du premier appel simulé — les types génériques de Prisma n'aident pas ici. */
+/** Arguments of the first simulated call — Prisma's generic types are of no help here. */
 function argsOf<T = Record<string, unknown>>(fn: unknown): T {
   return (fn as { mock: { calls: unknown[][] } }).mock.calls[0]![0] as T;
 }
 const whereOf = (fn: unknown): Record<string, unknown> =>
   argsOf<{ where: Record<string, unknown> }>(fn).where;
 
-/** Tous les appels simulés, dans l'ordre — quand une table est interrogée plus d'une fois. */
+/** All simulated calls, in order — when a table is queried more than once. */
 function callsOf<T = Record<string, unknown>>(fn: unknown): T[] {
   return (fn as { mock: { calls: unknown[][] } }).mock.calls.map((call) => call[0] as T);
 }
 
 /**
- * `Department` est désormais interrogée DEUX fois, pour deux raisons étrangères l'une à
- * l'autre : `search.ts` y résout les libellés en identifiants avant de chercher les tâches
- * (à tout rôle, sans rien rendre), et `searchExtras` y cherche le référentiel à proposer —
- * cela, aux seuls rôles qui peuvent l'ouvrir. Seule la seconde porte un `OR` de portée
- * (studio ou projet) : c'est ce qui les distingue, et c'est celle que ces tests visent.
+ * `Department` is now queried TWICE, for two unrelated reasons: `search.ts` resolves the labels to identifiers there before searching the tasks
+ * (for every role, returning nothing), and `searchExtras` searches the reference there to offer — to the roles that can open it only. Only the
+ * second carries a scope `OR` (studio or project): that is what distinguishes them, and it is the one these tests target.
  */
 const departmentReferentialCalls = (): { where: Record<string, unknown>; take?: number }[] =>
   callsOf<{ where: Record<string, unknown>; take?: number }>(prisma.department.findMany).filter(
@@ -83,23 +79,23 @@ beforeEach(() => {
 });
 
 describe('projectScope', () => {
-  it('ouvre le studio entier aux rôles globaux', () => {
+  it('opens the whole studio to global roles', () => {
     expect(projectScope(1, Role.ADMIN)).toEqual({ deletedAt: null });
     expect(projectScope(1, Role.SUPERVISOR)).toEqual({ deletedAt: null });
   });
 
-  it('borne tous les autres à leurs projets, corbeille exclue', () => {
+  it('bounds everyone else to their projects, trash excluded', () => {
     expect(projectScope(ARTIST_ID, Role.ARTIST)).toEqual(MEMBER_SCOPE);
     expect(projectScope(ARTIST_ID, Role.CLIENT)).toEqual(MEMBER_SCOPE);
   });
 });
 
-describe('searchEntities — un ARTIST ne voit que ses projets', () => {
+describe('searchEntities — an ARTIST only sees their projects', () => {
   beforeEach(async () => {
     await searchEntities('sh0120', ARTIST_ID, Role.ARTIST);
   });
 
-  it('filtre les cinq types du pipe par appartenance', () => {
+  it('filters the five pipeline types by membership', () => {
     expect(whereOf(prisma.project.findMany)).toMatchObject(MEMBER_SCOPE);
     expect(whereOf(prisma.sequence.findMany)).toMatchObject({ project: MEMBER_SCOPE });
     expect(whereOf(prisma.shot.findMany)).toMatchObject({ project: MEMBER_SCOPE });
@@ -112,7 +108,7 @@ describe('searchEntities — un ARTIST ne voit que ses projets', () => {
     });
   });
 
-  it('filtre les versions par le projet de leur plan ou de leur asset porteur', () => {
+  it('filters versions by the project of their shot or carrying asset', () => {
     const where = whereOf(prisma.version.findMany) as { AND: Record<string, unknown>[] };
     expect(where.AND[0]).toEqual({
       deletedAt: null,
@@ -124,7 +120,7 @@ describe('searchEntities — un ARTIST ne voit que ses projets', () => {
     });
   });
 
-  it('ne montre un média non publié qu’à son déposant', () => {
+  it('shows an unpublished media only to its uploader', () => {
     const where = whereOf(prisma.mediaObject.findMany) as { AND: Record<string, unknown>[] };
     expect(where.AND[0]).toMatchObject({
       deletedAt: null,
@@ -133,11 +129,11 @@ describe('searchEntities — un ARTIST ne voit que ses projets', () => {
     });
   });
 
-  it('filtre les playlists par projet', () => {
+  it('filters playlists by project', () => {
     expect(whereOf(prisma.playlist.findMany)).toMatchObject({ project: MEMBER_SCOPE });
   });
 
-  it('ne transmet à la recherche plein texte que les projets dont il est membre', () => {
+  it('passes to the full-text search only the projects they are a member of', () => {
     expect(vi.mocked(searchComments)).toHaveBeenCalledWith('sh0120', {
       userId: ARTIST_ID,
       role: Role.ARTIST,
@@ -146,7 +142,7 @@ describe('searchEntities — un ARTIST ne voit que ses projets', () => {
     });
   });
 
-  it('cherche l’annuaire du studio, adresses comprises, mais sans compte de service ni compte fermé', () => {
+  it('searches the studio directory, addresses included, but without service accounts or closed accounts', () => {
     const where = whereOf(prisma.user.findMany) as { OR: Record<string, unknown>[] };
     expect(where).toMatchObject({ isService: false, disabledAt: null });
     expect(where).not.toHaveProperty('memberships');
@@ -154,18 +150,18 @@ describe('searchEntities — un ARTIST ne voit que ses projets', () => {
   });
 });
 
-describe('searchEntities — un CLIENT est un intervenant extérieur', () => {
+describe('searchEntities — a CLIENT is an external contributor', () => {
   beforeEach(async () => {
     await searchEntities('reflet', ARTIST_ID, Role.CLIENT);
   });
 
-  it('ne voit aucun brouillon, pas même le sien', () => {
+  it('sees no draft, not even their own', () => {
     const where = whereOf(prisma.mediaObject.findMany) as { AND: Record<string, unknown>[] };
     expect(where.AND[0]).toMatchObject({ published: true });
     expect(where.AND[0]).not.toHaveProperty('OR');
   });
 
-  it('ne trouve que les personnes des projets qu’il partage, et jamais par adresse', () => {
+  it('finds only the people of the projects they share, and never by address', () => {
     const where = whereOf(prisma.user.findMany) as {
       OR: Record<string, unknown>[];
       memberships: unknown;
@@ -176,7 +172,7 @@ describe('searchEntities — un CLIENT est un intervenant extérieur', () => {
     expect(where.OR.some((c) => 'email' in c)).toBe(false);
   });
 
-  it('reste borné à ses projets pour les notes de review', () => {
+  it('stays bounded to their projects for review notes', () => {
     expect(vi.mocked(searchComments)).toHaveBeenCalledWith(
       'reflet',
       expect.objectContaining({ role: Role.CLIENT, projectIds: [3, 9] }),
@@ -184,8 +180,8 @@ describe('searchEntities — un CLIENT est un intervenant extérieur', () => {
   });
 });
 
-describe('searchEntities — rôles globaux', () => {
-  it('n’exige aucune appartenance et n’interroge pas la table des membres', async () => {
+describe('searchEntities — global roles', () => {
+  it('requires no membership and does not query the members table', async () => {
     await searchEntities('comp', 1, Role.SUPERVISOR);
     expect(whereOf(prisma.project.findMany)).toMatchObject({ deletedAt: null });
     expect(whereOf(prisma.project.findMany)).not.toHaveProperty('memberships');
@@ -197,8 +193,8 @@ describe('searchEntities — rôles globaux', () => {
   });
 });
 
-describe('searchEntities — résultats bornés', () => {
-  it('impose une limite à chacun des types', async () => {
+describe('searchEntities — bounded results', () => {
+  it('imposes a limit on each of the types', async () => {
     await searchEntities('v012', 1, Role.ADMIN);
     const takes = {
       projects: argsOf<{ take: number }>(prisma.project.findMany).take,
@@ -221,38 +217,37 @@ describe('searchEntities — résultats bornés', () => {
     }
   });
 
-  it('borne chaque famille, sans exception', async () => {
+  it('bounds each family, without exception', async () => {
     await searchEntities('v012', 1, Role.ADMIN);
     for (const limit of Object.values(SEARCH_LIMITS)) expect(limit).toBeGreaterThan(0);
   });
 });
 
 /**
- * Ce que le produit contient et que la recherche ignorait.
+ * What the product contains and the search ignored.
  *
- * Cinq familles ne rendaient rien, quoi qu'on tape : « Modeling » (un département), le code
- * d'un épisode, un montage, un board, et le texte d'une fiche d'entité — c'est-à-dire le
- * brief, le seul endroit où est écrit ce qu'un plan doit devenir. Le cloisonnement de
- * chacune est vérifié ici comme celui des dix premières : sur la clause `where`.
+ * Five families returned nothing, whatever was typed: "Modeling" (a department), the code of an episode, an edit, a board, and the text of an
+ * entity sheet — that is, the brief, the only place where what a shot must become is written. The scoping of each is checked here as the first ten
+ * were: on the `where` clause.
  */
-describe('searchEntities — les familles ajoutées', () => {
+describe('searchEntities — the families added', () => {
   beforeEach(async () => {
     await searchEntities('modeling', ARTIST_ID, Role.ARTIST);
   });
 
-  it('cherche les épisodes du projet, ni retirés ni masqués', () => {
+  it('searches the episodes of the project, neither removed nor hidden', () => {
     const where = whereOf(prisma.episode.findMany) as { OR: Record<string, unknown>[] };
     expect(where).toMatchObject({ deletedAt: null, hiddenAt: null, project: MEMBER_SCOPE });
     expect(where.OR.map((clause) => Object.keys(clause)[0])).toEqual(['code', 'name', 'description']);
   });
 
-  it('écarte le montage d’une séquence masquée ou retirée', () => {
+  it('discards the edit of a hidden or removed sequence', () => {
     const where = whereOf(prisma.timeline.findMany) as { OR: Record<string, unknown>[] };
     expect(where).toMatchObject({ project: MEMBER_SCOPE });
     expect(where.OR).toEqual([{ sequenceId: null }, { sequence: { deletedAt: null, hiddenAt: null } }]);
   });
 
-  it('ne propose le board que d’un projet accessible ou d’un asset visible', () => {
+  it('only offers the board of an accessible project or a visible asset', () => {
     const where = whereOf(prisma.board.findMany) as { OR: Record<string, unknown>[] };
     expect(where.OR[0]).toMatchObject({ project: MEMBER_SCOPE });
     expect(where.OR[1]).toMatchObject({
@@ -260,7 +255,7 @@ describe('searchEntities — les familles ajoutées', () => {
     });
   });
 
-  it('ne cherche une fiche que sous une entité visible d’un projet accessible', () => {
+  it('searches a sheet only under a visible entity of an accessible project', () => {
     const where = whereOf(prisma.entityNote.findMany) as { OR: Record<string, unknown>[] };
     expect(where).toMatchObject({ project: MEMBER_SCOPE });
     const visible = { deletedAt: null, hiddenAt: null };
@@ -272,9 +267,9 @@ describe('searchEntities — les familles ajoutées', () => {
     ]);
   });
 
-  it('trouve une tâche par son département : « Modeling » ne rendait rien', async () => {
-    // Le libellé de l'étape ne vit pas dans `Task` : il est résolu en identifiants d'abord
-    // (cf. `matchingDepartmentIds`), puis appliqué comme une colonne de `Task`.
+  it('finds a task by its department: "Modeling" returned nothing', async () => {
+    // The label of the step does not live in `Task`: it is resolved to identifiers first
+    // (cf. `matchingDepartmentIds`), then applied as a column of `Task`.
     vi.mocked(prisma.department.findMany).mockResolvedValueOnce([{ id: 4 }] as never);
     await searchEntities('modeling', ARTIST_ID, Role.ARTIST);
     const where = callsOf<{ where: { AND: { OR: Record<string, unknown>[] }[] } }>(prisma.task.findMany).at(
@@ -286,8 +281,8 @@ describe('searchEntities — les familles ajoutées', () => {
   });
 });
 
-describe('searchEntities — les départements ne s’offrent qu’à qui peut les ouvrir', () => {
-  it('les ignore pour un ARTIST et pour un CLIENT — l’écran leur serait refusé', async () => {
+describe('searchEntities — departments are only offered to those who can open them', () => {
+  it('ignores them for an ARTIST and for a CLIENT — the screen would be refused to them', async () => {
     const artist = await searchEntities('modeling', ARTIST_ID, Role.ARTIST);
     expect(departmentReferentialCalls()).toHaveLength(0);
     expect(artist.departments).toEqual([]);
@@ -296,7 +291,7 @@ describe('searchEntities — les départements ne s’offrent qu’à qui peut l
     expect(client.departments).toEqual([]);
   });
 
-  it('rend le référentiel du studio et les étapes des projets accessibles à un ADMIN', async () => {
+  it('returns the studio reference and the steps of accessible projects to an ADMIN', async () => {
     await searchEntities('modeling', 1, Role.ADMIN);
     const where = departmentReferentialCalls()[0]!.where as {
       OR: Record<string, unknown>[];
@@ -308,8 +303,8 @@ describe('searchEntities — les départements ne s’offrent qu’à qui peut l
   });
 });
 
-describe('searchEntities — mise en forme des familles ajoutées', () => {
-  it('rend un montage sans nom tel quel : son libellé se traduit à l’écran', async () => {
+describe('searchEntities — formatting of the families added', () => {
+  it('returns an unnamed edit as-is: its label is translated on screen', async () => {
     vi.mocked(prisma.timeline.findMany).mockResolvedValue([
       { id: 4, name: null, project: { name: 'Alpha' }, sequence: { code: 'SQ010' } },
       { id: 5, name: 'Montage client', project: { name: 'Alpha' }, sequence: null },
@@ -321,7 +316,7 @@ describe('searchEntities — mise en forme des familles ajoutées', () => {
     ]);
   });
 
-  it('rend un board avec le nom de ce qu’il illustre, projet ou asset', async () => {
+  it('returns a board with the name of what it illustrates, project or asset', async () => {
     vi.mocked(prisma.board.findMany).mockResolvedValue([
       { id: 1, projectId: 3, assetId: null, project: { name: 'Alpha' }, asset: null },
       { id: 2, projectId: null, assetId: 9, project: null, asset: { name: 'Robot' } },
@@ -333,7 +328,7 @@ describe('searchEntities — mise en forme des familles ajoutées', () => {
     ]);
   });
 
-  it('rend la fiche avec son porteur et un extrait autour du terme cherché', async () => {
+  it('returns the sheet with its carrier and an excerpt around the searched term', async () => {
     vi.mocked(prisma.entityNote.findMany).mockResolvedValue([
       {
         id: 7,
@@ -350,7 +345,7 @@ describe('searchEntities — mise en forme des familles ajoutées', () => {
     expect(res.briefs[0]!.excerpt.length).toBeLessThan(200);
   });
 
-  it('ne rend pas une fiche sans entité porteuse — elle n’ouvrirait aucune page', async () => {
+  it('does not return a sheet without a carrying entity — it would open no page', async () => {
     vi.mocked(prisma.entityNote.findMany).mockResolvedValue([
       { id: 8, body: 'fiche de projet', episode: null, sequence: null, shot: null, asset: null },
     ] as never);
@@ -358,7 +353,7 @@ describe('searchEntities — mise en forme des familles ajoutées', () => {
     expect(res.briefs).toEqual([]);
   });
 
-  it('rend le département d’une tâche, sa clé à défaut de la relation', async () => {
+  it('returns the department of a task, its key in default of the relation', async () => {
     vi.mocked(prisma.task.findMany).mockResolvedValue([
       {
         id: 1,
@@ -384,7 +379,7 @@ describe('searchEntities — mise en forme des familles ajoutées', () => {
     expect(res.tasks.map((task) => task.departmentName)).toEqual(['Modeling', 'setdress', null]);
   });
 
-  it('place la tâche NOMMÉE comp avant les tâches de l’étape Compositing', async () => {
+  it('places the task NAMED comp before the tasks of the Compositing step', async () => {
     vi.mocked(prisma.task.findMany).mockResolvedValue([
       {
         id: 1,
@@ -410,8 +405,8 @@ describe('searchEntities — mise en forme des familles ajoutées', () => {
   });
 });
 
-describe('searchEntities — mise en forme des résultats', () => {
-  it('rend le chemin lisible d’une version et sa cible de navigation', async () => {
+describe('searchEntities — formatting of the results', () => {
+  it('returns the readable path of a version and its navigation target', async () => {
     vi.mocked(prisma.version.findMany).mockResolvedValue([
       {
         id: 12,
@@ -434,7 +429,7 @@ describe('searchEntities — mise en forme des résultats', () => {
     });
   });
 
-  it('rend une version sans média visible sans cible, jamais en erreur', async () => {
+  it('returns a version without a visible media with no target, never an error', async () => {
     vi.mocked(prisma.version.findMany).mockResolvedValue([
       {
         id: 13,
@@ -450,7 +445,7 @@ describe('searchEntities — mise en forme des résultats', () => {
     expect(res.versions[0]).toMatchObject({ mediaId: null, assetId: 5, context: 'robot' });
   });
 
-  it('rend le média avec son plan et son numéro de version', async () => {
+  it('returns the media with its shot and its version number', async () => {
     vi.mocked(prisma.mediaObject.findMany).mockResolvedValue([
       {
         id: 88,
@@ -468,7 +463,7 @@ describe('searchEntities — mise en forme des résultats', () => {
     });
   });
 
-  it('ne renvoie jamais l’adresse d’une personne, et tolère un compte sans nom', async () => {
+  it("never returns a person's address, and tolerates an account without a name", async () => {
     vi.mocked(prisma.user.findMany).mockResolvedValue([
       { id: 2, username: null, name: null, firstName: null, lastName: null, jobTitle: null },
       { id: 3, username: null, name: null, firstName: 'Ana', lastName: 'Roy', jobTitle: 'Comp' },
@@ -483,15 +478,13 @@ describe('searchEntities — mise en forme des résultats', () => {
 });
 
 /**
- * Ce que la recherche trouve, et dans quel ordre.
+ * What the search finds, and in which order.
  *
- * Deux promesses distinctes : chercher **au-delà du nom** (un plan se retrouve par ce qu'il
- * raconte, pas seulement par son code), et **classer** — chaque liste sortait dans l'ordre
- * de la base, si bien que taper « SH0120 » plaçait le plan SH0120 après trois médias dont
- * le nom de fichier le contient.
+ * Two distinct promises: searching **beyond the name** (a shot is found by what it is about, not only by its code), and **ranking** — each list came
+ * out in database order, so typing "SH0120" placed the shot SH0120 after three media whose file name contains it.
  */
-describe('searchEntities — portée et classement', () => {
-  it('cherche aussi dans la description d’un plan, d’une séquence et d’un asset', async () => {
+describe('searchEntities — scope and ranking', () => {
+  it('also searches the description of a shot, a sequence and an asset', async () => {
     await searchEntities('pluie', ARTIST_ID, Role.ARTIST);
     for (const delegate of [prisma.shot, prisma.sequence, prisma.asset]) {
       const where = whereOf(delegate.findMany) as { OR: Record<string, unknown>[] };
@@ -499,9 +492,9 @@ describe('searchEntities — portée et classement', () => {
     }
   });
 
-  it('remonte la correspondance la plus nette, pas la plus récente', async () => {
+  it('brings up the sharpest match, not the most recent', async () => {
     vi.mocked(prisma.shot.findMany).mockResolvedValueOnce([
-      // Ordre de la base : le plus récent d'abord. Le second est pourtant ce qu'on cherche.
+      // Database order: most recent first. The second one is nevertheless what is sought.
       { id: 1, code: 'SH0121', name: 'SH0121', description: null, projectId: 1 },
       { id: 2, code: 'SH0120', name: 'SH0120', description: null, projectId: 1 },
       { id: 3, code: 'EP01_SH0120_old', name: 'x', description: null, projectId: 1 },
@@ -512,7 +505,7 @@ describe('searchEntities — portée et classement', () => {
     expect(results.shots.map((s) => s.id)).toEqual([2, 3, 1]);
   });
 
-  it('préfère une description exacte à un fragment perdu dans un code', async () => {
+  it('prefers an exact description to a fragment lost in a code', async () => {
     vi.mocked(prisma.asset.findMany).mockResolvedValueOnce([
       { id: 1, name: 'xpluiex', description: null, type: 'PROP', projectId: 1 },
       { id: 2, name: 'Robot', description: 'pluie', type: 'PROP', projectId: 1 },
@@ -523,7 +516,7 @@ describe('searchEntities — portée et classement', () => {
     expect(results.assets[0]!.id).toBe(2);
   });
 
-  it('ne perd aucun résultat en classant', async () => {
+  it('loses no result while ranking', async () => {
     vi.mocked(prisma.shot.findMany).mockResolvedValueOnce([
       { id: 1, code: 'A', name: 'A', description: null, projectId: 1 },
       { id: 2, code: 'B', name: 'B', description: null, projectId: 1 },

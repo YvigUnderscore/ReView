@@ -5,7 +5,8 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 const { publish } = vi.hoisted(() => ({ publish: vi.fn() }));
 
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: { user?: unknown }, _res: unknown, next: () => void) => {
     req.user = { id: 7, role: 'ARTIST', email: 'a@b.c' };
     next();
@@ -34,34 +35,34 @@ beforeEach(() => {
 });
 
 /**
- * Publier prend désormais la liste des ReViewers et leurs consignes. Le corps reste
- * FACULTATIF, et c'est la moitié qu'on oublie : tout ce qui publiait hier — un DCC, une
- * intégration, un test de bout en bout — poste sans corps du tout. En Express 5, `req.body`
- * vaut alors `undefined`, et un `z.object({…})` nu le refuse en 400 : la publication
- * s'arrêtait net, et avec elle le verrou d'édition qu'elle est censée poser.
+ * Publishing now takes the list of ReViewers and their instructions. The body remains OPTIONAL, and it
+ * is the half that gets forgotten: everything that published yesterday (a DCC, an integration, an
+ * end-to-end test) posts no body at all. In Express 5, `req.body` is then `undefined`, and a bare
+ * `z.object({…})` refuses it with a 400: publication stopped dead, and with it the edit lock it is
+ * supposed to set.
  */
-describe('POST /api/media/:id/publish — le corps est facultatif', () => {
-  it('publie sans aucun corps (ni contenu, ni en-tête de type)', async () => {
+describe('POST /api/media/:id/publish — the body is optional', () => {
+  it('publishes without any body (no content, no type header)', async () => {
     const res = await request(app).post('/api/media/12/publish');
     expect(res.status).toBe(200);
-    // `undefined`, et non `[]` : ne rien dire ne retire pas les ReViewers déjà confiés.
+    // `undefined`, not `[]`: saying nothing does not remove the ReViewers already assigned.
     expect(publish).toHaveBeenCalledWith(expect.objectContaining({ id: 7 }), 12, undefined);
   });
 
-  it('publie avec un corps vide (`{}`)', async () => {
+  it('publishes with an empty body (`{}`)', async () => {
     const res = await request(app).post('/api/media/12/publish').send({});
     expect(res.status).toBe(200);
     expect(publish).toHaveBeenCalledWith(expect.objectContaining({ id: 7 }), 12, undefined);
   });
 
-  it('transmet la liste et ses consignes quand elle est là', async () => {
+  it('passes the list and its instructions on when they are there', async () => {
     const reviewers = [{ userId: 3, note: 'la lumière du 1042' }];
     const res = await request(app).post('/api/media/12/publish').send({ reviewers });
     expect(res.status).toBe(200);
     expect(publish).toHaveBeenCalledWith(expect.objectContaining({ id: 7 }), 12, reviewers);
   });
 
-  it('refuse une liste mal formée sans rien publier', async () => {
+  it('rejects a malformed list without publishing anything', async () => {
     const res = await request(app)
       .post('/api/media/12/publish')
       .send({ reviewers: [{ userId: 'trois' }] });

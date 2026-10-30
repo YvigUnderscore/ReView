@@ -14,9 +14,8 @@ import { env } from '../config/env';
 import { escapeHtml as esc } from '../lib/html';
 
 /**
- * Rapport d'activité hebdomadaire (43.B — №124) : synthèse studio par projet
- * (versions publiées, décisions, notes ouvertes) sur 7 jours, envoyée aux
- * superviseurs/admins ayant activé `preferences.weeklyReport`. Planifié depuis server.ts.
+ * Weekly activity report (43.B, issue #124): studio summary per project (published versions, decisions, open notes)
+ * over 7 days, sent to supervisors/admins who enabled `preferences.weeklyReport`. Scheduled from server.ts.
  */
 
 export interface ProjectWeekly {
@@ -29,12 +28,12 @@ export interface ProjectWeekly {
   openNotes: number;
 }
 
-/** Filtre « version rattachée à ce projet » (3 chemins : shot, asset de tâche, asset direct). */
+/** "Version attached to this project" filter (3 paths: shot, task asset, direct asset). */
 const inProject = (projectId: number): Prisma.VersionWhereInput => ({
   OR: [{ task: { OR: [{ shot: { projectId } }, { asset: { projectId } }] } }, { asset: { projectId } }],
 });
 
-/** Synthèse d'un projet sur la fenêtre ; null si aucune activité ni note ouverte. */
+/** Summary of a project over the window; null if there is no activity and no open note. */
 async function buildProjectWeekly(
   projectId: number,
   projectName: string,
@@ -66,7 +65,7 @@ async function buildProjectWeekly(
   return { projectId, projectName, publishedVersions, approved, retakes, otherDecisions, openNotes };
 }
 
-/** Rapport studio complet : un bloc par projet actif ayant de l'activité. */
+/** Full studio report: one block per active project with activity. */
 export async function buildWeeklyReport(since: Date): Promise<ProjectWeekly[]> {
   const projects = await prisma.project.findMany({
     where: { deletedAt: null, status: { not: 'ARCHIVED' } },
@@ -84,7 +83,7 @@ export async function buildWeeklyReport(since: Date): Promise<ProjectWeekly[]> {
 const fmt = (d: Date, locale: Locale) =>
   d.toLocaleDateString(formatTag(locale), { day: 'numeric', month: 'long' });
 
-/** HTML du rapport (pur — testé unitairement). */
+/** HTML of the report (pure: unit-tested). */
 export function renderWeeklyReportHtml(
   locale: Locale,
   userName: string,
@@ -129,14 +128,14 @@ ${projects.length ? table : `<p>${t(locale, 'weekly.empty')}</p>`}
   );
 }
 
-/** Envoie le rapport hebdo aux superviseurs/admins abonnés (`preferences.weeklyReport`). */
+/** Sends the weekly report to subscribed supervisors/admins (`preferences.weeklyReport`). */
 export async function sendWeeklyReports(now = new Date()): Promise<number> {
   if (!(await isMailerConfigured())) {
-    logger.info('[WeeklyReport] SMTP non configuré : envoi hebdo sauté');
+    logger.info('[WeeklyReport] SMTP not configured: weekly send skipped');
     return 0;
   }
   const recipients = await prisma.user.findMany({
-    // Comptes de service exclus : adresse non routable (voir ApiTokenService).
+    // Service accounts excluded: non-routable address (see ApiTokenService).
     where: { role: { in: [Role.SUPERVISOR, Role.ADMIN] }, isService: false },
     select: {
       email: true,
@@ -154,9 +153,9 @@ export async function sendWeeklyReports(now = new Date()): Promise<number> {
   if (optedIn.length === 0) return 0;
 
   const since = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-  const projects = await buildWeeklyReport(since); // studio-wide, construit une seule fois
+  const projects = await buildWeeklyReport(since); // studio-wide, built only once
   if (projects.length === 0) {
-    logger.info('[WeeklyReport] aucune activité cette semaine : envoi sauté');
+    logger.info('[WeeklyReport] no activity this week: send skipped');
     return 0;
   }
   let sent = 0;
@@ -168,6 +167,6 @@ export async function sendWeeklyReports(now = new Date()): Promise<number> {
     });
     if (sentOk) sent += 1;
   }
-  logger.info(`[WeeklyReport] ${sent} rapport(s) envoyé(s)`);
+  logger.info(`[WeeklyReport] ${sent} report(s) sent`);
   return sent;
 }

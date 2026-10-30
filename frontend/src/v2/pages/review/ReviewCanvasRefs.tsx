@@ -5,7 +5,7 @@ import { useEffect, useRef } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { ImagePlus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { fileToImageDataUrl, imageFilesFromClipboard } from '../../lib/useImagePaste';
 import StagedRefLayer from './StagedRefLayer';
@@ -18,15 +18,15 @@ import { useT } from '../../i18n';
 const MAX_REFS = 12;
 
 /**
- * Images de référence épinglées au canvas de la review image — **liées à un commentaire**.
- * Ici les références **persistées** : figées, visibles quand leur commentaire est sélectionné
- * (les références historiques sans commentaire restent visibles). Celles en préparation vivent
- * dans `StagedRefLayer`.
+ * Reference images pinned to the canvas of the image review — **linked to a comment**.
+ * Here are the **persisted** references: frozen, visible when their comment is selected
+ * (historical references without a comment stay visible). Those being prepared live in
+ * `StagedRefLayer`.
  *
- * Coordonnées en fractions de l'image de base : une référence se pose n'importe où sur le
- * canvas, dedans comme dehors du cadre du média. L'affichage la laisse exactement où elle est
- * dès qu'on en voit assez, et ne rattrape que celle qu'aucun viewer ne montrerait — les
- * positions héritées (x = 1.05, du temps où le collage ne bornait rien) seraient invisibles.
+ * Coordinates are fractions of the base image: a reference can be placed anywhere on the
+ * canvas, inside or outside the media frame. Display leaves it exactly where it is as soon
+ * as enough of it is visible, and only pulls back the one no viewer would show — inherited
+ * positions (x = 1.05, from the time when pasting clamped nothing) would be invisible.
  */
 export default function ReviewCanvasRefs({
   mediaId,
@@ -43,8 +43,8 @@ export default function ReviewCanvasRefs({
 }) {
   const t = useT();
   const qc = useQueryClient();
-  // Ce calque épouse le média : il sert de mètre pour les bandes du viewer, dont dépendent le
-  // placement au collage et le rattrapage des positions héritées — pas le déplacement, libre.
+  // This layer follows the media: it serves as the ruler for the viewer bands, on which the
+  // placement on paste and the pull-back of inherited positions depend — not the move, which is free.
   const layerRef = useRef<HTMLDivElement>(null);
   const bands = useViewerBands(layerRef);
   const { setRefBands } = ann;
@@ -52,7 +52,7 @@ export default function ReviewCanvasRefs({
     setRefBands(bands);
   }, [bands, setRefBands]);
 
-  // Persistées : celles du commentaire sélectionné + les historiques (sans commentaire).
+  // Persisted: those of the selected comment + the historical ones (without a comment).
   const visible = references.filter((r) => r.commentId == null || r.commentId === selectedCommentId);
 
   const removePersisted = async (id: number) => {
@@ -98,9 +98,9 @@ export default function ReviewCanvasRefs({
 }
 
 /**
- * Contrôles écran (hors canvas) : bouton d'ajout + collage Ctrl+V global — l'image est jointe
- * au prochain commentaire. Le listener document ignore les collages destinés aux champs de
- * saisie (le composer gère ses propres pièces jointes).
+ * On-screen controls (outside the canvas): add button + global Ctrl+V paste — the image is
+ * attached to the next comment. The document listener ignores pastes aimed at input fields
+ * (the composer handles its own attachments).
  */
 export function ReviewCanvasRefsControls({ ann, annotating }: { ann: Annotations; annotating: boolean }) {
   const t = useT();
@@ -118,7 +118,7 @@ export function ReviewCanvasRefsControls({ ann, annotating }: { ann: Annotations
       toast.error(e instanceof Error ? e.message : t('file.readFailed'));
     }
   };
-  // Ré-abonné à chaque render (`ann` change d'identité) : coût négligeable, handler frais.
+  // Re-subscribed on every render (`ann` changes identity): negligible cost, fresh handler.
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
       const t = e.target as HTMLElement | null;

@@ -24,7 +24,8 @@ const { svc, actor } = vi.hoisted(() => {
 
 vi.mock('../services/ApiTokenService', () => svc);
 vi.mock('../lib/prisma', () => ({ prisma: {} }));
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: Request, _res: Response, next: NextFunction) => {
     req.user = actor.current as Request['user'];
     req.apiToken = actor.apiToken as Request['apiToken'];
@@ -63,14 +64,14 @@ beforeEach(() => {
 });
 
 describe('GET /api/admin/service-tokens', () => {
-  it('sert la liste aux admins', async () => {
+  it('serves the list to admins', async () => {
     svc.listService.mockResolvedValue([{ id: 9, name: 'Render farm' }]);
     const res = await request(app).get('/api/admin/service-tokens');
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ tokens: [{ id: 9, name: 'Render farm' }] });
   });
 
-  it('refuse un non-admin', async () => {
+  it('rejects a non-admin', async () => {
     actor.current = { id: 2, role: 'SUPERVISOR' };
     const res = await request(app).get('/api/admin/service-tokens');
     expect(res.status).toBe(403);
@@ -79,7 +80,7 @@ describe('GET /api/admin/service-tokens', () => {
 });
 
 describe('POST /api/admin/service-tokens', () => {
-  it('émet le token et rend le secret une seule fois', async () => {
+  it('issues the token and returns the secret only once', async () => {
     const res = await request(app).post('/api/admin/service-tokens').send(VALID);
     expect(res.status).toBe(201);
     expect(res.body).toMatchObject({ token: 'rvk_secret' });
@@ -92,14 +93,14 @@ describe('POST /api/admin/service-tokens', () => {
     });
   });
 
-  // Le mot de passe ne doit jamais retomber dans le service d'émission (ni en audit).
-  it('ne transmet pas le mot de passe au service d’émission', async () => {
+  // The password must never fall back into the issuing service (nor into the audit).
+  it('does not pass the password on to the issuing service', async () => {
     await request(app).post('/api/admin/service-tokens').send(VALID);
     const input = svc.createService.mock.calls[0]?.[1] as Record<string, unknown>;
     expect(input).not.toHaveProperty('currentPassword');
   });
 
-  it('ré-authentifie l’admin avant toute émission', async () => {
+  it('re-authenticates the admin before any issuance', async () => {
     svc.assertActorPassword.mockRejectedValue(
       forbidden('The current password is required', 'CURRENT_PASSWORD_REQUIRED'),
     );
@@ -111,14 +112,14 @@ describe('POST /api/admin/service-tokens', () => {
     expect(svc.createService).not.toHaveBeenCalled();
   });
 
-  it('appelle la ré-authentification même sans mot de passe fourni', async () => {
+  it('calls re-authentication even without a password supplied', async () => {
     const { currentPassword: _omit, ...withoutPassword } = VALID;
     await request(app).post('/api/admin/service-tokens').send(withoutPassword);
     expect(svc.assertActorPassword).toHaveBeenCalledWith(1, undefined);
   });
 
-  // ADMIN volontairement hors de l'énumération : un robot n'administre pas le studio.
-  it('refuse le rôle ADMIN', async () => {
+  // ADMIN deliberately kept out of the enumeration: a bot does not run the studio.
+  it('rejects the ADMIN role', async () => {
     const res = await request(app)
       .post('/api/admin/service-tokens')
       .send({ ...VALID, role: 'ADMIN' });
@@ -126,7 +127,7 @@ describe('POST /api/admin/service-tokens', () => {
     expect(svc.createService).not.toHaveBeenCalled();
   });
 
-  it('refuse une liste de scopes vide', async () => {
+  it('rejects an empty list of scopes', async () => {
     const res = await request(app)
       .post('/api/admin/service-tokens')
       .send({ ...VALID, scopes: [] });
@@ -134,8 +135,8 @@ describe('POST /api/admin/service-tokens', () => {
     expect(svc.createService).not.toHaveBeenCalled();
   });
 
-  // Anti-démultiplication : un token fuité ne doit pas pouvoir en forger d'autres.
-  it('refuse un porteur qui est lui-même un token d’API', async () => {
+  // Anti-multiplication: a leaked token must not be able to forge others.
+  it('rejects a bearer that is itself an API token', async () => {
     actor.apiToken = { id: 3 };
     const res = await request(app).post('/api/admin/service-tokens').send(VALID);
     expect(res.status).toBe(400);
@@ -145,13 +146,13 @@ describe('POST /api/admin/service-tokens', () => {
 });
 
 describe('DELETE /api/admin/service-tokens/:id', () => {
-  it('révoque et répond 204', async () => {
+  it('revokes and responds 204', async () => {
     const res = await request(app).delete('/api/admin/service-tokens/9');
     expect(res.status).toBe(204);
     expect(svc.revokeService).toHaveBeenCalledWith(1, 9);
   });
 
-  it('refuse un non-admin', async () => {
+  it('rejects a non-admin', async () => {
     actor.current = { id: 2, role: 'ARTIST' };
     const res = await request(app).delete('/api/admin/service-tokens/9');
     expect(res.status).toBe(403);

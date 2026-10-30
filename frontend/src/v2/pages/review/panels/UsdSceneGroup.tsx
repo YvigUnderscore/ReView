@@ -4,29 +4,29 @@
 import { AlertTriangle } from 'lucide-react';
 import { Group, ReadRow } from '../chrome/DockGroup';
 import { isLongDockGroup } from '../chrome/dockGroupSize';
-import type { UsdModelInfo } from '../../../types/api';
+import type { UsdModelInfo } from '@/v2/types/api';
 import { purposeLabel, unitLabel, variantValue } from '../usdDisplay';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
- * Section USD de la fiche technique (Phase 45, 45.F) : ce que le convertisseur a réellement
- * ouvert et composé. Trois informations comptent en review :
- *  - la **couche racine** retenue (une archive USD en contient souvent plusieurs) ;
- *  - les **références non résolues** — sans cet avertissement, un modèle arrive gris sans
- *    explication et le réflexe est de blâmer le viewer plutôt que l'archive livrée ;
- *  - les **variantes** en place, point d'entrée de la recomposition.
+ * USD section of the technical sheet (Phase 45, 45.F): what the converter actually opened and composed.
+ * Three pieces of information matter in review:
+ *  - the **root layer** retained (a USD archive often contains several);
+ *  - the **unresolved references**: without this warning, a model arrives grey with no explanation, and
+ *    the reflex is to blame the viewer rather than the delivered archive;
+ *  - the **variants** in place, the entry point for recomposition.
  */
 
 /**
- * Chemins listés dans le dock. Le serveur en rapporte jusqu'à cinquante ; les premiers
- * suffisent à reconnaître le dossier oublié, et le total reste affiché à côté du titre.
+ * Paths listed in the dock. The server reports up to fifty; the first ones are enough to recognise the
+ * forgotten folder, and the total stays displayed next to the title.
  */
 const LISTED = 8;
 
 /**
- * Nombre de lignes que la section rendra vraiment — l'entrée du seuil de repli. Compté plutôt
- * que deviné : la section va de six lignes (une scène nue) à onze (variantes, animation, rig,
- * références manquantes), et c'est au-delà du seuil du dock qu'elle vaut d'arriver fermée.
+ * Number of lines the section will actually render: the input to the collapse threshold. Counted rather
+ * than guessed: the section ranges from six lines (a bare scene) to eleven (variants, animation, rig,
+ * missing references), and it is beyond the dock's threshold that it is worth arriving closed.
  */
 function rowCount(usd: UsdModelInfo): number {
   const optional = [
@@ -36,11 +36,11 @@ function rowCount(usd: UsdModelInfo): number {
     usd.hasSkeleton,
     usd.variantSets.length > 0,
   ];
-  // rootLayer, upAxis, unit, layers, prims, purpose : toujours là.
+  // rootLayer, upAxis, unit, layers, prims, purpose: always present.
   return 6 + optional.filter(Boolean).length;
 }
 
-/** Références non résolues : le seul défaut de la scène que le viewer ne peut pas montrer. */
+/** Unresolved references: the only defect of the scene that the viewer cannot show. */
 function MissingAssets({ usd }: { usd: UsdModelInfo }) {
   const t = useT();
   const listed = usd.missingAssets.slice(0, LISTED);
@@ -67,7 +67,7 @@ function MissingAssets({ usd }: { usd: UsdModelInfo }) {
   );
 }
 
-/** Jeux de variantes et valeur courante de chacun — celle que la conversion a réellement posée. */
+/** Variant sets and the current value of each: the one the conversion actually set. */
 function VariantSets({ usd }: { usd: UsdModelInfo }) {
   const t = useT();
   const ignored = !usd.selectionApplied && Object.keys(usd.selection.variants).length > 0;
@@ -98,9 +98,9 @@ export default function UsdSceneGroup({ usd }: { usd: UsdModelInfo }) {
     <Group
       title={t('usd.scene')}
       collapsible
-      // Une section longue arrive fermée — SAUF si elle porte des références non résolues :
-      // c'est la seule information de la fiche que le viewer ne peut pas montrer, et la
-      // replier d'office reviendrait à la cacher au moment où elle explique tout l'écran.
+      // A long section arrives closed, EXCEPT if it carries unresolved references: that is the only piece of
+      // information in the sheet that the viewer cannot show, and collapsing it by default would hide it at
+      // the very moment it explains everything on screen.
       defaultCollapsed={isLongDockGroup(rows) && usd.missingAssets.length === 0}
       count={rows}
     >
@@ -112,7 +112,7 @@ export default function UsdSceneGroup({ usd }: { usd: UsdModelInfo }) {
       <ReadRow label={t('usd.layers')} value={usd.layerCount} />
       <ReadRow label={t('usd.prims')} value={usd.primCount} />
       <ReadRow label={t('usd.purpose')} value={purposeLabel(usd.selection.purpose)} />
-      {/* `hasAnimation` et `frameRange` disent la même chose côté serveur : la plage suffit. */}
+      {/* `hasAnimation` and `frameRange` say the same thing on the server side: the range is enough. */}
       {usd.frameRange && (
         <ReadRow
           label={t('usd.animation')}

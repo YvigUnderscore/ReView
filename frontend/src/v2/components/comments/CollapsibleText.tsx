@@ -7,29 +7,29 @@ import { isClipped, plainLength } from './collapse';
 import { useT } from '../../i18n';
 
 /**
- * Un contenu qui ne tient pas dans sa surface s'ouvre replié (D6) et se déplie au clic.
+ * Content that does not fit its surface opens collapsed (D6) and expands on click.
  *
- * Le texte entier reste DANS le document : on le masque en hauteur, jamais en le tronquant.
- * Un Ctrl+F, un lecteur d'écran et une recherche du navigateur continuent donc de le
- * trouver, replié ou non — et l'indicateur dit ce qu'il cache.
+ * The full text stays IN the document: it is masked by height, never truncated.
+ * Ctrl+F, screen readers and browser search still find it, collapsed or not, and the
+ * indicator says what is hidden.
  *
- * Deux serrages, un seul motif : le commentaire du fil se masque en HAUTEUR (`max-h`), la
- * remarque d'un point d'intérêt se coupe en LIGNES (`lines`) — trois, pas plus, sinon les
- * cartes ancrées dans la scène masquent ce qu'on relit.
+ * Two clamps, one pattern: a comment in a thread is masked by HEIGHT (`max-h`), while a
+ * remark on a point of interest is cut by LINES (`lines`), three at most, otherwise the
+ * cards anchored in the scene hide what the reader needs to re-read.
  *
- * L'indicateur, lui, ne se déduit plus du nombre de caractères : il suit la MESURE du
- * débordement (`isClipped`). Estimer coûtait des deux côtés — un bouton « dérouler 77
- * caractères » qui ne révélait rien dans le fil, large, et un commentaire réellement coupé
- * sans bouton pour l'ouvrir dès que la colonne se rétrécissait.
+ * The indicator is no longer derived from the character count: it follows the MEASURED
+ * overflow (`isClipped`). Estimating was wrong on both sides: a "expand 77 characters"
+ * button that revealed nothing in a wide thread, and a truncated comment with no button to
+ * open it once the column narrowed.
  */
 
 /**
- * Repliage serré : combien de lignes restent lisibles. Tailwind ne voit que les classes
- * écrites en toutes lettres — d'où la table, plutôt qu'une classe composée à la volée.
+ * Tight clamp: how many lines stay readable. Tailwind only sees classes written out in
+ * full, hence the table rather than a class composed on the fly.
  */
 const CLAMP_CLASS = { 3: 'line-clamp-3' } as const;
 
-/** Repliage par défaut : une hauteur, celle d'un commentaire de fil qu'on survole. */
+/** Default collapse: a height, that of a thread comment one hovers over. */
 const MAX_HEIGHT_CLASS = 'max-h-32 overflow-hidden';
 
 export default function CollapsibleText({
@@ -39,12 +39,12 @@ export default function CollapsibleText({
   children,
 }: {
   text: string;
-  /** Repliage serré : le contenu ne montre que N lignes tant qu'on ne l'a pas déplié. */
+  /** Tight clamp: the content shows only N lines until it is expanded. */
   lines?: keyof typeof CLAMP_CLASS;
   /**
-   * Classes du contenu replié. Couper des LIGNES se fait sur l'élément qui les porte : un
-   * bloc intercalé entre lui et le texte annulerait la coupe — d'où ces classes ici, et
-   * non sur un enfant.
+   * Classes of the collapsed content. Clamping LINES happens on the element that carries them:
+   * a block placed between it and the text would cancel the clamp, hence these classes are
+   * here and not on a child.
    */
   className?: string;
   children: ReactNode;
@@ -55,13 +55,12 @@ export default function CollapsibleText({
   const bodyRef = useRef<HTMLDivElement | null>(null);
 
   /**
-   * Le repliage cache-t-il vraiment quelque chose ? On le mesure sur l'élément replié, et on
-   * le REmesure quand la surface change de taille : c'est la largeur qui décide combien de
-   * caractères tiennent sur une ligne, et elle bouge (panneau redimensionné, carte ancrée
-   * qui change de côté, fenêtre).
+   * Does the collapse really hide anything? It is measured on the collapsed element, and
+   * re-measured when the surface changes size: the width decides how many characters fit on
+   * a line, and it moves (resized panel, anchored card switching sides, window).
    *
-   * Déplié, l'élément ne déborde plus : on garde alors la dernière mesure, sinon l'indicateur
-   * de repli disparaîtrait au moment même où il sert.
+   * Once expanded, the element no longer overflows: the last measure is kept, otherwise the
+   * collapse indicator would vanish at the very moment it is needed.
    */
   useLayoutEffect(() => {
     const el = bodyRef.current;

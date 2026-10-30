@@ -4,13 +4,13 @@
 import { create } from 'zustand';
 
 /**
- * Densité d'affichage (42.A1 — №74). `comfortable` (défaut) ou `compact`.
- * Applique l'attribut `data-density` sur <html> dès l'import (avant le premier rendu) ;
- * le CSS (index.css) réduit l'échelle de l'UI en mode compact via la taille de police racine.
+ * Display density (42.A1 — №74). `comfortable` (default) or `compact`.
+ * Applies the `data-density` attribute on <html> as soon as the module is imported (before the
+ * first render); the CSS (index.css) shrinks the UI scale in compact mode via the root font size.
  *
- * Depuis A2 le choix suit aussi le compte : un poste neuf reprend la densité enregistrée
- * côté serveur, mais un choix explicite fait sur cet appareil reste prioritaire — même
- * règle que la langue (`syncAccountLocale`).
+ * Since A2 the choice also follows the account: a new workstation picks up the density stored
+ * server-side, but an explicit choice made on this device takes precedence — same rule as the
+ * language (`syncAccountLocale`).
  */
 export type Density = 'comfortable' | 'compact';
 
@@ -40,7 +40,7 @@ export const useDensity = create<{ density: Density; setDensity: (d: Density) =>
   },
 }));
 
-/** Applique la densité du compte tant que cet appareil n'a pas fait de choix explicite. */
+/** Applies the account's density as long as this device has not made an explicit choice. */
 export function syncAccountDensity(density: unknown): void {
   if (!isDensity(density) || localStorage.getItem(STORAGE_KEY) !== null) return;
   applyDensity(density);

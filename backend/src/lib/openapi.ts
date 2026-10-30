@@ -5,19 +5,17 @@ import { extendZodWithOpenApi, OpenAPIRegistry, OpenApiGeneratorV3 } from '@aste
 import { z } from 'zod';
 import { paginationQuery } from './pagination';
 import { describeMounts } from './openapiRoutes';
-import { V1_BASE_PATH, V1_MOUNTS } from '../routes/v1';
+import type { Router } from 'express';
 
 /**
- * Génération OpenAPI 3.0 depuis les schémas Zod (10.D6).
+ * OpenAPI 3.0 generation from the Zod schemas (10.D6).
  *
- * `extendZodWithOpenApi` ajoute `.openapi()` à Zod : les schémas de validation sont
- * la source de vérité de la doc. Les routes sont enregistrées dans le `registry`
- * ci-dessous, puis `buildOpenApiDocument()` produit le document servi sur
- * `/api/openapi.json` et rendu par Scalar sur `/api/docs`.
+ * `extendZodWithOpenApi` adds `.openapi()` to Zod: the validation schemas are the source of truth for the docs.
+ * Routes are registered in the `registry` below, then `buildOpenApiDocument()` produces the document served on
+ * `/api/openapi.json` and rendered by Scalar on `/api/docs`.
  *
- * Couverture initiale : santé, auth, projets (CRUD + liste paginée). Étendre en
- * enregistrant de nouveaux chemins ici (aucune duplication : on réutilise les schémas
- * partagés comme `paginationQuery`).
+ * Initial coverage: health, auth, projects (CRUD + paginated list). Extend by registering new paths here (no
+ * duplication: shared schemas such as `paginationQuery` are reused).
  */
 extendZodWithOpenApi(z);
 
@@ -49,7 +47,7 @@ const Project = registry.register(
     .openapi('Project'),
 );
 
-/** Enveloppe de liste paginée standard (10.D1). */
+/** Standard paginated list envelope (10.D1). */
 function pageEnvelope<T extends z.ZodTypeAny>(item: T, name: string) {
   return z
     .object({ items: z.array(item), total: z.number(), page: z.number(), pageSize: z.number() })
@@ -61,7 +59,7 @@ const jsonError = (description: string) => ({
   content: { 'application/json': { schema: ErrorResponse } },
 });
 
-// ── Santé ────────────────────────────────────────────────────────────────────
+// ── Health ──
 registry.registerPath({
   method: 'get',
   path: '/health',
@@ -74,7 +72,7 @@ registry.registerPath({
   },
 });
 
-// ── Auth ─────────────────────────────────────────────────────────────────────
+// ── Auth ──
 const LoginBody = z.object({ email: z.string().email(), password: z.string().min(1) }).openapi('LoginBody');
 const LoginResponse = z
   .object({ token: z.string(), user: z.object({ id: z.number(), email: z.string(), role: z.string() }) })
@@ -91,7 +89,7 @@ registry.registerPath({
   },
 });
 
-// ── Projets ──────────────────────────────────────────────────────────────────
+// ── Projects ──
 registry.registerPath({
   method: 'get',
   path: '/api/projects',
@@ -149,7 +147,7 @@ registry.registerPath({
   },
 });
 
-// ── API v1 (intégrations) ────────────────────────────────────────────────────
+// ── API v1 (integrations) ──
 
 registry.registerComponent('securitySchemes', 'apiToken', {
   type: 'http',
@@ -160,11 +158,11 @@ registry.registerComponent('securitySchemes', 'apiToken', {
 });
 
 /**
- * Enregistre automatiquement toutes les routes de l'API v1, décrites depuis leurs propres
- * schémas de validation. Un endpoint ajouté à un routeur v1 apparaît ici sans autre geste.
+ * Automatically registers all the v1 API routes, described from their own validation schemas. An endpoint added to a v1
+ * router appears here without any other step.
  */
-function registerV1Paths(): void {
-  for (const route of describeMounts(V1_BASE_PATH, V1_MOUNTS)) {
+function registerV1Paths(v1: V1Surface): void {
+  for (const route of describeMounts(v1.base, v1.mounts)) {
     const { method, path, schemas, scope } = route;
     const request: Parameters<typeof registry.registerPath>[0]['request'] = {};
     if (schemas.params) request.params = schemas.params as never;
@@ -192,11 +190,20 @@ function registerV1Paths(): void {
   }
 }
 
-/** Produit le document OpenAPI 3.0 (mémoïsé). */
+/**
+ * The v1 routers to document. Passed in by the caller (`routes/docs.routes`) rather than imported: `lib/`
+ * does not depend on `routes/`.
+ */
+export interface V1Surface {
+  base: string;
+  mounts: { prefix: string; router: Router }[];
+}
+
+/** Produces the OpenAPI 3.0 document (memoised). */
 let cached: ReturnType<OpenApiGeneratorV3['generateDocument']> | null = null;
-export function buildOpenApiDocument() {
+export function buildOpenApiDocument(v1: V1Surface) {
   if (cached) return cached;
-  registerV1Paths();
+  registerV1Paths(v1);
   cached = new OpenApiGeneratorV3(registry.definitions).generateDocument({
     openapi: '3.0.0',
     info: {
@@ -207,7 +214,7 @@ export function buildOpenApiDocument() {
         '**`/api/v1`** est la surface d’intégration destinée aux outils (DCC, Prism, bots, ' +
         'synchronisations) : contrat stable, adressage par chemin de pipeline, écritures ' +
         'idempotentes et scopes explicites. **`/api`** sert l’interface web et suit le produit.',
-      // Le document est public : il porte la licence de l'API qu'il décrit.
+      // The document is public: it carries the licence of the API it describes.
       license: { name: 'AGPL-3.0-or-later', url: 'https://www.gnu.org/licenses/agpl-3.0.html' },
     },
     servers: [{ url: '/' }],

@@ -29,7 +29,7 @@ const chloe = user({
 });
 
 describe('adminUsers — userLabel', () => {
-  it('préfère displayName, puis pseudo, nom, email', () => {
+  it('prefers displayName, then handle, name, email', () => {
     expect(userLabel(chloe)).toBe('Chloé');
     expect(userLabel(alice)).toBe('alice');
     expect(userLabel(bob)).toBe('Bob Martin');
@@ -39,7 +39,7 @@ describe('adminUsers — userLabel', () => {
 
 describe('adminUsers — filterUsers', () => {
   const all = [alice, bob, chloe];
-  it('filtre par rôle et par texte (insensible à la casse)', () => {
+  it('filters by role and text (case-insensitive)', () => {
     expect(filterUsers(all, '', 'ALL')).toHaveLength(3);
     expect(filterUsers(all, '', 'CLIENT')).toEqual([chloe]);
     expect(filterUsers(all, 'MARTIN', 'ALL')).toEqual([bob]);
@@ -50,11 +50,11 @@ describe('adminUsers — filterUsers', () => {
 
 describe('adminUsers — sortUsers', () => {
   const all = [bob, chloe, alice];
-  it('trie par nom, rôle, stockage et id décroissant sans muter', () => {
+  it('sorts by name, role, storage and descending id without mutating', () => {
     expect(sortUsers(all, 'name').map((u) => u.id)).toEqual([1, 2, 3]);
     expect(sortUsers(all, 'role').map((u) => u.role)).toEqual(['ADMIN', 'ARTIST', 'CLIENT']);
     expect(sortUsers(all, 'storage').map((u) => u.storageUsed)).toEqual([900, 50, 10]);
     expect(sortUsers(all, 'recent').map((u) => u.id)).toEqual([3, 2, 1]);
-    expect(all.map((u) => u.id)).toEqual([2, 3, 1]); // liste d'origine intacte
+    expect(all.map((u) => u.id)).toEqual([2, 3, 1]); // original list left intact
   });
 });

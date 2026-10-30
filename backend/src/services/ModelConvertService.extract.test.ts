@@ -10,8 +10,8 @@ import { join } from 'node:path';
 import { extractArchive } from './ModelConvertService';
 
 /**
- * Extraction d'archive : `lib/zipSafety` juge le CATALOGUE (noms et tailles *déclarées*),
- * ces tests vérifient ce qui est réellement écrit sur le disque du worker.
+ * Archive extraction: `lib/zipSafety` judges the CATALOGUE (names and *declared* sizes); these tests verify
+ * what is actually written to the worker's disk.
  */
 
 let dir: string;
@@ -31,7 +31,7 @@ const archivePath = async (name: string, build: (zip: AdmZip) => void | Promise<
 };
 
 describe('extractArchive', () => {
-  it('extrait une archive honnête, arborescence comprise', async () => {
+  it('extracts an honest archive, folder tree included', async () => {
     const src = await archivePath('honest.zip', (zip) => {
       zip.addFile('scene.usda', Buffer.from('#usda 1.0\n'));
       zip.addFile('tex/albedo.bin', Buffer.alloc(2048, 7));
@@ -42,10 +42,10 @@ describe('extractArchive', () => {
     expect((await readFile(join(dest, 'tex/albedo.bin'))).length).toBe(2048);
   });
 
-  // Le cœur du correctif : le catalogue est fourni par l'attaquant. Une entrée qui annonce
-  // 16 octets et en contient 4 Mo passait tous les contrôles de `planExtraction` (tailles et
-  // ratio déclarés), puis `extractAllTo` écrivait les octets réels sans rien vérifier.
-  it('refuse une entrée dont la taille réelle dément la taille annoncée', async () => {
+  // The core of the fix: the catalogue is supplied by the attacker. An entry announcing 16 bytes while
+  // containing 4 MB passed every check of `planExtraction` (declared sizes and ratio),
+  // then `extractAllTo` wrote the real bytes without verifying anything.
+  it('refuses an entry whose real size contradicts the announced size', async () => {
     const honest = new AdmZip();
     honest.addFile('big.bin', Buffer.alloc(4 * 1024 * 1024, 0));
     const forged = new AdmZip(honest.toBuffer());
@@ -54,27 +54,26 @@ describe('extractArchive', () => {
     await writeFile(src, forged.toBuffer());
 
     const dest = join(dir, 'out-liar');
-    await expect(extractArchive(src, dest)).rejects.toThrow(/Extraction de l'archive échouée/);
+    await expect(extractArchive(src, dest)).rejects.toThrow(/Archive extraction failed/);
   });
 
-  // Variante la plus vicieuse : annoncer ZÉRO. La confrontation taille réelle / déclarée
-  // arrive APRÈS getData(), qui décompresse tout en mémoire — une déclaration à zéro
-  // franchissait donc le pré-contrôle de budget et offrait une décompression sans borne.
-  // Le refus doit intervenir AVANT toute décompression.
-  it('refuse une entrée qui se déclare vide mais ne l’est pas', async () => {
+  // The most insidious variant: announcing ZERO. The real/declared size comparison happens AFTER getData(),
+  // which decompresses everything in memory — a zero declaration therefore passed the budget pre-check and
+  // offered unbounded decompression. The refusal must happen BEFORE any decompression.
+  it('refuses an entry that declares itself empty but is not', async () => {
     const honest = new AdmZip();
     honest.addFile('bomb.bin', Buffer.alloc(4 * 1024 * 1024, 0));
     const forged = new AdmZip(honest.toBuffer());
-    forged.getEntries()[0]!.header.size = 0; // « je ne pèse rien »
+    forged.getEntries()[0]!.header.size = 0; // "I weigh nothing"
     const src = join(dir, 'zero.zip');
     await writeFile(src, forged.toBuffer());
 
     const dest = join(dir, 'out-zero');
-    await expect(extractArchive(src, dest)).rejects.toThrow(/Extraction de l'archive échouée/);
+    await expect(extractArchive(src, dest)).rejects.toThrow(/Archive extraction failed/);
     await expect(readdir(dest)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
-  it('accepte un fichier réellement vide', async () => {
+  it('accepts a truly empty file', async () => {
     const src = await archivePath('empty.zip', (zip) => {
       zip.addFile('vide.txt', Buffer.alloc(0));
       zip.addFile('scene.usda', Buffer.from('#usda 1.0\n'));
@@ -84,13 +83,13 @@ describe('extractArchive', () => {
     expect((await readFile(join(dest, 'vide.txt'))).length).toBe(0);
   });
 
-  // Régression : le pire cas était estimé à `compressedSize × 1032` (expansion physique de
-  // DEFLATE). Un fichier déjà compressé — un PNG de texture stocké tel quel — « pesait » alors
-  // mille fois son poids et faisait refuser l'archive entière : une scène glTF ordinaire avec
-  // ses textures était rejetée pour « contenu décompressé supérieur à 8192 Mo ».
-  it('accepte une entrée volumineuse et incompressible (texture stockée)', async () => {
+  // Regression: the worst case was estimated as `compressedSize × 1032` (DEFLATE's physical expansion). An
+  // already compressed file — a texture PNG stored as is — then "weighed"
+  // a thousand times its weight and got the entire archive refused: an ordinary glTF scene with its textures
+  // was rejected for "decompressed content above 8192 MB".
+  it('accepts a large, incompressible entry (stored texture)', async () => {
     const src = await archivePath('stored.zip', (zip) => {
-      // `Buffer` aléatoire : incompressible, donc stocké tel quel par adm-zip.
+      // Random `Buffer`: incompressible, hence stored as is by adm-zip.
       const noise = Buffer.alloc(12 * 1024 * 1024);
       for (let i = 0; i < noise.length; i += 1) noise[i] = (i * 2654435761) % 251;
       zip.addFile('textures/albedo.png', noise);
@@ -101,18 +100,18 @@ describe('extractArchive', () => {
     expect((await readFile(join(dest, 'textures/albedo.png'))).length).toBe(12 * 1024 * 1024);
   });
 
-  it('refuse une méthode de compression non supportée', async () => {
+  it('refuses an unsupported compression method', async () => {
     const honest = new AdmZip();
     honest.addFile('x.bin', Buffer.alloc(1024, 3));
     const forged = new AdmZip(honest.toBuffer());
-    forged.getEntries()[0]!.header.method = 12; // bzip2 : hors de ce que nous savons borner
+    forged.getEntries()[0]!.header.method = 12; // bzip2: outside what we know how to bound
     const src = join(dir, 'method.zip');
     await writeFile(src, forged.toBuffer());
 
-    await expect(extractArchive(src, join(dir, 'out-method'))).rejects.toThrow(/compression non supportée/);
+    await expect(extractArchive(src, join(dir, 'out-method'))).rejects.toThrow(/unsupported compression/);
   });
 
-  it('ne laisse aucune extraction partielle derrière un refus', async () => {
+  it('leaves no partial extraction behind a refusal', async () => {
     const honest = new AdmZip();
     honest.addFile('ok.txt', Buffer.from('bien'));
     honest.addFile('big.bin', Buffer.alloc(2 * 1024 * 1024, 0));
@@ -123,13 +122,12 @@ describe('extractArchive', () => {
 
     const dest = join(dir, 'out-partial');
     await expect(extractArchive(src, dest)).rejects.toThrow();
-    // Une scène USD à moitié extraite produirait un modèle silencieusement incomplet.
+    // A half-extracted USD scene would produce a silently incomplete model.
     await expect(readdir(dest)).rejects.toMatchObject({ code: 'ENOENT' });
   });
 
-  // La traversée de chemin (`../`, chemins absolus, symlinks) n'est pas testée ici : adm-zip
-  // normalise les noms à la *création*, on ne peut donc pas fabriquer l'archive hostile avec
-  // sa propre API. Ces cas sont couverts unitairement dans `lib/zipSafety.test.ts`, sur les
-  // deux fonctions que la boucle d'extraction applique à chaque entrée — `planExtraction`
-  // (refus du catalogue) et `resolveInside` (destination réellement écrite).
+  // Path traversal (`../`, absolute paths, symlinks) is not tested here: adm-zip normalises names at
+  // *creation*, so the hostile archive cannot be built with its own API. These cases are covered
+  // unit-wise in `lib/zipSafety.test.ts`, on the two functions that the extraction loop applies to each entry
+  // — `planExtraction` (catalogue refusal) and `resolveInside` (destination actually written).
 });

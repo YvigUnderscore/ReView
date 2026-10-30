@@ -3,31 +3,31 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import * as ChatService from '../services/ChatService';
 
 /**
- * Messagerie interne : messages privés et groupes de discussion.
- * Aucun contrôle de rôle — un fil est privé à ses membres, l'appartenance EST le droit
- * d'accès (vérifiée dans le service, pas ici, pour qu'aucune route ne puisse l'oublier).
+ * Internal messaging: private messages and discussion groups.
+ * No role check: a thread is private to its members, and membership IS the access right (verified in
+ * the service, not here, so that no route can forget it).
  */
 const router = Router();
 router.use(authenticate);
 
 const idParam = z.object({ id: z.coerce.number().int() });
 
-// GET /api/chat/conversations — fils de l'utilisateur, le plus actif d'abord
+// GET /api/chat/conversations — the user's threads, most active first
 router.get('/conversations', async (req, res) => {
-  res.json({ conversations: await ChatService.listConversations(req.user!.id) });
+  res.json({ conversations: await ChatService.listConversations(requireUser(req).id) });
 });
 
-// GET /api/chat/unread — total de non-lus (pastille de la sidebar)
+// GET /api/chat/unread — total unread count (sidebar badge)
 router.get('/unread', async (req, res) => {
-  res.json({ unread: await ChatService.countUnread(req.user!.id) });
+  res.json({ unread: await ChatService.countUnread(requireUser(req).id) });
 });
 
-// POST /api/chat/conversations — MP (un destinataire) ou groupe (titre ou 2+ destinataires)
+// POST /api/chat/conversations — DM (one recipient) or group (title or 2+ recipients)
 router.post(
   '/conversations',
   validate({
@@ -38,17 +38,17 @@ router.post(
   }),
   async (req, res) => {
     const body = req.body as { userIds: number[]; title?: string | null };
-    res.status(201).json({ conversation: await ChatService.createConversation(req.user!.id, body) });
+    res.status(201).json({ conversation: await ChatService.createConversation(requireUser(req).id, body) });
   },
 );
 
-// GET /api/chat/conversations/:id — un fil (membres, non-lus, dernier message)
+// GET /api/chat/conversations/:id — a thread (members, unread count, last message)
 router.get('/conversations/:id', validate({ params: idParam }), async (req, res) => {
-  const conversation = await ChatService.conversationViewFor(Number(req.params.id), req.user!.id);
+  const conversation = await ChatService.conversationViewFor(Number(req.params.id), requireUser(req).id);
   res.json({ conversation });
 });
 
-// GET /api/chat/conversations/:id/messages?before=&limit= — page de messages
+// GET /api/chat/conversations/:id/messages?before=&limit= — page of messages
 router.get(
   '/conversations/:id/messages',
   validate({
@@ -59,9 +59,9 @@ router.get(
     }),
   }),
   async (req, res) => {
-    // Express 5 : `req.query` est un getter, la coercition du middleware n'y persiste pas.
+    // Express 5: `req.query` is a getter, the middleware's coercion does not persist on it.
     const q = req.query as { before?: string; limit?: string };
-    const messages = await ChatService.listMessages(Number(req.params.id), req.user!.id, {
+    const messages = await ChatService.listMessages(Number(req.params.id), requireUser(req).id, {
       before: q.before ? Number(q.before) : undefined,
       limit: q.limit ? Number(q.limit) : undefined,
     });
@@ -69,7 +69,7 @@ router.get(
   },
 );
 
-// POST /api/chat/conversations/:id/messages — écrire dans le fil
+// POST /api/chat/conversations/:id/messages — write to the thread
 router.post(
   '/conversations/:id/messages',
   validate({
@@ -79,19 +79,19 @@ router.post(
   async (req, res) => {
     const message = await ChatService.sendMessage(
       Number(req.params.id),
-      req.user!.id,
+      requireUser(req).id,
       (req.body as { body: string }).body,
     );
     res.status(201).json({ message });
   },
 );
 
-// POST /api/chat/conversations/:id/read — marque le fil lu
+// POST /api/chat/conversations/:id/read — marks the thread as read
 router.post('/conversations/:id/read', validate({ params: idParam }), async (req, res) => {
-  res.json(await ChatService.markRead(Number(req.params.id), req.user!.id));
+  res.json(await ChatService.markRead(Number(req.params.id), requireUser(req).id));
 });
 
-// PATCH /api/chat/conversations/:id — renommer le groupe et/ou couper la sourdine
+// PATCH /api/chat/conversations/:id — rename the group and/or mute it
 router.patch(
   '/conversations/:id',
   validate({
@@ -101,42 +101,42 @@ router.patch(
   async (req, res) => {
     const id = Number(req.params.id);
     const body = req.body as { title?: string; muted?: boolean };
-    if (body.muted !== undefined) await ChatService.setMuted(id, req.user!.id, body.muted);
+    if (body.muted !== undefined) await ChatService.setMuted(id, requireUser(req).id, body.muted);
     if (body.title !== undefined) {
-      res.json({ conversation: await ChatService.renameConversation(id, req.user!.id, body.title) });
+      res.json({ conversation: await ChatService.renameConversation(id, requireUser(req).id, body.title) });
       return;
     }
-    res.json({ conversation: await ChatService.conversationViewFor(id, req.user!.id) });
+    res.json({ conversation: await ChatService.conversationViewFor(id, requireUser(req).id) });
   },
 );
 
-// POST /api/chat/conversations/:id/members — inviter dans le fil
+// POST /api/chat/conversations/:id/members — invite into the thread
 router.post(
   '/conversations/:id/members',
   validate({ params: idParam, body: z.object({ userIds: z.array(z.number().int()).min(1).max(50) }) }),
   async (req, res) => {
     const conversation = await ChatService.addMembers(
       Number(req.params.id),
-      req.user!.id,
+      requireUser(req).id,
       (req.body as { userIds: number[] }).userIds,
     );
     res.json({ conversation });
   },
 );
 
-// DELETE /api/chat/conversations/:id/members/:userId — retirer quelqu'un / quitter le fil
+// DELETE /api/chat/conversations/:id/members/:userId — remove someone or leave the thread
 router.delete(
   '/conversations/:id/members/:userId',
   validate({ params: idParam.extend({ userId: z.coerce.number().int() }) }),
   async (req, res) => {
-    await ChatService.removeMember(Number(req.params.id), req.user!.id, Number(req.params.userId));
+    await ChatService.removeMember(Number(req.params.id), requireUser(req).id, Number(req.params.userId));
     res.status(204).end();
   },
 );
 
-// DELETE /api/chat/messages/:id — suppression douce par l'auteur
+// DELETE /api/chat/messages/:id — soft delete by the author
 router.delete('/messages/:id', validate({ params: idParam }), async (req, res) => {
-  await ChatService.deleteMessage(Number(req.params.id), req.user!.id);
+  await ChatService.deleteMessage(Number(req.params.id), requireUser(req).id);
   res.status(204).end();
 });
 

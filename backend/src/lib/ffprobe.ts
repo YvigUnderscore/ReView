@@ -5,13 +5,12 @@ import { spawn } from 'node:child_process';
 import { FFPROBE_TIMEOUT_MS, ffmpegTimeoutMessage } from './ffmpegTimeout';
 
 /**
- * Sonde ffprobe.
+ * ffprobe probe.
  *
- * On parle au binaire plutôt qu'à `fluent-ffmpeg.ffprobe`, pour une raison précise :
- * la bibliothèque ne rend pas la main sur le processus enfant, donc une sonde qui se
- * bloque sur un flux corrompu ne peut pas être tuée — elle immobilise l'emplacement de
- * file jusqu'au redémarrage du worker. Ici la sonde a un délai, et le processus est tué.
- * Bénéfice second : l'analyse de la sortie devient une fonction pure, donc testable.
+ * We talk to the binary rather than to `fluent-ffmpeg.ffprobe`, for a specific reason: the library does not
+ * hand control back over the child process, so a probe blocked on a corrupted stream cannot be killed — it
+ * blocks the queue slot until the worker restarts. Here the probe has a delay, and the process is killed.
+ * A secondary benefit: parsing the output becomes a pure function, hence testable.
  */
 
 export interface ProbeResult {
@@ -19,24 +18,24 @@ export interface ProbeResult {
   width?: number;
   height?: number;
   fps?: number;
-  /** Numérateur de la cadence exacte (« 24000 » pour 24000/1001). */
+  /** Numerator of the exact frame rate ("24000" for 24000/1001). */
   fpsNum?: number;
-  /** Dénominateur de la cadence exacte (« 1001 » pour 24000/1001). */
+  /** Denominator of the exact frame rate ("1001" for 24000/1001). */
   fpsDen?: number;
   hasAudio?: boolean;
   /**
-   * Ordre de trame déclaré par le conteneur (`progressive`, `tt`, `bb`, `tb`, `bt`).
-   * Les masters MXF/AVI de diffusion sont fréquemment entrelacés : sans ce champ, le
-   * proxy sort peigné et le superviseur juge une image que personne n'a livrée.
+   * Field order declared by the container (`progressive`, `tt`, `bb`, `tb`, `bt`).
+   * Broadcast MXF/AVI masters are often interlaced: without this field, the proxy comes out combed and the
+   * supervisor judges a picture nobody delivered.
    */
   fieldOrder?: string;
-  /** Nombre de canaux de la piste audio retenue (6 pour un 5.1). */
+  /** Channel count of the retained audio track (6 for a 5.1). */
   audioChannels?: number;
-  /** Codec de la piste vidéo retenue (`prores`, `dnxhd`, `h264`…) — trace de provenance. */
+  /** Codec of the retained video track (`prores`, `dnxhd`, `h264`...) — provenance trace. */
   videoCodec?: string;
 }
 
-/** Cadence exacte, telle que le conteneur la déclare — jamais arrondie. */
+/** Exact frame rate, as the container declares it — never rounded. */
 export interface FrameRateFraction {
   num: number;
   den: number;
@@ -59,12 +58,12 @@ const asNumber = (v: unknown): number | undefined => {
 };
 
 /**
- * Cadence depuis `r_frame_rate` (« 24000/1001 »), arrondie au centième — c'est la valeur
- * historique du champ `metadata.fps`, sur laquelle reposent tous les compteurs de frame.
+ * Frame rate from `r_frame_rate` ("24000/1001"), rounded to the hundredth — this is the historical value of
+ * the `metadata.fps` field, on which all the frame counters rely.
  *
- * Conservée telle quelle : les médias déjà en base ne portent que ce nombre, et tout ce qui
- * l'affiche (« 23.98 fps ») ou le relit continue de fonctionner. La cadence **exacte** vient
- * en plus, dans `fpsNum`/`fpsDen` — cf. `parseFrameRateFraction`.
+ * Kept as-is: media already in the database only carry this number, and everything that displays it
+ * ("23.98 fps") or rereads it keeps working. The **exact** rate comes in addition, in `fpsNum`/`fpsDen` — see
+ * `parseFrameRateFraction`.
  */
 export function parseFrameRate(raw: unknown): number | undefined {
   if (typeof raw !== 'string' || !raw.includes('/')) return undefined;
@@ -76,32 +75,30 @@ export function parseFrameRate(raw: unknown): number | undefined {
 const gcd = (a: number, b: number): number => (b === 0 ? a : gcd(b, a % b));
 
 /**
- * Cadence **exacte** en fraction irréductible : 24000/1001, pas 23.98.
+ * **Exact** frame rate as an irreducible fraction: 24000/1001, not 23.98.
  *
- * L'arrondi au centième dérive de 0,003976 frame par seconde à 23,976 fps — une frame
- * entière d'écart au bout de quatre minutes. Le numéro de frame qu'un superviseur cite dans
- * un retour ne désigne alors plus la même image que celle ouverte dans le DCC. On garde donc
- * les deux termes de la fraction, seule forme dont aucun compteur ne dérive.
+ * Rounding to the hundredth drifts by 0.003976 frame per second at 23.976 fps — a whole frame of gap after four
+ * minutes. The frame number a supervisor cites in a note then no longer designates the same image as the one
+ * open in the DCC. Both terms of the fraction are therefore kept: the only form no counter drifts from.
  */
 export function parseFrameRateFraction(raw: unknown): FrameRateFraction | undefined {
   if (typeof raw !== 'string' || !raw.includes('/')) return undefined;
   const [n, d] = raw.split('/').map(Number);
   if (!n || !d || !Number.isFinite(n) || !Number.isFinite(d) || n < 0 || d < 0) return undefined;
-  // Réduction seulement sur des entiers : `30000/1001` se réduit, `29.97/1` n'a rien à réduire.
+  // Reduction only on integers: `30000/1001` reduces, `29.97/1` has nothing to reduce.
   if (!Number.isInteger(n) || !Number.isInteger(d)) return { num: n, den: d };
   const g = gcd(n, d);
   return { num: n / g, den: d / g };
 }
 
 /**
- * Piste vidéo **utile** d'un conteneur.
+ * The **useful** video track of a container.
  *
- * `streams.find(codec_type === 'video')` prenait la première venue. Or un master ProRes en
- * MOV, un MXF de diffusion ou un MP4 sorti d'un NLE embarquent régulièrement une pochette
- * (`disposition.attached_pic`) ou une vignette de 120 px : sondée, elle devenait la
- * définition du média — proxy transcodé en 120 px de haut, échelle HLS entière calculée
- * dessus, letterbox de review faux. On écarte donc les images attachées et, à défaut de
- * critère plus sûr, on retient la piste de plus grande surface.
+ * `streams.find(codec_type === 'video')` took whichever came first. Yet a ProRes master in MOV, a broadcast
+ * MXF or an MP4 exported from an NLE regularly embeds a cover (`disposition.attached_pic`) or a 120 px
+ * thumbnail: once probed, it became the definition of the media — proxy transcoded at 120 px high, whole HLS
+ * ladder computed from it, wrong review frame. Attached pictures are therefore set aside and, failing a safer
+ * criterion, the track with the largest area is kept.
  */
 function pickVideoStream(streams: RawStream[]): RawStream | undefined {
   const candidates = streams.filter((s) => s.codec_type === 'video' && s.disposition?.attached_pic !== 1);
@@ -114,14 +111,14 @@ function pickVideoStream(streams: RawStream[]): RawStream | undefined {
 }
 
 /**
- * Le média est-il entrelacé ? `unknown` et `progressive` valent « non » : on ne
- * désentrelace jamais sur un doute — la passe coûte une frame de netteté.
+ * Is the media interlaced? `unknown` and `progressive` mean "no": we never deinterlace on doubt — the pass
+ * costs a frame of sharpness.
  */
 export function isInterlaced(fieldOrder: string | undefined): boolean {
   return fieldOrder !== undefined && ['tt', 'bb', 'tb', 'bt'].includes(fieldOrder);
 }
 
-/** Analyse la sortie JSON de ffprobe. Une sortie illisible donne un résultat vide. */
+/** Parses the JSON output of ffprobe. Unreadable output yields an empty result. */
 export function parseProbeOutput(raw: string): ProbeResult {
   let data: { format?: { duration?: unknown }; streams?: unknown };
   try {
@@ -131,8 +128,8 @@ export function parseProbeOutput(raw: string): ProbeResult {
   }
   const streams: RawStream[] = Array.isArray(data.streams) ? (data.streams as RawStream[]) : [];
   const video = pickVideoStream(streams);
-  // Piste audio la plus « riche » : un master MXF porte souvent plusieurs pistes, dont le
-  // downmix stéréo et des stems mono. C'est le nombre de canaux qui décide du downmix.
+  // Richest audio track: a broadcast MXF often carries several tracks, including a stereo downmix and mono
+  // stems. The channel count decides the downmix.
   const audio = streams
     .filter((s) => s.codec_type === 'audio')
     .reduce<RawStream | undefined>(
@@ -156,12 +153,12 @@ export function parseProbeOutput(raw: string): ProbeResult {
   };
 }
 
-/** Arguments de la sonde (extraits pour être vérifiés sans lancer de processus). */
+/** Probe arguments (extracted so they can be checked without launching a process). */
 export function probeArgs(path: string): string[] {
   return ['-v', 'quiet', '-print_format', 'json', '-show_format', '-show_streams', '-i', path];
 }
 
-/** Sonde un fichier local. Dépassement du délai → processus tué et erreur explicite. */
+/** Probes a local file. On timeout the process is killed and an explicit error is raised. */
 export function probeFile(path: string, timeoutMs: number = FFPROBE_TIMEOUT_MS): Promise<ProbeResult> {
   return new Promise((resolve, reject) => {
     const child = spawn(process.env.FFPROBE_PATH || 'ffprobe', probeArgs(path), {

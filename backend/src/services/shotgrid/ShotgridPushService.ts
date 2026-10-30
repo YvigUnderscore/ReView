@@ -5,8 +5,8 @@ import type { Prisma } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { logger } from '../../lib/logger';
 import { env } from '../../config/env';
-import { shotgridQueue } from '../JobService';
-import { storage } from '../StorageService';
+import { shotgridQueue } from '../../lib/queues';
+import { storage } from '../../lib/storage';
 import { mediaSourceKey } from '../MediaService';
 import { clientForSiteRecord } from './ShotgridConfigService';
 import { writerFor, type ShotgridWriter } from './ShotgridWriter';
@@ -20,17 +20,14 @@ import { pushTaskCreation } from './ShotgridTaskCreate';
 import { pushPlaylist } from './ShotgridPlaylistSync';
 
 /**
- * Écritures ReView → ShotGrid.
+ * ReView -> ShotGrid writes.
  *
- * Tout passe par la file : un artiste qui change un statut ne doit pas attendre le
- * site distant, et une panne de ShotGrid ne doit pas faire échouer une action locale.
- * Chaque écriture vérifie trois choses avant de partir : le domaine est-il ouvert en
- * écriture, l'entité est-elle bien reliée, et l'entité distante appartient-elle
- * toujours au projet lié.
+ * Everything goes through the queue: an artist who changes a status must not wait for the remote site, and a ShotGrid outage must not make a local action fail.
+ * Each write checks three things before leaving: is the domain open for writing, is the entity linked, and does the remote entity still belong to the linked project.
  */
 
 export type PushJob =
-  // Tâche née dans ReView (retour de review) : elle n'existait que chez nous.
+  // Task born in ReView (review feedback): it only existed on our side.
   | { type: 'task-create'; taskId: number; actorId?: number | null }
   | { type: 'task-status'; taskId: number; actorId?: number | null }
   | { type: 'task-dates'; taskId: number; actorId?: number | null }
@@ -51,12 +48,10 @@ export type PushJob =
   | { type: 'playlist'; playlistId: number; actorId?: number | null };
 
 /**
- * Met une écriture en file pour le projet concerné, si une connexion existe.
+ * Queues a write for the concerned project, if a connection exists.
  *
- * Rien de ce qui se passe ici ne doit faire échouer l'action de l'utilisateur : poser
- * une décision de review, changer un statut ou publier reste une opération ReView, que
- * ShotGrid soit joignable ou non. Un incident est journalisé, et la réconciliation
- * périodique rattrapera l'écart au prochain passage.
+ * Nothing that happens here must make the user's action fail: posting a review decision, changing a status or publishing remains a ReView operation, whether or not
+ * ShotGrid is reachable. An incident is logged, and the periodic reconciliation will catch the gap on its next pass.
  */
 export async function enqueuePush(projectId: number, job: PushJob): Promise<void> {
   try {
@@ -68,7 +63,7 @@ export async function enqueuePush(projectId: number, job: PushJob): Promise<void
       { removeOnComplete: 200 },
     );
   } catch (err) {
-    logger.warn({ err, projectId, job }, "Écriture ShotGrid non mise en file — l'action locale reste valide");
+    logger.warn({ err, projectId, job }, 'ShotGrid write not queued — the local action stays valid');
   }
 }
 
@@ -77,19 +72,17 @@ interface PushContext {
   sgProjectId: number;
   sgProjectName: string;
   client: ReturnType<typeof clientForSiteRecord>;
-  /** Toute écriture passe par là — voir `ShotgridWriter`. */
+  /** Every write goes through here: see `ShotgridWriter`. */
   writer: ShotgridWriter;
   settings: ReturnType<typeof parseSettings>;
   baseUrl: string;
 }
 
 /**
- * Identifiant ShotGrid d'une entité locale.
+ * ShotGrid identifier of a local entity.
  *
- * Il ne relit plus la cible pour en vérifier le projet : c'est désormais `ShotgridWriter`
- * qui le fait, juste avant d'écrire, pour **toutes** les écritures — y compris celles que
- * cette fonction ne voyait pas passer. Le contrôle a gagné en portée et la lecture qui
- * était faite ici en double a disparu.
+ * It no longer re-reads the target to check its project: it is now `ShotgridWriter` that does so, just before writing, for **all** writes, including those this
+ * function did not see go by. The check gained scope and the duplicated read done here disappeared.
  */
 async function resolveTarget(
   ctx: PushContext,
@@ -102,7 +95,7 @@ async function resolveTarget(
   return link.sgId;
 }
 
-/** Compte ShotGrid de l'utilisateur, pour écrire en son nom quand c'est possible. */
+/** The user's ShotGrid account, to write in their name when possible. */
 async function actorLogin(ctx: PushContext, actorId: number | null | undefined): Promise<string | null> {
   if (!actorId || !ctx.settings.push.attributeToUser) return null;
   const link = await findByLocal(ctx.connectionId, 'user', actorId);
@@ -110,7 +103,7 @@ async function actorLogin(ctx: PushContext, actorId: number | null | undefined):
   return data.login ?? null;
 }
 
-/** Domaine de la matrice qui gouverne chaque type d'écriture. */
+/** Matrix domain that governs each type of write. */
 const JOB_DOMAIN: Record<PushJob['type'], 'tasks' | 'hierarchy' | 'versions' | 'notes' | 'playlists'> = {
   'task-create': 'tasks',
   'task-status': 'tasks',
@@ -128,13 +121,10 @@ const JOB_DOMAIN: Record<PushJob['type'], 'tasks' | 'hierarchy' | 'versions' | '
 };
 
 /**
- * Consigne une écriture refusée par la matrice de droits.
+ * Records a write refused by the rights matrix.
  *
- * Les gardes de domaine sont des `return` secs : le job se terminait « ok » et personne,
- * nulle part, n'apprenait que le statut n'était pas parti. L'utilisateur voyait sa
- * modification prise en compte dans ReView et cherchait ensuite pourquoi ShotGrid ne
- * bougeait pas. On agrège par domaine — un compteur et une date suffisent à faire
- * apparaître le problème dans l'écran de synchronisation.
+ * Domain guards were bare `return`s: the job ended "ok" and nobody, anywhere, learned that the status had not gone out. The user saw their change taken into account
+ * in ReView and then looked for why ShotGrid did not move. We aggregate per domain — a counter and a date are enough to surface the problem on the synchronization screen.
  */
 async function noteBlockedPush(connectionId: number, job: PushJob, domain: string): Promise<void> {
   const connection = await prisma.shotgridConnection.findUnique({
@@ -148,7 +138,7 @@ async function noteBlockedPush(connectionId: number, job: PushJob, domain: strin
     where: { id: connectionId },
     data: { pushBlocked: current as Prisma.InputJsonValue },
   });
-  logger.info({ connectionId, domain, jobType: job.type }, 'Écriture ShotGrid refusée par les réglages');
+  logger.info({ connectionId, domain, jobType: job.type }, 'ShotGrid write refused by the settings');
 }
 
 export async function runPush(connectionId: number, job: PushJob): Promise<void> {
@@ -173,8 +163,7 @@ export async function runPush(connectionId: number, job: PushJob): Promise<void>
     baseUrl: connection.site.baseUrl,
   };
 
-  // Le refus se constate ici, une fois pour tous les types : chaque fonction d'écriture
-  // reteste son domaine ensuite (défense en profondeur), mais aucune ne pouvait le dire.
+  // The refusal is detected here, once for all types: each write function re-tests its domain afterwards (defence in depth), but none could say so.
   const domain = JOB_DOMAIN[job.type];
   if (!can(ctx.settings, domain, 'write')) {
     await noteBlockedPush(connectionId, job, domain);
@@ -224,12 +213,12 @@ export async function runPush(connectionId: number, job: PushJob): Promise<void>
         break;
     }
   } catch (err) {
-    logger.error({ err, job }, 'Écriture ShotGrid en échec');
+    logger.error({ err, job }, 'ShotGrid write failed');
     throw err;
   }
 }
 
-/** Tâche ReView → Task ShotGrid : la création, et le lien qui la rattache. */
+/** ReView Task -> ShotGrid Task: the creation, and the link that attaches it. */
 async function pushTaskCreateJob(ctx: PushContext, job: Extract<PushJob, { type: 'task-create' }>) {
   if (!can(ctx.settings, 'tasks', 'write')) return;
   await pushTaskCreation(
@@ -262,15 +251,14 @@ async function pushTaskStatus(ctx: PushContext, job: Extract<PushJob, { type: 't
       asUserLogin: await actorLogin(ctx, job.actorId),
     },
   );
-  logger.info({ taskId: task.id, sgId, code }, 'Statut de tâche poussé vers ShotGrid');
+  logger.info({ taskId: task.id, sgId, code }, 'Task status pushed to ShotGrid');
 }
 
 /**
- * Dates de planification.
+ * Scheduling dates.
  *
- * ShotGrid lie start_date, due_date et duration : modifier l'une recalcule les autres.
- * Les deux dates partent donc dans la même requête — les envoyer séparément ferait
- * recalculer une échéance à partir d'une durée qui n'a plus cours.
+ * ShotGrid links start_date, due_date and duration: changing one recalculates the others. Both dates therefore leave in the same request: sending them separately
+ * would make a due date recalculate from a duration that no longer applies.
  */
 async function pushTaskDates(ctx: PushContext, job: Extract<PushJob, { type: 'task-dates' }>) {
   if (!can(ctx.settings, 'tasks', 'write')) return;
@@ -294,12 +282,11 @@ async function pushTaskAssignee(ctx: PushContext, job: Extract<PushJob, { type: 
   const sgId = await resolveTarget(ctx, 'task', task.id, 'Task');
   if (!sgId) return;
 
-  // Assigner suppose un compte ShotGrid correspondant : sans lui, ne rien écrire vaut
-  // mieux que de vider la liste des assignés côté ShotGrid.
+  // Assigning presupposes a matching ShotGrid account: without one, writing nothing is better than emptying the assignees list on the ShotGrid side.
   if (!task.assigneeId) return;
   const link = await findByLocal(ctx.connectionId, 'user', task.assigneeId);
   if (!link) {
-    logger.info({ taskId: task.id }, 'Assignation non poussée : pas de compte ShotGrid correspondant');
+    logger.info({ taskId: task.id }, 'Assignment not pushed: no matching ShotGrid account');
     return;
   }
   await ctx.writer.update(
@@ -334,12 +321,10 @@ async function pushShotStatus(ctx: PushContext, job: Extract<PushJob, { type: 's
 }
 
 /**
- * Statut de séquence ReView → ShotGrid.
+ * ReView sequence status -> ShotGrid.
  *
- * Il n'existait aucun chemin : une séquence porte un statut depuis la phase 48, mais
- * aucun type de job ne l'emportait vers le site. Le studio changeait l'état d'une
- * séquence dans ReView et le site n'en savait rien — jusqu'à ce que la synchronisation
- * suivante ramène l'ancienne valeur.
+ * No path existed: a sequence has carried a status since phase 48, but no job type carried it to the site. The studio changed the state of a sequence in ReView and the
+ * site knew nothing — until the next synchronization brought the old value back.
  */
 async function pushSequenceStatus(ctx: PushContext, job: Extract<PushJob, { type: 'sequence-status' }>) {
   if (!can(ctx.settings, 'hierarchy', 'write')) return;
@@ -358,15 +343,14 @@ async function pushSequenceStatus(ctx: PushContext, job: Extract<PushJob, { type
     { sg_status_list: code },
     { asUserLogin: await actorLogin(ctx, job.actorId) },
   );
-  logger.info({ sequenceId: sequence.id, sgId, code }, 'Statut de séquence poussé vers ShotGrid');
+  logger.info({ sequenceId: sequence.id, sgId, code }, 'Sequence status pushed to ShotGrid');
 }
 
 /**
- * Statut d'asset ReView → ShotGrid.
+ * ReView asset status -> ShotGrid.
  *
- * L'asset n'avait pas de statut propre : il empruntait le vocabulaire des tâches, et
- * rien ne remontait donc au site. Le chemin est celui du plan et de la séquence, à
- * l'entité près.
+ * The asset had no status of its own: it borrowed the vocabulary of tasks, and nothing therefore went up to the site. The path is that of the shot and the sequence,
+ * down to the entity.
  */
 async function pushAssetStatus(ctx: PushContext, job: Extract<PushJob, { type: 'asset-status' }>) {
   if (!can(ctx.settings, 'hierarchy', 'write')) return;
@@ -387,16 +371,13 @@ async function pushAssetStatus(ctx: PushContext, job: Extract<PushJob, { type: '
 }
 
 /**
- * Description ReView → ShotGrid, quand le studio a ouvert l'aller-retour.
+ * ReView description -> ShotGrid, when the studio has opened the round trip.
  *
- * Deux verrous, et il en faut deux : le domaine `hierarchy` doit être ouvert en écriture
- * (le réglage général), et `descriptions.writeBack` doit l'être aussi (le réglage précis).
- * Le premier seul ne suffit pas — un studio peut vouloir renvoyer les statuts sans
- * renvoyer les briefs, que sa production rédige côté site.
+ * Two locks, and both are needed: the `hierarchy` domain must be open for writing (the general setting), and `descriptions.writeBack` must be too (the precise setting).
+ * The first alone is not enough: a studio may want to send back statuses without sending back briefs, which its production writes on the site side.
  *
- * Une description vidée dans ReView est envoyée comme chaîne vide, pas ignorée : effacer
- * est une modification comme une autre, et ne rien envoyer laisserait le site afficher un
- * texte que ReView ne montre plus.
+ * A description emptied in ReView is sent as an empty string, not ignored: erasing is a modification like any other, and sending nothing would leave the site showing a
+ * text that ReView no longer displays.
  */
 async function pushDescription(ctx: PushContext, job: Extract<PushJob, { type: 'description' }>) {
   if (!can(ctx.settings, 'hierarchy', 'write')) return;
@@ -414,10 +395,10 @@ async function pushDescription(ctx: PushContext, job: Extract<PushJob, { type: '
     { description: description ?? '' },
     { asUserLogin: await actorLogin(ctx, job.actorId) },
   );
-  logger.info({ kind: job.kind, id: job.id, sgId }, 'Description poussée vers ShotGrid');
+  logger.info({ kind: job.kind, id: job.id, sgId }, 'Description pushed to ShotGrid');
 }
 
-/** La description locale, ou `undefined` quand l'entité n'existe plus. */
+/** The local description, or `undefined` when the entity no longer exists. */
 async function readDescription(
   kind: 'sequence' | 'shot' | 'asset',
   id: number,
@@ -432,7 +413,7 @@ async function readDescription(
   return row?.description;
 }
 
-/** Décision de review ReView → statut de la Version ShotGrid. */
+/** ReView review decision -> status of the ShotGrid Version. */
 async function pushVersionStatus(ctx: PushContext, job: Extract<PushJob, { type: 'version-status' }>) {
   if (!can(ctx.settings, 'versions', 'write')) return;
   const version = await prisma.version.findUnique({ where: { id: job.versionId } });
@@ -440,16 +421,15 @@ async function pushVersionStatus(ctx: PushContext, job: Extract<PushJob, { type:
   const sgId = await resolveTarget(ctx, 'version', version.id, 'Version');
   if (!sgId) return;
 
-  // La carte réglée d'abord ; à défaut, une déduction par le nom, en lecture seule.
-  // Sans ce second chemin, fermer la lecture du référentiel de statuts suffisait à
-  // couper tout envoi de décision de review.
+  // The configured map first; failing that, a deduction by name, read-only.
+  // Without this second path, closing the read of the status reference was enough to cut every sending of review decisions.
   const code =
     inverseVersionStatusMap(ctx.settings.versionStatusMap).get(version.reviewStatusId) ??
     (await resolveVersionStatusCode(ctx.client, version.reviewStatusId));
   if (!code) {
     logger.info(
       { versionId: version.id, reviewStatusId: version.reviewStatusId },
-      'Décision non poussée : statut ReView sans correspondance ShotGrid',
+      'Decision not pushed: ReView status with no ShotGrid mapping',
     );
     return;
   }
@@ -461,15 +441,14 @@ async function pushVersionStatus(ctx: PushContext, job: Extract<PushJob, { type:
       asUserLogin: await actorLogin(ctx, job.actorId),
     },
   );
-  logger.info({ versionId: version.id, sgId, code }, 'Décision de review poussée vers ShotGrid');
+  logger.info({ versionId: version.id, sgId, code }, 'Review decision pushed to ShotGrid');
 }
 
 /**
- * Publication ReView → Version ShotGrid.
+ * ReView publication -> ShotGrid Version.
  *
- * Deux modes réglés par projet : le lien (la Version ShotGrid renvoie vers la review
- * ReView, sans dupliquer le média) ou l'envoi du fichier. Le lien est le défaut :
- * dupliquer des masters de dailies coûte cher et ReView reste le lieu de la review.
+ * Two modes set per project: the link (the ShotGrid Version points back to the ReView review, without duplicating the media) or the sending of the file. The link is the
+ * default: duplicating dailies masters is costly, and ReView remains the place of the review.
  */
 async function pushVersionPublish(ctx: PushContext, job: Extract<PushJob, { type: 'version-publish' }>) {
   if (!can(ctx.settings, 'versions', 'write')) return;
@@ -487,8 +466,7 @@ async function pushVersionPublish(ctx: PushContext, job: Extract<PushJob, { type
 
   const already = await findByLocal(ctx.connectionId, 'version', version.id);
   if (already) {
-    // La version existe déjà là-bas : ajouter un média à une version en cours doit
-    // enrichir CETTE version, pas en fabriquer une seconde portant le même nom.
+    // The version already exists over there: adding a media to a version in progress must enrich THAT version, not manufacture a second one bearing the same name.
     const media = version.media[0];
     if (media) {
       await uploadThumbnail(ctx, already.sgId, media);
@@ -497,17 +475,15 @@ async function pushVersionPublish(ctx: PushContext, job: Extract<PushJob, { type
       }
       logger.info(
         { versionId: version.id, sgId: already.sgId },
-        'Média ajouté à la version ShotGrid existante',
+        'Media added to the existing ShotGrid version',
       );
     }
     return;
   }
 
   /**
-   * Une Version du même code existe peut-être déjà là-bas — créée par l'outil de rendu
-   * de l'artiste avant qu'il ne publie ici. S'y rattacher plutôt que d'en fabriquer une
-   * jumelle : le site n'a pas de moyen de départager deux entrées identiques, et le
-   * doublon se supprime à la main.
+   * A Version of the same code may already exist there — created by the artist's render tool before they published here. Attaching to it rather than making a twin:
+   * the site has no way to tell two identical entries apart, and the duplicate is deleted by hand.
    */
   const twin = await findVersionByCode(
     { client: ctx.client, scope: { sgProjectId: ctx.sgProjectId, sgProjectName: ctx.sgProjectName } },
@@ -520,8 +496,7 @@ async function pushVersionPublish(ctx: PushContext, job: Extract<PushJob, { type
       localId: version.id,
       sgType: 'Version',
       sgId: twin,
-      // `mediaImported` : sans lui, la synchronisation suivante rapatrierait le média
-      // qu'on vient d'envoyer, en double.
+      // `mediaImported`: without it, the next synchronization would fetch back the media we have just sent, as a duplicate.
       data: { publishMode: ctx.settings.push.publishMode, mediaImported: true },
     });
     const media = version.media[0];
@@ -529,7 +504,7 @@ async function pushVersionPublish(ctx: PushContext, job: Extract<PushJob, { type
       await uploadThumbnail(ctx, twin, media);
       if (ctx.settings.push.publishMode === 'upload') await uploadMasterMedia(ctx, twin, media);
     }
-    logger.info({ versionId: version.id, sgId: twin }, 'Version ShotGrid homonyme réutilisée');
+    logger.info({ versionId: version.id, sgId: twin }, 'Same-named ShotGrid version reused');
     return;
   }
 
@@ -570,19 +545,17 @@ async function pushVersionPublish(ctx: PushContext, job: Extract<PushJob, { type
     data: {
       createdFromReview: true,
       publishMode: ctx.settings.push.publishMode,
-      // Le média de cette version est celui qu'on vient d'envoyer : il est déjà ici.
-      // Sans ce marqueur, la synchronisation suivante le retéléchargerait depuis le site
-      // et l'ajouterait à la même version — une copie de plus à chaque passe.
+      // This version's media is the one we have just sent: it is already here. Without this marker, the next synchronization would download it again from the site
+      // and add it to the same version — one more copy at every pass.
       mediaImported: true,
     },
   });
   logger.info(
     { versionId: version.id, sgId: created.id, mode: ctx.settings.push.publishMode },
-    'Version créée dans ShotGrid depuis une publication ReView',
+    'Version created in ShotGrid from a ReView publication',
   );
 
-  // Miniature d'abord : légère, elle suffit à rendre la version reconnaissable dans
-  // les listes ShotGrid même quand le fichier lui-même reste chez nous.
+  // Thumbnail first: light, it is enough to make the version recognizable in ShotGrid lists even when the file itself stays with us.
   const media = version.media[0];
   if (media) {
     await uploadThumbnail(ctx, created.id, media);
@@ -592,17 +565,15 @@ async function pushVersionPublish(ctx: PushContext, job: Extract<PushJob, { type
   }
 }
 
-/** Playlist de dailies ReView → Playlist ShotGrid, ordre compris. */
+/** ReView dailies playlist -> ShotGrid Playlist, order included. */
 async function pushPlaylistJob(ctx: PushContext, job: Extract<PushJob, { type: 'playlist' }>) {
   if (!can(ctx.settings, 'playlists', 'write')) return;
   await pushPlaylist(
     {
       connectionId: ctx.connectionId,
       sgProjectId: ctx.sgProjectId,
-      // La portée attend un nom de projet ; l'appelant l'a sous la main. Le passer plutôt
-      // que de laisser le repli `?? ''` s'installer : `belongsToProject` ne tranche
-      // aujourd'hui que sur l'identifiant, mais une portée dont la moitié est une chaîne
-      // vide est un piège pour qui l'étendra au nom.
+      // The scope expects a project name; the caller has it at hand. Pass it rather than let the `?? ''` fallback settle in: `belongsToProject` only rules
+      // on the identifier today, but a scope half of which is an empty string is a trap for whoever extends it to the name.
       sgProjectName: ctx.sgProjectName,
       client: ctx.client,
       writer: ctx.writer,
@@ -612,7 +583,7 @@ async function pushPlaylistJob(ctx: PushContext, job: Extract<PushJob, { type: '
   );
 }
 
-/** Commentaire ReView → note ShotGrid, avec la frame annotée en pièce jointe. */
+/** ReView comment -> ShotGrid note, with the annotated frame attached. */
 async function pushCommentJob(ctx: PushContext, job: Extract<PushJob, { type: 'comment' }>) {
   if (!can(ctx.settings, 'notes', 'write')) return;
   await pushComment(
@@ -628,12 +599,10 @@ async function pushCommentJob(ctx: PushContext, job: Extract<PushJob, { type: 'c
 }
 
 /**
- * Rattachements d'un asset aux shots et aux sequences.
+ * An asset's links to shots and sequences.
  *
- * ShotGrid porte ces liens sur l'asset lui-même (`shots`, `sequences`) : c'est de là
- * que sortent les listes « quels assets pour ce plan ». Assigner dans ReView sans les
- * répercuter laissait la production aveugle côté ShotGrid, alors même que
- * l'information existait des deux côtés.
+ * ShotGrid holds these links on the asset itself (`shots`, `sequences`): that is where the "which assets for this shot" lists come from. Assigning in ReView without
+ * reflecting them left production blind on the ShotGrid side, even though the information existed on both sides.
  */
 async function pushAssetLinks(ctx: PushContext, job: Extract<PushJob, { type: 'asset-links' }>) {
   if (!can(ctx.settings, 'hierarchy', 'write')) return;
@@ -648,8 +617,7 @@ async function pushAssetLinks(ctx: PushContext, job: Extract<PushJob, { type: 'a
   const sgId = await resolveTarget(ctx, 'asset', asset.id, 'Asset');
   if (!sgId) return;
 
-  // Seuls les rattachements dont la contrepartie existe côté ShotGrid partent : un
-  // shot créé localement et jamais synchronisé n'a pas d'identifiant distant à citer.
+  // Only the links whose counterpart exists on the ShotGrid side are sent: a shot created locally and never synchronized has no remote identifier to cite.
   const shotRefs: Array<{ type: string; id: number }> = [];
   for (const shot of asset.shots) {
     const link = await findByLocal(ctx.connectionId, 'shot', shot.id);
@@ -669,11 +637,11 @@ async function pushAssetLinks(ctx: PushContext, job: Extract<PushJob, { type: 'a
   );
   logger.info(
     { assetId: asset.id, sgId, shots: shotRefs.length, sequences: sequenceRefs.length },
-    'Rattachements d’asset poussés vers ShotGrid',
+    'Asset links pushed to ShotGrid',
   );
 }
 
-/** Vignette de la version, envoyée dans le champ `image` de ShotGrid. */
+/** Thumbnail of the version, sent in the `image` field of ShotGrid. */
 async function uploadThumbnail(
   ctx: PushContext,
   sgVersionId: number,
@@ -684,14 +652,13 @@ async function uploadThumbnail(
     const buffer = await storage.getObjectBuffer(media.thumbnailKey);
     await ctx.writer.upload('Version', sgVersionId, 'image', buffer, `thumb-${media.id}.webp`, 'image/webp');
   } catch (err) {
-    logger.warn({ err, mediaId: media.id }, 'Vignette non transmise à ShotGrid');
+    logger.warn({ err, mediaId: media.id }, 'Thumbnail not sent to ShotGrid');
   }
 }
 
 /**
- * Transfert du fichier lui-même vers `sg_uploaded_movie`, qui déclenche le transcodage
- * de ShotGrid. Réservé au mode « upload » : un master de dailies pèse lourd, et le
- * dupliquer n'a de sens que si le studio veut ShotGrid autonome.
+ * Transfer of the file itself to `sg_uploaded_movie`, which triggers ShotGrid's transcoding. Reserved for "upload" mode: a dailies master weighs a lot, and duplicating it
+ * only makes sense if the studio wants ShotGrid to be self-sufficient.
  */
 async function uploadMasterMedia(
   ctx: PushContext,
@@ -709,14 +676,13 @@ async function uploadMasterMedia(
   if (Number(media.size) > MAX_UPLOAD_BYTES) {
     logger.warn(
       { mediaId: media.id, size: Number(media.size) },
-      'Média trop volumineux pour un envoi vers ShotGrid — la version reste liée sans fichier',
+      'Media too large to upload to ShotGrid — the version stays linked without a file',
     );
     return;
   }
   try {
     const buffer = await storage.getObjectBuffer(mediaSourceKey(media));
-    // `sg_uploaded_movie` accepte images et vidéos : c'est lui qui déclenche le
-    // transcodage de ShotGrid et alimente son lecteur.
+    // `sg_uploaded_movie` accepts images and videos: it is what triggers ShotGrid's transcoding and feeds its player.
     await ctx.writer.upload(
       'Version',
       sgVersionId,
@@ -725,8 +691,8 @@ async function uploadMasterMedia(
       media.originalName,
       media.mimeType,
     );
-    logger.info({ mediaId: media.id, sgVersionId }, 'Média envoyé vers ShotGrid');
+    logger.info({ mediaId: media.id, sgVersionId }, 'Media uploaded to ShotGrid');
   } catch (err) {
-    logger.error({ err, mediaId: media.id }, 'Envoi du média vers ShotGrid en échec');
+    logger.error({ err, mediaId: media.id }, 'Media upload to ShotGrid failed');
   }
 }

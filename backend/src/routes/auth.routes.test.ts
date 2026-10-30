@@ -16,7 +16,8 @@ vi.mock('../lib/sessions', () => ({
 }));
 vi.mock('../lib/oidcConfig', () => ({ isPasswordLoginBlocked: vi.fn().mockResolvedValue(false) }));
 vi.mock('../lib/userView', () => ({ toSessionUser: vi.fn(async (u: { id: number }) => ({ id: u.id })) }));
-vi.mock('../middleware/auth', () => ({
+vi.mock('../middleware/auth', async () => ({
+  ...(await import('../middleware/authUser')),
   authenticate: (req: Request, _res: Response, next: NextFunction) => {
     req.user = { id: 7, role: 'ARTIST' } as Request['user'];
     next();
@@ -32,7 +33,7 @@ import { createSession } from '../lib/sessions';
 
 const app = express().use(express.json()).use('/api/auth', authRoutes).use(errorHandler);
 
-// Coût 4 : ces tests mesurent le comportement, pas la résistance du hash.
+// Cost 4: these tests measure behavior, not the resistance of the hash.
 const HASH = bcrypt.hashSync('Motdepasse1', 4);
 const user = {
   id: 7,
@@ -46,19 +47,18 @@ const user = {
 beforeEach(() => {
   vi.clearAllMocks();
   db.user.findUnique.mockResolvedValue(user);
-  // `logAudit` détache l'écriture (`void create(...).catch(...)`) : le double doit rendre
-  // une promesse, sinon c'est le `.catch` qui explose au milieu de la route.
+  // `logAudit` detaches the write (`void create(...).catch(...)`): the double must return a promise,
+  // otherwise it is the `.catch` that explodes in the middle of the route.
   db.auditLog.create.mockResolvedValue({});
 });
 
 /**
- * Toutes les écritures normalisent l'adresse (inscription, invitation, installation,
- * provisionnement OIDC). La connexion, elle, cherchait la valeur brute du formulaire :
- * la personne qui retapait son adresse telle qu'on la lui avait communiquée, avec sa
- * majuscule, recevait « identifiants invalides » sur un compte pourtant existant.
+ * All writes normalize the address (sign-up, invitation, setup, OIDC provisioning). Login, however,
+ * looked up the raw value of the form: a person retyping their address as it had been communicated to
+ * them, capital letter included, got "invalid credentials" on an existing account.
  */
-describe('POST /api/auth/login — normalisation de l’adresse', () => {
-  it('retrouve le compte quand l’adresse est tapée avec des majuscules', async () => {
+describe('POST /api/auth/login — address normalization', () => {
+  it('finds the account when the address is typed with capital letters', async () => {
     const res = await request(app)
       .post('/api/auth/login')
       .send({ email: 'Alice@Studio.com', password: 'Motdepasse1' });
@@ -68,12 +68,11 @@ describe('POST /api/auth/login — normalisation de l’adresse', () => {
 });
 
 /**
- * L'écart de temps entre « adresse inconnue » (aucun bcrypt) et « mot de passe faux »
- * (~100 ms de bcrypt) énumère les adresses du studio à distance, sans jamais deviner un
- * mot de passe.
+ * The time gap between "unknown address" (no bcrypt at all) and "wrong password" (about 100 ms of
+ * bcrypt) enumerates the studio's addresses remotely, without ever guessing a password.
  */
-describe('POST /api/auth/login — pas d’énumération de comptes', () => {
-  it('compare quand même un hash quand l’adresse est inconnue', async () => {
+describe('POST /api/auth/login — no account enumeration', () => {
+  it('still compares a hash when the address is unknown', async () => {
     const spy = vi.spyOn(bcrypt, 'compare');
     db.user.findUnique.mockResolvedValue(null);
     const res = await request(app)
@@ -84,7 +83,7 @@ describe('POST /api/auth/login — pas d’énumération de comptes', () => {
     spy.mockRestore();
   });
 
-  it('rend le même refus qu’un mot de passe faux', async () => {
+  it('returns the same refusal as for a wrong password', async () => {
     db.user.findUnique.mockResolvedValue(null);
     const absent = await request(app)
       .post('/api/auth/login')
@@ -99,8 +98,8 @@ describe('POST /api/auth/login — pas d’énumération de comptes', () => {
     expect(absent.code).toBe('BAD_CREDENTIALS');
   });
 
-  // Un compte de service porte les écritures d'un token machine : il ne se connecte jamais.
-  it('refuse un compte de service, mot de passe correct compris', async () => {
+  // A service account carries the writes of a machine token: it never logs in.
+  it('rejects a service account, even with the correct password', async () => {
     db.user.findUnique.mockResolvedValue({ ...user, isService: true });
     const res = await request(app)
       .post('/api/auth/login')
@@ -108,7 +107,7 @@ describe('POST /api/auth/login — pas d’énumération de comptes', () => {
     expect(res.status).toBe(401);
   });
 
-  it('laisse entrer un mot de passe correct', async () => {
+  it('lets a correct password in', async () => {
     const res = await request(app)
       .post('/api/auth/login')
       .send({ email: 'alice@studio.com', password: 'Motdepasse1' });
@@ -117,11 +116,11 @@ describe('POST /api/auth/login — pas d’énumération de comptes', () => {
   });
 
   /**
-   * A1-01 : `DELETE /api/users/:id` sans `?hard=true` est le chemin d'offboarding documenté.
-   * Il révoque bien sessions et tokens — mais rien n'empêchait le partant de retaper le mot
-   * de passe qu'il connaît toujours et de repartir avec un couple de jetons neufs.
+   * A1-01: `DELETE /api/users/:id` without `?hard=true` is the documented offboarding path. It does
+   * revoke sessions and tokens, but nothing prevented the leaver from retyping the password they still
+   * know and walking away again with a fresh token pair.
    */
-  it('refuse un compte désactivé, mot de passe correct compris', async () => {
+  it('rejects a deactivated account, even with the correct password', async () => {
     db.user.findUnique.mockResolvedValue({ ...user, disabledAt: new Date() });
     const res = await request(app)
       .post('/api/auth/login')
@@ -131,7 +130,7 @@ describe('POST /api/auth/login — pas d’énumération de comptes', () => {
     expect(createSession).not.toHaveBeenCalled();
   });
 
-  it('bascule sur le second facteur sans émettre de jeton d’accès', async () => {
+  it('switches to the second factor without issuing an access token', async () => {
     db.user.findUnique.mockResolvedValue({ ...user, totpEnabledAt: new Date() });
     const res = await request(app)
       .post('/api/auth/login')

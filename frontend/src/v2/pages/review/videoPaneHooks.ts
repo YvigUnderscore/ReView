@@ -4,14 +4,14 @@
 import { useCallback, useEffect, useState, type RefObject } from 'react';
 
 /**
- * Hooks du pane vidéo (extraits de VideoPane, budget 300) : buffering du lecteur et
- * vitesse de lecture affichée (34.C).
+ * Hooks of the video pane (extracted from VideoPane, budget 300): player buffering and the displayed
+ * playback speed (34.C).
  */
 
 /**
- * Rebouclage I/O (retours 34) : on ne repart au point I **qu'en lecture** — en navigation
- * manuelle (pause, scrub, flèches) on doit pouvoir dépasser librement le point O — et
- * seulement si la boucle est activée (le toggle ne supprime pas les points I/O).
+ * I/O loop wrap (feedback 34): we only jump back to point I **during playback** — during manual
+ * navigation (pause, scrub, arrows) one must be able to freely pass point O — and only if the loop is
+ * enabled (the toggle does not remove the I/O points).
  */
 export function shouldLoopBack(
   loopIn: number | null,
@@ -26,9 +26,9 @@ export function shouldLoopBack(
 }
 
 /**
- * Points de boucle I/O du lecteur : marquage à la frame courante (raccourcis I/O),
- * effacement (Maj+I/O ou ×), et activation débrayable — désactiver la boucle **conserve**
- * les points (retours 34). Poser un point réactive la boucle.
+ * Player I/O loop points: marking at the current frame (I/O shortcuts), clearing (Shift+I/O or ×), and a
+ * switchable enable — disabling the loop **keeps** the points (feedback 34). Setting a point re-enables
+ * the loop.
  */
 export function useLoopPoints(videoRef: RefObject<HTMLVideoElement | null>) {
   const [loopIn, setLoopIn] = useState<number | null>(null);
@@ -55,8 +55,8 @@ export function useLoopPoints(videoRef: RefObject<HTMLVideoElement | null>) {
 }
 
 /**
- * Buffering du lecteur : vrai quand la vidéo attend des données (seek/switch qualité),
- * avec un léger délai anti-scintillement — pilote le spinner discret sur le viewer.
+ * Player buffering: true when the video waits for data (seek/quality switch), with a slight
+ * anti-flicker delay — drives the discreet spinner on the viewer.
  */
 export function useVideoBuffering(videoRef: RefObject<HTMLVideoElement | null>, src: string) {
   const [buffering, setBuffering] = useState(false);
@@ -86,9 +86,8 @@ export function useVideoBuffering(videoRef: RefObject<HTMLVideoElement | null>, 
 }
 
 /**
- * Vitesse de lecture affichée (34.C) : la lecture arrière J (shuttle rAF, vitesse
- * négative) est prioritaire sur `playbackRate` (L cumulés). `visible` dès qu'on n'est
- * pas en lecture normale ×1.
+ * Displayed playback speed (34.C): the J reverse playback (rAF shuttle, negative speed) takes precedence
+ * over `playbackRate` (cumulated L). `visible` as soon as we are not in normal ×1 playback.
  */
 export function usePlaybackSpeed(
   videoRef: RefObject<HTMLVideoElement | null>,

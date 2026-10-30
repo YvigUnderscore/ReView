@@ -5,7 +5,7 @@ import { useRef, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { AlertTriangle, KeyRound, Save, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -14,6 +14,7 @@ import { QueryState } from '../../components/ui/query-state';
 import { Panel } from './AdminPrimitives';
 import { useT } from '../../i18n';
 import { Hint } from '../../components/ui/hint';
+import { isWebImage, presignAndUpload } from '@/v2/lib/presignedUpload';
 
 interface OidcView {
   enabled: boolean;
@@ -30,11 +31,11 @@ interface OidcView {
 
 type Draft = OidcView & { clientSecret: string };
 
-/** Le serveur refuse de couper le mot de passe tant que le SSO n'est pas complet. */
+/** The server refuses to cut the password while SSO is not complete. */
 const ssoReady = (d: Draft) =>
   d.enabled && !!d.clientId.trim() && (d.hasSecret || !!d.clientSecret) && !!d.publicUrl.trim();
 
-/** Section « Identité (SSO) » (36.A) : connexion OIDC (Google par défaut). */
+/** "Identity (SSO)" section (36.A): OIDC sign-in (Google by default). */
 export default function IdentityTab() {
   const t = useT();
   const qc = useQueryClient();
@@ -62,7 +63,7 @@ export default function IdentityTab() {
         buttonLabel: draft.buttonLabel,
         passwordLoginDisabled: draft.passwordLoginDisabled,
         logoKey: draft.logoKey,
-        // Write-only : envoyé seulement si ressaisi.
+        // Write-only: sent only if re-entered.
         ...(draft.clientSecret ? { clientSecret: draft.clientSecret } : {}),
         ...patch,
       });
@@ -155,11 +156,11 @@ export default function IdentityTab() {
             className="mt-1 accent-primary"
             checked={draft.passwordLoginDisabled}
             disabled={busy || (!draft.passwordLoginDisabled && !ssoReady(draft))}
-            // Pas d'optimisme ici : le serveur refuse de couper le mot de passe si le SSO
-            // n'est pas complet, et une case cochée à tort ferait croire l'inverse.
+            // No optimism here: the server refuses to cut the password if SSO
+            // is not complete, and a wrongly ticked box would suggest the opposite.
             onChange={(e) => void save({ passwordLoginDisabled: e.target.checked })}
           />
-          {/* Texte directement sous le span : la règle a11y ne le cherche pas plus profond. */}
+          {/* Text directly under the span: the a11y rule does not look any deeper. */}
           <span className="font-medium">
             {t('sso.passwordDisable')}
             <span className="block text-xs font-normal text-muted-foreground">
@@ -179,7 +180,7 @@ export default function IdentityTab() {
   );
 }
 
-/** Logo affiché dans le bouton SSO de la page de connexion (dépôt MinIO + clé en config). */
+/** Logo shown on the SSO button of the login page (MinIO upload + key in config). */
 function LogoPanel({
   draft,
   busy,
@@ -197,17 +198,18 @@ function LogoPanel({
     const file = e.target.files?.[0];
     if (fileRef.current) fileRef.current.value = '';
     if (!file) return;
-    if (!/^image\/(png|jpe?g|webp)$/.test(file.type)) {
+    if (!isWebImage(file.type)) {
       toast.error(t('profile.avatar.invalidFormat'));
       return;
     }
     setUploading(true);
     try {
-      const { url, key } = await api.post<{ url: string; key: string }>('/api/admin/oidc/logo/presign', {
-        contentType: file.type,
-      });
-      const put = await fetch(url, { method: 'PUT', body: file, headers: { 'Content-Type': file.type } });
-      if (!put.ok) throw new Error(t('profile.avatar.uploadFailed'));
+      const { key } = await presignAndUpload(
+        '/api/admin/oidc/logo/presign',
+        { contentType: file.type },
+        file,
+        t('profile.avatar.uploadFailed'),
+      );
       onSaved(key);
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));

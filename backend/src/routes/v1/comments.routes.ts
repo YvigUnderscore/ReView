@@ -11,14 +11,14 @@ import { commentSelect, toComment } from '../../lib/v1Resources';
 import * as CommentService from '../../services/CommentService';
 import * as ApiEventService from '../../services/ApiEventService';
 import { idParam, requireMediaProject, requireVersionProject, readQuery } from './helpers';
+import { requireUser } from '../../middleware/auth';
 
 /**
- * Commentaires de review (API v1) — lecture et dépôt.
+ * Review comments (API v1): read and post.
  *
- * C'est la surface qu'utilise un bot : relayer les notes d'une review dans un salon
- * d'équipe, ou déposer le retour saisi ailleurs. Les annotations graphiques et les pièces
- * jointes restent hors de cette API : elles supposent un envoi de fichiers et une
- * géométrie d'image que seule l'interface produit correctement.
+ * This is the surface a bot uses: relaying review notes into a team channel, or posting
+ * feedback written elsewhere. Graphic annotations and attachments stay out of this API: they
+ * require file uploads and image geometry that only the UI produces correctly.
  */
 const router = Router();
 
@@ -31,7 +31,7 @@ const commentsQuery = z.object({
     .optional(),
 });
 
-// GET /api/v1/media/:id/comments — fil d'un média
+// GET /api/v1/media/:id/comments: thread of a media
 router.get(
   '/media/:id/comments',
   requireScope('comments:read'),
@@ -40,7 +40,7 @@ router.get(
     const mediaId = Number(req.params.id);
     await requireMediaProject(req, mediaId);
     const p = readPagination(req.query);
-    // Relecture typée : sans elle, `resolved=false` resterait la chaîne « false ».
+    // Typed re-read: without it, `resolved=false` would remain the string "false".
     const { resolved } = readQuery(commentsQuery, req);
     const where = {
       mediaObjectId: mediaId,
@@ -59,7 +59,7 @@ router.get(
   },
 );
 
-// POST /api/v1/media/:id/comments — dépose une note
+// POST /api/v1/media/:id/comments: post a note
 router.post(
   '/media/:id/comments',
   requireScope('comments:write'),
@@ -67,7 +67,7 @@ router.post(
     params: idParam,
     body: z.object({
       content: z.string().trim().min(1).max(10_000),
-      /** Position dans la vidéo, en secondes. */
+      /** Position in the video, in seconds. */
       timestamp: z.number().nonnegative().optional(),
       duration: z.number().nonnegative().optional(),
       parentId: z.number().int().positive().optional(),
@@ -77,7 +77,7 @@ router.post(
     const mediaId = Number(req.params.id);
     const projectId = await requireMediaProject(req, mediaId);
     const body = req.body as Omit<CommentService.CreateCommentInput, 'mediaObjectId'>;
-    const comment = await CommentService.create(req.user!, projectId, {
+    const comment = await CommentService.create(requireUser(req), projectId, {
       ...body,
       mediaObjectId: mediaId,
     });
@@ -85,7 +85,7 @@ router.post(
   },
 );
 
-// GET /api/v1/versions/:id/comments — tous les commentaires d'une version, médias confondus
+// GET /api/v1/versions/:id/comments: all comments of a version, across its media
 router.get(
   '/versions/:id/comments',
   requireScope('comments:read'),
@@ -102,7 +102,7 @@ router.get(
   },
 );
 
-// POST /api/v1/comments/:id/resolve — clôt une note (statut de retake traité)
+// POST /api/v1/comments/:id/resolve: close a note (retake status handled)
 router.post(
   '/comments/:id/resolve',
   requireScope('comments:write'),
@@ -126,7 +126,7 @@ router.post(
       where: { id },
       data: {
         isResolved: resolved,
-        resolvedById: resolved ? req.user!.id : null,
+        resolvedById: resolved ? requireUser(req).id : null,
         resolvedAt: resolved ? new Date() : null,
       },
       select: commentSelect,
@@ -136,7 +136,7 @@ router.post(
         projectId,
         entityType: 'comment',
         entityId: id,
-        actorId: req.user!.id,
+        actorId: requireUser(req).id,
         payload: { comment: toComment(updated) },
       });
     }

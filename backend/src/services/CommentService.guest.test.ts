@@ -16,7 +16,7 @@ vi.mock('./ReviewReferenceService', () => ({ purgeForComment: vi.fn() }));
 vi.mock('./WatchService', () => ({ notifyWatchers: vi.fn().mockResolvedValue([]) }));
 vi.mock('./ApiEventService', () => ({ publish: vi.fn() }));
 vi.mock('./shotgrid/ShotgridPushService', () => ({ enqueuePush: vi.fn() }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: { getPresignedGetUrl: vi.fn(), getPresignedPutUrl: vi.fn() },
 }));
 vi.mock('../lib/userView', () => ({
@@ -35,10 +35,10 @@ import { publish } from './ApiEventService';
 import { enqueuePush } from './shotgrid/ShotgridPushService';
 
 /**
- * Le retour d'un client passait par un `prisma.comment.create` nu suivi d'un seul emit
- * socket : sans personne devant le projet à cet instant, il n'était signalé à personne.
- * Ces tests portent sur les deux moitiés du problème — la chaîne d'alerte doit se
- * déclencher, et l'invité ne doit rien pouvoir faire de plus que déposer un retour.
+ * A client's feedback used to go through a bare `prisma.comment.create` followed by a single socket emit:
+ * with nobody in front of the project at that moment, it was reported to no one. These tests cover both
+ * halves of the problem: the alert chain must fire, and the guest must be able to do nothing more than leave
+ * a feedback.
  */
 const guest = { name: 'Camille (client)', shareLinkId: 4, shareOwnerId: 2 };
 const body = { mediaObjectId: 9, content: 'Le raccord au plan suivant saute.', timestamp: 12.5 };
@@ -54,8 +54,8 @@ beforeEach(() => {
   vi.mocked(notifyWatchers).mockResolvedValue([]);
 });
 
-describe('createGuest — le retour d’un client atteint quelqu’un', () => {
-  it('prévient les suiveurs du plan avec le nom de l’invité', async () => {
+describe("createGuest: a client's feedback reaches someone", () => {
+  it("alerts the followers of the shot with the guest's name", async () => {
     await createGuest(guest, 7, body);
     expect(notifyWatchers).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -67,23 +67,23 @@ describe('createGuest — le retour d’un client atteint quelqu’un', () => {
     );
   });
 
-  // Les suiveurs sont un abonnement volontaire, souvent vide sur un plan livré : sans
-  // cela, le retour peut n'atteindre personne alors que quelqu'un l'a sollicité.
-  it('prévient aussi qui a créé le lien', async () => {
+  // Followers are a voluntary subscription, often empty on a delivered shot: without this, the feedback may
+  // reach no one even though someone asked for it.
+  it('also alerts whoever created the link', async () => {
     await createGuest(guest, 7, body);
     expect(notify).toHaveBeenCalledWith(
-      // Type `WATCH` : c'est lui qui fait pointer la notification vers la review du média.
+      // Type `WATCH`: this is what points the notification to the media's review.
       expect.objectContaining({ userId: 2, kind: 'watch', referenceId: 9 }),
     );
   });
 
-  it('ne double pas la notification quand le créateur du lien suit déjà le plan', async () => {
+  it('does not duplicate the notification when the link creator already follows the shot', async () => {
     vi.mocked(notifyWatchers).mockResolvedValue([2]);
     await createGuest(guest, 7, body);
     expect(notify).not.toHaveBeenCalled();
   });
 
-  it('publie l’événement d’API avec le lien emprunté et sans acteur', async () => {
+  it('publishes the API event with the borrowed link and no actor', async () => {
     await createGuest(guest, 7, body);
     expect(publish).toHaveBeenCalledWith(
       'comment.created',
@@ -95,15 +95,15 @@ describe('createGuest — le retour d’un client atteint quelqu’un', () => {
     );
   });
 
-  it('pousse la note vers ShotGrid et ping Discord', async () => {
+  it('pushes the note to ShotGrid and pings Discord', async () => {
     await createGuest(guest, 7, body);
     expect(enqueuePush).toHaveBeenCalledWith(7, { type: 'comment', commentId: 31, actorId: null });
     expect(sendDiscord).toHaveBeenCalled();
   });
 });
 
-describe('createGuest — ce qu’un invité ne peut pas faire', () => {
-  it('écrit un commentaire sans compte, visible du client, à la racine', async () => {
+describe('createGuest: what a guest cannot do', () => {
+  it('writes a comment without an account, visible to the client, at the root', async () => {
     await createGuest(guest, 7, body);
     const data = vi.mocked(prisma.comment.create).mock.calls[0]?.[0]?.data as Record<string, unknown>;
     expect(data.guestName).toBe(guest.name);
@@ -114,21 +114,21 @@ describe('createGuest — ce qu’un invité ne peut pas faire', () => {
     expect(data.annotation).toBeUndefined();
   });
 
-  // Le `@nom` d'un invité ne doit notifier personne : la page publique n'a pas d'annuaire,
-  // et un inconnu ne choisit pas qui le studio doit réveiller.
-  it('ne déclenche aucune mention', async () => {
+  // A guest's `@name` must notify no one: the public page has no directory, and a stranger does not choose
+  // whom the studio should wake.
+  it('triggers no mention', async () => {
     await createGuest(guest, 7, { ...body, content: 'merci @alice et @bob' });
     expect(prisma.projectMembership.findMany).not.toHaveBeenCalled();
   });
 
-  it('assainit le contenu', async () => {
+  it('sanitizes the content', async () => {
     await createGuest(guest, 7, { ...body, content: '<script>alert(1)</script>ok' });
     const data = vi.mocked(prisma.comment.create).mock.calls[0]?.[0]?.data as { content: string };
     expect(data.content).not.toContain('<script>');
   });
 
-  // 38.B : un projet archivé est en lecture seule, y compris pour les liens déjà distribués.
-  it('refuse d’écrire dans un projet archivé', async () => {
+  // 38.B: an archived project is read-only, including for links already distributed.
+  it('refuses to write to an archived project', async () => {
     vi.mocked(prisma.project.findFirst).mockResolvedValueOnce({ status: 'ARCHIVED' } as never);
     await expect(createGuest(guest, 7, body)).rejects.toThrow();
     expect(prisma.comment.create).not.toHaveBeenCalled();
@@ -136,20 +136,20 @@ describe('createGuest — ce qu’un invité ne peut pas faire', () => {
 });
 
 /**
- * A2-02 : `cameraState` était le seul champ de forme libre de la surface PUBLIQUE de
- * partage — `z.any()` côté route, recopié tel quel en base, puis rediffusé à toutes les
- * sockets du projet. Quiconque reçoit le lien pouvait donc y verser des mégaoctets de JSON
- * quelconque, requête après requête, sans aucun compte. Le service le relit désormais.
+ * A2-02: `cameraState` was the only free-form field of the PUBLIC sharing surface: `z.any()` on the route
+ * side, copied as is into the database, then rebroadcast to every socket of the project. Anyone holding the
+ * link could therefore pour megabytes of arbitrary JSON into it, request after request, without any account.
+ * The service now reads it back.
  */
-describe('createGuest — la pose caméra d’un invité est bornée (A2-02)', () => {
-  it('refuse un blob de forme libre', async () => {
+describe("createGuest: a guest's camera pose is bounded (A2-02)", () => {
+  it('refuses a free-form blob', async () => {
     await expect(
       createGuest(guest, 7, { ...body, cameraState: { p: 'A'.repeat(4_000) } }),
     ).rejects.toMatchObject({ statusCode: 400 });
     expect(prisma.comment.create).not.toHaveBeenCalled();
   });
 
-  it('refuse une pose augmentée d’un champ inconnu (le volume passerait par là)', async () => {
+  it('refuses an augmented pose carrying an unknown field (volume would slip through there)', async () => {
     await expect(
       createGuest(guest, 7, {
         ...body,
@@ -163,7 +163,7 @@ describe('createGuest — la pose caméra d’un invité est bornée (A2-02)', (
     expect(prisma.comment.create).not.toHaveBeenCalled();
   });
 
-  it('accepte la pose que le viewer capture réellement', async () => {
+  it('accepts the pose the viewer actually captures', async () => {
     const pose = {
       position: { x: 1.5, y: 2, z: -3 },
       target: { x: 0, y: 0, z: 0 },

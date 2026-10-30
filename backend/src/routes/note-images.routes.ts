@@ -3,7 +3,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { assertProjectAccess } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { assertProjectWritable } from '../lib/projectGuard';
@@ -12,15 +12,14 @@ import { resolveProject, type NoteKind } from '../services/EntityNoteService';
 import * as NoteImages from '../services/EntityNoteImageService';
 
 /**
- * Les images déposées dans une fiche d'entité — monté sur `/api`.
+ * Images uploaded into an entity's sheet, mounted on `/api`.
  *
- * Deux temps, comme partout ailleurs : on demande une URL de dépôt, le navigateur téléverse
- * directement vers MinIO, et la fiche n'enregistre que la clé. La relecture passe par
- * `resolve` : une URL présignée expire, une clé non.
+ * Two steps, as everywhere else: an upload URL is requested, the browser uploads directly to MinIO, and
+ * the sheet only records the key. Reading goes through `resolve`: a presigned URL expires, a key does not.
  */
 const router = Router();
 
-/** ⚠ Monté sur `/api` : authentification route par route, jamais `router.use`. */
+/** ⚠ Mounted on `/api`: authentication route by route, never `router.use`. */
 const auth = authenticate;
 
 const SEGMENTS = {
@@ -46,19 +45,19 @@ for (const [segment, kind] of Object.entries(SEGMENTS) as [keyof typeof SEGMENTS
       const id = Number(req.params.id);
       const projectId = await resolveProject(kind, id);
       await assertProjectAccess(req, projectId);
-      // Déposer une image, c'est écrire la fiche : même droit, même garde d'archivage.
+      // Uploading an image is writing the sheet: same right, same archive guard.
       await assertProjectWritable(projectId);
-      await assertProjectManage(req.user!.id, req.user!.role, projectId);
+      await assertProjectManage(requireUser(req).id, requireUser(req).role, projectId);
       res.json(await NoteImages.presign(kind, id, req.body.filename, req.body.contentType));
     },
   );
 }
 
 /**
- * Les URL de lecture d'un lot de clés.
+ * The read URLs of a batch of keys.
  *
- * En POST plutôt qu'en GET : une planche porte des dizaines de clés, et les empiler dans
- * une chaîne de requête les tronquerait sans prévenir.
+ * POST rather than GET: a board carries dozens of keys, and stacking them into a query string would
+ * truncate them without warning.
  */
 router.post(
   '/note-images/resolve',
@@ -69,7 +68,7 @@ router.post(
     }),
   }),
   async (req, res) => {
-    res.json({ urls: await NoteImages.resolveMany(req.user!, req.body.keys) });
+    res.json({ urls: await NoteImages.resolveMany(requireUser(req), req.body.keys) });
   },
 );
 

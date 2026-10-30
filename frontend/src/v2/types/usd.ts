@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Types USD (Phase 45) — description de la scène convertie et provenance de conversion 3D.
- * Module séparé de `api.ts` (budget de lignes), réexporté par lui : une entité = une définition.
+ * USD types (Phase 45) — description of the converted scene and 3D conversion provenance.
+ * Separate module from `api.ts` (line budget), re-exported by it: one entity, one definition.
  */
 
-/** Purpose USD : ce qui est rendu, le proxy d'affichage rapide, les aides de mise en scène. */
+/** USD purpose: what is rendered, the fast display proxy, the staging guides. */
 export type UsdPurpose = 'render' | 'proxy' | 'guide';
 
-/** Jeu de variantes exposé par un prim de la scène (ex. `modelingVariant` : hero / lo). */
+/** Variant set exposed by a prim of the scene (e.g. `modelingVariant`: hero / lo). */
 export interface UsdVariantSet {
   prim: string;
   name: string;
@@ -17,67 +17,67 @@ export interface UsdVariantSet {
   selected: string;
 }
 
-/** Sélection de variantes : `{ "/World/Asset": { "modelingVariant": "hero" } }`. */
+/** Variant selection: `{ "/World/Asset": { "modelingVariant": "hero" } }`. */
 export type UsdVariantSelection = Record<string, Record<string, string>>;
 
-/** Prim de la scène USD (45/46) — brique du scenegraph affiché en review. */
+/** Prim of the USD scene (45/46) — building block of the scenegraph shown in review. */
 export interface UsdPrim {
-  /** Chemin USD absolu, ex. `/World/Asset/Geo`. Identifiant stable d'un prim. */
+  /** Absolute USD path, e.g. `/World/Asset/Geo`. Stable identifier of a prim. */
   path: string;
   name: string;
-  /** Type de schéma USD (`Xform`, `Mesh`, `Material`, `Scope`…), vide si non typé. */
+  /** USD schema type (`Xform`, `Mesh`, `Material`, `Scope`…), empty if untyped. */
   type: string;
   kind: string;
   purpose: string;
-  /** Noms des jeux de variantes portés par ce prim (badge dans l'arbre). */
+  /** Names of the variant sets carried by this prim (badge in the tree). */
   variantSets: string[];
   active: boolean;
   instanceable: boolean;
 }
 
-/** Description de la scène USD relevée à la conversion (fiche technique + recomposition). */
+/** Description of the USD scene recorded at conversion (technical sheet + recomposition). */
 export interface UsdModelInfo {
-  /** Couche racine réellement ouverte — utile quand l'archive en contenait plusieurs. */
+  /** Root layer actually opened — useful when the archive contained several. */
   rootLayer: string;
   defaultPrim: string | null;
   upAxis: 'Y' | 'Z';
   metersPerUnit: number;
-  /** Plage de timeCodes de la scène animée, null si statique. */
+  /** Timecode range of the animated scene, null if static. */
   frameRange: [number, number] | null;
   fps: number | null;
   hasAnimation: boolean;
   hasSkeleton: boolean;
   variantSets: UsdVariantSet[];
   purposes: string[];
-  /** Ce qui a été demandé… */
+  /** What was requested… */
   selection: { variants: UsdVariantSelection; purpose: UsdPurpose };
-  /** …et si le convertisseur retenu a pu l'appliquer (seul Blender le peut). */
+  /** …and whether the chosen converter could apply it (only Blender can). */
   selectionApplied: boolean;
-  /** Références non résolues : textures ou couches absentes de l'archive livrée. */
+  /** Unresolved references: textures or layers missing from the delivered archive. */
   missingAssets: string[];
   missingAssetsTotal: number;
   layerCount: number;
   primCount: number;
-  /** Scenegraph à plat (46.A) : inclut les prims **non rendus** (variante inactive, purpose filtré). */
+  /** Flat scenegraph (46.A): includes **unrendered** prims (inactive variant, filtered purpose). */
   prims: UsdPrim[];
-  /** Vrai si la scène dépasse la borne de prims rapportés — l'arbre affiché est partiel. */
+  /** True if the scene exceeds the reported prim bound — the displayed tree is partial. */
   primsTruncated: boolean;
 }
 
-/** Option de variante réellement cuite dans le GLB (46.G) — sa bascule est instantanée. */
+/** Variant option actually baked into the GLB (46.G) — its switch is instant. */
 export interface UsdBakedVariant {
   prim: string;
   set: string;
   option: string;
 }
 
-/** Provenance de conversion 3D (39.A) ; le bloc `usd` n'existe que pour les scènes USD (45.C). */
+/** 3D conversion provenance (39.A); the `usd` block only exists for USD scenes (45.C). */
 export interface ModelSource {
   sourceFormat: string;
   converter: string;
   native: boolean;
   usd?: UsdModelInfo;
-  /** Résumé de conversion Blender — seule la cuisson des variantes intéresse la review (46.P). */
+  /** Blender conversion summary — only the baking of variants matters to review (46.P). */
   blender?: {
     variantsBaked?: UsdBakedVariant[];
     variantsSkipped?: UsdBakedVariant[];

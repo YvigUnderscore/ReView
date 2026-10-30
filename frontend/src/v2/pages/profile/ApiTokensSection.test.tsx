@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 
 const { api } = vi.hoisted(() => ({ api: { get: vi.fn(), post: vi.fn(), del: vi.fn() } }));
-vi.mock('../../../lib/apiClient', () => ({ api }));
+vi.mock('@/lib/apiClient', () => ({ api }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 vi.mock('../../lib/queries', () => ({
   useProjectsQuery: () => ({ data: [{ id: 4, name: 'Dune' }] }),
@@ -47,19 +47,18 @@ beforeEach(() => {
 afterEach(cleanup);
 
 /**
- * Depuis la vague 1, le serveur exige le mot de passe courant pour émettre un token :
- * l'écran qui ne le demandait pas rendait la création simplement impossible. Ces tests
- * tiennent la ré-authentification et les réglages que l'API accepte (scopes fins,
- * cantonnement, expiration), qui n'étaient jamais envoyés.
+ * Since wave 1, the server requires the current password to issue a token: the screen that did not
+ * ask for it made creation simply impossible. These tests cover the re-authentication and the
+ * settings the API accepts (fine-grained scopes, scoping, expiry), which were never sent.
  */
 describe('ApiTokensSection', () => {
-  it('reste replié tant qu’on ne demande pas de token', async () => {
+  it('stays collapsed until a token is requested', async () => {
     mount();
     await screen.findByText(t('tokens.empty'));
     expect(screen.queryByText(t('profile.password.current'))).toBeNull();
   });
 
-  it('exige le mot de passe courant avant d’activer la création', async () => {
+  it('requires the current password before enabling creation', async () => {
     const { container } = await openForm();
     fireEvent.change(screen.getByLabelText(t('common.name')), { target: { value: 'ingest' } });
     fireEvent.click(screen.getAllByRole('checkbox')[0]);
@@ -70,7 +69,7 @@ describe('ApiTokensSection', () => {
     expect(submit?.hasAttribute('disabled')).toBe(false);
   });
 
-  it('envoie scopes fins, cantonnement, expiration et mot de passe', async () => {
+  it('sends fine-grained scopes, scoping, expiry and password', async () => {
     const { container } = await openForm();
     fireEvent.change(screen.getByLabelText(t('common.name')), { target: { value: 'ingest' } });
     fireEvent.click(screen.getAllByRole('checkbox')[1]);
@@ -89,7 +88,7 @@ describe('ApiTokensSection', () => {
     expect((body.scopes as string[]).sort()).toEqual(['versions:read', 'versions:write']);
   });
 
-  it('affiche le secret une fois puis oublie le mot de passe saisi', async () => {
+  it('shows the secret once, then forgets the password entered', async () => {
     const { container } = await openForm();
     fireEvent.change(screen.getByLabelText(t('common.name')), { target: { value: 'ingest' } });
     fireEvent.click(screen.getAllByRole('checkbox')[0]);

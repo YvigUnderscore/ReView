@@ -5,39 +5,30 @@ import type { Prisma, ShotgridLink } from '@prisma/client';
 import { prisma } from '../../lib/prisma';
 import { logger } from '../../lib/logger';
 import { conflict } from '../../lib/errors';
+import { ignoreFailure } from '../../lib/ignoreFailure';
 
 /**
- * Table de correspondance locale ↔ ShotGrid.
+ * Local <-> ShotGrid correspondence table.
  *
- * Toute entité importée y laisse une ligne : c'est elle qui rend les imports
- * idempotents (re-synchroniser ne duplique rien), qui permet de retrouver l'entité
- * distante d'un objet ReView pour l'écriture, et qui porte les champs ShotGrid sans
- * équivalent local (durée en minutes, assignés non-membres, chemins de publish).
+ * Every imported entity leaves a row there: it is what makes imports idempotent (re-synchronizing duplicates nothing), what allows finding the remote entity of a
+ * ReView object for writing, and what carries the ShotGrid fields with no local equivalent (duration in minutes, non-member assignees, publish paths).
  *
- * **Durée de vie d'un lien.** La table est polymorphe (`localType` + `localId`) : aucune
- * clé étrangère ne peut la rattacher aux douze modèles qu'elle désigne, donc aucun
- * `ON DELETE CASCADE`. La purge est confiée à des **déclencheurs PostgreSQL**
- * (`AFTER DELETE`, migration `20260908090000_shotgrid_liens_fiables`), pour deux raisons
- * qu'aucun code applicatif ne pouvait couvrir :
+ * **Lifetime of a link.** The table is polymorphic (`localType` + `localId`): no foreign key can attach it to the twelve models it designates, hence no
+ * `ON DELETE CASCADE`. The purge is entrusted to **PostgreSQL triggers** (`AFTER DELETE`, migration `20260908090000_shotgrid_liens_fiables`), for two reasons
+ * that no application code could cover:
  *
- * 1. la plupart des suppressions n'existent pas en TypeScript — supprimer un plan
- *    efface ses tâches, versions, médias et commentaires **par cascade SQL**, sans
- *    qu'aucun service ne les voie passer ;
- * 2. un déclencheur s'exécute dans la transaction de la suppression : le lien ne peut
- *    pas survivre une milliseconde à ce qu'il désigne, ni à un rollback.
+ * 1. most deletions do not exist in TypeScript — deleting a shot erases its tasks, versions, media and comments **by SQL cascade**, without any service seeing them go by;
+ * 2. a trigger runs within the deletion's transaction: the link cannot survive a millisecond beyond what it designates, nor a rollback.
  *
- * Rien à appeler depuis un service, donc : supprimer l'entité suffit. Ce qui suit ne
- * s'occupe que de poser et de lire les correspondances.
+ * Nothing to call from a service, then: deleting the entity is enough. What follows only deals with setting and reading the correspondences.
  */
 
 /**
- * Types locaux qu'une correspondance sait porter, **énumérés à l'exécution**.
+ * Local types that a correspondence can carry, **enumerated at runtime**.
  *
- * La liste n'est pas qu'un type : c'est elle que confronte
- * `shotgridLinkPurge.test.ts` aux déclencheurs SQL qui purgent les liens
- * d'une entité supprimée. Ajouter un type ici sans ajouter son déclencheur fait échouer
- * la suite — c'est le seul garde-fou contre le retour des liens orphelins, la table
- * étant polymorphe (`localType` + `localId`) et donc hors de portée d'une clé étrangère.
+ * The list is not just a type: it is what `shotgridLinkPurge.test.ts` confronts with the SQL triggers that purge the links of a deleted entity.
+ * Adding a type here without adding its trigger makes the suite fail — it is the only safeguard against the return of orphan links, the table being polymorphic
+ * (`localType` + `localId`) and therefore out of reach of a foreign key.
  */
 export const LOCAL_TYPES = [
   'episode',
@@ -81,12 +72,10 @@ export async function findByLocal(
 }
 
 /**
- * Identifiants ShotGrid d'un lot d'entités locales — évite N requêtes en boucle.
+ * ShotGrid identifiers of a batch of local entities — avoids N queries in a loop.
  *
- * Volontairement **non bornée**, contrairement à `listForUi` : la synchronisation s'en
- * sert pour savoir ce qui est déjà lié. Un lien absent de la table s'y lit « entité
- * jamais importée » et déclenche une création sur le site distant — tronquer la carte
- * dupliquerait des plans chez le client. Elle est appelée par un job, pas par un écran.
+ * Deliberately **unbounded**, unlike `listForUi`: the synchronization uses it to know what is already linked. A link absent from the table reads there as "entity never
+ * imported" and triggers a creation on the remote site — truncating the map would duplicate shots at the client. It is called by a job, not by a screen.
  */
 export async function mapLocalToSg(
   connectionId: number,
@@ -96,7 +85,7 @@ export async function mapLocalToSg(
   return new Map(links.map((l) => [l.localId, l]));
 }
 
-/** Le sens inverse, non bornée pour la même raison que `mapLocalToSg`. */
+/** The reverse direction, unbounded for the same reason as `mapLocalToSg`. */
 export async function mapSgToLocal(
   connectionId: number,
   localType: LocalType,
@@ -106,27 +95,20 @@ export async function mapSgToLocal(
 }
 
 /**
- * Pose ou rafraîchit une correspondance.
+ * Sets or refreshes a correspondence.
  *
- * Le couple (connexion, entité distante) et le couple (connexion, entité locale) sont
- * tous deux uniques : une entité ne peut pas être liée deux fois, dans un sens comme
- * dans l'autre. Un ancien lien devenu incohérent est **remplacé** — mais plus en
- * silence, et plus à n'importe quel prix :
+ * The pair (connection, remote entity) and the pair (connection, local entity) are both unique: an entity cannot be linked twice, in either direction. An old link that has
+ * become inconsistent is **replaced** — but no longer silently, and no longer at any price:
  *
- * - **Rebranchement légitime** (même `localType`) : un plan ReView change d'entité
- *   distante — le plan a été recréé sur le site avec un nouvel identifiant — ou une
- *   entité distante change de contrepartie locale. Le lien précédent part, mais un
- *   `warn` le dit : le plan délaissé redevient « jamais importé », et la passe suivante
- *   le recréera chez le client. Une trace est le minimum pour comprendre le doublon.
- * - **Collision entre types** (`localType` différent) : un identifiant ShotGrid ne
- *   peut pas désigner à la fois un média et une note. Le remplacement était ici une
- *   corruption pure — c'est ainsi qu'un lien juste se faisait écraser par le lien
- *   menteur `('Attachment', <id de Version>)`. On refuse au lieu d'obéir : une écriture
- *   ShotGrid fausse ne se rattrape pas, mieux vaut un job rouge qu'un lien inventé.
+ * - **Legitimate rewiring** (same `localType`): a ReView shot changes remote entity — the shot was recreated on the site with a new identifier — or a remote entity changes
+ *   local counterpart. The previous link goes, but a `warn` says so: the abandoned shot becomes "never imported" again, and the next pass will recreate it at the client.
+ *   A trace is the minimum needed to understand the duplicate.
+ * - **Collision between types** (different `localType`): a ShotGrid identifier cannot designate both a media and a note at once. The replacement here was pure corruption —
+ *   that is how a correct link got overwritten by the lying link `('Attachment', <Version id>)`. We refuse rather than obey: a false ShotGrid write cannot be undone; a red job
+ *   is better than an invented link.
  *
- * Tous les conflits sont retirés, pas seulement le premier : un lien peut entrer en
- * collision des DEUX côtés à la fois (deux lignes distinctes), et n'en retirer qu'une
- * laissait l'`upsert` buter sur l'autre contrainte d'unicité.
+ * All conflicts are removed, not only the first: a link can collide on BOTH sides at once (two distinct rows), and removing only one would leave the `upsert` stumbling on
+ * the other unique constraint.
  */
 export async function upsertLink(params: {
   connectionId: number;
@@ -151,8 +133,7 @@ export async function upsertLink(params: {
 
   const crossType = conflicting.find((c) => c.localType !== localType);
   if (crossType) {
-    // Sans code d'erreur : rien de tout ceci n'atteint un écran — la synchronisation
-    // s'exécute en job, et c'est le journal de passe qui portera le message.
+    // Without an error code: none of this reaches a screen — the synchronization runs as a job, and it is the pass journal that will carry the message.
     throw conflict(
       `ShotGrid ${sgType}#${sgId} is already linked to ${crossType.localType}#${crossType.localId}, not to ${localType}#${localId}`,
     );
@@ -195,37 +176,35 @@ export async function upsertLink(params: {
 export async function removeLink(connectionId: number, sgType: string, sgId: number): Promise<void> {
   await prisma.shotgridLink
     .delete({ where: { connectionId_sgType_sgId: { connectionId, sgType, sgId } } })
-    .catch(() => undefined);
+    .catch(ignoreFailure('[shotgrid] link delete failed', { connectionId, sgType, sgId }));
 }
 
-/** Données annexes d'un lien, typées à l'usage. */
+/** Ancillary data of a link, typed for its use. */
 export function linkData<T extends LinkData>(link: ShotgridLink | null | undefined): Partial<T> {
   if (!link || typeof link.data !== 'object' || link.data === null) return {};
   return link.data as Partial<T>;
 }
 
-/** Champs ShotGrid conservés sur une tâche faute d'équivalent dans le modèle ReView. */
+/** ShotGrid fields kept on a task for lack of an equivalent in the ReView model. */
 export interface TaskLinkData extends LinkData {
   durationMinutes?: number | null;
   stepName?: string | null;
-  /** Assignés ShotGrid sans compte ReView : affichés en grisé, jamais inventés. */
+  /** ShotGrid assignees without a ReView account: displayed greyed out, never invented. */
   sgAssignees?: Array<{ id: number; name: string; email: string | null }>;
   sgStatusCode?: string | null;
 }
 
 /**
- * Témoin de la vignette rapatriée du site (voir `ShotgridThumbnails`).
+ * Marker of the thumbnail fetched from the site (see `ShotgridThumbnails`).
  *
- * C'est l'adresse de l'image, signature retirée : adressée par contenu, donc stable tant
- * que la vignette ne change pas. Sa présence dit aussi que la vignette locale vient du
- * site — sans quoi une image déposée à la main dans ReView se ferait effacer par le
- * premier plan que ShotGrid n'illustre pas.
+ * It is the address of the image, signature removed: addressed by content, so stable as long as the thumbnail does not change. Its presence also says that the local
+ * thumbnail comes from the site — otherwise an image dropped by hand in ReView would be erased by the first shot that ShotGrid does not illustrate.
  */
 export interface ThumbnailLinkData extends LinkData {
   sgThumbSrc?: string | null;
 }
 
-/** Une séquence n'a rien d'autre à conserver hors modèle : sa vignette, et c'est tout. */
+/** A sequence has nothing else to keep outside the model: its thumbnail, and that is all. */
 export type SequenceLinkData = ThumbnailLinkData;
 
 export interface ShotLinkData extends ThumbnailLinkData {
@@ -244,9 +223,9 @@ export interface VersionLinkData extends LinkData {
   sgFirstFrame?: number | null;
   sgLastFrame?: number | null;
   mediaImported?: boolean;
-  /** Version née dans ReView puis poussée : son média vient d'ici, pas du site. */
+  /** Version born in ReView then pushed: its media comes from here, not from the site. */
   createdFromReview?: boolean;
-  /** Publishes de pipeline rattachés (chemins de fichiers, lecture seule). */
+  /** Attached pipeline publishes (file paths, read-only). */
   publishedFiles?: Array<{
     id: number;
     name: string;
@@ -256,31 +235,25 @@ export interface VersionLinkData extends LinkData {
   }>;
 }
 
-/** Types de correspondance dont l'interface tire une pastille ou un lien direct. */
+/** Correspondence types from which the interface draws a badge or a direct link. */
 export const UI_LINK_TYPES: readonly LocalType[] = ['sequence', 'shot', 'asset', 'task', 'version'];
 
 /**
- * Plafond de la table de correspondance servie à l'interface.
+ * Cap on the correspondence table served to the interface.
  *
- * La requête n'était pas bornée : à la volumétrie visée (2 000 plans, 10 000 tâches,
- * 20 000 versions) elle renvoyait plusieurs mégaoctets de JSON à chaque ouverture de
- * projet. Le plafond laisse passer l'intégralité des types « carte » — séquences, plans,
- * assets, tâches — et ne rogne que sur les versions : le tri par `localType` les place
- * en dernier (ordre alphabétique), si bien que la dégradation touche d'abord ce qui
- * s'affiche le moins.
+ * The query was not bounded: at the targeted volume (2,000 shots, 10,000 tasks, 20,000 versions) it returned several megabytes of JSON on every project opening.
+ * The cap lets through all the "card" types — sequences, shots, assets, tasks — and only trims the versions: sorting by `localType` places them last (alphabetical order), so
+ * the degradation first touches what is displayed the least.
  */
 export const UI_LINKS_LIMIT = 20000;
 
 /**
- * Correspondances d'un projet, telles que l'interface les consomme.
+ * A project's correspondences, as the interface consumes them.
  *
- * `sgType` et `syncedAt` accompagnent chaque lien : le premier permet de réaligner une
- * entité sans redemander de quel type ShotGrid il s'agit, le second de dire depuis quand
- * elle n'a pas été relue. Une seule requête sert ainsi les liens directs ET l'état
- * d'alignement — une liste de deux cents plans n'en déclenche pas deux cents.
+ * `sgType` and `syncedAt` accompany each link: the first allows realigning an entity without asking which ShotGrid type it is, the second says since when it was not
+ * re-read. A single query thus serves the direct links AND the alignment state — a list of two hundred shots does not trigger two hundred of them.
  *
- * `localTypes` permet à un écran de ne demander que ce qu'il affiche (la page d'un plan
- * n'a que faire des vingt mille versions du projet).
+ * `localTypes` lets a screen request only what it displays (the page of a shot has no use for the project's twenty thousand versions).
  */
 export async function listForUi(
   connectionId: number,
@@ -297,20 +270,17 @@ export async function listForUi(
     select: { localType: true, localId: true, sgId: true, sgType: true, syncedAt: true },
   });
   if (links.length >= limit) {
-    // Une pastille manquante se lit « cette entité n'est pas liée » : il faut pouvoir
-    // remonter à la troncature plutôt qu'à une désynchronisation imaginaire.
+    // A missing badge reads as "this entity is not linked": one must be able to trace back to the truncation rather than to an imagined desynchronization.
     logger.warn({ connectionId, limit }, 'shotgrid links truncated for UI');
   }
   return links;
 }
 
 /**
- * Faut-il rapatrier le média de cette version ?
+ * Should this version's media be fetched?
  *
- * Écrit comme une règle nommée plutôt qu'en condition dissoute, parce que l'oublier a
- * coûté un défaut visible : une version publiée depuis ReView voyait son propre fichier
- * retéléchargé depuis le site à la synchronisation suivante et ajouté à la même version
- * — une copie de plus à chaque passe.
+ * Written as a named rule rather than as a dissolved condition, because forgetting it cost a visible defect: a version published from ReView had its own file re-downloaded
+ * from the site at the next synchronization and added to the same version — one more copy at every pass.
  */
 export function shouldImportMedia(params: {
   withMedia: boolean;
@@ -319,7 +289,7 @@ export function shouldImportMedia(params: {
 }): boolean {
   if (!params.withMedia || !params.autoImport) return false;
   if (params.link.mediaImported) return false;
-  // Ce qu'on lirait sur le site est le fichier qu'on y a envoyé.
+  // What we would read on the site is the file we sent there.
   if (params.link.createdFromReview) return false;
   return true;
 }

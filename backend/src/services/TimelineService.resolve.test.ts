@@ -15,13 +15,13 @@ const { db, latest } = vi.hoisted(() => ({
 vi.mock('../lib/prisma', () => ({ prisma: db }));
 vi.mock('./PipelineLatestService', () => latest);
 vi.mock('./SocketService', () => ({ emitToProject: vi.fn() }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: {
     getPresignedGetUrl: vi.fn((k: string) => Promise.resolve(`url:${k}`)),
     statObject: vi.fn(),
   },
 }));
-vi.mock('./JobService', () => ({
+vi.mock('../lib/queues', () => ({
   enqueueTimelineExport: vi.fn(),
   timelineExportJobId: vi.fn(),
   timelineExportQueue: { getJob: vi.fn() },
@@ -36,7 +36,7 @@ vi.mock('../lib/projectSettings', () => ({
 
 import { resolve, listSnapshots } from './TimelineService';
 
-/** Un plan tel que la requête bornée le rend (les champs de `shotSelect`). */
+/** A shot as the bounded query returns it (the fields of `shotSelect`). */
 const shot = (
   id: number,
   code: string,
@@ -69,11 +69,10 @@ beforeEach(() => {
   latest.latestForShots.mockResolvedValue(new Map());
 });
 
-describe('TimelineService.resolve — plans du montage', () => {
-  it('borne la requête et la trie côté base', async () => {
-    // La requête chargeait TOUS les plans du projet avant de trier en mémoire. Sans
-    // `orderBy`, un plafond couperait dans un ensemble arbitraire et le montage
-    // changerait d'un rafraîchissement à l'autre.
+describe('TimelineService.resolve: shots of the timeline', () => {
+  it('bounds the query and sorts it on the database side', async () => {
+    // The query used to load ALL the project's shots before sorting in memory. Without
+    // `orderBy`, a cap would cut into an arbitrary set and the edit would change from one refresh to the next.
     await resolve(5);
     expect(db.shot.findMany).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -89,27 +88,26 @@ describe('TimelineService.resolve — plans du montage', () => {
     );
   });
 
-  it('garde les plans omis et supprimés hors du montage', async () => {
+  it('keeps omitted and deleted shots out of the timeline', async () => {
     await resolve(5);
     const args = db.shot.findMany.mock.calls[0]![0] as { where: Record<string, unknown> };
     expect(args.where).toMatchObject({ projectId: 3, deletedAt: null, omitted: false });
   });
 
-  it('conserve le départage naturel des codes, que SQL ne sait pas faire', async () => {
-    // « SH2 » doit rester avant « SH10 » : c'est le tri en mémoire qui l'assure, et il
-    // reste le juge final après le tri SQL.
+  it('keeps the natural tie-break of codes, which SQL cannot do', async () => {
+    // "SH2" must stay before "SH10": it is the in-memory sort that ensures it, and it remains the final judge after the SQL sort.
     db.shot.findMany.mockResolvedValue([shot(1, 'SH10'), shot(2, 'SH2')]);
     const view = await resolve(5);
     expect(view.items.map((i) => i.shotCode)).toEqual(['SH2', 'SH10']);
   });
 
-  it('range les plans hors séquence en fin de montage', async () => {
+  it('puts shots outside any sequence at the end of the timeline', async () => {
     db.shot.findMany.mockResolvedValue([shot(1, 'SH99', 0, null), shot(2, 'SH01')]);
     const view = await resolve(5);
     expect(view.items.map((i) => i.shotCode)).toEqual(['SH01', 'SH99']);
   });
 
-  it('signale la troncature au lieu de la taire', async () => {
+  it('reports the truncation instead of hiding it', async () => {
     expect((await resolve(5)).truncated).toBe(false);
     db.shot.findMany.mockResolvedValue(
       new Array(5000).fill(null).map((_, i) => shot(i + 1, `SH${String(i).padStart(4, '0')}`)),
@@ -119,7 +117,7 @@ describe('TimelineService.resolve — plans du montage', () => {
 });
 
 describe('TimelineService.listSnapshots', () => {
-  it('borne la liste sans perdre les révisions récentes', async () => {
+  it('bounds the list without losing the recent revisions', async () => {
     db.timelineSnapshot.findMany.mockResolvedValue([]);
     await listSnapshots(5);
     expect(db.timelineSnapshot.findMany).toHaveBeenCalledWith(

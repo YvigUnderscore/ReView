@@ -5,37 +5,37 @@ import { describe, expect, it } from 'vitest';
 import { cameraPoseFromView } from './cameraPose';
 
 /**
- * Banc réécrit sciemment (Phase 50, lot 8). Il verrouillait « conserve les champs présents,
- * dont aspect » : c'était précisément le défaut. `camera.aspect` valait le ratio du cadre, le
- * cadre lisait la présentation — le premier enregistrement gelait donc un 16/9 que personne
- * n'avait choisi, à la place du ratio de livraison du projet. L'aspect ne se capture plus ;
- * un aspect déjà enregistré, lui, se reconduit (annotations normalisées déjà posées).
+ * Deliberately rewritten test bench (Phase 50, batch 8). It used to lock in "keep the fields
+ * present, including aspect": that was precisely the bug. `camera.aspect` held the frame's
+ * ratio, the frame read the presentation — so the first recording froze a 16/9 nobody had
+ * chosen, instead of the project's delivery ratio. The aspect is no longer captured; an
+ * already-recorded aspect, however, is carried over (normalized annotations already placed).
  */
 describe('cameraPoseFromView', () => {
   const base = { position: { x: 1, y: 2, z: 3 }, target: { x: 0, y: 0, z: 0 } };
 
-  it('conserve position/cible, focale et tilt', () => {
+  it('keeps position/target, focal length and tilt', () => {
     const pose = cameraPoseFromView({ ...base, fov: 50, roll: 0.2 });
     expect(pose).toEqual({ ...base, fov: 50, roll: 0.2 });
   });
 
-  it('n’enregistre PAS l’aspect de la vue — le ratio n’est pas un réglage de caméra', () => {
+  it('does NOT record the view aspect — the ratio is not a camera setting', () => {
     const pose = cameraPoseFromView({ ...base, fov: 50, aspect: 1.777 });
     expect('aspect' in pose).toBe(false);
   });
 
-  it('reconduit l’aspect déjà enregistré, quel que soit celui de la vue', () => {
+  it("carries over the already-recorded aspect, whatever the view's own is", () => {
     const pose = cameraPoseFromView({ ...base, aspect: 16 / 9 }, 2.39);
     expect(pose.aspect).toBeCloseTo(2.39);
   });
 
-  it('ne grave pas un aspect enregistré aberrant', () => {
+  it('does not write a faulty recorded aspect', () => {
     expect('aspect' in cameraPoseFromView(base, 0)).toBe(false);
     expect('aspect' in cameraPoseFromView(base, Number.NaN)).toBe(false);
     expect('aspect' in cameraPoseFromView(base, null)).toBe(false);
   });
 
-  it('omet les champs absents (pas de clés fov/aspect/roll indéfinies)', () => {
+  it('omits absent fields (no undefined fov/aspect/roll keys)', () => {
     const pose = cameraPoseFromView(base);
     expect(pose).toEqual(base);
     expect('aspect' in pose).toBe(false);

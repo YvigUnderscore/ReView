@@ -1,40 +1,40 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { MediaKind } from '../../../types/api';
+import type { MediaKind } from '@/v2/types/api';
 import { DEFAULT_MODE, allowedModesFor, isSpatialKind, type ModeId } from './modes';
 import { panelsFor, type PanelId } from './panels';
 import { DEFAULT_TOOL, toolsFor, type ToolId } from './tools';
 
 /**
- * État du chrome de review — une seule source par workspace, découpée par domaine. Les hooks
- * métier (annotations, caméra, splat…) gardent leur état ; on ne décrit ici que ce qui pilote
- * les cinq emplacements du chrome.
+ * Review chrome state — a single source per workspace, split by domain. Domain hooks
+ * (annotations, camera, splat…) keep their own state; this only describes what drives the five
+ * chrome slots.
  *
- * `labels`, `panel` et `comments` sont des **préférences** : persistées par utilisateur et par
- * type de média. `mode`, `tool` et `drawer` sont éphémères et repartent à leur défaut.
+ * `labels`, `panel` and `comments` are **preferences**: persisted per user and per media type.
+ * `mode`, `tool` and `drawer` are ephemeral and reset to their defaults.
  */
 export type DrawerId = 'strip' | 'curves';
 
 export interface ChromeState {
   mode: ModeId;
   tool: ToolId;
-  /** `null` = dock replié sur sa bande d'onglets. */
+  /** `null` = dock folded onto its tab strip. */
   panel: PanelId | null;
-  /** Rail déplié : libellés et raccourcis visibles à côté des icônes. */
+  /** Rail expanded: labels and shortcuts visible next to the icons. */
   labels: boolean;
   comments: boolean;
   drawer: DrawerId | null;
-  /** Hauteur du tiroir (px) — redimensionnable, persistée. */
+  /** Drawer height (px) — resizable, persisted. */
   drawerH: number;
 }
 
-/** Bornes de la hauteur du tiroir (poignée de redimensionnement). */
+/** Drawer height bounds (resize handle). */
 export const DRAWER_MIN_H = 120;
 export const DRAWER_MAX_H = 480;
 export const DRAWER_DEFAULT_H = 168;
 
-/** Le tiroir ancré sous le transport : courbes d'animation en 3D, pellicule en vidéo/image. */
+/** The drawer anchored under the transport: animation curves in 3D, filmstrip in video/image. */
 export function drawerForKind(kind: MediaKind): DrawerId {
   return isSpatialKind(kind) ? 'curves' : 'strip';
 }
@@ -43,8 +43,8 @@ export function defaultChromeState(): ChromeState {
   return {
     mode: DEFAULT_MODE,
     tool: DEFAULT_TOOL,
-    // Dock replié à la première ouverture : le média passe avant les réglages. L'utilisateur
-    // l'ouvre quand il en a besoin, et sa préférence est retenue par type de média.
+    // Dock folded on first opening: the media comes before the settings. The user
+    // opens it when needed, and their preference is remembered per media type.
     panel: null,
     labels: false,
     comments: true,
@@ -54,13 +54,13 @@ export function defaultChromeState(): ChromeState {
 }
 
 /**
- * Ramène un état à ce qui existe réellement pour ce média et ce mode : outil inconnu du mode
- * → `nav`, panneau absent du dock → premier panneau, tiroir d'une autre famille → fermé.
- * Appelé au changement de mode comme au changement de média ; retourne l'objet d'origine
- * quand rien ne bouge, pour ne pas déclencher de rendu inutile.
+ * Brings a state back to what actually exists for this media and mode: a tool unknown to the mode
+ * → `nav`, a panel absent from the dock → first panel, a drawer from another family → closed.
+ * Called on mode change as well as on media change; returns the original object when nothing
+ * moves, to avoid a needless render.
  *
- * `canCompare` faux retire « Compare » des modes valides : sans version voisine, y rester
- * n'afficherait aucune comparaison.
+ * `canCompare` false removes "Compare" from the valid modes: without a neighbouring version,
+ * staying there would show no comparison.
  */
 export function reconcileChrome(state: ChromeState, kind: MediaKind, canCompare = true): ChromeState {
   const mode = allowedModesFor(kind, canCompare).some((m) => m.value === state.mode)
@@ -77,15 +77,15 @@ export function reconcileChrome(state: ChromeState, kind: MediaKind, canCompare 
   return { ...state, mode, tool, panel, drawer };
 }
 
-/** Clé de persistance des préférences — une par type de média. */
+/** Preferences persistence key — one per media type. */
 export function chromePrefsKey(kind: MediaKind): string {
   return `review.chrome.${kind}`;
 }
 
 /**
- * Sous-ensemble persisté de l'état : les préférences, jamais le mode ni l'outil courants.
- * Le tiroir est retenu par son état ouvert (`drawerOpen`) — l'identité du tiroir dépend du
- * média (`drawerForKind`), pas de la préférence.
+ * Persisted subset of the state: the preferences, never the current mode or tool. The drawer is
+ * remembered by its open state (`drawerOpen`) — the drawer's identity depends on the media
+ * (`drawerForKind`), not on the preference.
  */
 export type ChromePrefs = Pick<ChromeState, 'panel' | 'labels' | 'comments' | 'drawerH'> & {
   drawerOpen: boolean;
@@ -118,7 +118,7 @@ export function readChromePrefs(kind: MediaKind, raw: string | null): ChromePref
           : fallback.drawerH,
     };
   } catch {
-    // Préférence corrompue (édition manuelle, ancien format) : on repart des défauts.
+    // Corrupt preference (manual edit, old format): start again from the defaults.
     return fallback;
   }
 }

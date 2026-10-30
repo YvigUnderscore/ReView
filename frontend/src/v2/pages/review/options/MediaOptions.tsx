@@ -3,23 +3,23 @@
 
 import type { ReactNode } from 'react';
 import { Eraser, Redo2, Undo2 } from 'lucide-react';
-import { IconButton } from '../../../components/ui/icon-button';
-import { NumberField } from '../../../components/ui/number-field';
-import { SegmentedControl } from '../../../components/ui/segmented-control';
-import { USER_COLORS } from '../../../lib/userColor';
+import { IconButton } from '@/v2/components/ui/icon-button';
+import { NumberField } from '@/v2/components/ui/number-field';
+import { SegmentedControl } from '@/v2/components/ui/segmented-control';
+import { USER_COLORS } from '@/v2/lib/userColor';
 import OptionsBar from '../chrome/OptionsBar';
 import type { ModeId } from '../chrome/modes';
 import type { ReviewTool } from '../chrome/tools';
 import type { CompareMode } from '../useCompareState';
 import type { Annotations } from '../useAnnotations';
-import { useT, type MessageKey } from '../../../i18n';
+import { useT, type MessageKey } from '@/v2/i18n';
 
-/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+/** Translator passed to the label tables, recomputed on each render. */
 type Tr = (key: MessageKey) => string;
 
 const DRAWING = new Set(['draw', 'rect', 'ellipse', 'arrow', 'polygon', 'text']);
 
-/** Encres proposées d'emblée — cinq teintes distinctes de la palette utilisateur. */
+/** Inks offered up front: five distinct shades from the user palette. */
 const INK = [USER_COLORS[6], USER_COLORS[11], USER_COLORS[2], USER_COLORS[4], USER_COLORS[8]];
 
 const compare_modes = (t: Tr) => [
@@ -29,10 +29,9 @@ const compare_modes = (t: Tr) => [
 ];
 
 /**
- * Barre d'options des viewers plats (vidéo, image) : les paramètres du seul outil armé.
- * Remplace la palette d'annotation qui vivait sous le champ de commentaire — les outils sont
- * passés au rail, il ne reste ici que l'encre, l'épaisseur, l'opacité et les actions de
- * l'outil.
+ * Options bar of the flat viewers (video, image): the settings of the single armed tool.
+ * Replaces the annotation palette that lived below the comment field. Tools are now in the rail,
+ * and only the ink, thickness, opacity and the tool's actions remain here.
  */
 export default function MediaOptions({
   tool,
@@ -43,12 +42,12 @@ export default function MediaOptions({
   tool: ReviewTool;
   mode: ModeId;
   ann: Annotations;
-  /** Comparaison A/B — mode partagé avec la session live. */
+  /** A/B comparison: mode shared with the live session. */
   compare?: {
     mode: CompareMode;
     onMode: (mode: CompareMode) => void;
     hasB: boolean;
-    /** Réglages A et B (`CompareAB`) — montés par le chrome, absents en vidéo. */
+    /** A and B settings (`CompareAB`): mounted by the chrome, absent for video. */
     ab?: ReactNode;
   };
 }) {
@@ -58,11 +57,11 @@ export default function MediaOptions({
 
   return (
     <OptionsBar tool={tool}>
-      {/* L'aide de l'outil s'efface en comparaison : la ligne y porte les réglages A et B. */}
+      {/* The tool's hint fades out in comparison: the line carries the A and B settings there. */}
       {id === 'nav' && mode !== 'compare' && <span className="rv-optbar__hint">{t(tool.hintKey)}</span>}
 
-      {/* Comparaison : les réglages restent affichés quel que soit l'outil armé — c'est le
-          mode qui compare, pas l'outil, et le choix de B doit se voir. */}
+      {/* Comparison: the settings stay displayed whatever tool is armed. It is the mode that
+          compares, not the tool, and the choice of B must be visible. */}
       {mode === 'compare' && compare && (
         <>
           {compare.ab}
@@ -80,11 +79,11 @@ export default function MediaOptions({
         </>
       )}
 
-      {/* Annuler/Rétablir/Effacer suivent ce qu'il y a À DÉFAIRE, pas l'outil armé : ils
-          disparaissaient dès qu'on désarmait le tracé, alors que les formes et les références
-          collées, elles, restaient attachées au commentaire. Le clavier (Ctrl+Z / Ctrl+Y /
-          Ctrl+Maj+Z) couvre le même besoin depuis la phase 50 ; ces boutons en sont la
-          contrepartie visible. Les réglages d'encre, eux, restent propres au tracé. */}
+      {/* Undo/Redo/Clear follow what is left TO UNDO, not the armed tool: they used to disappear as
+          soon as the stroke was disarmed, whereas pasted shapes and references stayed attached to
+          the comment. The keyboard (Ctrl+Z / Ctrl+Y / Ctrl+Shift+Z) has covered the same need since
+          phase 50; these buttons are its visible counterpart. The ink settings, for their part,
+          remain specific to the stroke. */}
       {(drawing ||
         id === 'shape-move' ||
         id === 'erase' ||
@@ -110,8 +109,8 @@ export default function MediaOptions({
                     style={{ backgroundColor: c }}
                   />
                 ))}
-                {/* Couleur libre : le sélecteur natif s'ouvre hors de la page, il ne recouvre
-                    jamais le média — c'est tout l'intérêt par rapport à l'ancienne palette. */}
+                {/* Free colour: the native picker opens outside the page and never covers the
+                    media. That is its advantage over the former palette. */}
                 <input
                   type="color"
                   value={ann.color}

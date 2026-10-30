@@ -2,41 +2,38 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * OpenTimelineIO (JSON) d'une playlist ou d'un montage, notes de review en marqueurs.
+ * OpenTimelineIO (JSON) of a playlist or an edit, review notes as markers.
  *
- * Écrit à la main plutôt qu'avec la bibliothèque Python : le sous-ensemble dont ReView a
- * besoin — une timeline, une piste vidéo, des clips bout à bout, des marqueurs — tient en
- * quelques schémas stables, et une dépendance de plus se paierait à chaque déploiement.
+ * Written by hand rather than with the Python library: the subset ReView needs — one timeline, one video track,
+ * end-to-end clips, markers — fits in a few stable schemas, and one more dependency would be paid for on every deployment.
  *
- * Le parti est celui d'un OTIO **minimal mais valide** : uniquement des schémas que toutes
- * les versions d'OTIO depuis 0.14 savent relire (`Timeline.1`, `Stack.1`, `Track.1`,
- * `Clip.1`, `Marker.2`, `ExternalReference.1`, `MissingReference.1`, `RationalTime.1`,
- * `TimeRange.1`). En particulier `Clip.1`/`media_reference` plutôt que `Clip.2`/
- * `media_references` : le lecteur récent fait la montée de version tout seul, l'inverse
- * n'est pas vrai.
+ * The approach is that of a **minimal but valid** OTIO: only schemas that every OTIO version since 0.14 can read back
+ * (`Timeline.1`, `Stack.1`, `Track.1`, `Clip.1`, `Marker.2`, `ExternalReference.1`, `MissingReference.1`,
+ * `RationalTime.1`, `TimeRange.1`). In particular `Clip.1`/`media_reference` rather than `Clip.2`/`media_references`:
+ * a recent reader upgrades the version on its own, the reverse is not true.
  *
- * Sérialisation PURE (aucune dépendance) : le service fournit clips et marqueurs résolus.
+ * PURE serialisation (no dependency): the service supplies resolved clips and markers.
  */
 
-/** Couleurs de marqueur définies par OTIO (`otio.schema.MarkerColor`). */
+/** Marker colours defined by OTIO (`otio.schema.MarkerColor`). */
 export type OtioColor = 'RED' | 'GREEN' | 'BLUE' | 'CYAN' | 'YELLOW' | 'MAGENTA' | 'WHITE';
 
 export interface OtioMarker {
   name: string;
   color: OtioColor;
-  /** Position dans le clip, en secondes depuis son début. */
+  /** Position within the clip, in seconds from its start. */
   at: number;
-  /** Durée de la plage commentée, en secondes (0 = marqueur ponctuel). */
+  /** Duration of the commented range, in seconds (0 = point marker). */
   span?: number;
-  /** Métadonnées ReView reportées telles quelles (id de note, état, auteur…). */
+  /** ReView metadata carried as-is (note id, state, author...). */
   metadata?: Record<string, unknown>;
 }
 
 export interface OtioClip {
   name: string;
-  /** Durée du clip en secondes. */
+  /** Clip duration in seconds. */
   duration: number;
-  /** URL du média, si on en publie une ; sinon la référence est déclarée manquante. */
+  /** Media URL, if one is published; otherwise the reference is declared missing. */
   url?: string | null;
   markers: OtioMarker[];
   metadata?: Record<string, unknown>;
@@ -60,7 +57,7 @@ const timeRange = (startFrames: number, durationFrames: number, rate: number) =>
   duration: rationalTime(durationFrames, rate),
 });
 
-/** Frames arrondies d'un instant — même convention que l'EDL. */
+/** Rounded frames of an instant — same convention as the EDL. */
 const framesAt = (seconds: number, fps: number): number =>
   !Number.isFinite(seconds) || fps <= 0 ? 0 : Math.max(0, Math.round(seconds * fps));
 
@@ -103,9 +100,8 @@ function clip(c: OtioClip, fps: number) {
 }
 
 /**
- * Sérialise une suite de clips en document OTIO (JSON indenté, comme l'écrit
- * `otio.adapters.write_to_string`). Les clips de durée nulle sont écartés : OTIO les
- * accepte, mais aucun logiciel de montage n'en fait quoi que ce soit.
+ * Serialises a sequence of clips into an OTIO document (indented JSON, as `otio.adapters.write_to_string` writes it).
+ * Zero-duration clips are discarded: OTIO accepts them, but no editing software does anything with them.
  */
 export function toOtio(input: OtioInput): string {
   const fps = input.fps > 0 ? input.fps : 24;

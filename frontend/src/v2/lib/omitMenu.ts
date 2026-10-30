@@ -2,19 +2,19 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Omission d'un plan du montage — logique pure, sans React ni réseau.
+ * Omitting a shot from the mount — pure logic, no React and no network.
  *
- * Le drapeau existait en base et dans les montages automatiques (Phase 45), écrit par la
- * seule route `PATCH /api/shots/:id` : la production pouvait *voir* qu'un plan était coupé
- * — la grille de la séquence le marque d'un œil barré — sans jamais pouvoir le décider.
+ * The flag existed in the database and in automatic mounts (Phase 45), written by the sole route
+ * `PATCH /api/shots/:id`: production could *see* that a shot was cut — the sequence grid marks it
+ * with a crossed-out eye — without ever being able to decide it.
  *
- * Ce module dit ce que vaut le drapeau, quel corps le bascule et quelle séquence rafraîchir.
+ * This module says what the flag is worth, which body toggles it, and which sequence to refresh.
  */
 
 /**
- * Le plan tel que l'écran l'a sous la main. La liste d'un projet le donne à plat
- * (`sequenceId`), la fiche d'un plan l'imbrique (`sequence`) : les deux caches n'ont pas
- * la même forme, et n'en connaître qu'une laisserait l'œil barré périmé sur l'autre écran.
+ * The shot as the screen has it at hand. A project list provides it flat (`sequenceId`), a shot
+ * record nests it (`sequence`): the two caches do not have the same shape, and knowing only one would
+ * leave the crossed-out eye stale on the other screen.
  */
 export interface OmitTarget {
   id: number;
@@ -23,23 +23,23 @@ export interface OmitTarget {
   sequence?: { id: number } | null;
 }
 
-/** Un plan sans drapeau est au montage : l'absence de valeur n'est pas une omission. */
+/** A shot without a flag is in the mount: the absence of a value is not an omission. */
 export function isOmitted(shot: OmitTarget): boolean {
   return shot.omitted === true;
 }
 
 /**
- * Le corps du `PATCH` : la bascule, et rien d'autre.
+ * The body of the `PATCH`: the toggle, and nothing else.
  *
- * Le plan reste éditable ailleurs — panneau de réglages, statut au clic droit, synchro
- * ShotGrid. Y joindre le moindre champ que personne n'a touché republierait vers le site
- * une valeur qui a pu bouger entre-temps, et l'écraserait au passage.
+ * The shot remains editable elsewhere — settings panel, status on right click, ShotGrid sync.
+ * Attaching any field that nobody touched would republish to the site a value that may have moved
+ * in the meantime, and overwrite it on the way.
  */
 export function omitBody(shot: OmitTarget): { omitted: boolean } {
   return { omitted: !isOmitted(shot) };
 }
 
-/** La séquence porteuse, quelle que soit la forme reçue — `null` pour un plan sans séquence. */
+/** The owning sequence, whatever the shape received — `null` for a shot without a sequence. */
 export function sequenceIdOf(shot: OmitTarget): number | null {
   return shot.sequenceId ?? shot.sequence?.id ?? null;
 }

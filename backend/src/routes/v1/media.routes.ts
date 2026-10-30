@@ -9,34 +9,34 @@ import { idParam, readQuery } from './helpers';
 import { loadReadableMedia, signVariant, urlQuery } from './mediaAccess';
 
 /**
- * Médias de l'API v1 : la fiche d'un fichier, et l'URL pour le lire.
+ * Media in API v1: a file's record, and the URL to read it.
  *
- * C'est le pendant de `/api/v1/publish` : un poste d'artiste pousse un rendu, puis vient
- * chercher la référence dont il a besoin (une plate approuvée, un layout à charger). Sans
- * ces deux routes, une intégration DCC ne pouvait que pousser.
+ * This is the counterpart of `/api/v1/publish`: a workstation pushes a render, then fetches the
+ * reference it needs (an approved plate, a layout to load). Without these two routes, a DCC
+ * integration could only push.
  */
 const router = Router();
 
-// GET /api/v1/media/:id — fiche du média (sans URL : elle se demande, et elle expire)
+// GET /api/v1/media/:id: media record (no URL here: it is requested separately, and it expires)
 router.get('/media/:id', requireScope('media:read'), validate({ params: idParam }), async (req, res) => {
   const media = await loadReadableMedia(req, Number(req.params.id));
   res.json({ media: toMedia(media), versionId: media.versionId });
 });
 
 /**
- * GET /api/v1/media/:id/url — URL présignée de lecture.
+ * GET /api/v1/media/:id/url: presigned read URL.
  *
- * `variant` choisit ce qu'on rapatrie : `source` (le fichier déposé, ou le proxy quand
- * l'original a été effacé après transcodage), `proxy` (le MP4 de review, coupe comprise)
- * ou `thumbnail`. `expiresIn` borne la validité : une ferme qui distribue l'URL à ses
- * nœuds la veut courte, un artiste qui télécharge un plan de 40 Go la veut longue.
+ * `variant` picks what is fetched: `source` (the deposited file, or the proxy when the original was
+ * deleted after transcoding), `proxy` (the review MP4, cut included) or `thumbnail`. `expiresIn`
+ * bounds validity: a farm distributing the URL to its nodes wants it short, an artist downloading a
+ * 40 GB shot wants it long.
  */
 router.get(
   '/media/:id/url',
   requireScope('media:read'),
   validate({ params: idParam, query: urlQuery }),
   async (req, res) => {
-    // Express 5 : `req.query` est un getter, la coercition du middleware ne persiste pas.
+    // Express 5: `req.query` is a getter, the middleware's coercion does not persist.
     const { variant, expiresIn } = readQuery(urlQuery, req);
     const media = await loadReadableMedia(req, Number(req.params.id));
     const url = await signVariant(media, variant, expiresIn);

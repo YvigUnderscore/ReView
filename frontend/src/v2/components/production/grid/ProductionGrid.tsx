@@ -4,9 +4,9 @@
 import { useMemo, useRef, useState } from 'react';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useVirtualizer } from '@tanstack/react-virtual';
-import { api } from '../../../../lib/apiClient';
-import { qk } from '../../../lib/query';
-import { useProjectRole } from '../../../lib/useProjectRole';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
+import { useProjectRole } from '@/v2/lib/useProjectRole';
 import { Button } from '../../ui/button';
 import { SkeletonRows } from '../../ui/skeleton';
 import GridFilterBar from './GridFilterBar';
@@ -25,25 +25,22 @@ import {
   type GridFilters,
   type ProjectGrid,
 } from './gridWire';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
- * La grille de suivi : un plan par ligne, un département par colonne.
+ * The tracking grid: one shot per row, one department per column.
  *
- * Elle remplace « Where the project stands », que l'utilisateur a jugé incompréhensible.
- * Ce que l'écran d'avant ne disait pas et qu'elle dit : quel PLAN attend quoi, qui le
- * tient, quel département n'est même pas à son programme, et quel est son statut propre.
+ * It replaces "Where the project stands", which users judged incomprehensible. What the earlier screen did not say and this
+ * one does: which SHOT waits for what, who holds it, which department is not even on its schedule, and what its own status is.
  *
- * Trois contraintes gouvernent le montage. Le **volume** — cent plans par douze étapes
- * font douze cents cases, donc une table virtualisée qui ne monte que sa fenêtre visible
- * et des en-têtes collants en ligne comme en colonne. La **pagination par curseur**, qui
- * porte sur les plans et jamais sur les tâches : une page ne coupe pas une ligne en deux.
- * Et le **repli par sequence**, qui rend exactement le résumé d'avant sans le figer dans
- * un second écran.
+ * Three constraints govern the assembly. The **volume**: a hundred shots by twelve steps make twelve hundred cells, hence a
+ * virtualised table that mounts only its visible window, with sticky headers by row as well as by column. The **cursor
+ * pagination**, which operates on shots and never on tasks: a page never cuts a row in two. And the **collapsing per
+ * sequence**, which renders exactly the earlier summary without freezing it into a second screen.
  *
- * Ce n'est plus une `<table>` : une table virtualisée est un empilement d'éléments
- * absolus, que le navigateur ne relierait plus en lignes et colonnes. Les rôles ARIA les
- * rétablissent — sans eux, la synthèse vocale lirait mille boutons à la file.
+ * It is no longer a `<table>`: a virtualised table is a stack of absolutely positioned elements, which the browser would no
+ * longer relate as rows and columns. The ARIA roles restore that: without them, a screen reader would read a thousand
+ * buttons in a row.
  */
 export default function ProductionGrid({ projectId }: { projectId: number }) {
   const t = useT();
@@ -54,8 +51,8 @@ export default function ProductionGrid({ projectId }: { projectId: number }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const actions = useGridActions(projectId, canManage);
 
-  // La même chaîne sert de clé de cache et de query-string : une page servie sous la clé
-  // d'un autre filtre montrerait les plans du voisin.
+  // The same string serves as cache key and query string: a page served under another filter's key would show the
+  // neighbour's shots.
   const search = gridSearch(filters, null);
   const gridQ = useInfiniteQuery({
     queryKey: qk.projectGrid(projectId, search),
@@ -66,15 +63,13 @@ export default function ProductionGrid({ projectId }: { projectId: number }) {
     enabled: projectId > 0,
   });
 
-  // Les pages telles que TanStack les garde, sans repli : un `?? []` neuf à chaque rendu
-  // invaliderait la mémoïsation ci-dessous, donc la passe se referait à chaque cran de
-  // défilement.
+  // Pages as TanStack keeps them, with no fallback: a new `?? []` on each render would invalidate the memoisation below,
+  // so the pass would be redone at every scroll step.
   const pages = gridQ.data?.pages;
 
-  // Les colonnes visibles et leur largeur se calculent en UNE passe sur les données, gardée
-  // d'un rendu à l'autre : le défilement virtualisé re-rend cette table à chaque cran, et
-  // la largeur dépend du nom de statut le plus long de la page — jamais d'une mesure de
-  // texte, qui coûterait douze cents lectures de mise en page par cran.
+  // Visible columns and their width are computed in ONE pass over the data, kept from one render to the next: virtualised
+  // scrolling re-renders this table at each step, and the width depends on the longest status name on the page, never on a
+  // text measurement, which would cost twelve hundred layout reads per step.
   const { rows, columns, colWidth } = useMemo(() => {
     const served = (pages ?? []).flatMap((page) => page.rows);
     const shown = visibleDepartments(pages?.[0]?.departments ?? [], served, hideEmpty);
@@ -84,15 +79,14 @@ export default function ProductionGrid({ projectId }: { projectId: number }) {
   const lines = flattenGrid(groupBySequence(rows), collapsed);
   const total = pages?.[0]?.total ?? 0;
 
-  // Le compilateur React renonce à mémoïser un composant qui appelle `useVirtualizer` :
-  // le virtualiseur rend des fonctions liées à un état mutable, qu'on figerait à tort.
-  // C'est sans conséquence ici — aucune de ces fonctions ne sort de ce composant, et les
-  // lignes ne reçoivent que des données (plan, colonnes, gestes de la grille).
-  // eslint-disable-next-line react-hooks/incompatible-library -- rien n'est mémoïsé ici, cf. ci-dessus
+  // The React compiler gives up memoising a component that calls `useVirtualizer`: the virtualiser returns functions bound
+  // to mutable state, which one would wrongly freeze. This has no consequence here: none of these functions leaves this
+  // component, and the rows only receive data (shot, columns, grid gestures).
+  // eslint-disable-next-line react-hooks/incompatible-library -- nothing is memoised here, see above
   const virtualizer = useVirtualizer({
     count: lines.length,
     getScrollElement: () => scrollRef.current,
-    // Toutes les lignes ont la même hauteur : rien à remesurer après le montage.
+    // All rows have the same height: nothing to re-measure after mounting.
     estimateSize: () => LINE_H,
     overscan: OVERSCAN,
     getItemKey: (index) => lines[index].key,
@@ -155,8 +149,8 @@ export default function ProductionGrid({ projectId }: { projectId: number }) {
                 style={{ width: colWidth }}
               >
                 <span className="truncate text-center text-2xs font-semibold">{department.name}</span>
-                {/* La teinte du référentiel, pas une couleur inventée par l'écran : c'est
-                    elle qui relie la colonne au département partout ailleurs. */}
+                {/* The reference tint, not a colour invented by the screen: it is what links the column to the department
+                    everywhere else. */}
                 {department.color && (
                   <span
                     aria-hidden

@@ -13,12 +13,12 @@ import {
   statusSchema,
 } from './opsOrder';
 
-describe('les filtres du protocole', () => {
-  it('accepte une étiquette de version, et rien qui lui ressemble', () => {
+describe('protocol filters', () => {
+  it('accepts a version tag, and nothing resembling one', () => {
     for (const good of ['v2.4.0', 'v2.10.3', 'v3.0.0-rc.1', 'v2.4.0-beta.2']) {
       expect(VERSION_TAG.test(good), good).toBe(true);
     }
-    // Chacune de ces valeurs finirait en argument de `git checkout` ou de `docker compose`.
+    // Each of these values would end up as an argument of `git checkout` or `docker compose`.
     for (const bad of [
       'v2.4.0; rm -rf /',
       'v2.4.0 && curl evil',
@@ -35,14 +35,14 @@ describe('les filtres du protocole', () => {
     }
   });
 
-  it('accepte un identifiant de sauvegarde, qui est un nom de dossier', () => {
+  it('accepts a backup identifier, which is a folder name', () => {
     expect(BACKUP_STAMP.test('20260910-030000')).toBe(true);
     for (const bad of ['20260910', '../backups', '20260910-030000/..', '2026091-030000']) {
       expect(BACKUP_STAMP.test(bad), bad).toBe(false);
     }
   });
 
-  it('accepte un identifiant d’exécution, qui est aussi un nom de dossier', () => {
+  it('accepts a run identifier, which is also a folder name', () => {
     expect(RUN_ID.test('20260910-142233-a1b2c3')).toBe(true);
     for (const bad of ['20260910-142233', '20260910-142233-A1B2C3', '20260910-142233-a1b2c3/..', '..']) {
       expect(RUN_ID.test(bad), bad).toBe(false);
@@ -51,14 +51,14 @@ describe('les filtres du protocole', () => {
 });
 
 describe('newRunId', () => {
-  it('horodate — donc trie — et rend deux ordres du même instant distincts', () => {
+  it('timestamps — hence sorts — and yields two distinct orders for the same instant', () => {
     const at = new Date(2026, 8, 10, 14, 22, 33);
     expect(newRunId(at, () => 'a1b2c3')).toBe('20260910-142233-a1b2c3');
     expect(RUN_ID.test(newRunId(at))).toBe(true);
     expect(newRunId(at)).not.toBe(newRunId(at));
   });
 
-  it('range les identifiants dans l’ordre du temps', () => {
+  it('sorts the identifiers in time order', () => {
     const early = newRunId(new Date(2026, 8, 10, 9, 5, 0), () => 'ffffff');
     const late = newRunId(new Date(2026, 8, 10, 14, 22, 33), () => '000000');
     expect([late, early].sort()).toEqual([early, late]);
@@ -66,7 +66,7 @@ describe('newRunId', () => {
 });
 
 describe('clampSeconds', () => {
-  it('borne, tronque, et refuse ce qui n’est pas un nombre', () => {
+  it('bounds, truncates, and refuses what is not a number', () => {
     expect(clampSeconds(600, 60, 3600)).toBe(600);
     expect(clampSeconds(5, 60, 3600)).toBe(60);
     expect(clampSeconds(99_999, 60, 3600)).toBe(3600);
@@ -80,7 +80,7 @@ describe('buildOrder', () => {
   const now = new Date('2026-09-10T14:22:33.000Z');
   const actor = { id: 3, displayName: 'ops@studio.tld' };
 
-  it('rend un ordre complet, borné et daté', () => {
+  it('returns a complete, bounded and dated order', () => {
     const order = buildOrder({
       id: '20260910-142233-a1b2c3',
       kind: 'update',
@@ -105,9 +105,9 @@ describe('buildOrder', () => {
     });
   });
 
-  it('borne les durées quoi qu’on lui passe', () => {
-    // `readyTimeoutSec` atterrit dans « $(( SECONDS + READY_TIMEOUT )) », où bash ré-évalue
-    // le contenu de la variable. C'est la première des trois passes de filtrage.
+  it('bounds the durations whatever is passed to it', () => {
+    // `readyTimeoutSec` lands in "$(( SECONDS + READY_TIMEOUT ))", where bash re-evaluates the content of the variable.
+    // This is the first of the three filtering passes.
     const order = buildOrder({
       id: '20260910-142233-a1b2c3',
       kind: 'backup',
@@ -119,15 +119,15 @@ describe('buildOrder', () => {
     });
     expect(order.params.readyTimeoutSec).toBe(3600);
     expect(order.params.maxRuntimeSec).toBe(60);
-    // TTL borné aussi : un ordre valable dix secondes n'atteindrait jamais l'agent.
+    // A TTL is bounded too: an order valid for ten seconds would never reach the agent.
     expect(order.expiresAt).toBe('2026-09-10T14:23:33.000Z');
   });
 });
 
 describe('CANCELLABLE_PHASES', () => {
-  it('ne laisse annuler que tant que rien n’est basculé', () => {
-    // Tuer le script après la bascule laisserait la pile à moitié recréée, et le retour
-    // arrière automatique — la seule promesse de sécurité de la commande — n'aurait pas eu lieu.
+  it('only lets cancellation happen as long as nothing has been switched over', () => {
+    // Killing the script after the switchover would leave the stack half recreated, and the automatic rollback — the
+    // only safety promise of the command — would not have taken place.
     for (const phase of ['queued', 'precheck', 'backup'])
       expect(CANCELLABLE_PHASES.has(phase), phase).toBe(true);
     for (const phase of ['switch', 'health', 'rollback', 'done']) {
@@ -137,17 +137,17 @@ describe('CANCELLABLE_PHASES', () => {
 });
 
 describe('statusSchema', () => {
-  it('lit un statut minimal — un agent plus ancien n’a pas tous les champs', () => {
+  it('reads a minimal status — an older agent does not have every field', () => {
     const parsed = statusSchema.safeParse({ id: 'x', kind: 'update', state: 'running' });
     expect(parsed.success).toBe(true);
   });
 
-  it('ignore ce qu’il ne connaît pas — le protocole n’évolue qu’additivement', () => {
+  it('ignores what it does not know — the protocol only evolves additively', () => {
     const parsed = statusSchema.safeParse({ id: 'x', kind: 'update', state: 'running', futurChamp: 42 });
     expect(parsed.success).toBe(true);
   });
 
-  it('refuse un statut sans identité', () => {
+  it('refuses a status without an identity', () => {
     expect(statusSchema.safeParse({ kind: 'update', state: 'running' }).success).toBe(false);
   });
 });

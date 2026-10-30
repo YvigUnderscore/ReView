@@ -7,23 +7,20 @@ import { intlLocale, useT } from '../../i18n';
 import { readAttention } from './productionWire';
 
 /**
- * L'état du projet en une ligne.
+ * The state of the project in one line.
  *
- * La page empilait six panneaux, chacun excellent, mais il fallait les lire tous pour
- * répondre à la seule question qu'on se pose en l'ouvrant : **est-ce que ça va ?** Quatre
- * chiffres y répondent — ce qui est fait, ce qui attend une review, ce qui est en retard,
- * ce que personne n'a pris. Le détail est un onglet plus loin.
+ * The page stacked six panels, each excellent, but one had to read them all to answer the only question one has on opening
+ * it: **is it going well?** Four figures answer it: what is done, what awaits review, what is overdue, and what nobody has
+ * taken. The detail is one tab further.
  *
- * Les trois derniers sont des alertes : ils se colorent seulement quand ils comptent. Un
- * « 0 en retard » en rouge apprendrait à ignorer la couleur.
+ * The last three are alerts: they only take colour when they matter. A "0 overdue" in red would teach people to ignore colour.
  *
- * Ces chiffres étaient la **longueur des listes** rendues par le serveur, plafonnées à
- * cinquante : un projet avec trois cents tâches en retard affichait « 50 », et la tuile
- * devenait d'autant plus fausse que la situation était grave. Ce sont maintenant les
- * totaux comptés en base, et la tuile dit que la liste, elle, est plafonnée.
+ * These figures used to be the **length of the lists** returned by the server, capped at fifty: a project with three hundred
+ * overdue tasks displayed "50", and the tile became all the more wrong as the situation was serious. They are now the totals
+ * counted in the database, and the tile says that the list itself is capped.
  */
 
-/** Un chiffre et ce qu'il désigne. `tone` ne s'allume qu'au-dessus de zéro. */
+/** A figure and what it designates. `tone` only lights up above zero. */
 function Tile({
   icon: Icon,
   value,
@@ -34,7 +31,7 @@ function Tile({
 }: {
   icon: typeof Eye;
   value: string;
-  /** Ce que `value` vaut en nombre : c'est lui qui allume la couleur, pas le texte rendu. */
+  /** The numeric value: it is what lights the colour, not the rendered text. */
   count?: number;
   label: string;
   hint?: string;
@@ -67,8 +64,7 @@ export default function ProductionSummary({ data }: { data: ProductionOverview }
   const attention = readAttention(data);
   const percent = total > 0 ? Math.round((done / total) * 100) : 0;
   const number = (value: number) => value.toLocaleString(intlLocale());
-  // Le plafond ne se dit que lorsqu'il mord : sinon la tuile porterait une ligne de plus
-  // pour ne rien apprendre.
+  // The cap is only mentioned when it bites: otherwise the tile would carry one more line for nothing.
   const hint = attention.capped
     ? t('production.summary.capped', { value: number(attention.limit ?? attention.shown) })
     : undefined;

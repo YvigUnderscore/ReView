@@ -3,27 +3,23 @@
 
 import { useState } from 'react';
 import { Paperclip } from 'lucide-react';
-import {
-  isAudioAttachment,
-  isImageAttachment,
-  type DisplayAttachment,
-} from '../../../lib/commentAttachments';
+import { isAudioAttachment, isImageAttachment, type DisplayAttachment } from '../../lib/commentAttachments';
 import { Lightbox } from '../ui/lightbox';
 import { useT } from '../../i18n';
 
 /**
- * Pièces jointes d'un commentaire ENVOYÉ : 2 vignettes image max + tuile « +x images »
- * (toutes visibles dans la lightbox carrousel), chips téléchargeables pour les PDF/zip/texte.
+ * Attachments of a SENT comment: at most 2 image thumbnails + a "+x images" tile (all
+ * visible in the carousel lightbox), downloadable chips for PDF/zip/text.
  *
- * Le type n'exige pas la clé MinIO : c'est ce qui permet au portail client d'afficher les
- * mêmes vignettes sans que la clé descende jamais sur une surface publique.
+ * The type does not require the MinIO key: this lets the client portal show the same
+ * thumbnails without the key ever reaching a public surface.
  */
 export default function CommentAttachmentList({
   attachments,
   stop,
 }: {
   attachments: DisplayAttachment[];
-  /** Empêche un clic interne de sélectionner la carte du commentaire. */
+  /** Prevents an internal click from selecting the comment card. */
   stop: (e: React.MouseEvent) => void;
 }) {
   const t = useT();
@@ -63,7 +59,7 @@ export default function CommentAttachmentList({
           <span className="text-2xs">{t('comment.images')}</span>
         </button>
       )}
-      {/* Notes vocales (32.F) : lecteur audio inline */}
+      {/* Voice notes (32.F): inline audio player */}
       {attachments.map(
         (a, i) =>
           a.url &&

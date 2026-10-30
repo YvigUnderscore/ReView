@@ -5,68 +5,68 @@ import type { SplatCamera } from '../../reviewTypes';
 import { emptyAnim, upsertFullKey, upsertKey, type CameraAnimV2 } from './model';
 
 /**
- * Preset « Orbite » — un tour complet autour de la cible courante, réécrit sur la mécanique de
- * l'**auto-rotation** (`three/turntable.ts`) : le vecteur caméra→cible tourne autour de l'axe Y
- * du monde, ce qui conserve exactement la distance à la cible et la hauteur de la caméra. Seule
- * différence avec le turntable, qui bouge la vue frame par frame : ici le tour est **écrit en
- * clés**, donc persisté et rejoué à l'identique pour tous.
+ * "Orbit" preset — one full turn around the current target, rewritten on the mechanics of the
+ * **auto-rotation** (`three/turntable.ts`): the camera→target vector rotates around the world Y
+ * axis, which keeps the distance to the target and the camera height exactly. The only
+ * difference from the turntable, which moves the view frame by frame: here the turn is
+ * **written as keys**, so it is persisted and replayed identically for everyone.
  *
- * Trois défauts corrigés (Phase 50, lot 7) :
- *  1. les tangentes `auto` (Catmull-Rom sur 9 points d'un cosinus) faisaient un rayon variable de
- *     4,9 % et une vitesse variable de 16 % — ce n'était pas un cercle. Chaque clé porte désormais
- *     la **tangente exacte** du cercle (mode `free`), et 8 segments suffisent : rayon constant à
- *     0,1 %, vitesse à 0,08 % ;
- *  2. la dernière clé retombait sur une tangente tronquée, d'où une cassure de direction de 45° à
- *     chaque bouclage. La tangente à `t = durée` est celle de `t = 0` (l'angle diffère de 2π) :
- *     la boucle est continue par construction ;
- *  3. les cinq canaux constants (hauteur, cible, focale) écrivaient 45 clés qui n'apportaient
- *     rien et encombraient le curve editor et l'historique. Une clé unique par canal constant
- *     suffit — `evalChannel` rend la valeur d'une clé seule à tout instant. 23 clés au lieu de 63.
+ * Three defects fixed (Phase 50, batch 7):
+ *  1. the `auto` tangents (Catmull-Rom over 9 points of a cosine) gave a radius varying by
+ *     4.9% and a speed varying by 16% — it was not a circle. Each key now carries the **exact
+ *     tangent** of the circle (`free` mode), and 8 segments suffice: radius constant to 0.1%,
+ *     speed to 0.08%;
+ *  2. the last key fell back on a truncated tangent, hence a 45° direction break at every
+ *     loop. The tangent at `t = duration` is that of `t = 0` (the angle differs by 2π): the
+ *     loop is continuous by construction;
+ *  3. the five constant channels (height, target, focal length) wrote 45 keys that added
+ *     nothing and cluttered the curve editor and the history. A single key per constant channel
+ *     is enough — `evalChannel` returns the value of a lone key at any time. 23 keys instead of 63.
  *
- * Les canaux constants sont **écrits** plutôt que laissés vides : un canal sans clé retombe sur la
- * pose de base, qui n'est pas persistée — l'orbite ne se rejouerait pas à l'identique.
+ * Constant channels are **written** rather than left empty: a channel without a key falls back
+ * to the base pose, which is not persisted — the orbit would not replay identically.
  */
 
-/** Durée d'un tour complet (ms). Doit rester divisible par `ORBIT_STEPS` : arrondir les temps de
- *  clé suffit à faire réapparaître une vitesse variable (mesuré à 0,45 % pour 36 pas). */
+/** Duration of a full turn (ms). Must stay divisible by `ORBIT_STEPS`: rounding the key times
+ *  is enough to bring back a varying speed (measured at 0.45% for 36 steps). */
 export const ORBIT_DURATION_MS = 12000;
 
-/** Segments du tour. 8 avec les tangentes exactes valent mieux que 36 en `auto`. */
+/** Segments of the turn. 8 with exact tangents are better than 36 in `auto`. */
 const ORBIT_STEPS = 8;
 
-/** Élévation de repli quand la vue est à la verticale de la cible (rad). */
+/** Fallback elevation when the view is vertically above the target (rad). */
 const FALLBACK_ELEVATION = Math.PI / 6;
 
-/** En deçà de cette fraction de la distance, l'écart horizontal est jugé dégénéré. */
+/** Below this fraction of the distance, the horizontal gap is deemed degenerate. */
 const MIN_HORIZONTAL = 0.1;
 
-/** Géométrie du tour déduite de la vue de départ. */
+/** Turn geometry derived from the starting view. */
 export interface OrbitStart {
-  /** Centre du tour = cible de la vue. */
+  /** Center of the turn = target of the view. */
   center: { x: number; y: number; z: number };
-  /** Rayon dans le plan XZ (unités monde). */
+  /** Radius in the XZ plane (world units). */
   radius: number;
-  /** Hauteur de la caméra au-dessus du centre — conservée pendant tout le tour. */
+  /** Camera height above the center — kept throughout the turn. */
   height: number;
-  /** Angle de départ dans le plan XZ (rad). */
+  /** Starting angle in the XZ plane (rad). */
   angle: number;
 }
 
 /**
- * Déduit la géométrie du tour de la vue courante. Le cas général reprend le turntable : rayon =
- * écart horizontal, hauteur = écart vertical, donc **distance à la cible inchangée**.
+ * Derives the turn geometry from the current view. The general case follows the turntable:
+ * radius = horizontal gap, height = vertical gap, so **the distance to the target is unchanged**.
  *
- * Depuis une vue plongeante verticale, l'écart horizontal est quasi nul : l'ancien `|| 1` ramenait
- * le rayon à 1 unité monde et l'orbite changeait complètement d'échelle. On bascule désormais à
- * une élévation de 30° **en gardant la distance** — c'est l'échelle qui comptait, pas l'angle.
- * Pur/testable.
+ * From a vertical top-down view, the horizontal gap is nearly zero: the old `|| 1` brought the
+ * radius back to 1 world unit and the orbit changed scale entirely. We now switch to a 30°
+ * elevation **while keeping the distance** — it was the scale that mattered, not the angle.
+ * Pure/testable.
  */
 export function orbitStartFromView(from: SplatCamera): OrbitStart {
   const center = { x: from.target.x, y: from.target.y, z: from.target.z };
   const dx = from.position.x - center.x;
   const dy = from.position.y - center.y;
   const dz = from.position.z - center.z;
-  // Caméra exactement sur sa cible : aucune distance à conserver, on en prend une.
+  // Camera exactly on its target: no distance to keep, so we take one.
   const distance = Math.hypot(dx, dy, dz) || 1;
   const horizontal = Math.hypot(dx, dz);
   const angle = horizontal > 0 ? Math.atan2(dz, dx) : 0;
@@ -79,11 +79,11 @@ export function orbitStartFromView(from: SplatCamera): OrbitStart {
   };
 }
 
-/** Un tour complet autour de la cible de `from`, en boucle. */
+/** A full turn around the target of `from`, looping. */
 export function orbitPresetV2(from: SplatCamera): CameraAnimV2 {
   const { center, radius, height, angle } = orbitStartFromView(from);
-  // Vitesse angulaire constante (rad/ms) — c'est elle qui donne les tangentes exactes, exprimées
-  // en unités/ms comme le veut `hermite.ts`.
+  // Constant angular speed (rad/ms) — it is what gives the exact tangents, expressed
+  // in units/ms as `hermite.ts` expects.
   const omega = (2 * Math.PI) / ORBIT_DURATION_MS;
   let anim = emptyAnim(true);
   for (let i = 0; i <= ORBIT_STEPS; i++) {
@@ -106,7 +106,7 @@ export function orbitPresetV2(from: SplatCamera): CameraAnimV2 {
       mode: 'free',
     });
   }
-  // Canaux constants : une seule clé, au début du tour.
+  // Constant channels: a single key, at the start of the turn.
   anim = upsertKey(anim, 'py', 0, center.y + height);
   anim = upsertKey(anim, 'tx', 0, center.x);
   anim = upsertKey(anim, 'ty', 0, center.y);

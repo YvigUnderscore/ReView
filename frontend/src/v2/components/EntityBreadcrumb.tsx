@@ -12,7 +12,7 @@ import { useProjectContext } from '../stores/useProjectContext';
 import type { AssetRef, MediaRef, ProjectRef, SequenceRef, ShotRef, Task, Version } from '../types/api';
 import { useT, type MessageKey } from '../i18n';
 
-/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+/** Translator passed to the label tables, recomputed at each render. */
 type Tr = (key: MessageKey) => string;
 import {
   Breadcrumb,
@@ -24,14 +24,14 @@ import {
 } from './ui/breadcrumb';
 
 /**
- * Fil d'Ariane contextuel : résout la chaîne d'ancêtres d'une entité via
- * GET /api/context/:entity/:id et rend des segments cliquables
- * (Projets › Projet › Séquence › Shot|Asset › Tâche › Version › Média [› tail]).
+ * Contextual breadcrumb: resolves the chain of ancestors of an entity via
+ * GET /api/context/:entity/:id and renders clickable segments
+ * (Projects › Project › Sequence › Shot|Asset › Task › Version › Media [› tail]).
  */
 
 export type BreadcrumbEntity = 'media' | 'version' | 'task' | 'shot' | 'sequence' | 'asset' | 'project';
 
-/** Réponse de GET /api/context/:entity/:id (10.D3) — chaîne d'ancêtres. */
+/** Response of GET /api/context/:entity/:id (10.D3): chain of ancestors. */
 interface BreadcrumbContext {
   project: ProjectRef;
   sequence?: SequenceRef | null;
@@ -54,8 +54,8 @@ function toSegments(t: Tr, ctx: BreadcrumbContext, tail?: string): Segment[] {
     { label: t('nav.projects'), to: '/projects' },
     { label: ctx.project.name, to: `/projects/${pslug}` },
   ];
-  // La séquence a sa page depuis C3 — le lien menait à l'onglet du projet, à charge pour
-  // le lecteur de retrouver la ligne concernée dans la liste.
+  // The sequence has its own page since C3: the link led to the project's tab, which left it to
+  // the reader to find the relevant row in the list.
   if (ctx.sequence) segments.push({ label: ctx.sequence.code, to: `/sequences/${ctx.sequence.id}` });
   if (ctx.shot) segments.push({ label: ctx.shot.code, to: `/shots/${ctx.shot.id}` });
   if (ctx.asset) segments.push({ label: ctx.asset.name, to: `/assets/${ctx.asset.id}` });
@@ -66,7 +66,7 @@ function toSegments(t: Tr, ctx: BreadcrumbContext, tail?: string): Segment[] {
   return segments;
 }
 
-/** Libellé de l'entité feuille (celle de la page visitée) pour les Récents. */
+/** Label of the leaf entity (the one of the page visited) for Recents. */
 function leafLabel(entity: BreadcrumbEntity, ctx: BreadcrumbContext): string | null {
   switch (entity) {
     case 'project':
@@ -104,9 +104,9 @@ export default function EntityBreadcrumb({
   });
   const ctx = data?.context ?? null;
 
-  // Effet volontaire : chaque contexte résolu alimente les « Récents » et le
-  // projet courant de la sidebar (10.A4) — l'URL exacte est mémorisée pour y
-  // revenir en 1 clic.
+  // Deliberate side effect: each resolved context feeds "Recents" and the
+  // current project of the sidebar (10.A4): the exact URL is stored so as to
+  // to return in one click.
   useEffect(() => {
     if (!ctx) return;
     useProjectContext.getState().setProjectId(ctx.project.id);

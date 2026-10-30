@@ -12,7 +12,10 @@
   "digest.by": "by {name}",
   "digest.commentOn": "{author} on {media}",
   "digest.optOut": "You are receiving this email because the daily digest is enabled in your ReView profile.",
-  "digest.preview": { "one": "What moved on {count} project since yesterday.", "other": "What moved on {count} projects since yesterday." },
+  "digest.preview": {
+    "one": "What moved on {count} project since yesterday.",
+    "other": "What moved on {count} projects since yesterday."
+  },
 
   "weekly.subject": "ReView — weekly production report",
   "weekly.title": "Weekly production report",
@@ -24,7 +27,10 @@
   "weekly.column.retakes": "Retakes",
   "weekly.column.openNotes": "Open notes",
   "weekly.optOut": "You are receiving this report because it is enabled in your ReView profile (supervisors).",
-  "weekly.preview": { "one": "The week on {count} project: deliveries, decisions, open notes.", "other": "The week on {count} projects: deliveries, decisions, open notes." },
+  "weekly.preview": {
+    "one": "The week on {count} project: deliveries, decisions, open notes.",
+    "other": "The week on {count} projects: deliveries, decisions, open notes."
+  },
 
   "smtp.test.subject": "ReView — SMTP test",
   "smtp.test.title": "SMTP test",
@@ -52,13 +58,19 @@
   "notification.reviewAssigned": "You were assigned to the review of version {version}",
   "notification.reviewNoteUpdated": "The brief changed on a review you were given: {version}",
   "notification.clientDecision": "{name} answered “{status}” on version {version} from a share link",
-  "chat.system.joined": { "one": "{names} joined the conversation", "other": "{names} joined the conversation" },
+  "chat.system.joined": {
+    "one": "{names} joined the conversation",
+    "other": "{names} joined the conversation"
+  },
   "chat.system.left": "{name} left the conversation",
   "chat.system.removed": "{name} was removed",
   "chat.system.renamed": "The group is now called « {title} »",
   "chat.mediaPublished": "🎬 New media published: {name}",
   "chat.decision": "{icon} Decision « {status} » on version {version}",
-  "chat.decisionBulk": { "one": "{icon} Decision « {status} » on {count} version", "other": "{icon} Decision « {status} » on {count} versions" },
+  "chat.decisionBulk": {
+    "one": "{icon} Decision « {status} » on {count} version",
+    "other": "{icon} Decision « {status} » on {count} versions"
+  },
   "chat.newComment": "💬 New comment on a media (project #{project})",
   "chat.montageComment": "🎬 New note on an edit (project #{project})",
   "share.mail.subject": "Access to {project}",
@@ -72,7 +84,10 @@
   "share.mail.cta": "Open the link",
   "share.mail.expiry": "This link expires on {date}.",
   "share.mail.noExpiry": "This link has no expiry date.",
-  "share.mail.viewLimit": { "one": "It can be opened {count} time in all.", "other": "It can be opened {count} times in all." },
+  "share.mail.viewLimit": {
+    "one": "It can be opened {count} time in all.",
+    "other": "It can be opened {count} times in all."
+  },
   "share.mail.password": "It is protected by a password, sent to you separately.",
   "share.mail.fallback": "If the button does not work, paste this link into your browser:",
   "notesSheet.title": "Review notes",

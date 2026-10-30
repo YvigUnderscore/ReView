@@ -4,33 +4,32 @@
 import { thumbAbbrev, thumbScale } from '../../lib/entityThumbLabel';
 
 /**
- * Vignette d'un élément : son image, et son **nom** tant qu'aucune image n'existe.
+ * Thumbnail of an element: its image, or its **name** as long as no image exists.
  *
- * Un projet neuf, une séquence qu'on vient de créer, deux cents plans importés d'un CSV :
- * les grilles affichaient la même icône d'image grise répétée, si bien que rien ne
- * distinguait une carte d'une autre avant d'en lire le titre, plus bas et plus petit. Le
- * nom devient donc l'image par défaut — c'est la seule chose qu'on sache de l'élément
- * avant son premier média, et c'est déjà ce qu'on cherche du regard.
+ * A new project, a sequence just created, two hundred shots imported from a CSV: the grids showed the same grey
+ * image icon repeated, so nothing distinguished one card from another before reading its title, further down and
+ * smaller. The name therefore becomes the default image: it is the only thing known about the element before its
+ * first media, and it is already what one looks for at a glance.
  *
- * Le repli s'efface de lui-même : la miniature effective est résolue côté serveur
- * (`backend/src/lib/thumbnails.ts`), qui retombe sur celle du premier média publié de
- * l'élément dès qu'une image parvient.
+ * The fallback disappears by itself: the effective thumbnail is resolved server-side
+ * (`backend/src/lib/thumbnails.ts`), which falls back to that of the element's first published media as soon as
+ * an image arrives.
  */
 export interface EntityThumbProps {
-  /** Miniature effective, si l'élément en a une (vignette choisie ou premier média). */
+  /** Effective thumbnail, if the element has one (chosen thumbnail or first media). */
   url?: string | null;
-  /** Nom de l'élément — c'est lui l'image par défaut. */
+  /** Name of the element: it is the default image. */
   name: string;
-  /** `card` : le nom en entier ; `mini` : son abrégé, sous 40 px de côté. */
+  /** `card`: the full name; `mini`: its abbreviation, below 40 px on a side. */
   variant?: 'card' | 'mini';
-  /** Classes de l'appelant (transitions au survol, arrondis…) — image comme repli. */
+  /** Caller classes (hover transitions, rounding…), applied to the image as well as to the fallback. */
   className?: string;
 }
 
 export default function EntityThumb({ url, name, variant = 'card', className = '' }: EntityThumbProps) {
   if (url) {
-    // Chargement paresseux : une grille de cent plans demandait cent JPEG de 640 px dès
-    // le montage (4 à 8 Mo) pour n'en afficher qu'une douzaine à l'écran.
+    // Lazy loading: a grid of a hundred shots would otherwise request a hundred 640 px JPEGs (4 to 8 MB)
+    // at mount, to display only a dozen on screen.
     return (
       <img
         src={url}
@@ -45,13 +44,13 @@ export default function EntityThumb({ url, name, variant = 'card', className = '
   const mini = variant === 'mini';
   const label = mini ? thumbAbbrev(name) : name;
   return (
-    // `aria-hidden` : le nom est déjà porté par le titre de la carte ou de la page — le
-    // répéter ferait dire deux fois la même chose au lecteur d'écran.
+    // `aria-hidden`: the name is already carried by the card's or page's title; repeating it would make
+    // the screen reader say the same thing twice.
     <span
       aria-hidden="true"
       className={`flex h-full w-full items-center justify-center overflow-hidden bg-gradient-to-br from-primary/15 to-secondary/60 text-center font-semibold leading-tight text-foreground/70 ${
-        // Sous 40 px, ni marge ni retour à la ligne : « 020 » se coupait en « 02 » puis
-        // « 0 », deux lignes illisibles là où l'abrégé tient d'un trait.
+        // Below 40 px, no margin and no line wrap: "020" used to break into "02" then "0", two unreadable
+        // lines where the abbreviation fits on one.
         mini ? 'text-2xs tracking-tight' : `px-1.5 ${thumbScale(label)}`
       } ${className}`}
     >

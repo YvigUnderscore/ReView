@@ -30,25 +30,25 @@ afterEach(() => {
 });
 
 /**
- * La vignette d'un fichier en attente vit dans une URL `blob:`. Chacune retient le fichier
- * en mémoire jusqu'à sa révocation : le hook doit en créer une par fichier, et les rendre
- * toutes dès que la liste change ou que le composeur disparaît.
+ * The thumbnail of a pending file lives in a `blob:` URL. Each one keeps its file in memory until
+ * it is revoked: the hook must create one per file, and revoke all of them as soon as the list
+ * changes or the composer goes away.
  */
 describe('useObjectUrls', () => {
-  it('crée une URL par fichier, dans l’ordre', () => {
+  it('creates one URL per file, in order', () => {
     const { result } = renderHook(() => useObjectUrls([png('a.png'), png('b.png')]));
     expect(created).toHaveLength(2);
     expect(result.current).toEqual(created);
   });
 
-  it('révoque tout au démontage', () => {
+  it('revokes everything on unmount', () => {
     const { unmount } = renderHook(() => useObjectUrls([png('a.png')]));
     expect(revoked).toEqual([]);
     unmount();
     expect(revoked).toEqual(created);
   });
 
-  it('révoque l’ancien lot quand la liste change', () => {
+  it('revokes the previous batch when the list changes', () => {
     const { rerender } = renderHook(({ files }: { files: File[] }) => useObjectUrls(files), {
       initialProps: { files: [png('a.png')] },
     });
@@ -58,7 +58,7 @@ describe('useObjectUrls', () => {
     expect(created).toHaveLength(3);
   });
 
-  it('ne recrée rien quand la liste ne change pas d’identité', () => {
+  it('recreates nothing when the list keeps the same identity', () => {
     const files = [png('a.png')];
     const { rerender } = renderHook(({ f }: { f: File[] }) => useObjectUrls(f), {
       initialProps: { f: files },

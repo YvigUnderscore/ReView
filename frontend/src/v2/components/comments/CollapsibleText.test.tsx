@@ -5,16 +5,16 @@ import { afterEach, describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import CollapsibleText from './CollapsibleText';
-import { stubLayoutMetrics } from '../../../test/layoutMetrics';
+import { stubLayoutMetrics } from '@/test/layoutMetrics';
 import { t } from '../../i18n';
 
 /**
- * Un contenu qui ne tient pas dans sa surface s'ouvre replié. Trois exigences pèsent sur ce
- * repliage : il doit dire ce qu'il cache, le texte doit RESTER dans le document — sinon un
- * Ctrl+F et un lecteur d'écran perdent une note qui est pourtant là — et l'indicateur ne doit
- * apparaître QUE s'il y a quelque chose à révéler.
+ * Content that does not fit its surface opens collapsed. Three requirements apply to this
+ * collapse: it must say what it hides, the text must REMAIN in the document (otherwise Ctrl+F
+ * and screen readers lose a note that is actually there), and the indicator must appear ONLY
+ * when there is something to reveal.
  *
- * Tous ces tests posent une mise en page : happy-dom n'en a aucune, et le composant mesure.
+ * All these tests set up a layout: happy-dom has none, and the component measures.
  */
 
 const wall = 'a'.repeat(620);
@@ -27,7 +27,7 @@ afterEach(() => {
   restore = null;
 });
 
-/** Largeur de la surface d'accueil, en caractères par ligne. */
+/** Width of the landing surface, in characters per line. */
 const layout = (charsPerLine: number) => {
   restore = stubLayoutMetrics({ charsPerLine });
 };
@@ -81,9 +81,9 @@ describe('CollapsibleText', () => {
 });
 
 /**
- * Le défaut que ces deux cas ferment : l'indicateur se décidait au nombre de caractères, et la
- * même note obtenait donc la même réponse partout. Au fil, large, « dérouler 90 caractères »
- * s'affichait alors que les trois lignes montraient déjà tout — un clic pour rien.
+ * The bug these two cases close: the indicator was decided by character count, so the same
+ * note got the same answer everywhere. In a wide thread, "expand 90 characters" was shown
+ * while the three lines already showed everything, a click for nothing.
  */
 describe('CollapsibleText — la surface décide, pas le nombre de caractères', () => {
   const note = 'x'.repeat(90);
@@ -109,8 +109,8 @@ describe('CollapsibleText — la surface décide, pas le nombre de caractères',
   });
 
   it('un commentaire réellement coupé garde son bouton, même en dessous des anciens seuils', () => {
-    // 320 caractères : sous l'ancien plafond de 600, et pourtant coupé par `max-h-32` dès que
-    // la colonne se rétrécit. Il n'avait alors aucun moyen d'être ouvert.
+    // 320 characters: below the old 600 ceiling, yet clipped by `max-h-32` as soon as
+    // the column narrows. It then had no way to be opened.
     const cut = 'y'.repeat(320);
     layout(20);
     render(

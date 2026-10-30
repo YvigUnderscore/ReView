@@ -5,9 +5,9 @@ import type { SplatMesh } from '@sparkjsdev/spark';
 import type { SplatTransform } from '../../reviewTypes';
 
 /**
- * Applique une transformation TRS enregistrée au SplatMesh (preview live des gizmos et au
- * chargement). SplatMesh dérive de THREE.Object3D → position/quaternion/échelle natifs.
- * Tolérant : une valeur absente ou d'un ancien format → identité.
+ * Applies a saved TRS transform to the SplatMesh (live preview of the gizmos, and on loading).
+ * SplatMesh derives from THREE.Object3D, so position, quaternion and scale are native.
+ * Tolerant: a missing value or one from an old format gives identity.
  */
 export function applySplatTransform(mesh: SplatMesh, t: SplatTransform | null): void {
   if (t && Array.isArray(t.position) && Array.isArray(t.quaternion) && Array.isArray(t.scale)) {

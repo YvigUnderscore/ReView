@@ -7,24 +7,24 @@ import { createSampler } from './statsSampler';
 const READ = { calls: 12, triangles: 900_000, geometries: 8, textures: 5 };
 
 describe('statsSampler.createSampler', () => {
-  it('moyenne le FPS sur la fenêtre et relaie les compteurs lus', () => {
+  it('averages the FPS over the window and relays the read counters', () => {
     const sampler = createSampler(() => READ, 500);
     const received: ({ fps: number } & typeof READ)[] = [];
     sampler.subscribe((s) => received.push(s));
-    for (let t = 0; t <= 600; t += 100 / 6) sampler.frame(t); // 60 fps simulés
+    for (let t = 0; t <= 600; t += 100 / 6) sampler.frame(t); // 60 simulated fps
     expect(received).toHaveLength(1);
     expect(received[0].fps).toBeCloseTo(60, 0);
     expect(received[0]).toMatchObject(READ);
   });
 
-  it('ne mesure rien sans abonné (panneau fermé = coût nul)', () => {
+  it('measures nothing without a subscriber (closed panel = zero cost)', () => {
     const read = vi.fn(() => READ);
     const sampler = createSampler(read, 500);
     for (let t = 0; t <= 2000; t += 100) sampler.frame(t);
     expect(read).not.toHaveBeenCalled();
   });
 
-  it('repart d’une fenêtre propre après un abonnement tardif, et s’arrête au désabonnement', () => {
+  it('starts from a clean window after a late subscription, and stops on unsubscribe', () => {
     const sampler = createSampler(() => READ, 500);
     const cb = vi.fn();
     for (let t = 0; t <= 2000; t += 100) sampler.frame(t);

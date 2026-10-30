@@ -7,44 +7,44 @@ import { render, screen } from '@testing-library/react';
 import EntityCard, { EntityContainer, type EntityCardProps } from './EntityCard';
 
 /**
- * `EntityCard` est la carte de toutes les listes denses (plans, assets, projets). Cent
- * plans, c'était cent JPEG de 640 px demandés en parallèle dès le montage pour une
- * douzaine de cartes visibles. Le chargement paresseux est donc un attribut à ne pas
- * perdre au fil des refontes — et il ne doit rien changer à ce que la carte affiche.
+ * `EntityCard` is the card of all dense lists (shots, assets, projects). A hundred
+ * shots meant a hundred 640 px JPEGs requested in parallel as soon as the grid mounted, for a
+ * dozen visible cards. Lazy loading is therefore an attribute not to lose
+ * during redesigns, and it must not change what the card displays.
  */
 const markup = (props: Partial<EntityCardProps> = {}) =>
   renderToStaticMarkup(<EntityCard title="SH010" view="cards" {...props} />);
 
 describe('EntityCard — vignette', () => {
-  it('charge l’image de la vue cartes paresseusement et la décode hors du fil principal', () => {
+  it('loads the card-view image lazily and decodes it off the main thread', () => {
     const html = markup({ thumbnailUrl: 'https://minio/thumb.jpg' });
     expect(html).toContain('loading="lazy"');
     expect(html).toContain('decoding="async"');
     expect(html).toContain('src="https://minio/thumb.jpg"');
   });
 
-  it('en fait autant en vue compacte', () => {
+  it('does the same in compact view', () => {
     const html = markup({ view: 'compact', thumbnailUrl: 'https://minio/thumb.jpg' });
     expect(html).toContain('loading="lazy"');
     expect(html).toContain('decoding="async"');
   });
 
-  it('met le nom à la place de l’image tant qu’aucune vignette n’est connue', () => {
-    // Une icône d'image grise répétée cent fois ne distinguait rien : sur une grille de
-    // plans neufs, seul le nom dit ce qu'on regarde.
+  it('shows the name in place of the image while no thumbnail is known', () => {
+    // A grey image icon repeated a hundred times distinguished nothing: on a grid of
+    // fresh shots, only the name says what one is looking at.
     const cards = markup();
     expect(cards).not.toContain('<img');
-    // Deux fois : dans la tuile et dans le titre — la tuile est masquée au lecteur d'écran.
+    // Twice: in the tile and in the title. The tile is hidden from the screen reader.
     expect(cards.match(/SH010/g)).toHaveLength(2);
     expect(cards).toContain('aria-hidden="true"');
 
-    // Vue compacte : 32 px de côté, où seul l'abrégé tient.
+    // Compact view: 32 px square, where only the abbreviation fits.
     const compact = markup({ view: 'compact' });
     expect(compact).not.toContain('<img');
     expect(compact).toContain('>010<');
   });
 
-  it('affiche toujours titre, sous-titre et badge', () => {
+  it('always shows title, subtitle and badge', () => {
     const html = markup({
       subtitle: 'seq_010',
       badge: <span>WIP</span>,
@@ -55,21 +55,21 @@ describe('EntityCard — vignette', () => {
     expect(html).toContain('WIP');
   });
 
-  it('rend une image vide de texte alternatif : le titre porte déjà l’information', () => {
-    // `alt=""` est délibéré (image décorative doublée par le titre) : le vérifier évite
-    // qu'une future refonte ne la transforme en doublon lu par le lecteur d'écran.
+  it('renders an image with empty alternative text: the title already carries the information', () => {
+    // `alt=""` is deliberate (a decorative image doubled by the title): checking it prevents
+    // a future redesign from turning it into a duplicate read by the screen reader.
     expect(markup({ thumbnailUrl: 'https://minio/thumb.jpg' })).toContain('alt=""');
   });
 });
 
 /**
- * La bande d'informations : ce qu'une carte dit d'une entité au-delà de son nom.
+ * The information strip: what a card says about an entity beyond its name.
  *
- * Elle a été ajoutée pour répondre en un coup d'œil aux quatre questions qu'on se pose en
- * balayant une grille de deux cents plans. Deux invariants la tiennent : elle ne s'affiche
- * que si elle a quelque chose à dire, et elle dit la même chose dans les deux vues.
+ * It was added to answer at a glance the four questions one asks while
+ * scanning a grid of two hundred shots. Two invariants hold it: it only shows
+ * if it has something to say, and it says the same thing in both views.
  */
-describe('EntityCard — bande d’informations', () => {
+describe('EntityCard — information strip', () => {
   const alice = {
     id: 2,
     name: 'Alice Martin',
@@ -79,49 +79,49 @@ describe('EntityCard — bande d’informations', () => {
     avatarUrl: null,
   };
 
-  it('montre la description, les visages et la pastille d’attente', () => {
+  it('shows the description, the faces and the waiting dot', () => {
     const html = markup({
       meta: { description: 'Le héros entre par la gauche', assignees: [alice], awaitingReview: 3 },
     });
     expect(html).toContain('Le héros entre par la gauche');
-    // Pas d'avatar déposé : la pastille à initiales tient lieu de visage.
+    // No avatar uploaded: the initials badge stands in for a face.
     expect(html).toContain('AM');
     expect(html).toContain('>3<');
   });
 
-  it('ne réserve aucune hauteur quand il n’y a rien à dire', () => {
-    // Une bande vide sur une carte neuve coûterait la densité de la grille entière.
+  it('reserves no height when there is nothing to say', () => {
+    // An empty strip on a new card would cost the density of the whole grid.
     const withMeta = markup({ meta: {} });
     const without = markup({});
     expect(withMeta).toBe(without);
   });
 
-  it('tait la pastille d’attente à zéro — « rien à regarder » n’est pas une information', () => {
+  it('hides the waiting dot at zero: "nothing to look at" is not information', () => {
     expect(markup({ meta: { awaitingReview: 0, assignees: [alice] } })).not.toContain('>0<');
   });
 
-  it('dit la même chose en vue compacte', () => {
+  it('says the same thing in compact view', () => {
     const html = markup({ view: 'compact', meta: { description: 'Brief du plan', assignees: [alice] } });
     expect(html).toContain('Brief du plan');
     expect(html).toContain('AM');
   });
 
-  it('borne la description à deux lignes en vue cartes, une seule en compact', () => {
+  it('limits the description to two lines in card view, one line in compact', () => {
     expect(markup({ meta: { description: 'x' } })).toContain('line-clamp-2');
     expect(markup({ view: 'compact', meta: { description: 'x' } })).toContain('truncate');
   });
 });
 
 /**
- * La grille et ses enveloppes d'apparition.
+ * The grid and its entrance wrappers.
  *
- * Les enveloppes étaient keyées par **index** : filtrer une grille de plans réassociait
- * chaque carte à l'enveloppe de sa voisine — React réutilisait le nœud d'à-côté et
- * rejouait le fondu-montée sur des cartes déjà à l'écran (la liste « clignotait »). La
- * grandeur mesurée ici est donc un **nombre de cartes réassociées à un autre nœud** :
- * une avant le correctif, zéro après.
+ * The wrappers were keyed by **index**: filtering a shot grid re-associated
+ * each card with its neighbour's wrapper. React reused the adjacent node and
+ * replayed the fade-in on cards already on screen (the list "flickered"). The
+ * quantity measured here is therefore a **number of cards re-associated to another node**:
+ * one before the fix, zero after.
  */
-describe('EntityContainer — apparition en cascade', () => {
+describe('EntityContainer — cascading entrance', () => {
   const grid = (codes: string[]) => (
     <EntityContainer view="cards">
       {codes.map((code) => (
@@ -130,10 +130,10 @@ describe('EntityContainer — apparition en cascade', () => {
     </EntityContainer>
   );
 
-  /** Enveloppes de la grille, dans l'ordre du DOM. */
+  /** Wrappers of the grid, in DOM order. */
   const wrappers = (container: HTMLElement) => [...(container.firstElementChild?.children ?? [])];
 
-  it('laisse à chaque carte son nœud quand la liste est filtrée', () => {
+  it('gives each card its own node when the list is filtered', () => {
     const { container, rerender } = render(grid(['SH010', 'SH020', 'SH030']));
     expect(wrappers(container)).toHaveLength(3);
     const kept = screen.getByText('SH020');
@@ -144,19 +144,19 @@ describe('EntityContainer — apparition en cascade', () => {
     expect(screen.queryByText('SH010')).not.toBeInTheDocument();
   });
 
-  it('anime en CSS, en respectant « animations réduites » sans JS', () => {
+  it('animates in CSS, respecting "reduced motion" without JS', () => {
     const { container } = render(grid(['SH010', 'SH020']));
 
     for (const wrapper of wrappers(container)) {
       expect(wrapper).toHaveClass('animate-in');
       expect(wrapper).toHaveClass('motion-reduce:animate-none');
-      // Sans `fill-mode-backwards`, la carte serait visible pendant son délai puis
-      // disparaîtrait d'un coup pour se remontrer : un clignotement, pas une apparition.
+      // Without `fill-mode-backwards`, the card would be visible during its delay, then
+      // would vanish at once to reappear: a flicker, not an entrance.
       expect(wrapper).toHaveClass('fill-mode-backwards');
     }
   });
 
-  it('étale l’entrée, mais borne le retard : une page de cent cartes n’attend pas trois secondes', () => {
+  it('spreads the entrance, but caps the delay: a page of a hundred cards does not wait too long', () => {
     const { container } = render(grid(Array.from({ length: 40 }, (_, i) => `SH${i}`)));
     const delays = wrappers(container).map((w) => (w as HTMLElement).style.animationDelay);
 
@@ -164,7 +164,7 @@ describe('EntityContainer — apparition en cascade', () => {
     expect(Math.max(...delays.map((d) => Number.parseInt(d, 10)))).toBeLessThanOrEqual(360);
   });
 
-  it('empile sans enveloppe en vue compacte', () => {
+  it('stacks without a wrapper in compact view', () => {
     const { container } = render(
       <EntityContainer view="compact">
         <EntityCard view="compact" title="SH010" thumbnailUrl="https://minio/t.jpg" />

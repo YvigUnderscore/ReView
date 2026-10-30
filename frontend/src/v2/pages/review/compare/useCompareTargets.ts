@@ -2,17 +2,17 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useQueries, useQuery } from '@tanstack/react-query';
-import { api } from '../../../../lib/apiClient';
-import { qk } from '../../../lib/query';
-import type { MediaKind, VersionDetail, VersionListItem } from '../../../types/api';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
+import type { MediaKind, VersionDetail, VersionListItem } from '@/v2/types/api';
 
-/** Un média comparable, nommé pour le sélecteur B. */
+/** A comparable media, named for the B selector. */
 export interface CompareTargetMedia {
   id: number;
   name: string;
 }
 
-/** Une version voisine et ses médias du même type que le média ouvert. */
+/** A neighbouring version and its media of the same type as the open media. */
 export interface CompareTarget {
   versionId: number;
   name: string;
@@ -23,12 +23,12 @@ const fetchVersion = (id: number) =>
   api.get<{ version: VersionDetail }>(`/api/versions/${id}`).then((d) => d.version);
 
 /**
- * Versions voisines (même tâche ou même asset) du média ouvert.
+ * Neighbouring versions (same task or same asset) of the open media.
  *
- * Source unique de la décision « peut-on comparer » : le segment « Compare » de la bascule
- * s'y réfère au lieu de deviner, faute de quoi l'on offre un mode sans issue dès que la
- * tâche ne porte qu'une version. Mêmes clés de query que `VersionNavigator` : rien de plus
- * n'est demandé au serveur.
+ * Single source of the "can we compare" decision: the "Compare" segment of the toggle refers
+ * to it rather than guessing, otherwise a mode with no way out is offered as soon as the task
+ * carries only one version. Same query keys as `VersionNavigator`: nothing more is requested
+ * from the server.
  */
 export function useCompareTargets(versionId: number) {
   const versionQ = useQuery({ queryKey: qk.version(versionId), queryFn: () => fetchVersion(versionId) });
@@ -49,11 +49,11 @@ export function useCompareTargets(versionId: number) {
 }
 
 /**
- * Médias comparables de chaque version voisine — le second temps du choix de B.
+ * Comparable media of each neighbouring version: the second step of choosing B.
  *
- * B se choisissait par version : une version portant plusieurs images ne pouvait être
- * comparée que par la première. Les détails ne sont chargés qu'à l'entrée en comparaison
- * (`enabled`) — une requête par version voisine, inutile tant qu'on ne compare pas.
+ * B used to be chosen per version: a version carrying several images could only be compared
+ * through the first one. Details are only loaded on entering the comparison (`enabled`): one
+ * request per neighbouring version, useless as long as we are not comparing.
  */
 export function useCompareMedia(
   versions: VersionListItem[],
@@ -77,7 +77,7 @@ export function useCompareMedia(
   }));
   return {
     targets,
-    /** Premier média comparable connu — null tant que les détails ne sont pas arrivés. */
+    /** First known comparable media, null until the details have arrived. */
     firstMediaId: targets.find((v) => v.media.length > 0)?.media[0]?.id ?? null,
   };
 }

@@ -5,25 +5,25 @@ import { z } from 'zod';
 import { prisma } from './prisma';
 
 /**
- * Configuration de transcodage vidéo (contexte Vidéo admin, Phase 22) — lue par le worker
- * FFmpeg (Phase 23, HLS adaptatif). Stockée dans `Setting.transcode_config` (JSON).
- * Quand `enabled` est faux, le worker retombe sur un proxy MP4 unique (comportement legacy).
+ * Video transcoding configuration (admin Video context, Phase 22), read by the FFmpeg
+ * worker (Phase 23, adaptive HLS). Stored in `Setting.transcode_config` (JSON).
+ * When `enabled` is false, the worker falls back to a single MP4 proxy (legacy behavior).
  */
 
 export interface TranscodeRendition {
-  height: number; // hauteur cible (px)
-  videoBitrateK: number; // débit vidéo cible (kbps)
+  height: number; // target height (px)
+  videoBitrateK: number; // target video bitrate (kbps)
 }
 
 export interface TranscodeConfig {
-  enabled: boolean; // HLS adaptatif multi-rendition
-  crf: number; // qualité x264 (plus bas = meilleur)
-  preset: string; // preset x264
-  audioBitrateK: number; // débit audio (kbps)
-  maxHeight: number; // plafond de résolution
-  ladder: TranscodeRendition[]; // échelle de qualités
-  /** Scene detection FFmpeg (34.H, opt-in : une passe d'analyse en plus par vidéo) —
-   *  pose des marqueurs de timeline « Plan n » aux coupes détectées. */
+  enabled: boolean; // adaptive multi-rendition HLS
+  crf: number; // x264 quality (lower = better)
+  preset: string; // x264 preset
+  audioBitrateK: number; // audio bitrate (kbps)
+  maxHeight: number; // resolution cap
+  ladder: TranscodeRendition[]; // quality ladder
+  /** FFmpeg scene detection (34.H, opt-in: one extra analysis pass per video) —
+   *  places timeline markers "Plan n" at the detected cuts. */
   sceneDetection: boolean;
 }
 
@@ -88,22 +88,22 @@ function sanitize(raw: unknown, base: TranscodeConfig): TranscodeConfig {
 }
 
 /**
- * Renditions effectives pour une source de hauteur donnée : on garde les paliers de l'échelle
- * dont la hauteur ≤ min(source, plafond), et on ajoute un palier « source » si aucun ne l'atteint
- * (pour ne jamais up-scaler mais toujours proposer au moins une qualité). Pur, testable.
+ * Effective renditions for a source of a given height: keeps the ladder rungs whose height
+ * is ≤ min(source, ceiling), and adds a "source" rung if none reaches it (so that we never
+ * up-scale but always offer at least one quality). Pure, testable.
  */
 export function selectRenditions(config: TranscodeConfig, sourceHeight: number): TranscodeRendition[] {
   const ceil = Math.min(sourceHeight, config.maxHeight);
   const kept = config.ladder.filter((r) => r.height <= ceil);
   if (kept.length === 0) {
-    // Source plus petite que le plus petit palier : une seule rendition à la hauteur source.
+    // Source smaller than the smallest rung: a single rendition at the source height.
     const smallest = config.ladder[0];
     return [{ height: ceil, videoBitrateK: smallest?.videoBitrateK ?? 800 }];
   }
   return kept;
 }
 
-/** Config effective (Setting.transcode_config fusionné avec le repli interne). */
+/** Effective config (Setting.transcode_config merged with the internal fallback). */
 export async function getTranscodeConfig(): Promise<TranscodeConfig> {
   const row = await prisma.setting.findUnique({ where: { key: TRANSCODE_KEY } });
   if (!row) return FALLBACK;
@@ -114,7 +114,7 @@ export async function getTranscodeConfig(): Promise<TranscodeConfig> {
   }
 }
 
-/** Enregistre la config de transcodage (validée/bornée). */
+/** Saves the transcoding config (validated and bounded). */
 export async function setTranscodeConfig(value: unknown): Promise<TranscodeConfig> {
   const clean = sanitize(value, FALLBACK);
   await prisma.setting.upsert({

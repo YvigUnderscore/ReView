@@ -2,29 +2,29 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Pièces jointes d'un commentaire : quelles clés MinIO on accepte d'un client, et
- * lesquelles deviennent orphelines quand on réécrit la liste.
+ * Comment attachments: which MinIO keys are accepted from a client, and which become orphans when the
+ * list is rewritten.
  *
- * La clé est fournie par le CLIENT puis sert à signer une URL de lecture : le filtre de
- * préfixe est une **garde de sécurité**, pas une commodité d'écriture. Sans lui, joindre
- * la clé d'un autre utilisateur suffirait à lire sa pièce jointe, sur un autre projet.
+ * The key is supplied by the CLIENT and then used to sign a read URL: the prefix filter is a **security
+ * guard**, not a writing convenience. Without it, attaching another user's key would be enough to read
+ * their attachment, on another project.
  */
 
 import { z } from 'zod';
 
-/** Descripteur envoyé par le client : la clé de l'objet et ses étiquettes d'affichage. */
+/** Descriptor sent by the client: the object key and its display labels. */
 export interface AttachmentRef {
   key: string;
   name?: string;
   contentType?: string;
 }
 
-/** Plafond par commentaire (miroir du front). */
+/** Per-comment ceiling (mirrors the frontend). */
 export const MAX_COMMENT_ATTACHMENTS = 8;
 
 /**
- * Forme acceptée en entrée, à la création comme à l'édition. Elle borne la FORME et le
- * volume ; la propriété des clés, elle, se vérifie dans le service (`filterAttachments`).
+ * Accepted input shape, on creation as on edit. It bounds the SHAPE and the volume; key ownership is
+ * checked in the service (`filterAttachments`).
  */
 export const attachmentsSchema = z
   .array(
@@ -37,25 +37,25 @@ export const attachmentsSchema = z
   .max(MAX_COMMENT_ATTACHMENTS);
 
 /**
- * Racine MinIO des pièces jointes de commentaire.
+ * MinIO root of comment attachments.
  *
- * Les dossiers sont CONCATÉNÉS et non interpolés : un gabarit ferait passer cette clé de
- * stockage pour du texte d'interface aux yeux de `check-untranslated`, qui compte chaque
- * fragment d'un gabarit backend (même raison que `frontend/src/test/apiMock.ts`).
+ * The folders are CONCATENATED rather than interpolated: a template would make this storage key look
+ * like interface text to `check-untranslated`, which counts every fragment of a backend template
+ * (same reason as `frontend/src/test/apiMock.ts`).
  */
 const ROOT = 'comments/attachments/';
 
-/** Dossier qu'un utilisateur remplit lui-même, via une URL présignée à son nom. */
+/** Folder a user fills in themselves, via a presigned URL under their name. */
 export const ownAttachmentPrefix = (userId: number) => ROOT + userId + '/';
 
 /**
- * Dossier des pièces rapatriées d'une note ShotGrid : il appartient au commentaire, pas à
- * une personne. Une édition doit pouvoir les conserver — les refuser reviendrait à effacer
- * les pièces venues du site distant dès la première correction de texte.
+ * Folder for the files pulled in from a ShotGrid note: it belongs to the comment, not to a person.
+ * An edit must be able to keep them — refusing them would erase the files coming from the remote site
+ * at the first text correction.
  */
 export const shotgridAttachmentPrefix = (commentId: number) => ROOT + 'shotgrid/' + commentId + '/';
 
-/** Ne garde que les clés issues d'un des dossiers autorisés (et jamais de remontée `..`). */
+/** Keeps only keys from one of the allowed folders (and never a `..` traversal). */
 export function filterAttachments(
   attachments: AttachmentRef[] | undefined,
   prefixes: string[],
@@ -65,7 +65,7 @@ export function filterAttachments(
   );
 }
 
-/** Clés d'un blob `attachments` relu en base — colonne JSON, donc forme non garantie. */
+/** Keys of an `attachments` blob re-read from the database — a JSON column, so the shape is not guaranteed. */
 export function attachmentKeys(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
   return value
@@ -74,8 +74,8 @@ export function attachmentKeys(value: unknown): string[] {
 }
 
 /**
- * Objets à effacer du stockage : présents avant, absents après. Sans cela, retirer une
- * image d'un commentaire (ou supprimer le commentaire) la laissait dans MinIO à vie.
+ * Objects to delete from storage: present before, absent after. Without this, removing an image from a
+ * comment (or deleting the comment) left it in MinIO forever.
  */
 export function orphanedKeys(before: unknown, after: unknown): string[] {
   const kept = new Set(attachmentKeys(after));

@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { describe, it, expect } from 'vitest';
-import type { Tr } from '../../../i18n';
+import type { Tr } from '@/v2/i18n';
 import { fieldLabel, isBlocking, issueLabel, toReportCsv } from './report';
 import { CSV_FIELDS, type ImportReport } from './types';
 
-/** Traducteur d'essai : rend la clé et ses paramètres, pour lire ce qui a été demandé. */
+/** Test translator: returns the key and its parameters, to read what was requested. */
 const t = ((key: string, params?: Record<string, string | number>) =>
   params
     ? `${key}(${Object.entries(params)
@@ -35,7 +35,7 @@ const report = (issues: ImportReport['issues']): ImportReport => ({
 });
 
 describe('fieldLabel', () => {
-  it('donne un libellé à chacun des seize champs, sans clé manquante', () => {
+  it('gives a label to each of the sixteen fields, with no missing key', () => {
     for (const field of CSV_FIELDS) {
       const label = fieldLabel(t, field);
       expect(label).toBeTruthy();
@@ -45,7 +45,7 @@ describe('fieldLabel', () => {
 });
 
 describe('issueLabel', () => {
-  it('passe la colonne et la valeur fautives au message', () => {
+  it('passes the faulty column and value to the message', () => {
     expect(issueLabel(t, { code: 'INVALID_DATE', line: 4, column: 'due_date', value: '32/13' })).toBe(
       'csvImport.issue.invalidDate(column=due_date,value=32/13)',
     );
@@ -54,13 +54,13 @@ describe('issueLabel', () => {
     );
   });
 
-  it('ne laisse jamais « undefined » atteindre le message', () => {
+  it('never lets "undefined" reach the message', () => {
     expect(issueLabel(t, { code: 'UNKNOWN_COLUMN', line: 1 })).toBe('csvImport.issue.unknownColumn(column=)');
   });
 });
 
 describe('isBlocking', () => {
-  it('distingue le refus de la ligne du simple avertissement', () => {
+  it('distinguishes a refused row from a mere warning', () => {
     expect(isBlocking('MISSING_SHOT')).toBe(true);
     expect(isBlocking('MISSING_SHOT_COLUMN')).toBe(true);
     expect(isBlocking('UNKNOWN_STATUS')).toBe(false);
@@ -69,7 +69,7 @@ describe('isBlocking', () => {
 });
 
 describe('toReportCsv', () => {
-  it('écrit une ligne par anomalie, avec sa gravité', () => {
+  it('writes one row per anomaly, with its severity', () => {
     const csv = toReportCsv(
       t,
       report([
@@ -84,12 +84,12 @@ describe('toReportCsv', () => {
     expect(lines[2]).toContain('csvImport.report.warning');
   });
 
-  it('neutralise l’injection de formule dans le rapport', () => {
+  it('neutralizes formula injection in the report', () => {
     const csv = toReportCsv(t, report([{ code: 'UNKNOWN_STATUS', line: 2, shot: '=cmd()', value: 'x' }]));
     expect(csv).toContain("'=cmd()");
   });
 
-  it('n’écrit qu’un en-tête quand le fichier est sain', () => {
+  it('writes only a header when the file is clean', () => {
     expect(toReportCsv(t, report([])).split('\n')).toHaveLength(1);
   });
 });

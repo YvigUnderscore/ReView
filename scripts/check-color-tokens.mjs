@@ -2,28 +2,27 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Contrôle « couleurs = tokens du thème » (règle projet) : aucune classe Tailwind ne doit
- * porter une couleur en dur dans le frontend. Deux familles de fautes :
- *   (a) la palette brute — `bg-blue-500`, `text-amber-400/80` — chaque nuance nommée
- *       court-circuite le thème et ignore le mode clair/sombre ;
- *   (b) la couleur arbitraire — `bg-[#ff0000]`, `text-[rgb(1,2,3)]` — même faute, écrite
- *       à la main. Mesuré sur le dépôt avant d'être figé : aucune occurrence légitime
- *       (ni code généré, ni canvas), donc aucune exclusion à documenter.
+ * "Colours = theme tokens" check (project rule): no Tailwind class may carry a hard-coded colour in
+ * the frontend. Two families of mistakes:
+ *   (a) the raw palette — `bg-blue-500`, `text-amber-400/80` — every named shade short-circuits the
+ *       theme and ignores the light/dark mode;
+ *   (b) the arbitrary colour — `bg-[#ff0000]`, `text-[rgb(1,2,3)]` — the same mistake, written by
+ *       hand. Measured on the repository before being frozen: no legitimate occurrence (neither
+ *       generated code nor canvas), so no exclusion to document.
  *
- * Les tokens du thème (`bg-primary`, `text-muted-foreground`, `bg-destructive/20`, un
- * futur `bg-warning`…) et les neutres hors palette (`white`, `black`, `transparent`,
- * `current`, `inherit`) restent permis : ils ne correspondent à aucun des deux motifs.
- * Les valeurs arbitraires non colorées (`text-[10px]`, `bg-[image:var(--x)]`,
- * `bg-[var(--panel)]`) passent aussi — seul un littéral de couleur est une faute.
+ * Theme tokens (`bg-primary`, `text-muted-foreground`, `bg-destructive/20`, a future
+ * `bg-warning`…) and the neutrals outside the palette (`white`, `black`, `transparent`, `current`,
+ * `inherit`) remain allowed: they match neither pattern. Arbitrary values that are not colours
+ * (`text-[10px]`, `bg-[image:var(--x)]`, `bg-[var(--panel)]`) pass too — only a colour literal is a
+ * mistake.
  *
- * Le contrôle est textuel (regex ligne à ligne), pas un parseur de className : toute
- * occurrence littérale du motif est signalée, même dans un commentaire ou une chaîne
- * quelconque — limite assumée, le motif n'a aucune raison d'exister ailleurs que dans
- * une classe utilitaire. Inversement, un mot qui ne fait que ressembler à une classe
- * (`sky-blue-500`, `subtext-blue-500`) n'est pas signalé : le préfixe doit être un
- * utilitaire Tailwind en tête de classe.
+ * The check is textual (line-by-line regex), not a className parser: every literal occurrence of the
+ * pattern is reported, even inside a comment or any string — an accepted limit, since the pattern has
+ * no reason to exist anywhere but in a utility class. Conversely, a word that merely looks like a class
+ * (`sky-blue-500`, `subtext-blue-500`) is not reported: the prefix must be a Tailwind utility at the
+ * start of a class.
  *
- * Usage : node scripts/check-color-tokens.mjs
+ * Usage: node scripts/check-color-tokens.mjs
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -33,7 +32,7 @@ import { fileURLToPath } from 'node:url';
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
 const ROOT = 'frontend/src';
 
-/** Utilitaires Tailwind porteurs de couleur. */
+/** Tailwind utilities that carry a colour. */
 export const COLOR_PREFIXES = [
   'bg',
   'text',
@@ -52,7 +51,7 @@ export const COLOR_PREFIXES = [
   'divide',
 ];
 
-/** Couleurs nommées de la palette Tailwind — toujours remplacées par un token du thème. */
+/** Named colours of the Tailwind palette — always replaced by a theme token. */
 export const PALETTE_NAMES = [
   'red',
   'orange',
@@ -80,8 +79,8 @@ export const PALETTE_NAMES = [
 
 const PREFIX = `(?:${COLOR_PREFIXES.join('|')})`;
 
-// Le lookbehind exige un début de classe (`"`, espace, `:` de variante, `!`) : un préfixe
-// enfoui dans un mot (`subtext-blue-500`) ou précédé d'un tiret n'est pas un utilitaire.
+// The lookbehind requires the start of a class (`"`, space, variant `:`, `!`): a prefix
+// buried in a word (`subtext-blue-500`) or preceded by a dash is not a utility.
 const PALETTE_RE = new RegExp(
   `(?<![\\w-])${PREFIX}-(?:${PALETTE_NAMES.join('|')})-\\d{2,3}(?:/\\d{1,3})?(?!\\d)`,
   'g',
@@ -89,8 +88,8 @@ const PALETTE_RE = new RegExp(
 const ARBITRARY_RE = new RegExp(`(?<![\\w-])${PREFIX}-\\[(?:#|rgb|hsl|oklch)[^\\]]*\\]`, 'g');
 
 /**
- * Relève les classes de couleur hors tokens dans un source.
- * Rend `{ line, column, match, kind }` par occurrence, kind ∈ `palette` | `arbitrary`.
+ * Reports the colour classes outside tokens in a source.
+ * Returns `{ line, column, match, kind }` per occurrence, kind ∈ `palette` | `arbitrary`.
  */
 export function findRawColorClasses(source) {
   const occurrences = [];
@@ -138,7 +137,7 @@ function main() {
   console.log('\x1b[0;32m✓ couleurs hors tokens du thème : 0\x1b[0m');
 }
 
-// Exécuté directement (et non importé par un test) → on lance.
+// Run directly (and not imported by a test) → launch it.
 if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   main();
 }

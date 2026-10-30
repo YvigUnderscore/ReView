@@ -1,49 +1,49 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import type { UsdPrim } from '../../../types/api';
+import type { UsdPrim } from '@/v2/types/api';
 
 /**
- * Scenegraph USD de la review (Phase 46, 46.A) — logique **pure et testable**.
+ * USD scenegraph of the review (Phase 46, 46.A) — **pure and testable** logic.
  *
- * Deux arbres coexistent et ne coïncident pas toujours :
- *  - l'**arbre USD** rapporté par l'analyseur : la vérité sémantique (types, variantes,
- *    purposes), y compris les prims non rendus ;
- *  - l'**arbre glTF** réellement chargé dans Three : ce que le spectateur voit et manipule.
+ * Two trees coexist and do not always coincide:
+ *  - the **USD tree** reported by the parser: the semantic truth (types, variants,
+ *    purposes), including unrendered prims;
+ *  - the **glTF tree** actually loaded in Three: what the viewer sees and manipulates.
  *
- * L'importeur USD de Blender n'expose aucun chemin de prim ; on le reconstruit à l'export
- * depuis la hiérarchie d'objets, qui peut **collapser ou insérer** un niveau (une référence
- * dont la racine porte le même nom que le prim référençant, par exemple). D'où `matchPrimPath`,
- * qui apparie les deux au lieu d'exiger une égalité stricte.
+ * Blender's USD importer exposes no prim path; we rebuild it at export time from the object
+ * hierarchy, which can **collapse or insert** a level (a reference whose root carries the same name
+ * as the referencing prim, for example). Hence `matchPrimPath`, which pairs the two instead of
+ * requiring strict equality.
  */
 
-/** Nœud d'arbre : un prim et ses enfants. */
+/** Tree node: a prim and its children. */
 export interface PrimNode extends UsdPrim {
   children: PrimNode[];
 }
 
-/** Segments d'un chemin USD (`/World/Asset` → `['World','Asset']`). */
+/** Segments of a USD path (`/World/Asset` → `['World','Asset']`). */
 export function primSegments(path: string): string[] {
   return path.split('/').filter(Boolean);
 }
 
-/** Chemin du parent, ou `null` pour un prim de premier niveau. */
+/** Path of the parent, or `null` for a top-level prim. */
 export function parentPath(path: string): string | null {
   const segments = primSegments(path);
   return segments.length <= 1 ? null : `/${segments.slice(0, -1).join('/')}`;
 }
 
-/** Dernier segment d'un chemin (nom du prim). */
+/** Last segment of a path (the prim name). */
 export function leafName(path: string): string {
   return primSegments(path).at(-1) ?? '';
 }
 
-/** Vrai si `path` est `ancestor` lui-même ou l'un de ses descendants. */
+/** True if `path` is `ancestor` itself or one of its descendants. */
 export function isSelfOrDescendant(path: string, ancestor: string): boolean {
   return path === ancestor || path.startsWith(`${ancestor}/`);
 }
 
-/** Ancêtres d'un chemin, de la racine à son parent (`/a/b/c` → `['/a','/a/b']`). */
+/** Ancestors of a path, from the root to its parent (`/a/b/c` → `['/a','/a/b']`). */
 export function ancestorPaths(path: string): string[] {
   const out: string[] = [];
   for (let parent = parentPath(path); parent; parent = parentPath(parent)) out.unshift(parent);
@@ -51,40 +51,39 @@ export function ancestorPaths(path: string): string[] {
 }
 
 /**
- * `kind` USD de la hiérarchie de modèle visé par défaut : le niveau « objet » d'une scène de
- * production (une chaise, une casserole), celui dans lequel un chef déco raisonne.
+ * Default USD `kind` of the targeted model hierarchy: the "object" level of a production scene
+ * (a chair, a saucepan), the level a set dresser reasons in.
  */
 const COMPONENT_KIND = 'component';
 
-/** Table `chemin → kind` d'une liste de prims — entrée de `promoteToKind`. */
+/** `path → kind` table of a list of prims — input of `promoteToKind`. */
 export function primKinds(prims: readonly UsdPrim[]): Map<string, string> {
   return new Map(prims.map((p) => [p.path, p.kind]));
 }
 
 export interface PromoteOptions {
-  /** `kind` par chemin de prim (`primKinds`) — seule source de la promotion. */
+  /** `kind` per prim path (`primKinds`) — the only source of promotion. */
   kinds: ReadonlyMap<string, string>;
   /**
-   * Chemins réellement manipulables, c'est-à-dire indexés dans la scène Three. Un ancêtre qui
-   * n'y est pas ne porte **aucun objet** : le promouvoir donnerait une sélection sans halo, sans
-   * cadrage et sans gizmo. Absent ⇒ pas de filtre (usage purement sémantique).
+   * Paths actually manipulable, i.e. indexed in the Three scene. An ancestor that is not there
+   * carries **no object**: promoting to it would yield a selection without halo, framing or gizmo.
+   * Absent ⇒ no filter (purely semantic use).
    */
   selectable?: ReadonlySet<string>;
-  /** `kind` visé — `component` par défaut. */
+  /** Target `kind` — `component` by default. */
   kind?: string;
 }
 
 /**
- * Remonte un chemin de prim jusqu'au **component** englobant : le clic dans le viewer touche une
- * feuille (`.../Chair_1/Geom/Seat`), mais l'objet que l'utilisateur désigne est la chaise.
+ * Climbs a prim path up to the enclosing **component**: the click in the viewer hits a leaf
+ * (`.../Chair_1/Geom/Seat`), but the object the user designates is the chair.
  *
- * Le repli ne perd **jamais** la sélection : sans ancêtre éligible — arbre tronqué
- * (`MAX_PRIMS_REPORTED`), niveaux implicites au `kind` vide, ancêtre non indexé — le chemin
- * d'origine est rendu tel quel. Un chemin nul (aucune correspondance) reste nul.
+ * The fallback **never** loses the selection: without an eligible ancestor — truncated tree
+ * (`MAX_PRIMS_REPORTED`), implicit levels with an empty `kind`, unindexed ancestor — the original
+ * path is returned as is. A null path (no match) stays null.
  *
- * Pure et sans dépendance à Three : c'est la seule promotion du module, et elle n'a lieu qu'à la
- * **résolution du clic** — jamais à l'écriture d'un override, dont les chemins déjà enregistrés
- * visent des feuilles.
+ * Pure and free of any Three dependency: it is the module's only promotion, and it only happens at
+ * **click resolution** — never when writing an override, whose already recorded paths target leaves.
  */
 export function promoteToKind(path: string | null, opts: PromoteOptions): string | null {
   if (!path) return null;
@@ -97,7 +96,7 @@ export function promoteToKind(path: string | null, opts: PromoteOptions): string
   return path;
 }
 
-/** Prim synthétique pour un niveau intermédiaire absent de la liste (arbre tronqué). */
+/** Synthetic prim for an intermediate level missing from the list (truncated tree). */
 function implicitPrim(path: string): UsdPrim {
   return {
     path,
@@ -112,16 +111,15 @@ function implicitPrim(path: string): UsdPrim {
 }
 
 /**
- * Reconstruit la hiérarchie depuis la liste plate : les chemins la portent entièrement.
- * Les niveaux intermédiaires manquants (liste tronquée, prim filtré) sont créés implicitement
- * pour qu'aucune branche ne se retrouve orpheline à la racine.
+ * Rebuilds the hierarchy from the flat list: the paths carry all of it. Missing intermediate levels
+ * (truncated list, filtered prim) are created implicitly so that no branch is left orphaned at the root.
  */
 export function buildPrimTree(prims: UsdPrim[]): PrimNode[] {
   const nodes = new Map<string, PrimNode>();
   const ensure = (prim: UsdPrim): PrimNode => {
     const existing = nodes.get(prim.path);
     if (existing) {
-      // Un prim réel remplace le nœud implicite créé pour lui servir de parent.
+      // A real prim replaces the implicit node created to serve as its parent.
       if (!existing.type && prim.type) Object.assign(existing, prim, { children: existing.children });
       return existing;
     }
@@ -130,8 +128,8 @@ export function buildPrimTree(prims: UsdPrim[]): PrimNode[] {
     return node;
   };
 
-  // Premier passage : chaque prim **et toute sa lignée d'ancêtres** existent comme nœud, pour
-  // que le rattachement du second passage ne rencontre jamais de parent manquant.
+  // First pass: each prim **and its whole ancestry** exist as nodes, so that the attachment of
+  // the second pass never meets a missing parent.
   for (const prim of prims) {
     ensure(prim);
     for (let parent = parentPath(prim.path); parent; parent = parentPath(parent))
@@ -154,12 +152,12 @@ export function buildPrimTree(prims: UsdPrim[]): PrimNode[] {
 }
 
 /**
- * Arbre complet de la scène **telle qu'elle est réellement chargée** : les prims de l'analyseur,
- * plus des prims implicites pour les chemins rendus qu'il ne connaît pas. L'analyseur compose la
- * scène avec **une seule** option par jeu de variantes — la géométrie des autres options, cuite
- * dans le GLB (46.G), n'existe pas dans son arbre. Sans ces prims implicites, la sélectionner ou
- * l'isoler était impossible : l'isolement retombait sur le parent connu le plus proche.
- * Les artefacts d'export Blender (`_materials`) sont tenus hors de l'arbre.
+ * Full tree of the scene **as actually loaded**: the parser's prims, plus implicit prims for the
+ * rendered paths it does not know. The parser composes the scene with **a single** option per
+ * variant set — the geometry of the other options, baked into the GLB (46.G), does not exist in its
+ * tree. Without these implicit prims, selecting or isolating them was impossible: isolation fell
+ * back to the nearest known parent.
+ * Blender export artifacts (`_materials`) are kept out of the tree.
  */
 export function buildRenderedPrimTree(prims: UsdPrim[], renderedPaths: Iterable<string>): PrimNode[] {
   const known = new Set(prims.map((p) => p.path));
@@ -173,10 +171,10 @@ export function buildRenderedPrimTree(prims: UsdPrim[], renderedPaths: Iterable<
 }
 
 /**
- * Apparie un chemin reconstruit côté glTF au prim USD correspondant. Égalité stricte d'abord ;
- * sinon, parmi les prims de **même nom de feuille**, celui qui partage le plus long préfixe —
- * ce qui absorbe un niveau collapsé ou inséré. Renvoie `null` si rien ne correspond ou si le
- * meilleur score est ambigu (deux prims aussi plausibles).
+ * Matches a path rebuilt on the glTF side to the corresponding USD prim. Strict equality first;
+ * otherwise, among prims with the **same leaf name**, the one sharing the longest prefix — which
+ * absorbs a collapsed or inserted level. Returns `null` if nothing matches or if the best score is
+ * ambiguous (two equally plausible prims).
  */
 export function matchPrimPath(candidate: string, usdPaths: string[]): string | null {
   if (usdPaths.includes(candidate)) return candidate;
@@ -208,7 +206,7 @@ export function matchPrimPath(candidate: string, usdPaths: string[]): string | n
   return best && !ambiguous ? best.path : null;
 }
 
-/** Chemins de l'arbre en ordre d'affichage (pré-ordre) — plage Maj+clic du scenegraph (B1). */
+/** Paths of the tree in display order (pre-order) — the Shift+click range of the scenegraph (B1). */
 export function flattenTree(tree: PrimNode[]): string[] {
   const out: string[] = [];
   const walk = (nodes: PrimNode[]) => {
@@ -221,34 +219,33 @@ export function flattenTree(tree: PrimNode[]): string[] {
   return out;
 }
 
-/** Deux premiers niveaux : dépliage par défaut du scenegraph, assez pour situer la scène. */
+/** First two levels: default expansion of the scenegraph, enough to place the scene. */
 export function initialExpansion(tree: readonly PrimNode[]): Set<string> {
   return new Set(tree.flatMap((n) => [n.path, ...n.children.map((c) => c.path)]));
 }
 
-/** Résultat d'une recherche dans l'arbre : ce qui reste visible, et ce qu'il faut déplier. */
+/** Result of a tree search: what stays visible, and what must be expanded. */
 export interface PrimSearch {
-  /** Arbre filtré : les correspondances et leurs ancêtres, rien d'autre. */
+  /** Filtered tree: the matches and their ancestors, nothing else. */
   tree: PrimNode[];
   /**
-   * Nœuds à déplier de force — **uniquement** le chemin menant à une correspondance. Ce sont
-   * les nœuds internes de l'arbre filtré : une correspondance sans descendance retenue reste
-   * fermée, et taper « table » ne déroule plus toute la table.
+   * Nodes to force open — **only** the path leading to a match. These are the internal nodes of the
+   * filtered tree: a match with no kept descendant stays closed, and typing "table" no longer
+   * unrolls the entire table.
    */
   expand: ReadonlySet<string>;
 }
 
-/** Aucun dépliage forcé : instance partagée pour que la mémoïsation des rangées tienne. */
+/** No forced expansion: shared instance so that row memoization holds. */
 const NO_EXPANSION: ReadonlySet<string> = new Set<string>();
 
 /**
- * Recherche dans l'arbre (insensible à la casse) : un nœud reste si lui ou l'un de ses
- * descendants correspond — les ancêtres d'un résultat restent visibles pour situer le prim.
+ * Search in the tree (case-insensitive): a node stays if it or one of its descendants matches — the
+ * ancestors of a result stay visible to place the prim.
  *
- * La correspondance porte sur le **nom**, pas sur le chemin : comparer le chemin complet faisait
- * correspondre tout ce qui descend d'un nœud trouvé (« table » retenait `/…/table/…/vis_037`),
- * et l'arbre se dépliait entièrement. Une requête contenant une barre est en revanche une
- * intention de chemin explicite, et se compare au chemin.
+ * Matching is on the **name**, not the path: comparing the full path made everything under a found
+ * node match ("table" kept `/…/table/…/vis_037`), and the tree unfolded entirely. A query containing
+ * a slash, on the other hand, is an explicit path intent and is compared against the path.
  */
 export function searchPrimTree(tree: PrimNode[], query: string): PrimSearch {
   const q = query.trim().toLowerCase();

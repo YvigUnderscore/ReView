@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import type { MediaKind } from '../../../types/api';
+import type { MediaKind } from '@/v2/types/api';
 import {
   chromePrefsKey,
   defaultChromeState,
@@ -17,20 +17,19 @@ import { chromeCommandFor } from './shortcuts';
 import { DEFAULT_TOOL, toolsFor, type ReviewTool } from './tools';
 
 /**
- * État du chrome pour un média : préférences relues au montage (rail déplié, panneau ouvert,
- * commentaires visibles), mode/outil/tiroir éphémères, et les raccourcis communs aux quatre
- * viewers — touches numériques pour les modes, lettres d'outils du rail, Échap pour revenir à la
- * navigation, `Tab` pour replier le dock.
+ * Chrome state for a media: preferences read back on mount (rail expanded, panel open, comments
+ * visible), ephemeral mode/tool/drawer, and the shortcuts shared by the four viewers — digit keys
+ * for the modes, rail tool letters, Escape to return to navigation, `Tab` to fold the dock.
  *
- * Les touches ne sont pas décidées ici : elles sont résolues par `chromeCommandFor`, le registre
- * partagé avec l'aide des raccourcis. Ce hook applique la commande, rien de plus.
+ * The keys are not decided here: they are resolved by `chromeCommandFor`, the registry shared with
+ * the shortcut help. This hook applies the command, nothing more.
  *
- * Une seule exception à « applique la commande » : **pendant un vol** (clic droit maintenu dans
- * un viewer spatial), le chrome ne répond à rien. C'est l'un des quatre écouteurs clavier qui
- * cohabitent sur `window`/`document` — il était le seul sans garde de vol.
+ * One exception to "applies the command": **during a flight** (right button held in a spatial
+ * viewer), the chrome answers nothing. It is one of the four keyboard listeners that coexist on
+ * `window`/`document` — it was the only one without a flight guard.
  *
- * Toute mise à jour repasse par `reconcileChrome` : impossible de rester sur un outil qui
- * n'existe pas dans le mode courant.
+ * Every update goes back through `reconcileChrome`: it is impossible to stay on a tool that does not
+ * exist in the current mode.
  */
 function initialState(kind: MediaKind): ChromeState {
   const base = defaultChromeState();
@@ -41,24 +40,24 @@ function initialState(kind: MediaKind): ChromeState {
 
 export interface ChromeOptions {
   /**
-   * Au moins une version voisine existe. Faux, le mode « Compare » quitte la bascule **et** les
-   * touches numériques — un mode qui ne peut rien montrer ne s'arme pas.
+   * At least one neighbouring version exists. If false, the "Compare" mode leaves the toggle **and**
+   * the digit keys — a mode that cannot show anything does not arm.
    */
   canCompare?: boolean;
   /**
-   * Modes réellement offerts par la bascule. Le lecteur de montage n'en a qu'un : sans cette
-   * option, la touche `2` l'envoyait dans un mode « Compare » que son en-tête ne propose pas.
+   * Modes actually offered by the toggle. The edit mount's player has only one: without this
+   * option, the `2` key would send it into a "Compare" mode that its header does not offer.
    */
   modes?: ReviewMode[];
   /**
-   * Outils réellement au rail. Le montage fournit les siens ; un outil absent du rail ne doit
-   * pas être armable au clavier, sinon la lettre arme un outil sans implémentation.
+   * Tools actually on the rail. The mount supplies its own; a tool absent from the rail must not be
+   * armable from the keyboard, otherwise the letter arms a tool with no implementation.
    */
   tools?: (mode: ModeId) => ReviewTool[];
   /**
-   * Vol en cours dans un viewer spatial (clic droit maintenu). Tant qu'il dure, le clavier
-   * appartient au vol : **aucune** touche du chrome ne répond. Les deux viewers spatiaux le
-   * fournissent (`splat.isFlying`, `model3d.isFlying`) ; les médias plats n'en ont pas.
+   * Flight in progress in a spatial viewer (right button held). For as long as it lasts, the keyboard
+   * belongs to the flight: **no** chrome key answers. Both spatial viewers provide it
+   * (`splat.isFlying`, `model3d.isFlying`); flat media have none.
    */
   isFlying?: () => boolean;
 }
@@ -73,24 +72,24 @@ export function useChromeState(kind: MediaKind, options: ChromeOptions = {}) {
     [kind, canCompare],
   );
 
-  // Changement de média : on repart des préférences de ce type, mode et outil au repos.
-  // Ajusté pendant le rendu plutôt que dans un effet — pas de rendu intermédiaire périmé.
+  // Media change: we restart from the preferences of this type, with mode and tool at rest.
+  // Adjusted during render rather than in an effect — no stale intermediate render.
   const [lastKind, setLastKind] = useState(kind);
   if (lastKind !== kind) {
     setLastKind(kind);
     setState(initialState(kind));
   }
 
-  // Les versions voisines arrivent après le premier rendu : quand `canCompare` retombe, l'état
-  // courant repasse au crible au lieu d'attendre la prochaine action — sans quoi l'on resterait
-  // dans un mode « Compare » que la bascule vient de retirer.
+  // Neighbouring versions arrive after the first render: when `canCompare` drops, the state
+  // is re-checked instead of waiting for the next action — otherwise one would stay
+  // in a "Compare" mode that the toggle has just removed.
   const [lastCanCompare, setLastCanCompare] = useState(canCompare);
   if (lastCanCompare !== canCompare) {
     setLastCanCompare(canCompare);
     setState((prev) => reconcileChrome(prev, kind, canCompare));
   }
 
-  // Les préférences sont persistées par type de média ; mode et outil restent éphémères.
+  // Preferences are persisted per media type; mode and tool stay ephemeral.
   useEffect(() => {
     const { panel, labels, comments, drawer, drawerH } = state;
     window.localStorage.setItem(
@@ -108,19 +107,19 @@ export function useChromeState(kind: MediaKind, options: ChromeOptions = {}) {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement | null;
-      // Jamais de raccourci pendant une saisie (commentaire, champ numérique, recherche).
+      // Never a shortcut during input (comment, numeric field, search).
       if (target?.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(target?.tagName ?? '')) return;
       if (e.ctrlKey || e.metaKey || e.altKey) return;
-      // GARDE DE VOL : le clic droit maintenu est un mode de navigation, pas un état où l'on
-      // arme des outils. `S` (reculer, en ZQSD comme en WASD) armait le gizmo Échelle en plein
-      // vol ; `T`/`R` le faisaient basculer de mode. Toutes les touches se taisent, pas
-      // seulement celles du vol : changer d'outil au milieu d'un déplacement n'a aucun sens,
-      // et le geste ne se distingue pas d'une faute de frappe.
+      // FLIGHT GUARD: right click held is a navigation mode, not a state where one
+      // arms tools. `S` (back, in ZQSD as in WASD) armed the Scale gizmo in the middle of a
+      // flight; `T`/`R` switched its mode. All keys stay silent, not only the flight ones:
+      // changing tool in the middle of a move makes no sense, and the gesture cannot be told
+      // apart from a typo.
       if (isFlying?.()) return;
 
-      // Une seule autorité sur ces touches : le registre. Le garde-fou `reservedKeys` a disparu
-      // avec le mode Découpe (Phase 50) — il existait parce que `I`/`O` étaient à la fois la
-      // boucle du transport et les points de coupe, et plus aucun outil ne porte ces lettres.
+      // A single authority over these keys: the registry. The `reservedKeys` safeguard disappeared
+      // with the Cut mode (Phase 50) — it existed because `I`/`O` were both the transport's loop and
+      // the cut points, and no tool carries those letters any more.
       const command = chromeCommandFor(e.key, {
         kind,
         mode: state.mode,
@@ -131,7 +130,7 @@ export function useChromeState(kind: MediaKind, options: ChromeOptions = {}) {
       if (!command) return;
       e.preventDefault();
       if (command.action === 'panel') {
-        // Tab replie le dock ouvert, ou rouvre le premier panneau du média.
+        // Tab folds the open dock, or reopens the media's first panel.
         update({ panel: state.panel ? null : (panelsFor(kind)[0]?.id ?? null) });
       } else if (command.action === 'rest') {
         update({ tool: DEFAULT_TOOL });

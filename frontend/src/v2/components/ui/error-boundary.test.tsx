@@ -8,20 +8,20 @@ import { useState } from 'react';
 import { ErrorBoundary } from './error-boundary';
 import { t } from '../../i18n';
 
-/** Composant qui jette au rendu tant qu'on ne l'a pas désarmé. */
+/** Component that throws on render until it has been disarmed. */
 function Boom({ armed }: { armed: boolean }): React.ReactElement {
   if (armed) throw new Error('viewer WebGL perdu');
   return <p>contenu rétabli</p>;
 }
 
 beforeEach(() => {
-  // React journalise l'exception attrapée : on la fait taire pour garder la sortie lisible.
+  // React logs the caught exception: silence it to keep the output readable.
   vi.spyOn(console, 'error').mockImplementation(() => {});
 });
 afterEach(() => vi.restoreAllMocks());
 
 describe('ErrorBoundary', () => {
-  it('laisse passer ses enfants quand rien ne jette', () => {
+  it('lets its children through when nothing throws', () => {
     render(
       <ErrorBoundary>
         <Boom armed={false} />
@@ -31,10 +31,10 @@ describe('ErrorBoundary', () => {
   });
 
   /**
-   * Sans frontière, React démonte l'arbre entier : l'utilisateur se retrouvait devant un
-   * écran blanc, sans navigation ni message.
+   * Without a boundary, React unmounts the whole tree: the user was left with a blank
+   * screen, with no navigation and no message.
    */
-  it('affiche un message et non un écran vide quand un enfant jette', () => {
+  it('shows a message rather than an empty screen when a child throws', () => {
     render(
       <ErrorBoundary>
         <Boom armed />
@@ -44,7 +44,7 @@ describe('ErrorBoundary', () => {
     expect(screen.getByRole('button', { name: new RegExp(t('error.boundary.retry')) })).toBeTruthy();
   });
 
-  it('« Réessayer » remonte les enfants', async () => {
+  it('"Retry" remounts the children', async () => {
     const user = userEvent.setup();
     function Host(): React.ReactElement {
       const [armed, setArmed] = useState(true);
@@ -70,7 +70,7 @@ describe('ErrorBoundary', () => {
     expect(screen.getByText('contenu rétabli')).toBeTruthy();
   });
 
-  it('journalise la portée pour retrouver la page fautive', () => {
+  it('logs the scope to find the faulty page', () => {
     render(
       <ErrorBoundary scope="viewer">
         <Boom armed />

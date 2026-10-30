@@ -5,11 +5,11 @@ import { Fragment, useMemo } from 'react';
 import { matchSpans } from './docsHighlight';
 
 /**
- * Un libellé du sommaire, le terme cherché surligné.
+ * A table-of-contents label with the searched term highlighted.
  *
- * Même surlignage que dans le corps de la page, posé ici sur du texte que React rend
- * lui-même — un titre de page ou de chapitre. Le texte reste du texte : on ne construit
- * aucun HTML, on découpe une chaîne en segments.
+ * Same highlighting as in the body of the page, applied here to text that React renders
+ * itself, such as a page or chapter title. The text remains text: no HTML is built, a string
+ * is split into segments.
  */
 export default function HighlightedText({ text, words }: { text: string; words: string[] }) {
   const segments = useMemo(() => {

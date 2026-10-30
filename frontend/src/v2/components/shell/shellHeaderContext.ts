@@ -4,11 +4,10 @@
 import { createContext } from 'react';
 
 /**
- * Nœud d'accueil du titre / fil d'Ariane dans la barre du haut (A1).
+ * Title / breadcrumb anchor node in the top bar (A1).
  *
- * Depuis que `Shell` est une route layout, il est monté une fois pour toutes et les pages
- * vivent dans son `<Outlet/>` : elles ne peuvent plus lui passer leur titre en prop. Elles
- * le projettent donc par portail dans ce nœud, via `PageShell`. Vaut `null` le temps du
- * premier rendu (le nœud n'existe pas encore) — les consommateurs ne rendent alors rien.
+ * Since `Shell` became a layout route, it is mounted once and for all and the pages live in its `<Outlet/>`: they can no
+ * longer pass their title as a prop. They therefore project it through a portal into this node, via `PageShell`. It is
+ * `null` until the first render (the node does not exist yet): consumers then render nothing.
  */
 export const ShellHeaderContext = createContext<HTMLElement | null>(null);

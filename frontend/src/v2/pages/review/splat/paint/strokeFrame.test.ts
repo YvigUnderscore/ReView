@@ -7,7 +7,7 @@ import type { Line2 } from 'three/addons/lines/Line2.js';
 import { GHOST_OPACITY, attachStrokeFrame, ghostOpacity } from './strokeFrame';
 import type { PaintSceneHandle } from './surfaceRay';
 
-/** Entretien par image, appelé avec le minimum dont il se sert réellement. */
+/** Per-frame upkeep, called with the minimum it actually uses. */
 type Upkeep = (
   renderer: { getSize: (target: THREE.Vector2) => THREE.Vector2 },
   scene: unknown,
@@ -39,7 +39,7 @@ function cameraAt(x: number, y: number, z: number) {
 }
 
 describe('ghostOpacity', () => {
-  it('pleine opacité face au trait, fantôme derrière, rampe entre les deux', () => {
+  it('full opacity facing the stroke, ghosted behind, ramps between the two', () => {
     expect(ghostOpacity(1)).toBe(1);
     expect(ghostOpacity(0.1)).toBe(1);
     expect(ghostOpacity(-0.2)).toBe(GHOST_OPACITY);
@@ -50,7 +50,7 @@ describe('ghostOpacity', () => {
     expect(middle).toBeCloseTo(GHOST_OPACITY + 0.5 * (1 - GHOST_OPACITY), 6);
   });
 
-  it('croît sans redescendre sur toute la rampe', () => {
+  it('increases without going back down over the whole ramp', () => {
     let previous = -1;
     for (let facing = -0.3; facing <= 0.2; facing += 0.01) {
       const value = ghostOpacity(facing);
@@ -61,7 +61,7 @@ describe('ghostOpacity', () => {
 });
 
 describe('attachStrokeFrame', () => {
-  it('donne la taille de la vue au matériau — sans elle, l’épaisseur en pixels est fausse', () => {
+  it('gives the material the view size: without it, the thickness in pixels is wrong', () => {
     const line = fakeLine();
     attachStrokeFrame(line, fakeHandle(), null, [0, 0, 0]);
     (line.onBeforeRender as unknown as Upkeep)(renderer, null, cameraAt(0, 0, 10));
@@ -69,16 +69,16 @@ describe('attachStrokeFrame', () => {
     expect(line.material.resolution.y).toBe(720);
   });
 
-  it('laisse un trait sans normale pleinement visible (traits d’avant l’occlusion)', () => {
+  it('leaves a stroke without a normal fully visible (strokes from before occlusion)', () => {
     const line = fakeLine();
     attachStrokeFrame(line, fakeHandle(), null, [0, 0, 0]);
     (line.onBeforeRender as unknown as Upkeep)(renderer, null, cameraAt(0, 0, -10));
     expect(line.material.opacity).toBe(1);
   });
 
-  it('estompe le trait quand la caméra passe derrière la face peinte', () => {
+  it('fades the stroke when the camera moves behind the painted face', () => {
     const line = fakeLine();
-    // Trait peint depuis +z : sa normale objet pointe vers +z.
+    // Stroke painted from +z: its object normal points towards +z.
     attachStrokeFrame(line, fakeHandle(), [0, 0, 1], [0, 0, 0]);
     const upkeep = line.onBeforeRender as unknown as Upkeep;
     upkeep(renderer, null, cameraAt(0, 0, 10));
@@ -87,9 +87,9 @@ describe('attachStrokeFrame', () => {
     expect(line.material.opacity).toBe(GHOST_OPACITY);
   });
 
-  it('mesure en espace objet : la transformation du média ne renverse pas l’occlusion', () => {
+  it('measures in object space: the media transform does not invert the occlusion', () => {
     const line = fakeLine();
-    // Le mesh est déplacé de 100 en x ; le trait, lui, vit en espace objet en (0,0,0).
+    // The mesh is moved by 100 in x; the stroke, for its part, lives in object space at (0,0,0).
     attachStrokeFrame(line, fakeHandle(new THREE.Vector3(100, 0, 0)), [0, 0, 1], [0, 0, 0]);
     const upkeep = line.onBeforeRender as unknown as Upkeep;
     upkeep(renderer, null, cameraAt(100, 0, 10));

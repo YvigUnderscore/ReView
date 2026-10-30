@@ -5,12 +5,11 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { MediaStatus, Role } from '@prisma/client';
 
 /**
- * Transport d'une séquence : N fichiers, UN média.
+ * Transport of a sequence: N files, ONE media.
  *
- * Trois garanties sont vérifiées ici, parce que chacune coûte cher quand elle manque :
- * le refus arrive **avant** le transfert (un lot mal formé ne doit pas coûter 80 Go),
- * la reprise s'appuie sur le stockage et non sur le client, et la finalisation écrit ce
- * qui est réellement arrivé — pas ce qui avait été annoncé.
+ * Three guarantees are verified here, because each costs dearly when it is missing: the refusal happens
+ * **before** the transfer (a malformed batch must not cost 80 GB), resumption relies on storage and not on
+ * the client, and finalization writes what actually arrived — not what had been announced.
  */
 
 const createUpload = vi.fn();
@@ -25,7 +24,7 @@ vi.mock('../lib/prisma', () => ({
     $transaction: vi.fn(),
   },
 }));
-vi.mock('./StorageService', () => ({
+vi.mock('../lib/storage', () => ({
   storage: {
     iterateObjects: async function* () {
       yield* objects;
@@ -38,11 +37,11 @@ vi.mock('./StorageService', () => ({
 }));
 vi.mock('./MediaService', () => ({
   createUpload: (...args: unknown[]) => createUpload(...args),
-  // Les effets de la publication ont leur propre banc (MediaService.publication.test.ts).
+  // The effects of publication have their own bench (MediaService.publication.test.ts).
   announcePublication: vi.fn(),
 }));
 vi.mock('./AuditService', () => ({ logAudit: vi.fn() }));
-vi.mock('./JobService', () => ({ enqueueMediaJob: vi.fn() }));
+vi.mock('../lib/queues', () => ({ enqueueMediaJob: vi.fn() }));
 vi.mock('../middleware/rbac', () => ({ checkProjectAccess: vi.fn(async () => true) }));
 vi.mock('../lib/projectQuota', () => ({ assertProjectQuota: vi.fn() }));
 vi.mock('../lib/settings', () => ({
@@ -51,8 +50,8 @@ vi.mock('../lib/settings', () => ({
   SETTING_KEYS: { MAX_FILE_SIZE: 'max_file_size' },
 }));
 vi.mock('../lib/pipeline', () => ({ resolveProjectIdForVersion: vi.fn(async () => 3) }));
-// Le module reste RÉEL pour `checkReviewNote` : `lib/uploadNote` s'appuie dessus, et c'est
-// la règle de consigne qu'on veut voir s'appliquer aussi à une séquence.
+// The module stays REAL for `checkReviewNote`: `lib/uploadNote` relies on it, and it is the brief rule that
+// we want to see applied to a sequence as well.
 vi.mock('../lib/projectSettings', async (importOriginal) => ({
   ...(await importOriginal<typeof import('../lib/projectSettings')>()),
   resolveProjectSettingsById: vi.fn(async () => ({
@@ -64,8 +63,8 @@ vi.mock('../lib/projectSettings', async (importOriginal) => ({
 
 import { completeSequence, frameUploadUrls, initSequence, listSequenceFrames } from './ImageSequenceService';
 import { prisma } from '../lib/prisma';
-import { storage } from './StorageService';
-import { enqueueMediaJob } from './JobService';
+import { storage } from '../lib/storage';
+import { enqueueMediaJob } from '../lib/queues';
 import { resolveProjectSettingsById } from '../lib/projectSettings';
 
 const user = { id: 3, role: Role.ARTIST };
@@ -77,7 +76,7 @@ const frames = (from: number, to: number, size = 1024): { name: string; size: nu
     size,
   }));
 
-/** En-tête OpenEXR (nombre magique 20000630 en petit-boutien) + de quoi remplir 32 octets. */
+/** OpenEXR header (magic number 20000630 in little-endian) + enough to fill 32 bytes. */
 const EXR_HEADER = Buffer.concat([Buffer.from([0x76, 0x2f, 0x31, 0x01]), Buffer.alloc(28)]);
 
 beforeEach(() => {
@@ -101,10 +100,10 @@ beforeEach(() => {
   vi.mocked(storage.getObjectHeader).mockResolvedValue(EXR_HEADER);
 });
 
-describe('initSequence — refuser avant le transfert', () => {
+describe('initSequence: refuse before the transfer', () => {
   const base = { versionId: 12, pattern: 'plan.%04d.exr' };
 
-  it('crée un seul média porteur et range les frames sous un préfixe dédié', async () => {
+  it('creates a single carrier media and files the frames under a dedicated prefix', async () => {
     const res = await initSequence(user, { ...base, frames: frames(1001, 1010) });
     expect(res).toMatchObject({ mediaObjectId: 42, resumed: false, framerate: 25 });
     expect(createUpload).toHaveBeenCalledTimes(1);
@@ -118,34 +117,34 @@ describe('initSequence — refuser avant le transfert', () => {
     });
   });
 
-  it('refuse un motif qui n’en est pas un', async () => {
+  it('refuses a pattern that is not one', async () => {
     await expect(
       initSequence(user, { versionId: 12, pattern: 'plan.exr', frames: frames(1, 2) }),
     ).rejects.toMatchObject({ code: 'BAD_PATTERN' });
     expect(createUpload).not.toHaveBeenCalled();
   });
 
-  it('refuse une frame qui n’appartient pas au motif', async () => {
+  it('refuses a frame that does not belong to the pattern', async () => {
     await expect(
       initSequence(user, { ...base, frames: [...frames(1001, 1002), { name: 'plan.1003.dpx', size: 1 }] }),
     ).rejects.toMatchObject({ code: 'FRAME_OUTSIDE_PATTERN' });
     expect(createUpload).not.toHaveBeenCalled();
   });
 
-  it('refuse un nom de frame qui se déguise en chemin', async () => {
+  it('refuses a frame name disguised as a path', async () => {
     await expect(
       initSequence(user, { ...base, frames: [{ name: '../plan.1001.exr', size: 1 }, ...frames(1002, 1002)] }),
     ).rejects.toMatchObject({ code: 'BAD_FRAME_NAME' });
   });
 
-  it('refuse un lot qui dépasse le plafond de taille du studio, sans rien créer', async () => {
+  it("refuses a batch exceeding the studio's size ceiling, creating nothing", async () => {
     await expect(
       initSequence(user, { ...base, frames: frames(1001, 1010, 900 * 1024 * 1024 * 1024) }),
     ).rejects.toMatchObject({ code: 'FILE_TOO_LARGE' });
     expect(createUpload).not.toHaveBeenCalled();
   });
 
-  it('reprend un envoi interrompu en listant ce qui est déjà arrivé (le stockage fait foi)', async () => {
+  it('resumes an interrupted upload by listing what has already arrived (storage is authoritative)', async () => {
     vi.mocked(prisma.mediaObject.findFirst).mockResolvedValue({
       id: 42,
       imageSequence: { storagePrefix: PREFIX, framerate: 24 },
@@ -159,7 +158,7 @@ describe('initSequence — refuser avant le transfert', () => {
   });
 });
 
-describe('frameUploadUrls — le nom devient une clé', () => {
+describe('frameUploadUrls: the name becomes a key', () => {
   beforeEach(() => {
     vi.mocked(prisma.mediaObject.findFirst).mockResolvedValue({
       id: 42,
@@ -167,25 +166,25 @@ describe('frameUploadUrls — le nom devient une clé', () => {
     } as never);
   });
 
-  it('signe sous le préfixe de la séquence, avec le nom livré', async () => {
+  it('signs under the sequence prefix, with the delivered name', async () => {
     const { urls } = await frameUploadUrls(user, 42, ['plan.1001.exr']);
     expect(urls[0]!.url).toContain(`${PREFIX}plan.1001.exr`);
   });
 
-  it('refuse une évasion de préfixe même une fois l’envoi ouvert', async () => {
+  it('refuses a prefix escape even once the upload is open', async () => {
     await expect(frameUploadUrls(user, 42, ['../../evade.exr'])).rejects.toMatchObject({
       code: 'BAD_FRAME_NAME',
     });
   });
 
-  it('refuse une frame d’une autre extension que celle de la séquence', async () => {
+  it('refuses a frame of a different extension from that of the sequence', async () => {
     await expect(frameUploadUrls(user, 42, ['plan.1001.dpx'])).rejects.toMatchObject({
       code: 'FRAME_OUTSIDE_PATTERN',
     });
   });
 });
 
-describe('completeSequence — ce qui est arrivé fait foi', () => {
+describe('completeSequence: what arrived is authoritative', () => {
   beforeEach(() => {
     vi.mocked(prisma.mediaObject.findFirst).mockResolvedValue({
       id: 42,
@@ -203,7 +202,7 @@ describe('completeSequence — ce qui est arrivé fait foi', () => {
     } as never);
   });
 
-  it('recompte les bornes sur les frames réellement déposées, trous compris', async () => {
+  it('recounts the bounds on the frames actually deposited, gaps included', async () => {
     objects.push(
       { key: `${PREFIX}plan.1001.exr`, size: 100 },
       { key: `${PREFIX}plan.1002.exr`, size: 100 },
@@ -219,7 +218,7 @@ describe('completeSequence — ce qui est arrivé fait foi', () => {
     expect(enqueueMediaJob).toHaveBeenCalledWith({ mediaObjectId: 42, kind: 'transcode' });
   });
 
-  it('écrit un manifeste : la livraison reste lisible sans la base de données', async () => {
+  it('writes a manifest: the delivery stays readable without the database', async () => {
     objects.push({ key: `${PREFIX}plan.1001.exr`, size: 7 }, { key: `${PREFIX}plan.1002.exr`, size: 9 });
     await completeSequence(user, 42);
     const [key, body] = vi.mocked(storage.putObject).mock.calls[0]!;
@@ -234,11 +233,11 @@ describe('completeSequence — ce qui est arrivé fait foi', () => {
     expect(manifest.frames.map((f) => f.name)).toEqual(['plan.1001.exr', 'plan.1002.exr']);
   });
 
-  it('refuse un lot dont aucune frame n’a atteint le stockage', async () => {
+  it('refuses a batch of which no frame reached storage', async () => {
     await expect(completeSequence(user, 42)).rejects.toMatchObject({ code: 'SEQUENCE_EMPTY' });
   });
 
-  it('refuse une livraison qui n’est pas le format annoncé (PNG renommés en .exr)', async () => {
+  it('refuses a delivery that is not the announced format (PNGs renamed .exr)', async () => {
     objects.push({ key: `${PREFIX}plan.1001.exr`, size: 100 }, { key: `${PREFIX}plan.1002.exr`, size: 100 });
     vi.mocked(storage.getObjectHeader).mockResolvedValue(Buffer.alloc(32));
     await expect(completeSequence(user, 42)).rejects.toMatchObject({ code: 'INVALID_FILE' });
@@ -246,11 +245,11 @@ describe('completeSequence — ce qui est arrivé fait foi', () => {
   });
 
   /**
-   * Cette fonction joue le rôle de `MediaService.finalize` pour une séquence : la consigne
-   * obligatoire (Phase 50) doit donc y valoir aussi. Sans cela, mille EXR seraient devenus la
-   * porte de service d'un réglage que le studio croit posé sur tous ses uploads.
+   * This function plays the role of `MediaService.finalize` for a sequence: the mandatory brief (Phase 50)
+   * must therefore apply here too. Without it, a thousand EXRs would have
+   * become the service door of a setting the studio believes is applied to all its uploads.
    */
-  it('refuse une séquence sans consigne quand le projet l’exige — avant de balayer le bucket', async () => {
+  it('refuses a sequence without a brief when the project requires one — before sweeping the bucket', async () => {
     vi.mocked(resolveProjectSettingsById).mockResolvedValue({
       framerate: 25,
       reviewRequest: { requireNote: true, minNoteLength: 5 },
@@ -260,14 +259,14 @@ describe('completeSequence — ce qui est arrivé fait foi', () => {
     await expect(completeSequence(user, 42)).rejects.toMatchObject({ code: 'UPLOAD_NOTE_REQUIRED' });
     expect(enqueueMediaJob).not.toHaveBeenCalled();
 
-    // La même livraison passe dès qu'elle est accompagnée.
+    // The same delivery goes through as soon as it is accompanied.
     objects.push({ key: `${PREFIX}plan.1002.exr`, size: 8 });
     vi.mocked(storage.getObjectHeader).mockResolvedValue(EXR_HEADER);
     await expect(completeSequence(user, 42, 'Regarder le grain du 1001')).resolves.toBeTruthy();
   });
 });
 
-describe('listSequenceFrames — le livrable d’origine', () => {
+describe('listSequenceFrames: the original deliverable', () => {
   beforeEach(() => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue({
       id: 42,
@@ -285,14 +284,14 @@ describe('listSequenceFrames — le livrable d’origine', () => {
     } as never);
   });
 
-  it('rend les frames dans l’ordre, sous leur nom d’origine', async () => {
+  it('returns the frames in order, under their original name', async () => {
     objects.push({ key: `${PREFIX}plan.1002.exr`, size: 100 }, { key: `${PREFIX}plan.1001.exr`, size: 100 });
     const res = await listSequenceFrames(user, 42);
     expect(res.frames.map((f) => f.name)).toEqual(['plan.1001.exr', 'plan.1002.exr']);
     expect(res).toMatchObject({ pattern: 'plan.%04d.exr', startFrame: 1001, endFrame: 1002 });
   });
 
-  it('impose un type de réponse opaque : une frame déposée en text/html ne s’exécute pas', async () => {
+  it('imposes an opaque response type: a frame deposited as text/html does not run', async () => {
     objects.push({ key: `${PREFIX}plan.1001.exr`, size: 100 }, { key: `${PREFIX}plan.1002.exr`, size: 100 });
     await listSequenceFrames(user, 42);
     for (const call of vi.mocked(storage.getPresignedGetUrl).mock.calls) {
@@ -300,7 +299,7 @@ describe('listSequenceFrames — le livrable d’origine', () => {
     }
   });
 
-  it('refuse un média sans séquence', async () => {
+  it('refuses a media without a sequence', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue({ id: 42, imageSequence: null } as never);
     await expect(listSequenceFrames(user, 42)).rejects.toThrow('Media has no image sequence');
   });

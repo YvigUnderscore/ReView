@@ -2,31 +2,31 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Mise en page simulée, pour les composants qui MESURENT.
+ * Simulated layout, for components that MEASURE.
  *
- * happy-dom ne met rien en page : `scrollHeight` et `clientHeight` valent zéro sur tout
- * l'arbre. Un composant qui décide d'après son propre débordement — le repliage des
- * commentaires, qui a cessé d'estimer à partir du nombre de caractères — ne constate donc
- * rien, et un test qui s'en tient au DOM nu ne vérifie plus ce qu'il annonce.
+ * happy-dom lays nothing out: `scrollHeight` and `clientHeight` are zero on every
+ * node of the tree. A component that decides based on its own overflow (the clamping of
+ * comments, which stopped estimating from the character count) therefore checks
+ * nothing, and a test that sticks to the bare DOM no longer verifies what it announces.
  *
- * Le bouchon prête au document la métrique la plus simple qui reproduise le défaut : une
- * largeur en CARACTÈRES par ligne, une hauteur de ligne fixe, et le plafond que déclarent les
- * classes de repliage (`line-clamp-N`, `max-h-32`). C'est la largeur qui change d'une surface
- * à l'autre — une carte ancrée de 15 rem contre le fil de commentaires — et c'est exactement
- * ce qu'une constante de caractères ne pouvait pas distinguer.
+ * The double gives the document the simplest metric that reproduces the defect: a
+ * width in CHARACTERS per line, a fixed line height, and the ceiling declared by the
+ * clamping classes (`line-clamp-N`, `max-h-32`). It is the width that changes from one surface
+ * to another (a 15 rem anchored card against the comment thread), and that is exactly
+ * what a constant character count could not tell apart.
  *
- * Ce n'est pas un moteur de rendu : les mots ne se coupent qu'au caractère, et seules les deux
- * classes de repliage de l'application plafonnent une hauteur. Un test qui aurait besoin de
- * plus devrait passer par le navigateur.
+ * This is not a rendering engine: words only break at the character, and only the two
+ * clamping classes of the application cap a height. A test that needs more
+ * should go through the browser.
  */
 
-/** Hauteur d'une ligne, en pixels : une valeur ronde, pour que les comptes se lisent. */
+/** Height of a line, in pixels: a round value, so the counts are easy to read. */
 export const STUB_LINE_HEIGHT = 16;
 
-/** Hauteur visible du repliage par défaut (`max-h-32`), en pixels. */
+/** Visible height of the default clamp (`max-h-32`), in pixels. */
 const MAX_H_32 = 128;
 
-/** Plafond de hauteur déclaré par les classes de repliage, ou `null` si l'élément n'en a pas. */
+/** Height ceiling declared by the clamping classes, or `null` if the element has none. */
 function heightCap(el: Element, lineHeight: number): number | null {
   const classes = (el.getAttribute('class') ?? '').split(/\s+/);
   const clamp = classes.find((c) => /^line-clamp-\d+$/.test(c));
@@ -34,7 +34,7 @@ function heightCap(el: Element, lineHeight: number): number | null {
   return classes.includes('max-h-32') ? MAX_H_32 : null;
 }
 
-/** Lignes qu'occupe un texte à cette largeur, sauts de ligne compris. */
+/** Lines occupied by a text at this width, line breaks included. */
 function wrappedLines(text: string, charsPerLine: number): number {
   return text
     .split('\n')
@@ -42,8 +42,8 @@ function wrappedLines(text: string, charsPerLine: number): number {
 }
 
 /**
- * Installe la métrique et rend la fonction qui la retire. À appeler AVANT le rendu : la
- * mesure se fait dans un effet de mise en page, donc pendant le rendu.
+ * Installs the metric and returns the function that removes it. To be called BEFORE rendering: the
+ * measure is taken in a layout effect, so during rendering.
  */
 export function stubLayoutMetrics({
   charsPerLine,
@@ -61,8 +61,8 @@ export function stubLayoutMetrics({
       return wrappedLines(this.textContent ?? '', charsPerLine) * lineHeight;
     },
   });
-  // Sans plafond, l'élément montre tout son contenu : c'est le cas de tout l'arbre sauf le
-  // seul élément replié, et c'est ce qui fait que lui seul est mesuré comme débordant.
+  // Without a ceiling, the element shows all its content: this is the case of the whole tree except the
+  // single clamped element, and that is what makes only it measured as overflowing.
   Object.defineProperty(HTMLElement.prototype, 'clientHeight', {
     configurable: true,
     get(this: HTMLElement): number {

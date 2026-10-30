@@ -4,7 +4,7 @@
 import { useCallback, useRef, type MutableRefObject } from 'react';
 import type { ImageView, ImageViewApi } from '../../components/ImageReviewViewer';
 
-/** Égalité de vues normalisées (zoom + centre en fraction d'image) à epsilon près. */
+/** Equality of normalized views (zoom + center as a fraction of the image) within epsilon. */
 export const viewsEqual = (a: ImageView | null, b: ImageView | null): boolean =>
   !!a &&
   !!b &&
@@ -15,10 +15,10 @@ export const viewsEqual = (a: ImageView | null, b: ImageView | null): boolean =>
 type Apply = ((v: ImageView) => void) | null;
 
 /**
- * Relais de vue entre panes A/B (34.D), pur (la partie React est dans le hook) :
- * mémorise la dernière vue propagée pour couper la boucle A→B→A (l'application chez
- * l'autre pane ré-émet la même vue, ignorée à epsilon près). La **première** émission
- * du pane B (son fit au montage) ne remonte pas au maître : B adopte la vue courante.
+ * View relay between A/B panes (34.D), pure (the React part is in the hook): remembers the last view
+ * propagated to cut the A→B→A loop (applying it on the other pane re-emits the same view, ignored
+ * within epsilon). The **first** emission from pane B (its fit on mount) does not go back up to the
+ * master: B adopts the current view.
  */
 export function createViewSync() {
   let last: ImageView | null = null;
@@ -43,9 +43,9 @@ export function createViewSync() {
 }
 
 /**
- * Zoom/pan répliqué entre les panes A et B de la comparaison image (34.D) : chaque
- * viewer émet sa vue (`onViewChange`), le relais l'applique à l'autre. Bidirectionnel —
- * manipuler le pane B recadre aussi le maître.
+ * Zoom/pan replicated between panes A and B of the image comparison (34.D): each viewer emits its view
+ * (`onViewChange`), and the relay applies it to the other. Bidirectional — manipulating pane B also
+ * reframes the master.
  */
 export function useImageCompareSync(masterApiRef?: MutableRefObject<ImageViewApi | null>) {
   const slaveApiRef = useRef<ImageViewApi | null>(null);

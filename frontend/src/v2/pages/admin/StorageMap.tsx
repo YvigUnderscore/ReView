@@ -5,8 +5,8 @@ import { Panel } from './AdminPrimitives';
 import { useT, type MessageKey } from '../../i18n';
 
 /**
- * Cartographie statique des conventions de clés MinIO : où vit chaque type de fichier.
- * Source de vérité : StorageService (conventions de clés) et le worker FFmpeg (dérivés).
+ * Static map of the MinIO key conventions: where each file type lives.
+ * Source of truth: StorageService (key conventions) and the FFmpeg worker (derivatives).
  */
 const MAP: { typeKey: MessageKey; path: string; noteKey: MessageKey }[] = [
   {

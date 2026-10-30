@@ -4,26 +4,20 @@
 import { useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
-import { api } from '../../../../lib/apiClient';
-import { qk } from '../../../lib/query';
-import { Button } from '../../../components/ui/button';
-import { Input } from '../../../components/ui/input';
-import { Label } from '../../../components/ui/label';
-import { Select } from '../../../components/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from '../../../components/ui/dialog';
-import type { SharePermission } from '../../../types/api';
-import { useT } from '../../../i18n';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
+import { Button } from '@/v2/components/ui/button';
+import { Input } from '@/v2/components/ui/input';
+import { Label } from '@/v2/components/ui/label';
+import { Select } from '@/v2/components/ui/select';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '@/v2/components/ui/dialog';
+import type { SharePermission } from '@/v2/types/api';
+import { useT } from '@/v2/i18n';
 import ShareScopeFields from './ShareScopeFields';
 import { clientUrl } from './shareUrl';
 import { emptyScope, isScopeReady, scopePayload, type ScopedShareLink, type ScopeState } from './shareScope';
 
-/** Création d'un lien client durci : portée, permission, expiration, limite de vues, mot de passe. */
+/** Creates a hardened client link: scope, permission, expiry, view limit, password. */
 export default function CreateShareDialog({
   projectId,
   open,
@@ -107,8 +101,8 @@ export default function CreateShareDialog({
             >
               <option value="VIEW">{t('shares.permission.readOnly')}</option>
               <option value="COMMENT">{t('shares.permission.comment')}</option>
-              {/* Donner un avis engageant n'est pas laisser une note : on envoie un lien de
-                  relecture à trois personnes et le mandat de trancher à une seule. */}
+              {/* Giving a binding opinion is not leaving a note: a review link goes to three people,
+                  and the mandate to decide goes to a single one. */}
               <option value="DECIDE">{t('shares.permission.decide')}</option>
             </Select>
           </div>

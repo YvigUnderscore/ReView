@@ -3,7 +3,7 @@
 
 import type { Role, UserStatus } from './api';
 
-/** Fiche publique d'un membre du studio — GET /api/users/:id/profile. */
+/** Public profile of a studio member — GET /api/users/:id/profile. */
 export interface UserProfile {
   id: number;
   displayName: string;
@@ -14,7 +14,7 @@ export interface UserProfile {
   username: string | null;
   jobTitle: string | null;
   bio: string | null;
-  /** Coordonnées : absentes pour un lecteur CLIENT externe. */
+  /** Contact details: absent for an external CLIENT reader. */
   email?: string;
   phone?: string | null;
   role: Role;
@@ -22,7 +22,7 @@ export interface UserProfile {
   lastSeenAt: string | null;
   online: boolean;
   createdAt: string;
-  /** Projets partagés avec le lecteur. */
+  /** Projects shared with the reader. */
   sharedProjects: { id: number; name: string }[];
   isSelf: boolean;
 }

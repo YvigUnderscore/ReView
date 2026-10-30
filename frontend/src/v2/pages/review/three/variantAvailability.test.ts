@@ -7,24 +7,24 @@ import { variantOptionAvailable } from './variantAvailability';
 describe('variantOptionAvailable (46.P)', () => {
   const baked = [{ prim: '/K/Book_1', set: 'shadingVariant', option: 'BookBlue' }];
 
-  it('l’option composée à la conversion est toujours montrable', () => {
+  it('the option composed at conversion is always displayable', () => {
     expect(variantOptionAvailable(baked, '/K/Book_1', 'shadingVariant', 'BookTan', 'BookTan')).toBe(true);
     expect(variantOptionAvailable([], '/K/Book_1', 'shadingVariant', 'BookTan', 'BookTan')).toBe(true);
   });
 
-  it('une option cuite est disponible, une option non cuite ne l’est pas', () => {
+  it('a baked option is available, a non-baked one is not', () => {
     expect(variantOptionAvailable(baked, '/K/Book_1', 'shadingVariant', 'BookBlue', 'BookTan')).toBe(true);
-    // C'était le symptôme : l'option apparaissait au menu mais sa géométrie n'était pas
-    // dans le GLB — la choisir ne changeait rien à l'écran.
+    // That was the symptom: the option appeared in the menu but its geometry was not
+    // in the GLB — choosing it changed nothing on screen.
     expect(variantOptionAvailable(baked, '/K/Book_1', 'shadingVariant', 'BookGreen', 'BookTan')).toBe(false);
   });
 
-  it('distingue les prims et les jeux homonymes', () => {
+  it('distinguishes prims and homonymous sets', () => {
     expect(variantOptionAvailable(baked, '/K/Book_2', 'shadingVariant', 'BookBlue', 'BookTan')).toBe(false);
     expect(variantOptionAvailable(baked, '/K/Book_1', 'modelingVariant', 'BookBlue', 'BookTan')).toBe(false);
   });
 
-  it('sans information de cuisson (vieux média), ne bloque rien', () => {
+  it('without baking information (old media), blocks nothing', () => {
     expect(variantOptionAvailable(null, '/K/Book_1', 'shadingVariant', 'BookGreen', 'BookTan')).toBe(true);
     expect(variantOptionAvailable(undefined, '/K/Book_1', 'shadingVariant', 'BookGreen', 'BookTan')).toBe(
       true,

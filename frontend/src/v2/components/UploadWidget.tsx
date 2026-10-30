@@ -3,31 +3,31 @@
 
 import { useState } from 'react';
 import { CheckCircle2, Layers, Loader2, UploadCloud, X } from 'lucide-react';
-import { useUploadStore, type UploadItem, type UploadStatus } from '../../stores/useUploadStore';
+import { useUploadStore, type UploadItem, type UploadStatus } from '../stores/useUploadStore';
 import {
   useSequenceUploadStore,
   type SequenceUploadItem,
   type SequenceUploadStatus,
-} from '../../stores/useSequenceUploadStore';
+} from '../stores/useSequenceUploadStore';
 import SequenceGroupDialog from './SequenceGroupDialog';
 import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
 import { useMediaQuery } from '../lib/useMediaQuery';
 import { useT, type Tr } from '../i18n';
 
 /**
- * Largeur en dessous de laquelle la pastille se réduit à son compte.
+ * Width below which the badge shrinks to its count.
  *
- * Le texte d'état se repliait sous le seuil « fenêtre étroite » de la coquille (1100 px),
- * et c'était un contresens : c'est précisément là que la rangée gagne le plus de place —
- * la recherche y tombe à une icône, soit 20 rem rendues au fil d'Ariane. Un portable, ou
- * un navigateur posé à côté d'un logiciel 3D, perdait donc la seule chose qu'on demandait
- * à l'encart de montrer. Le repli n'a de sens qu'à la largeur d'un téléphone, où le fil
- * d'Ariane n'a lui-même plus de quoi s'écrire ; au-dessus, c'est le texte BORNÉ (max-w +
- * troncature) qui garantit la règle du lot 13 — la pastille pousse, elle ne chasse pas.
+ * The status text used to fold below the shell's "narrow window" threshold (1100 px),
+ * which was a misreading: that is precisely where the row gains the most room, since
+ * search falls to an icon, that is 20 rem returned to the breadcrumb. A laptop, or
+ * a browser placed next to 3D software, therefore lost the one thing the panel was asked
+ * to show. The fallback only makes sense at phone width, where the breadcrumb itself no longer has room
+ * to be written; above that, it is the BOUNDED text (max-w plus
+ * truncation) that guarantees the batch 13 rule: the badge pushes, it does not crowd out.
  */
 const TIGHT_ROW_QUERY = '(max-width: 560px)';
 
-/** Libellé d'état lisible — le traitement serveur dépend du type de média. */
+/** Readable status label: server-side processing depends on the media type. */
 function statusLabel(u: UploadItem, t: Tr): string {
   switch (u.status) {
     case 'pending':
@@ -49,7 +49,7 @@ function statusLabel(u: UploadItem, t: Tr): string {
   }
 }
 
-/** Même libellé pour une séquence — le compte de frames y remplace le pourcentage d'octets. */
+/** Same label for a sequence: the frame count replaces the byte percentage there. */
 function sequenceStatusLabel(s: SequenceUploadItem, t: Tr): string {
   switch (s.status) {
     case 'processing':
@@ -63,11 +63,11 @@ function sequenceStatusLabel(s: SequenceUploadItem, t: Tr): string {
   }
 }
 
-/** Un transfert encore vivant s'annule ; une ligne terminée se retire simplement. */
+/** A transfer still alive is cancelled; a finished line is simply removed. */
 const isCancellable = (s: UploadStatus): boolean =>
   s === 'pending' || s === 'uploading' || s === 'finalizing';
 
-/** Une ligne de transfert : nom, état, barre, et la sortie qui manquait (annuler/retirer). */
+/** A transfer line: name, status, bar, and the missing exit (cancel/remove). */
 export function UploadRow({ item: u, onDismiss }: { item: UploadItem; onDismiss: (id: string) => void }) {
   const t = useT();
   return (
@@ -92,7 +92,7 @@ export function UploadRow({ item: u, onDismiss }: { item: UploadItem; onDismiss:
       </div>
       <div className="mt-1 h-1.5 w-full overflow-hidden rounded bg-muted">
         {u.status === 'processing' ? (
-          // Traitement serveur : durée inconnue → barre indéterminée animée.
+          // Server processing: unknown duration, so an animated indeterminate bar.
           <div className="h-full w-1/3 animate-pulse rounded bg-primary/70" />
         ) : (
           <div
@@ -107,11 +107,11 @@ export function UploadRow({ item: u, onDismiss }: { item: UploadItem; onDismiss:
 }
 
 /**
- * Une séquence d'images en cours d'envoi.
+ * An image sequence being sent.
  *
- * Le compte de fichiers est ce que l'artiste suit — « 342 / 1200 frames » situe mieux
- * qu'un pourcentage d'octets, les frames n'ayant pas toutes la même taille. La barre,
- * elle, reste en octets : c'est elle qui avance régulièrement.
+ * The file count is what the artist follows: "342 / 1200 frames" places it better
+ * than a byte percentage, since the frames are not all the same size. The bar,
+ * for its part, stays in bytes: it is what advances steadily.
  */
 export function SequenceRow({
   item: s,
@@ -159,15 +159,15 @@ export function SequenceRow({
   );
 }
 
-/** Une ligne encore en vol : c'est la moyenne de celles-là que la pastille résume. */
+/** A line still in flight: it is the average of those that the badge summarizes. */
 const isInFlight = (s: UploadStatus | SequenceUploadStatus): boolean => s !== 'done' && s !== 'error';
 
-/** Les deux files partagent ce que la pastille lit : un état et un avancement. */
+/** Both queues share what the badge reads: a status and a progress. */
 type UploadRowItem = UploadItem | SequenceUploadItem;
 
 /**
- * Rang de pipeline : l'ordre dans lequel une ligne s'approche de `done`. Les statuts de
- * séquence sont un sous-ensemble de ceux d'un fichier isolé (pas de `finalizing`).
+ * Pipeline rank: the order in which a line approaches `done`. The statuses of
+ * a sequence are a subset of those of an isolated file (no `finalizing`).
  */
 const PHASE_RANK: Record<UploadStatus, number> = {
   pending: 0,
@@ -179,12 +179,12 @@ const PHASE_RANK: Record<UploadStatus, number> = {
 };
 
 /**
- * Ce que la pastille annonce quand plusieurs lignes sont en vol : **la plus avancée**.
+ * What the badge announces when several lines are in flight: **the most advanced one**.
  *
- * Le choix n'est pas neutre. La file est bornée à trois transferts simultanés : sur un dépôt
- * de trente plans, l'état *majoritaire* reste « En attente » du début à la fin, et l'encart
- * se figerait sur la seule chose qui ne bouge pas. La ligne la plus avancée est au contraire
- * celle dont l'état changera le prochain — à égalité de phase, celle qui mène au pourcentage.
+ * The choice is not neutral. The queue is bounded to three simultaneous transfers: on a drop
+ * of thirty shots, the *majority* state would remain "Waiting" from start to finish, and the panel
+ * would freeze on the one thing that never moves. The most advanced line, on the other hand,
+ * is the one whose state will change next: at equal phase, the one leading to the percentage.
  */
 function currentLabel(rows: UploadRowItem[], t: Tr): string | null {
   const lead = rows.reduce<UploadRowItem | null>((best, r) => {
@@ -197,29 +197,29 @@ function currentLabel(rows: UploadRowItem[], t: Tr): string | null {
 }
 
 /**
- * Suivi des envois — **ancré dans la barre du haut, à gauche de la recherche**, comme la
- * cloche de notifications (lot 9).
+ * Send tracker: **anchored in the top bar, to the left of the search**, like the
+ * notifications bell (batch 9).
  *
- * L'encart vivait en `fixed bottom-4 right-4`, et c'était son défaut : plusieurs centaines
- * de pixels de haut pendant l'envoi d'une séquence, posés par-dessus le coin bas droit de
- * l'écran — donc par-dessus la pagination d'une liste, le HUD d'un viewer, la conversation
- * ancrée à la sidebar, et les toasts qui atterrissaient au même endroit.
+ * The panel used to live in `fixed bottom-4 right-4`, and that was its flaw: several hundred
+ * pixels high during the send of a sequence, laid over the bottom right corner of
+ * the screen, so over a list's pagination, a viewer's HUD, the conversation
+ * anchored to the sidebar, and the toasts that landed in the same place.
  *
- * Deux règles, celles de la cloche :
+ * Two rules, those of the bell:
  *
- * 1. **Rien ne recouvre rien.** Ce qui reste visible pendant tout l'envoi — l'icône, le
- *    compte, l'avancement d'ensemble — vit DANS le flux de la rangée : il pousse, il ne se
- *    superpose pas. Le fil d'Ariane, à sa gauche, absorbe la place prise (`flex-1`).
- * 2. **Le détail se déplie.** La liste fichier par fichier est un panneau qui ne s'ouvre
- *    que sur un clic ; un envoi qui démarre ne l'ouvre jamais de lui-même.
+ * 1. **Nothing covers anything.** What stays visible throughout the send (the icon, the
+ *    count, the overall progress) lives INSIDE the flow of the row: it pushes, it does not
+ *    overlap. The breadcrumb, on its left, absorbs the space taken (`flex-1`).
+ * 2. **The detail unfolds.** The file-by-file list is a panel that opens only
+ *    on a click; a send that starts never opens it by itself.
  *
- * Ce qui reste visible sans déplier (lot 14) : **terminés sur total**, et **l'état en cours**
- * de la ligne la plus avancée — un compte seul ne disait pas si ça progressait, et une roue
- * qui tourne ne disait pas ce qu'elle attendait.
+ * What stays visible without unfolding (batch 14): **finished out of total**, and **the current state**
+ * of the most advanced line. A count alone did not say whether things were progressing, and a spinning
+ * wheel did not say what it was waiting for.
  *
- * Lit les deux files Zustand globales — un fichier isolé et une séquence d'images n'ont ni
- * la même granularité ni le même coût, mais l'artiste les suit au même endroit. L'item
- * passe automatiquement en « Transcodage… » après l'envoi d'une vidéo, jusqu'à READY.
+ * Reads the two global Zustand queues: an isolated file and an image sequence have neither
+ * the same granularity nor the same cost, but the artist follows them in the same place. The item
+ * automatically switches to "Transcoding…" after the upload of a video, until READY.
  */
 export default function UploadWidget() {
   const t = useT();
@@ -232,23 +232,23 @@ export default function UploadWidget() {
   const clearSequences = useSequenceUploadStore((s) => s.clearCompleted);
   const removeSequence = useSequenceUploadStore((s) => s.removeUpload);
   const total = uploads.length + sequences.length;
-  // La file s'est vidée : le panneau n'a plus rien à déplier. Ajusté pendant le rendu (même
-  // motif que la coquille) — un effet laisserait un rendu de plus avec un panneau vide.
+  // The queue has emptied: the panel has nothing left to unfold. Adjusted during render (same
+  // pattern as the shell), since an effect would leave one more render with an empty panel.
   if (total === 0 && open) setOpen(false);
   if (total === 0) return <SequenceGroupDialog />;
 
   const rows: UploadRowItem[] = [...sequences, ...uploads];
   const inFlight = rows.filter((r) => isInFlight(r.status));
-  // `x` compte ce qui est RÉELLEMENT arrivé : une ligne en échec n'est pas terminée, elle
-  // reste dans le dénominateur jusqu'à ce qu'on la retire — c'est ce qui la rend visible.
+  // `x` counts what has REALLY arrived: a failed line is not finished, it
+  // stays in the denominator until it is removed, which is what makes it visible.
   const done = rows.filter((r) => r.status === 'done').length;
-  // Moyenne des lignes en vol : la pastille doit avancer sans qu'on la déplie.
+  // Average of the lines in flight: the badge must advance without unfolding it.
   const pct = inFlight.length
     ? Math.round(inFlight.reduce((sum, r) => sum + r.progress, 0) / inFlight.length)
     : 100;
   const current = currentLabel(inFlight, t);
   const label = t('uploads.title', { count: total });
-  // Au repos l'encart n'est qu'une icône de barre ; actif, il se nomme par son état.
+  // At rest the panel is only a bar icon; when active, it is named by its state.
   const triggerLabel = current
     ? t('uploads.summaryBusyAria', { done, total, status: current })
     : t('uploads.summaryAria', { done, total });
@@ -262,8 +262,8 @@ export default function UploadWidget() {
             type="button"
             title={triggerLabel}
             aria-label={triggerLabel}
-            // Actif, l'encart cesse d'être une icône de barre : il prend la surface encadrée
-            // de l'aperçu de la cloche, et son texte quitte le gris d'attente.
+            // Active, the panel stops being a bar icon: it takes the framed surface
+            // of the bell's preview, and its text leaves the waiting grey.
             className={`flex shrink-0 items-center gap-1.5 rounded-md transition-colors hover:bg-secondary/60 hover:text-foreground ${
               current
                 ? 'border border-border bg-secondary/40 px-2 py-1.5 text-foreground'

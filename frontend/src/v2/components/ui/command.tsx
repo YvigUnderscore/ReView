@@ -8,8 +8,8 @@ import { cn } from '../../lib/utils';
 import { Dialog, DialogContent, DialogTitle } from './dialog';
 
 /**
- * Primitive palette de commandes (cmdk, style shadcn) : liste filtrable
- * navigable au clavier (↑/↓/Entrée), rendue dans un Dialog accessible.
+ * Command palette primitive (cmdk, shadcn style): a filterable list navigable by keyboard
+ * (↑/↓/Enter), rendered in an accessible Dialog.
  */
 
 const Command = forwardRef<
@@ -94,11 +94,10 @@ const CommandGroup = forwardRef<
     ref={ref}
     className={cn(
       /*
-       * Même étiquette de section que `.section-label` (cf. index.css), écrite en
-       * utilitaires : l'en-tête est rendu par cmdk, on ne l'atteint que par un sélecteur
-       * arbitraire, et un variant Tailwind ne sait pas porter une classe composant. Seule
-       * exception à la convention — si l'étiquette de section change, ce couple
-       * `uppercase`/`tracking-wide` est à reporter ici.
+       * Same section label as `.section-label` (see index.css), written as utilities: the
+       * header is rendered by cmdk, and we only reach it through an arbitrary selector, and a
+       * Tailwind variant cannot carry a component class. The only exception to the convention:
+       * if the section label changes, this `uppercase`/`tracking-wide` pair must be updated here too.
        */
       'overflow-hidden [&_[cmdk-group-heading]]:px-2 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-semibold [&_[cmdk-group-heading]]:uppercase [&_[cmdk-group-heading]]:tracking-wide [&_[cmdk-group-heading]]:text-muted-foreground',
       className,

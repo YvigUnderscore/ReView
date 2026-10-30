@@ -2,31 +2,31 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Sprite de miniatures de la timeline vidéo (une vignette ~toutes les 3 s, très légère) :
- * le worker FFmpeg tuile les captures dans UNE image JPEG (`derived/{id}/timeline-sprite.jpg`),
- * décrite par `metadata.timelineSprite` et affichée en fond de timeline côté review.
+ * Thumbnail sprite of the video timeline (one thumbnail about every 3 s, very light):
+ * the FFmpeg worker tiles the captures into ONE JPEG image (`derived/{id}/timeline-sprite.jpg`),
+ * described by `metadata.timelineSprite` and displayed as the timeline background on review.
  */
 
 export interface TimelineSpritePlan {
-  /** Intervalle réel entre deux vignettes (s) — étiré si la vidéo est très longue. */
+  /** Actual interval between two thumbnails (s), stretched if the video is very long. */
   intervalSec: number;
-  /** Nombre de vignettes attendues. */
+  /** Expected number of thumbnails. */
   count: number;
   cols: number;
   rows: number;
-  /** Dimensions d'une vignette (px, pairs — contrainte encodeur). */
+  /** Dimensions of a thumbnail (px, even: encoder constraint). */
   tileW: number;
   tileH: number;
 }
 
 const BASE_INTERVAL_SEC = 3;
-const MAX_TILES = 240; // ~12 min à 3 s ; au-delà l'intervalle s'étire (sprite bornée)
+const MAX_TILES = 240; // ~12 min at 3 s; beyond that the interval stretches (sprite capped)
 const TILE_WIDTH = 160;
 const MAX_COLS = 10;
 
 const even = (n: number) => Math.max(2, Math.round(n / 2) * 2);
 
-/** Plan du sprite pour une vidéo donnée — null si la durée est inconnue/nulle. */
+/** Sprite plan for a given video: null if the duration is unknown or zero. */
 export function planTimelineSprite(
   durationSec: number | undefined,
   srcWidth: number | undefined,

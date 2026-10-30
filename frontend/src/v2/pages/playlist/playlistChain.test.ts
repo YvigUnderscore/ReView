@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { PlaylistItemEntry } from '../../types/api';
 import { itemIndexOfMedia, loadAutoAdvance, nextPlayableAfterMedia, saveAutoAdvance } from './playlistChain';
 
-/** Item de playlist : une version, avec ou sans média visible. */
+/** Playlist item: a version, with or without a visible media. */
 const item = (id: number, mediaId: number | null): PlaylistItemEntry => ({
   id,
   order: id,
@@ -17,42 +17,42 @@ const item = (id: number, mediaId: number | null): PlaylistItemEntry => ({
 const items = [item(1, 101), item(2, null), item(3, 103), item(4, 104)];
 
 describe('itemIndexOfMedia', () => {
-  it('retrouve la place du média affiché', () => {
+  it('finds the place of the displayed media', () => {
     expect(itemIndexOfMedia(items, 103)).toBe(2);
   });
 
-  it('média étranger à la playlist : pas de place', () => {
+  it('media outside the playlist: no place', () => {
     expect(itemIndexOfMedia(items, 999)).toBe(-1);
   });
 });
 
 describe('nextPlayableAfterMedia', () => {
-  it('saute les versions sans média visible', () => {
+  it('skips versions without a visible media', () => {
     expect(nextPlayableAfterMedia(items, 101)?.media?.id).toBe(103);
   });
 
-  it('enchaîne sur le voisin immédiat', () => {
+  it('chains onto the immediate neighbour', () => {
     expect(nextPlayableAfterMedia(items, 103)?.media?.id).toBe(104);
   });
 
-  it('dernier plan : la lecture s’arrête là', () => {
+  it('last shot: playback stops there', () => {
     expect(nextPlayableAfterMedia(items, 104)).toBeNull();
   });
 
-  it('média hors playlist : rien à enchaîner', () => {
+  it('media outside the playlist: nothing to chain', () => {
     expect(nextPlayableAfterMedia(items, 999)).toBeNull();
     expect(nextPlayableAfterMedia([], 101)).toBeNull();
   });
 });
 
-describe('bascule d’enchaînement', () => {
+describe('chaining toggle', () => {
   beforeEach(() => localStorage.clear());
 
-  it('armée par défaut', () => {
+  it('armed by default', () => {
     expect(loadAutoAdvance()).toBe(true);
   });
 
-  it('le choix survit au rechargement', () => {
+  it('the choice survives a reload', () => {
     saveAutoAdvance(false);
     expect(loadAutoAdvance()).toBe(false);
     saveAutoAdvance(true);

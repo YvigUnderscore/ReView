@@ -7,7 +7,7 @@ import { ChevronRight } from 'lucide-react';
 import { cn } from '../../lib/utils';
 import { useT } from '../../i18n';
 
-/** Fil d'Ariane : conteneur + éléments. Le dernier segment (page courante) utilise BreadcrumbPage. */
+/** Breadcrumb: container and items. The last segment (current page) uses BreadcrumbPage. */
 function Breadcrumb({ className, ...props }: HTMLAttributes<HTMLElement>) {
   const t = useT();
   return <nav aria-label={t('nav.breadcrumb')} className={cn('min-w-0', className)} {...props} />;
@@ -37,7 +37,7 @@ function BreadcrumbLink({ to, children }: { to: string; children: ReactNode }) {
   );
 }
 
-/** Segment courant (non cliquable). */
+/** Current segment (not clickable). */
 function BreadcrumbPage({ children }: { children: ReactNode }) {
   return (
     <span aria-current="page" className="max-w-56 truncate px-1 py-0.5 font-medium text-foreground">

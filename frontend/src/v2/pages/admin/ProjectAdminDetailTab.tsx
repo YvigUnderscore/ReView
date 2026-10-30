@@ -4,7 +4,7 @@
 import { Link, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ArrowLeft, ExternalLink } from 'lucide-react';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import Avatar from '../../components/Avatar';
 import { Badge } from '../../components/ui/badge';
@@ -18,7 +18,7 @@ import type { AdminProjectDetail } from '../../types/api';
 import { useT } from '../../i18n';
 import { Hint } from '../../components/ui/hint';
 
-/** Fiche d'administration d'un projet : membres, réglages résolus, hiérarchie, stats. */
+/** Admin sheet of a project: members, resolved settings, hierarchy, stats. */
 export default function ProjectAdminDetailTab() {
   const t = useT();
   const { id } = useParams();

@@ -5,25 +5,24 @@ import { stripHtml } from '../../lib/richText';
 import type { ReviewComment, TimelineClip } from '../../types/api';
 
 /**
- * Retours posés sur un montage — analyse PURE, testée (Phase 46).
+ * Notes left on a montage — PURE analysis, tested (Phase 46).
  *
- * Un retour de montage porte deux positions : sa frame DANS le plan (`timestamp`, ce qui
- * permettra de le renvoyer exactement là sur la review du plan) et sa position dans le
- * film entier (`timelineTime`, la seule échelle qu'une timeline unique puisse afficher).
- * Ce fichier tient la correspondance entre les deux.
+ * A montage note carries two positions: its frame WITHIN the shot (`timestamp`, which allows
+ * sending it back exactly there on the shot's review) and its position in the whole film
+ * (`timelineTime`, the only scale a single timeline can display). This file holds the mapping
+ * between the two.
  */
 
 /**
- * Un retour de montage EST un commentaire de review : le fil, le clic droit et les
- * réponses sont les mêmes composants qu'ailleurs. Seules s'ajoutent sa position dans le
- * film et la trace de son renvoi.
+ * A montage note IS a review comment: the thread, the right click and the replies are the same
+ * components as elsewhere. Only its position in the film and the trace of its sending are added.
  */
 export interface MontageComment extends ReviewComment {
   timelineTime: number | null;
   sharedToShot: boolean;
 }
 
-/** Le plan sur lequel tombe un retour, en clair : « SQ020 · SH010 ». */
+/** The shot a note falls on, in plain text: "SQ020 · SH010". */
 export function shotLabelOf(
   clips: readonly TimelineClip[],
   mediaObjectId: number | null | undefined,
@@ -33,7 +32,7 @@ export function shotLabelOf(
   return clip.sequenceCode ? `${clip.sequenceCode} · ${clip.shotCode}` : clip.shotCode;
 }
 
-/** Repère d'un retour sur la bande du montage. */
+/** Marker of a note on the montage band. */
 export interface CommentMarker {
   id: number;
   time: number;
@@ -42,10 +41,10 @@ export interface CommentMarker {
 }
 
 /**
- * Marqueurs à poser sur la timeline.
+ * Markers to place on the timeline.
  *
- * Un retour dont la position dans le film est inconnue est replacé au début du plan qu'il
- * vise, plutôt qu'écarté : un retour invisible est un retour perdu.
+ * A note whose position in the film is unknown is put back at the start of the shot it targets,
+ * rather than discarded: an invisible note is a lost note.
  */
 export function commentMarkers(
   comments: readonly MontageComment[],

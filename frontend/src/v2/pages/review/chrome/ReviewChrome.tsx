@@ -2,10 +2,10 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import type { ReactNode } from 'react';
-import type { MediaKind, Role } from '../../../types/api';
-import { Badge } from '../../../components/ui/badge';
-import { ErrorBoundary } from '../../../components/ui/error-boundary';
-import { SegmentedControl } from '../../../components/ui/segmented-control';
+import type { MediaKind, Role } from '@/v2/types/api';
+import { Badge } from '@/v2/components/ui/badge';
+import { ErrorBoundary } from '@/v2/components/ui/error-boundary';
+import { SegmentedControl } from '@/v2/components/ui/segmented-control';
 import ToolRail from './ToolRail';
 import InspectorDock from './InspectorDock';
 import { useReviewHeaderSlots } from '../header/reviewHeaderSlots';
@@ -21,15 +21,15 @@ import {
 } from './tools';
 import type { ChromeState } from './chromeState';
 import './chrome.css';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
- * Conteneur du chrome de review : les cinq emplacements fixes, identiques pour les quatre
- * types de média. Bascule de mode en haut, rail d'outils à gauche, barre d'options sous
- * l'en-tête, dock inspecteur à droite, temps ou zoom en bas.
+ * Review chrome container: the five fixed slots, identical for the four media types. Mode toggle
+ * at the top, tool rail on the left, options bar under the header, inspector dock on the right,
+ * time or zoom at the bottom.
  *
- * Le média ne garde que les surcouches ancrées à la vue (tracés, épingles, barre de wipe,
- * repères, PiP, triade d'axes, compteur) : plus aucun réglage ne recouvre l'image jugée.
+ * The media keeps only the overlays anchored to the view (strokes, pins, wipe bar, guides, PiP,
+ * axis triad, counter): no setting covers the image being judged any more.
  */
 export default function ReviewChrome({
   kind,
@@ -55,77 +55,75 @@ export default function ReviewChrome({
   onState: (patch: Partial<ChromeState>) => void;
   role: Role;
   /**
-   * Modes proposés par la bascule. Par défaut ceux du type de média ; le montage n'en a
-   * qu'un (regarder), la comparaison A/B n'ayant pas de sens sur un film
-   * assemblé. En dessous de deux, la bascule disparaît plutôt que de montrer un segment
-   * unique qui ne bascule vers rien.
+   * Modes offered by the toggle. By default those of the media type; the edit mount has only one
+   * (watch), since A/B comparison makes no sense on an assembled film. Below two, the toggle
+   * disappears rather than showing a single segment that switches to nothing.
    */
   modes?: ReviewMode[];
   /**
-   * Outils du rail. Par défaut ceux du mode et du type de média ; le montage fournit les
-   * siens, dont un outil de navigation qui ne promet ni panoramique ni zoom — il n'en a pas.
+   * Rail tools. By default those of the mode and the media type; the mount supplies its own,
+   * including a navigation tool that promises neither pan nor zoom — it has none.
    */
   tools?: ReviewTool[];
   /**
-   * Groupe d'outils supplémentaire, sous celui du mode courant : le rail d'un mode **valide mais
-   * absent de la bascule**. C'est par là que l'édition du nuage revient au rail (Phase 50, lot
-   * 13) — le segment « Nettoyer » a quitté l'en-tête, ses outils ne devaient pas quitter la
-   * gauche de l'écran pour autant.
+   * Extra tool group, under the current mode's: the rail of a mode **valid but absent from the
+   * toggle**. This is how cloud editing returns to the rail (Phase 50, batch 13) — the "Clean up"
+   * segment left the header, but its tools should not leave the left side of the screen either.
    *
-   * Tant que ce mode est le mode courant, le premier groupe montre celui du mode par défaut :
-   * le rail garde la même forme d'un bout à l'autre, et cliquer un de ses outils est la sortie
-   * du mode — sans quoi l'on s'y enfermerait, la bascule n'ayant plus de segment à rendre.
+   * While this mode is the current one, the first group shows the default mode's: the rail keeps
+   * the same shape from one end to the other, and clicking one of its tools is the way out of the
+   * mode — otherwise one would be locked in, the toggle having no segment left to render.
    */
   railExtra?: RailSection;
   /**
-   * Média, version, navigation — à gauche de l'en-tête. La review les fournit par contexte
-   * (`ReviewHeaderSlots`) ; cette prop sert au lecteur de montage, qui n'a pas ce contexte.
+   * Media, version, navigation — on the left of the header. The review provides them through
+   * context (`ReviewHeaderSlots`); this prop serves the edit mount's player, which lacks that context.
    */
   headerLeft?: ReactNode;
   /**
-   * A/B du viewer — à droite de l'en-tête, devant les actions de la page. C'est là que la 3D
-   * et le splat posent leur sélecteur de versions, alimenté par leur propre hook.
+   * Viewer A/B — on the right of the header, in front of the page actions. This is where 3D and
+   * splat place their version selector, fed by their own hook.
    */
   headerRight?: ReactNode;
-  /** `<OptionsBar>` de l'outil actif. */
+  /** `<OptionsBar>` of the active tool. */
   options: ReactNode;
-  /** Contenu du panneau ouvert. */
+  /** Content of the open panel. */
   panel: ReactNode;
   transport?: ReactNode;
-  /** Tiroir ancré sous le transport (courbes ou pellicule). */
+  /** Drawer anchored under the transport (curves or filmstrip). */
   drawer?: ReactNode;
-  /** Dernière colonne. La review la fournit par contexte ; cette prop la force. */
+  /** Last column. The review provides it through context; this prop forces it. */
   comments?: ReactNode;
   /**
-   * Cadrer / vue d'origine. Absent quand le viewer ne les implémente pas : le rail n'affiche
-   * alors pas ces deux boutons plutôt que d'en proposer d'inertes.
+   * Fit / original view. Absent when the viewer does not implement them: the rail then does not
+   * show these two buttons rather than offering inert ones.
    */
   onViewAction?: (action: ViewAction['id']) => void;
-  /** Éditions en attente — vient des hooks d'édition, pas de l'état du chrome. */
+  /** Pending edits — comes from the editing hooks, not from the chrome state. */
   dirty?: boolean;
-  /** Le viewport, plein espace. */
+  /** The viewport, full space. */
   children: ReactNode;
 }) {
   const t = useT();
-  // En-tête unique : la page de review pose identité, actions et commentaires ici plutôt que
-  // dans une barre à elle. Hors review (lecteur de montage), le contexte est absent et seules
-  // les props comptent.
+  // Single header: the review page places identity, actions and comments here rather than
+  // in a bar of its own. Outside review (edit mount player), the context is absent and only
+  // the props count.
   const slots = useReviewHeaderSlots();
   const left = headerLeft ?? slots?.identity;
-  // Les deux cohabitent sans se chasser : l'A/B du viewer d'abord, les actions de la page
-  // ensuite — c'est le seul endroit où les deux moitiés de l'ancien en-tête se rejoignent.
+  // Both coexist without displacing each other: the viewer A/B first, then the page actions
+  // after — this is the only place where the two halves of the old header meet.
   const hasRight = Boolean(headerRight) || Boolean(slots?.actions);
   const commentsColumn = comments ?? slots?.comments;
-  // La bascule ne liste pas « Annoter » : l'annotation s'arme depuis l'espace commentaire.
-  // Le mode reste valide — pendant l'annotation, aucun segment n'est actif et c'est le bouton
-  // du composer qui joue l'indicateur ; le pied de page garde le bon rappel.
+  // The toggle does not list "Annotate": annotation is armed from the comment space.
+  // The mode stays valid — during annotation no segment is active and the composer's button
+  // acts as the indicator; the footer keeps the right reminder.
   const modes = modesProp ?? switcherModesFor(kind);
-  // Plus de liste d'outils « masqués » (Phase 50) : elle ne filtrait que le rail, et la lettre
-  // armait quand même l'outil retiré. Un outil qu'un viewer n'implémente pas n'existe plus du
-  // tout — soit il porte son type de média (`kind`), soit il a été supprimé de `tools.ts`.
+  // No more "hidden" tool list (Phase 50): it only filtered the rail, and the key letter still
+  // armed the removed tool. A tool a viewer does not implement no longer exists at all —
+  // either it carries its media type (`kind`), or it was removed from `tools.ts`.
   //
-  // Mode du PREMIER groupe : celui du chrome, sauf quand c'est le mode du groupe supplémentaire
-  // — on montre alors celui du mode par défaut, qui est la sortie.
+  // Mode of the FIRST group: the chrome's, except when it is the extra group's mode
+  // — then the default mode's is shown, which is the way out.
   const mainMode = railExtra?.mode === state.mode ? DEFAULT_MODE : state.mode;
   const tools = toolsProp ?? toolsFor(mainMode, kind);
   const sections: RailSection[] = [
@@ -133,19 +131,19 @@ export default function ReviewChrome({
     ...(railExtra && railExtra.tools.length > 0 ? [railExtra] : []),
   ];
   const panels = panelsFor(kind);
-  // Le client ne voit pas la bascule : il reste dans le mode d'exploration, en lecture seule.
+  // The client does not see the toggle: it stays in explore mode, read-only.
   const switchable = canSwitchMode(role, modes.length);
 
   return (
     <div
-      // La largeur minimale de 1440 px rendait la review inutilisable sur un portable :
-      // sous ce seuil, toute la page partait en défilement horizontal (D1). Le rail et le
-      // dock se replient désormais d'eux-mêmes, la barre d'en-tête passe à la ligne.
+      // The 1440 px minimum width made the review unusable on a laptop:
+      // below this threshold, the whole page scrolled horizontally (D1). The rail and the
+      // dock now fold by themselves, and the header bar wraps onto a new line.
       className="flex h-full min-h-0 flex-col overflow-hidden bg-background text-foreground"
     >
-      {/* En-tête unique : identité à gauche, bascule de mode au centre, A/B du viewer puis
-          actions de la page à droite. Il passe à la ligne plutôt que de déborder — la barre
-          fusionnée est bien plus chargée que la seule bascule qu'elle portait. */}
+      {/* Single header: identity on the left, mode toggle in the center, viewer A/B then
+          page actions on the right. It wraps onto a new line rather than overflowing — the merged
+          bar is much busier than the lone toggle it used to carry. */}
       <header className="flex flex-shrink-0 flex-wrap items-center gap-x-3 gap-y-2 border-b border-border bg-card px-3 py-2">
         {left && <div className="flex min-w-0 flex-shrink items-center gap-2">{left}</div>}
         {switchable && (
@@ -153,8 +151,8 @@ export default function ReviewChrome({
             <SegmentedControl
               size="lg"
               label={t('review.mode')}
-              // Plus aucun mode n'est fermé par la publication : le dernier — la découpe
-              // vidéo — a été retiré en Phase 50. Un mode grisé n'existe donc plus.
+              // No mode is closed by publication any more: the last one — the video cut — was
+              // removed in Phase 50. A greyed-out mode therefore no longer exists.
               items={modes.map((m, index) => ({
                 value: m.value,
                 label: t(m.labelKey),
@@ -188,10 +186,10 @@ export default function ReviewChrome({
 
         <div className="flex min-w-0 flex-1 flex-col">
           {options}
-          {/* Le viewport monte Three.js, Spark ou hls.js. Depuis que les commentaires sont
-              une colonne du chrome, un plantage WebGL les emporterait : la frontière descend
-              donc au ras du viewer, et l'en-tête, le dock et le fil de commentaires
-              survivent à la vue qui tombe. */}
+          {/* The viewport mounts Three.js, Spark or hls.js. Since comments are a column of the
+              chrome, a WebGL crash would take them down too: the boundary moves down right at
+              the viewer, so the header, the dock and the comment thread survive the view
+              falling over. */}
           <ErrorBoundary scope="viewer">{children}</ErrorBoundary>
           {transport}
           {drawer}
@@ -208,11 +206,11 @@ export default function ReviewChrome({
         {commentsColumn}
       </div>
 
-      {/* Le pied de page ne dit plus que ce qui a une CONSÉQUENCE : reste-t-il quelque chose
-          à enregistrer. Il narrait auparavant le mode actif et l'état du rail et du dock —
-          des phrases que le lecteur a sous les yeux, et qui occupaient une bande en
-          permanence pour ne rien lui apprendre. Le mode reste expliqué dans l'infobulle de
-          son bouton, où l'on va le chercher quand on se pose la question. */}
+      {/* The footer now only says what has a CONSEQUENCE: is there anything left to save.
+          It used to narrate the active mode and the state of the rail and dock — sentences the
+          reader already has in front of them, which took up a strip permanently to teach them
+          nothing. The mode is still explained in its button's tooltip, where one looks for it
+          when wondering. */}
       {dirty !== undefined && (
         <footer className="flex flex-shrink-0 items-center justify-end border-t border-border bg-card/60 px-2.5 py-[0.3125rem]">
           <Badge variant={dirty ? 'warning' : 'success'}>

@@ -2,49 +2,44 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Réécriture des playlists HLS (vague 2 — servir la vidéo sans traverser Node).
+ * HLS playlist rewriting (wave 2: serve video without going through Node).
  *
- * Le worker FFmpeg écrit des playlists à URI **relatifs** (`720p.m3u8`, `720p_003.ts`).
- * Servies telles quelles derrière `/api/media/:id/hls/:file`, elles faisaient repasser
- * chaque segment de 2 s par le process web. On les réécrit désormais à la volée :
- *  - le **maître** garde des URI relatifs (donc l'API) mais leur accroche le jeton de
- *    lecture, ce qui évite de refaire le contrôle d'accès en base pour chaque rendition ;
- *  - la **sous-playlist** remplace chaque segment par une URL MinIO présignée absolue :
- *    le lecteur va chercher les octets au stockage, plus jamais à l'API.
+ * The FFmpeg worker writes playlists with **relative** URIs (`720p.m3u8`, `720p_003.ts`). Served as-is behind
+ * `/api/media/:id/hls/:file`, every 2 s segment went back through the web process. They are now rewritten on the fly:
+ *  - the **master** keeps relative URIs (hence the API) but appends the playback token, which avoids redoing
+ *    the database access check for each rendition;
+ *  - the **sub-playlist** replaces each segment with an absolute presigned MinIO URL: the player fetches the
+ *    bytes from storage, never from the API again.
  *
- * Tout est pur et sans I/O : la signature des URL, elle, vit dans MediaService.
+ * Everything is pure and I/O-free: URL signing, for its part, lives in MediaService.
  */
 
-/** Fenêtre de signature des URL de segments (s) — cf. `signingWindowStart`. */
+/** Signing window of the segment URLs (s) — see `signingWindowStart`. */
 export const HLS_URL_WINDOW_SEC = 15 * 60;
 
 /**
- * Durée de vie des URL présignées de segments (s), comptée depuis la fenêtre.
+ * Lifetime of the presigned segment URLs (s), counted from the window.
  *
- * **C'est le délai réel de révocation d'une review interne diffusée en HLS**, et il faut le
- * lire comme tel : une URL de segment n'est liée à personne (la signature S3 ne couvre que
- * le bucket, la clé et la date), donc retirer un membre d'un projet, dépublier un média ou
- * le mettre à la corbeille ne coupe pas les segments déjà remis — ils restent lisibles
- * jusqu'à deux heures (2 h 10 avec la tranche de signature de `StorageService`).
+ * **This is the real revocation delay of an internal review broadcast in HLS**, and it must be read as such:
+ * a segment URL is bound to nobody (the S3 signature covers only the bucket, key and date), so removing a
+ * member from a project, unpublishing a media or putting it in the trash does not cut off segments already
+ * handed out — they stay readable for up to two hours (2 h 10 with the `StorageService` signing slice).
  *
- * Ces deux heures sont **assumées, pas subies** : pour un VOD, hls.js charge la
- * sous-playlist UNE fois et ne la recharge jamais. Raccourcir le TTL ne raccourcirait donc
- * pas la fuite d'un lien déjà copié — cela couperait la lecture d'un média resté ouvert plus
- * longtemps que le TTL, au premier déplacement de tête de lecture, c'est-à-dire en pleine
- * projection de dailies. Le fermer pour de bon suppose de servir les segments derrière une
- * route qui revérifie l'accès (le jeton de `lib/mediaToken` en est la moitié faite), pas de
- * jouer sur la durée.
+ * These two hours are **accepted, not endured**: for a VOD, hls.js loads the sub-playlist ONCE and never
+ * reloads it. Shortening the TTL would therefore not shorten the leak of a link already copied — it would cut
+ * playback of a media left open longer than the TTL, at the first seek, i.e. in the middle of a dailies
+ * screening. Closing it for good requires serving the segments behind a route that rechecks access (the
+ * `lib/mediaToken` token is half of that), not tweaking the duration.
  */
 export const HLS_URL_TTL_SEC = 2 * 60 * 60;
 
 /**
- * Début de la fenêtre courante (ms epoch).
+ * Start of the current window (ms epoch).
  *
- * Une URL présignée est unique par instant de signature : signées à la demande, vingt
- * spectateurs d'un même daily demanderaient vingt URL différentes pour le même segment, et
- * aucun cache partagé ne pourrait les rapprocher. On gèle donc la playlist réécrite par
- * fenêtre : dans les quinze minutes, tout le monde reçoit les MÊMES URL — le cache du
- * frontal (et celui du navigateur au rechargement) redevient utile.
+ * A presigned URL is unique per signing instant: signed on demand, twenty viewers of the same dailies would
+ * ask for twenty different URLs for the same segment, and no shared cache could match them. The rewritten
+ * playlist is therefore frozen per window: within fifteen minutes, everyone receives the SAME URLs — the
+ * front cache (and the browser's on reload) becomes useful again.
  */
 export function signingWindowStart(nowMs: number = Date.now(), windowSec = HLS_URL_WINDOW_SEC): number {
   const windowMs = windowSec * 1000;
@@ -52,21 +47,19 @@ export function signingWindowStart(nowMs: number = Date.now(), windowSec = HLS_U
 }
 
 /**
- * Nom de fichier HLS acceptable : pas de séparateur, pas de `..`, pas de query. Le même
- * motif que la route — on le revérifie ici parce que ces noms viennent du CONTENU d'une
- * playlist et servent à composer une clé de stockage à présigner.
+ * Acceptable HLS file name: no separator, no `..`, no query. The same pattern as the route — rechecked here
+ * because these names come from the CONTENT of a playlist and are used to build a storage key to presign.
  */
 export function isSafeHlsName(name: string): boolean {
   return /^[A-Za-z0-9][A-Za-z0-9._-]*$/.test(name) && !name.includes('..');
 }
 
-/** Attribut `URI="…"` d'une balise (`#EXT-X-MAP`, `#EXT-X-I-FRAME-STREAM-INF`, `#EXT-X-KEY`). */
+/** `URI="…"` attribute of a tag (`#EXT-X-MAP`, `#EXT-X-I-FRAME-STREAM-INF`, `#EXT-X-KEY`). */
 const TAG_URI = /URI="([^"]*)"/g;
 
 /**
- * Applique `map` à chaque URI de la playlist : les lignes nues (segment ou sous-playlist)
- * et les attributs `URI="…"` des balises. Les commentaires, balises et lignes vides sont
- * rendus intacts, et la playlist garde sa structure ligne à ligne.
+ * Applies `map` to each URI of the playlist: bare lines (segment or sub-playlist) and `URI="…"` tag attributes.
+ * Comments, tags and blank lines are returned intact, and the playlist keeps its line-by-line structure.
  */
 export function rewritePlaylistUris(playlist: string, map: (uri: string) => string): string {
   return playlist
@@ -80,7 +73,7 @@ export function rewritePlaylistUris(playlist: string, map: (uri: string) => stri
     .join('\n');
 }
 
-/** Tous les URI référencés par la playlist, dans l'ordre, sans doublon. */
+/** All URIs referenced by the playlist, in order, without duplicates. */
 export function playlistUris(playlist: string): string[] {
   const found: string[] = [];
   rewritePlaylistUris(playlist, (uri) => {
@@ -91,8 +84,8 @@ export function playlistUris(playlist: string): string[] {
 }
 
 /**
- * Maître → chaque sous-playlist porte le jeton de lecture en query. Les URI restent
- * relatifs : le lecteur les résout contre l'URL du maître, donc sur `/api/media/:id/hls/`.
+ * Master → each sub-playlist carries the playback token in its query. URIs stay relative: the player resolves
+ * them against the master's URL, hence against `/api/media/:id/hls/`.
  */
 export function withPlaybackToken(master: string, token: string): string {
   const q = `pt=${encodeURIComponent(token)}`;
@@ -100,9 +93,9 @@ export function withPlaybackToken(master: string, token: string): string {
 }
 
 /**
- * Sous-playlist → chaque segment devient l'URL absolue fournie par `urls`. Un URI absent de
- * la table (nom inattendu, donc jamais présigné) est laissé relatif : il retombe sur le
- * proxy `/api/media/:id/hls/:file`, qui continue de fonctionner. Aucune lecture ne casse.
+ * Sub-playlist → each segment becomes the absolute URL supplied by `urls`. A URI absent from the table
+ * (unexpected name, hence never presigned) is left relative: it falls back on the
+ * `/api/media/:id/hls/:file` proxy, which keeps working. No playback breaks.
  */
 export function withPresignedSegments(playlist: string, urls: ReadonlyMap<string, string>): string {
   return rewritePlaylistUris(playlist, (uri) => urls.get(uri) ?? uri);

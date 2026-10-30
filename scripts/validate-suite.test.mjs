@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Les contrôles ajoutés à `validate.sh` sont eux-mêmes sous contrôle.
+ * The checks added to `validate.sh` are themselves under control.
  *
- * La suite de validation est un principe protégé : « toute évolution doit l'étendre, jamais
- * l'affaiblir ». Un principe qui ne s'exécute pas se perd à la première réécriture — ce
- * fichier vérifie donc que les étapes existent, qu'elles ne sont pas neutralisées par un
- * `|| true`, et que la CI exige bien celles qui ne peuvent tourner que chez elle.
+ * The validation suite is a protected principle: "every change must extend it, never
+ * weaken it". A principle that is not executed is lost at the first rewrite — this
+ * file therefore checks that the steps exist, that they are not neutralised by a
+ * `|| true`, and that CI does require those that can only run there.
  */
 
 import { describe, it, expect } from 'vitest';
@@ -29,8 +29,8 @@ describe('validate.sh — étapes du lot « vert veut dire que ça marche »', (
   it('mesure la couverture des deux paquets et la confronte à ses planchers', () => {
     expect(VALIDATE).toMatch(/check-coverage\.mjs" backend/);
     expect(VALIDATE).toMatch(/check-coverage\.mjs" frontend/);
-    // La mesure remplace le `npm test` nu quand le provider est là : jamais en plus, jamais
-    // à la place du contrôle. Les deux branches lancent bien les tests.
+    // The measurement replaces the bare `npm test` when the provider is there: never in addition, never
+    // in place of the check. Both branches do run the tests.
     expect(VALIDATE).toMatch(/npx vitest run --coverage/);
   });
 
@@ -38,7 +38,7 @@ describe('validate.sh — étapes du lot « vert veut dire que ça marche »', (
     expect(VALIDATE).toMatch(/-m compileall/);
     expect(VALIDATE).toMatch(/backend\/src\/workers\/usd/);
     expect(VALIDATE).toMatch(/backend\/src\/workers\/ocio/);
-    // Le contrôle ne doit pas salir le dépôt de `__pycache__`.
+    // The check must not litter the repository with `__pycache__`.
     expect(VALIDATE).toMatch(/PYTHONPYCACHEPREFIX=/);
   });
 
@@ -66,7 +66,7 @@ describe('validate.sh — étapes du lot « vert veut dire que ça marche »', (
 
 describe('CI — le job d’intégration compte à nouveau', () => {
   it('n’est plus complaisant : aucun job ne porte continue-on-error', () => {
-    // La directive, pas le mot : le commentaire du workflow raconte pourquoi elle a sauté.
+    // The directive, not the word: the workflow comment explains why it was skipped.
     expect(WORKFLOW).not.toMatch(/^\s*continue-on-error\s*:/m);
   });
 

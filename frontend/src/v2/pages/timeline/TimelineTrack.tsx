@@ -11,16 +11,16 @@ import type { TimelineClip } from '../../types/api';
 import { useT } from '../../i18n';
 
 /**
- * Le montage entier sur UNE bande (Phase 46).
+ * The whole montage on ONE band (Phase 46).
  *
- * Tous les plans y sont, les uns à la suite des autres, séquences comprises : la largeur
- * d'un plan est sa durée, la tête de lecture court d'un bout à l'autre, et cliquer
- * n'importe où y emmène le film. Il n'y a donc plus ni liste de vignettes d'un côté ni
- * réglette de l'autre — c'était le même objet montré deux fois, et rien ne disait que la
- * bande continuait par-delà la séquence affichée.
+ * Every shot is there, one after the other, sequences included: the width of a shot is its
+ * duration, the playhead runs from one end to the other, and clicking anywhere takes the film
+ * there. There is therefore no longer a list of thumbnails on one side and a scrubber on the
+ * other — it was the same object shown twice, and nothing said that the band continued beyond
+ * the displayed sequence.
  *
- * Les trous ne sont pas masqués : un plan sans média tient sa place, à sa durée, en ambre.
- * Un montage qui saute ses trous prétend être complet.
+ * Gaps are not hidden: a shot without media holds its place, at its duration, in amber. A
+ * montage that skips its gaps claims to be complete.
  */
 export default function TimelineTrack({
   items,
@@ -40,9 +40,9 @@ export default function TimelineTrack({
   currentIndex: number;
   onSeek: (t: number) => void;
   timelineId: number;
-  /** Raccourci « ouvrir ce plan en review » au survol — inutile quand le clic y mène déjà. */
+  /** "Open this shot in review" shortcut on hover — pointless when the click already leads there. */
   linkToReview?: boolean;
-  /** Retours posés sur le montage, à leur position dans le film (Phase 46). */
+  /** Notes left on the montage, at their position in the film (Phase 46). */
   markers?: { id: number; time: number; label: string; shared: boolean }[];
   selectedMarkerId?: number | null;
   onMarkerClick?: (id: number) => void;
@@ -65,7 +65,7 @@ export default function TimelineTrack({
 
   return (
     <div className="select-none">
-      {/* Bandes de séquences : la teinte alterne, le code reste lisible en projection. */}
+      {/* Sequence bands: the tint alternates, the code stays legible when projected. */}
       <div className="relative mb-0.5 h-4 w-full">
         {spans.map((span, i) => (
           <div
@@ -100,7 +100,7 @@ export default function TimelineTrack({
               style={{ left: `${leftPct}%`, width: `${widthPct}%` }}
               title={`${clip.shotCode} · ${clip.shotName}`}
               className={`group absolute top-0 h-16 overflow-hidden ${
-                // Le changement de séquence est plus marqué que le changement de plan.
+                // A sequence change is marked more strongly than a shot change.
                 starts.has(index) ? 'border-l-2 border-primary/80' : 'border-l border-border/60'
               } ${clip.placeholder ? 'bg-warning/10' : ''} ${
                 index === currentIndex ? 'ring-1 ring-inset ring-primary' : ''
@@ -131,7 +131,7 @@ export default function TimelineTrack({
               {clip.mediaId !== null && linkToReview && (
                 <Link
                   to={`${reviewPath({ id: clip.mediaId, originalName: clip.mediaName })}?timeline=${timelineId}`}
-                  // Sans cela, ouvrir la review déplacerait aussi la tête de lecture.
+                  // Without this, opening the review would also move the playhead.
                   onPointerDown={(e) => e.stopPropagation()}
                   title={t('timeline.openInReview')}
                   className="absolute left-0.5 top-0.5 rounded bg-background/80 p-0.5 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover:opacity-100"
@@ -142,8 +142,8 @@ export default function TimelineTrack({
             </div>
           );
         })}
-        {/* Retours du montage : posés sur la même échelle que le film, donc lisibles d'un
-            coup d'œil — c'est tout l'intérêt d'une timeline unique. */}
+        {/* Montage notes: placed on the same scale as the film, so readable at a glance — that is
+            the whole point of a single timeline. */}
         {markers.map((m) => (
           <button
             key={m.id}

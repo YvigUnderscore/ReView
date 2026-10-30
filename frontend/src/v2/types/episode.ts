@@ -2,13 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Le niveau Épisode — module séparé, comme `usd.ts` ou `share.ts`.
+ * The Episode level — separate module, like `usd.ts` or `share.ts`.
  *
- * Niveau **facultatif par projet** : tant que `EpisodeSettings.enabled` est faux — ce
- * qu'il est par défaut — aucun écran ne construit ni ne lit ces types. Un projet de
- * long-métrage ne voit jamais la moindre trace de ce niveau.
+ * **Optional per project**: as long as `EpisodeSettings.enabled` is false — which it is by default —
+ * no screen builds or reads these types. A feature-film project never sees any trace of this level.
  *
- * Ré-exporté depuis `types/api.ts` : une entité, une définition.
+ * Re-exported from `types/api.ts`: one entity, one definition.
  */
 
 export interface Episode {
@@ -24,17 +23,17 @@ export interface Episode {
 
 export type EpisodeRef = Pick<Episode, 'id' | 'code' | 'name'>;
 
-/** GET /api/episodes?projectId= — un épisode dans la liste du projet. */
+/** GET /api/episodes?projectId= — one episode in the project list. */
 export type EpisodeSummary = Episode & { _count: { sequences: number } };
 
-/** L'interrupteur du projet, et ce que sa désactivation masquerait. */
+/** The project switch, and what turning it off would hide. */
 export interface EpisodeSettings {
   enabled: boolean;
   episodeCount: number;
   linkedSequenceCount: number;
 }
 
-/** Séquence telle que la fiche d'un épisode la rend. */
+/** Sequence as an episode's sheet renders it. */
 export interface EpisodeSequence {
   id: number;
   code: string;
@@ -45,7 +44,7 @@ export interface EpisodeSequence {
   _count: { shots: number };
 }
 
-/** Plan tel que la fiche d'un épisode le rend (tous ses plans, toutes séquences confondues). */
+/** Shot as an episode's sheet renders it (all its shots, across all sequences). */
 export interface EpisodeShot {
   id: number;
   code: string;
@@ -59,7 +58,7 @@ export interface EpisodeShot {
   thumbnailUrl?: string | null;
 }
 
-/** GET /api/episodes/:id — la fiche complète. */
+/** GET /api/episodes/:id — the full sheet. */
 export type EpisodeDetail = Episode & {
   sequences: EpisodeSequence[];
   shots: EpisodeShot[];

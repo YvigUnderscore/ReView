@@ -7,17 +7,15 @@ import { isStillClip } from './timelinePlayback';
 import type { TimelineClip } from '../../types/api';
 
 /**
- * Source pleine résolution des plans-image d'un montage.
+ * Full-resolution source of a montage's still-image shots.
  *
- * Un plan dont la version publiée est une image ne passe pas par l'élément vidéo — un JPEG
- * confié à `<video>` échoue au démultiplexage et bloquait la lecture de tout le montage. Il
- * lui faut donc sa propre source, résolue comme celle d'une vidéo (`GET /api/media/:id`) mais
- * posée dans une `<img>`.
+ * A shot whose published version is an image does not go through the video element — a JPEG handed
+ * to `<video>` fails demuxing and blocked playback of the whole montage. It therefore needs its own
+ * source, resolved like a video's (`GET /api/media/:id`) but set in an `<img>`.
  *
- * Les URL résolues sont conservées par média : un montage qui revient sur le même plan ne
- * redemande pas son URL, et la bascule reste instantanée. La valeur rendue se DÉRIVE de cet
- * accumulateur pendant le rendu — pas de `setState` synchrone dans un effet, qui ferait
- * cascader les rendus à chaque changement de plan.
+ * Resolved URLs are kept per media: a montage returning to the same shot does not ask for its URL
+ * again, and the switch stays instant. The returned value is DERIVED from this accumulator during
+ * render — no synchronous `setState` in an effect, which would cascade renders at every shot change.
  */
 export function useStillSource(clip: TimelineClip | null): string | null {
   const [resolved, setResolved] = useState<Record<number, string>>({});
@@ -32,7 +30,7 @@ export function useStillSource(clip: TimelineClip | null): string | null {
         if (!cancelled && url) setResolved((prev) => ({ ...prev, [mediaId]: url }));
       })
       .catch(() => {
-        // Sans URL, la vignette du plan tient la place : un montage ne tombe pas au noir.
+        // Without a URL, the shot's thumbnail holds the place: a montage does not drop to black.
       });
     return () => {
       cancelled = true;
@@ -40,6 +38,6 @@ export function useStillSource(clip: TimelineClip | null): string | null {
   }, [mediaId, resolved]);
 
   if (mediaId === null) return null;
-  // La vignette sert d'affichage immédiat le temps que l'image pleine résolution arrive.
+  // The thumbnail serves as immediate display while the full-resolution image arrives.
   return resolved[mediaId] ?? clip?.thumbnailUrl ?? null;
 }

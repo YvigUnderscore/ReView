@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { pctOf, sortedEntries, CATEGORY_LABELS, DERIVED_LABELS } from './adminStorage';
 
 describe('adminStorage — pctOf', () => {
-  it('calcule un pourcentage borné, 0 si total nul', () => {
+  it('computes a clamped percentage, 0 if the total is zero', () => {
     expect(pctOf(50, 200)).toBe(25);
     expect(pctOf(300, 200)).toBe(100);
     expect(pctOf(10, 0)).toBe(0);
@@ -13,7 +13,7 @@ describe('adminStorage — pctOf', () => {
 });
 
 describe('adminStorage — sortedEntries', () => {
-  it('trie par poids décroissant avec libellés et pourcentages', () => {
+  it('sorts by descending weight, with labels and percentages', () => {
     const entries = sortedEntries(
       {
         thumbnails: { count: 10, bytes: 100 },
@@ -31,11 +31,11 @@ describe('adminStorage — sortedEntries', () => {
       bytes: 900,
       pct: 90,
     });
-    // Clé sans libellé : rien à traduire, l'appelant retombe sur la clé brute.
+    // Key without a label: nothing to translate, the caller falls back to the raw key.
     expect(entries[2].labelKey).toBeNull();
   });
 
-  it('rend une liste vide pour un agrégat vide', () => {
+  it('returns an empty list for an empty aggregate', () => {
     expect(sortedEntries({}, CATEGORY_LABELS, 100)).toEqual([]);
   });
 });

@@ -12,25 +12,25 @@ import * as EpisodeService from '../../services/EpisodeService';
 import { idParam, listQuery, refParam, requireEpisodeProject, requireProject } from './helpers';
 
 /**
- * Le niveau épisode, côté intégrations.
+ * The episode level, integration side.
  *
- * Il est arrivé avec la série (un cran au-dessus de la séquence) sans jamais atteindre
- * `/api/v1` : une synchronisation tierce voyait des séquences orphelines et n'avait aucun
- * moyen de savoir de quel épisode elles relevaient — ni même que le projet en avait.
+ * It arrived with series support (one level above sequences) but never reached `/api/v1`:
+ * a third-party sync saw orphan sequences and had no way to know which episode they belonged
+ * to, or even that the project had episodes.
  *
- * Lecture seule, volontairement. Découper une série en épisodes est un geste de production
- * qui réordonne, rattache et renomme ; l'exposer en écriture demanderait de reproduire
- * tout ce que l'écran d'épisodes orchestre, pour un besoin qu'aucune intégration n'a
- * formulé. `episodesEnabled` dit d'ailleurs si le niveau existe seulement sur ce projet.
+ * Read-only, on purpose. Splitting a series into episodes is a production action that reorders,
+ * attaches and renames; exposing it for writing would mean reproducing everything the episodes
+ * screen orchestrates, for a need no integration has expressed. `episodesEnabled` also says
+ * whether the level exists on this project.
  */
 const router = Router();
 
 /**
- * GET /api/v1/projects/{ref}/episodes — les épisodes du projet.
+ * GET /api/v1/projects/{ref}/episodes: the project's episodes.
  *
- * `enabled` vaut faux sur un long-métrage : la liste est alors vide, et c'est une réponse,
- * pas une absence. `unassignedSequences` compte les séquences qu'aucun épisode ne réclame
- * — un découpage en cours en laisse toujours, et les taire ferait croire le projet vide.
+ * `enabled` is false on a feature film: the list is then empty, and that is an answer, not an
+ * absence. `unassignedSequences` counts the sequences no episode claims. A split in progress
+ * always leaves some, and hiding them would make the project look empty.
  */
 router.get(
   '/projects/:ref/episodes',
@@ -48,7 +48,7 @@ router.get(
   },
 );
 
-// GET /api/v1/episodes/{id} — la fiche, avec ses séquences et leurs plans.
+// GET /api/v1/episodes/{id}: the record, with its sequences and their shots.
 router.get(
   '/episodes/:id',
   requireScope('episodes:read'),
@@ -63,11 +63,11 @@ router.get(
 );
 
 /**
- * GET /api/v1/episodes/{id}/sequences — les séquences rattachées, forme v1.
+ * GET /api/v1/episodes/{id}/sequences: the attached sequences, v1 shape.
  *
- * La fiche ci-dessus rend l'arbre complet (séquences ET plans) ; celle-ci rend la même
- * collection sous la forme que les autres routes v1 emploient, pour qu'un client puisse
- * enchaîner sur `/api/v1/sequences/{id}/…` sans transposer deux représentations.
+ * The record above returns the full tree (sequences AND shots); this one returns the same
+ * collection in the shape the other v1 routes use, so a client can continue on
+ * `/api/v1/sequences/{id}/...` without translating two representations.
  */
 router.get(
   '/episodes/:id/sequences',

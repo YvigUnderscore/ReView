@@ -2,11 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { Copy, Plus, ScrollText, Send, Trash2, Webhook as WebhookIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
-import { qk } from '../../lib/query';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -16,25 +14,12 @@ import { Panel } from './AdminPrimitives';
 import WebhookDeliveries from './WebhookDeliveries';
 import { isSilencedByFailures, scopeName } from './webhookLog';
 import { useT, type MessageKey } from '../../i18n';
-import type { AdminProjectRow } from '../../types/api';
 import { Hint } from '../../components/ui/hint';
+import { useAdminProjectsQuery } from '@/v2/lib/queries';
+import { useWebhooksQuery, webhooksApi, webhooksKey, type WebhookRow } from './webhooksApi';
 
-/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+/** Translator passed to the label tables, recomputed on each render. */
 type Tr = (key: MessageKey) => string;
-
-interface WebhookRow {
-  id: number;
-  url: string;
-  events: string[];
-  active: boolean;
-  /** Portée : `null` = tout le studio ; sinon, ce projet et lui seul. */
-  projectId: number | null;
-  lastStatus: number | null;
-  lastError: string | null;
-  lastDeliveryAt: string | null;
-  failureStreak: number;
-  createdAt: string;
-}
 
 const eventRows = (t: Tr) => [
   { key: 'media.published', label: t('task.published') },
@@ -42,19 +27,13 @@ const eventRows = (t: Tr) => [
   { key: 'comment.created', label: t('comments.created') },
 ];
 
-/** Webhooks sortants (36.D) : POST JSON signés HMAC vers vos outils (Slack relais, CI…). */
+/** Outbound webhooks (36.D): JSON POSTs signed with HMAC to your tools (Slack relay, CI…). */
 export default function WebhooksPanel() {
   const t = useT();
   const qc = useQueryClient();
-  const hooksQ = useQuery({
-    queryKey: qk.admin('webhooks'),
-    queryFn: () => api.get<{ webhooks: WebhookRow[] }>('/api/admin/webhooks').then((d) => d.webhooks),
-  });
+  const hooksQ = useWebhooksQuery();
   const hooks = hooksQ.data ?? [];
-  const projectsQ = useQuery({
-    queryKey: qk.adminProjects,
-    queryFn: () => api.get<{ projects: AdminProjectRow[] }>('/api/admin/projects'),
-  });
+  const projectsQ = useAdminProjectsQuery();
   const projects = projectsQ.data?.projects ?? [];
 
   const [url, setUrl] = useState('');
@@ -64,14 +43,14 @@ export default function WebhooksPanel() {
   const [busy, setBusy] = useState(false);
   const [openLog, setOpenLog] = useState<number | null>(null);
 
-  const invalidate = () => qc.invalidateQueries({ queryKey: qk.admin('webhooks') });
+  const invalidate = () => qc.invalidateQueries({ queryKey: webhooksKey });
 
   const create = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!url.trim() || events.length === 0) return;
     setBusy(true);
     try {
-      const d = await api.post<{ secret: string }>('/api/admin/webhooks', {
+      const d = await webhooksApi.create({
         url: url.trim(),
         events,
         projectId: scope ? Number(scope) : null,
@@ -89,7 +68,7 @@ export default function WebhooksPanel() {
 
   const patch = async (h: WebhookRow, body: Partial<Pick<WebhookRow, 'active' | 'projectId'>>) => {
     try {
-      await api.patch(`/api/admin/webhooks/${h.id}`, body);
+      await webhooksApi.update(h.id, body);
       void invalidate();
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
@@ -97,7 +76,7 @@ export default function WebhooksPanel() {
   };
   const remove = async (h: WebhookRow) => {
     try {
-      await api.del(`/api/admin/webhooks/${h.id}`);
+      await webhooksApi.remove(h.id);
       toast.success(t('webhooks.deleted'));
       void invalidate();
     } catch (err) {
@@ -106,7 +85,7 @@ export default function WebhooksPanel() {
   };
   const test = async (h: WebhookRow) => {
     try {
-      await api.post(`/api/admin/webhooks/${h.id}/test`);
+      await webhooksApi.test(h.id);
       toast.success(t('webhooks.testQueued'));
     } catch (err) {
       toast.error(err instanceof Error ? err.message : t('common.error.generic'));
@@ -130,8 +109,8 @@ export default function WebhooksPanel() {
           maxLength={500}
         />
         <div className="flex flex-wrap items-center gap-3">
-          {/* Portée : par défaut tout le studio, comme avant. Rattacher à un projet est ce
-              qui rend un webhook donnable à un client sans lui ouvrir les autres films. */}
+          {/* Scope: the whole studio by default, as before. Attaching to a project is what
+               makes a webhook grantable to a client without opening the other films to them. */}
           <label className="flex items-center gap-1.5 text-xs">
             {t('webhooks.scope')}
             <Select
@@ -190,8 +169,8 @@ export default function WebhooksPanel() {
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">{h.url}</p>
                 <div className="mt-0.5 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  {/* La portée se corrige sans recréer le webhook : c'est ce réglage-là
-                      qu'on découvre trop tard, un client ayant déjà reçu un autre film. */}
+                  {/* The scope can be corrected without recreating the webhook: this is the setting
+                      one discovers too late, a client having already received another film. */}
                   <Select
                     className="px-1.5 py-0.5 text-xs"
                     value={h.projectId ?? ''}

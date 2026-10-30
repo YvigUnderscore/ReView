@@ -8,7 +8,7 @@ import { encodeMask } from './mask';
 afterEach(() => vi.restoreAllMocks());
 
 describe('fetchMaskIndices', () => {
-  it('télécharge et décode le bitset en indices', async () => {
+  it('downloads and decodes the bitset into indices', async () => {
     const bytes = encodeMask([1, 8, 42]);
     vi.stubGlobal(
       'fetch',
@@ -20,7 +20,7 @@ describe('fetchMaskIndices', () => {
     await expect(fetchMaskIndices('http://mask')).resolves.toEqual([1, 8, 42]);
   });
 
-  it('rejette si le téléchargement échoue', async () => {
+  it('rejects if the download fails', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false, status: 404 }));
     await expect(fetchMaskIndices('http://mask')).rejects.toThrow('404');
   });

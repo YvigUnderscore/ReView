@@ -10,14 +10,13 @@ import type { TimelineClip } from '../../types/api';
 import { useT } from '../../i18n';
 
 /**
- * La timeline du montage — même barre que celle du lecteur de review, à ceci près qu'elle
- * porte le film entier (Phase 46).
+ * The montage timeline — the same bar as the review player's, except that it carries the whole
+ * film (Phase 46).
  *
- * Une seule échelle, de zéro à la fin : les plans y occupent leur durée, les séquences se
- * lisent à la bande du dessus et à la frontière franche qui les sépare, et les retours s'y
- * épinglent comme en review, avec l'avatar de leur auteur. Rien d'autre n'est inventé —
- * l'apparence, le scrub et les repères sont ceux de la review, pour que la page se lise
- * sans réapprentissage.
+ * A single scale, from zero to the end: shots occupy their duration, sequences are read from the
+ * band above and the hard boundary that separates them, and notes pin onto it as in review, with
+ * their author's avatar. Nothing else is invented — the look, the scrub and the markers are those
+ * of the review, so the page reads without re-learning.
  */
 export default function MontageTimeline({
   items,
@@ -46,7 +45,7 @@ export default function MontageTimeline({
   const starts = new Set(sequenceStarts(items));
   const progress = total > 0 ? Math.min(time / total, 1) : 0;
   const pct = (v: number) => (total > 0 ? Math.min(100, Math.max(0, (v / total) * 100)) : 0);
-  // Même calage que la review : la barre a 4 px de marge intérieure de chaque côté.
+  // Same alignment as the review: the bar has a 4 px inner margin on each side.
   const anchor = (v: number) => `calc(${pct(v)}% * (100% - 8px) / 100% + 4px)`;
 
   const seekFromEvent = useCallback(
@@ -63,7 +62,7 @@ export default function MontageTimeline({
 
   return (
     <div className="flex shrink-0 flex-col gap-1">
-      {/* Bande des séquences : la respiration du film, au-dessus des plans. */}
+      {/* Sequence band: the rhythm of the film, above the shots. */}
       <div className="relative h-4 w-full px-1">
         {spans.map((span, i) => (
           <div
@@ -98,7 +97,7 @@ export default function MontageTimeline({
       >
         <div className="absolute inset-y-0 left-1 right-1 overflow-hidden rounded">
           <div className="h-full rounded bg-secondary/40" />
-          {/* Les plans à leur durée : c'est ce qui fait d'une barre de temps un montage. */}
+          {/* Shots at their duration: this is what makes a time bar a montage. */}
           {slots.map(({ index, leftPct, widthPct }) => {
             const clip = items[index];
             return (
@@ -122,13 +121,13 @@ export default function MontageTimeline({
           />
         </div>
 
-        {/* Curseur de lecture — même trait que la review. */}
+        {/* Playhead — same line as in the review. */}
         <div
           className="pointer-events-none absolute bottom-0 top-0 z-10 w-0.5 rounded-full bg-primary"
           style={{ left: anchor(time) }}
         />
 
-        {/* Retours du montage : épinglés à l'avatar de leur auteur, comme en review. */}
+        {/* Montage notes: pinned to their author's avatar, as in review. */}
         {comments
           .filter((c) => c.timelineTime != null)
           .map((c) => (

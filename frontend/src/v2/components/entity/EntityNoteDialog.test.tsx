@@ -3,16 +3,16 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { screen } from '@testing-library/react';
-import { renderWithProviders } from '../../../test/renderWithProviders';
+import { renderWithProviders } from '@/test/renderWithProviders';
 import { t } from '../../i18n';
 import EntityNoteDialog from './EntityNoteDialog';
 
 /**
- * La porte de la fenêtre.
+ * The window's gate.
  *
- * Échap, le clic à l'extérieur et la croix mènent tous au même endroit — et une fiche à
- * moitié écrite ne doit pas partir avec. Le cas s'est présenté sans qu'on le cherche :
- * annuler le sélecteur de fichiers se fait avec Échap, et cet Échap-là emportait l'édition.
+ * Escape, a click outside and the close button all lead to the same place, and a half-written note must not
+ * leave with them. The case came up unbidden: cancelling the file picker is done with Escape, and that Escape
+ * discarded the edit.
  */
 
 const API = {
@@ -29,7 +29,7 @@ const mount = () => {
   return { ...out, onClose };
 };
 
-/** Ouvre l'édition et écrit quelque chose — la fiche devient « sale ». */
+/** Opens the editor and types something: the note becomes "dirty". */
 async function edit(user: ReturnType<typeof mount>['user']) {
   await user.click(await screen.findByRole('button', { name: t('common.edit') }));
   await user.click(await screen.findByRole('button', { name: t('note.text.edit') }));
@@ -41,7 +41,7 @@ afterEach(() => {
 });
 
 describe('EntityNoteDialog', () => {
-  it('ferme sans rien demander tant que rien n’a changé', async () => {
+  it('closes without asking anything as long as nothing has changed', async () => {
     const confirm = vi.fn(() => true);
     vi.stubGlobal('confirm', confirm);
     const { user, onClose } = mount();
@@ -52,7 +52,7 @@ describe('EntityNoteDialog', () => {
     expect(onClose).toHaveBeenCalled();
   });
 
-  it('demande confirmation quand une fiche en cours d’écriture allait être perdue', async () => {
+  it('asks for confirmation when a note being written would be lost', async () => {
     const confirm = vi.fn(() => false);
     vi.stubGlobal('confirm', confirm);
     const { user, onClose } = mount();
@@ -61,12 +61,12 @@ describe('EntityNoteDialog', () => {
     await user.keyboard('{Escape}');
 
     expect(confirm).toHaveBeenCalledWith(t('note.discardConfirm'));
-    // Refus : la fenêtre reste, et le texte avec elle.
+    // Refusal: the window stays, and the text with it.
     expect(onClose).not.toHaveBeenCalled();
     expect(screen.getByRole('textbox')).toHaveValue('Brief initial modifié');
   });
 
-  it('laisse partir quand la perte est assumée', async () => {
+  it('lets it go when the loss is accepted', async () => {
     vi.stubGlobal(
       'confirm',
       vi.fn(() => true),

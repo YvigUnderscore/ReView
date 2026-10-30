@@ -4,34 +4,34 @@
 import { memo } from 'react';
 import { ChevronDown, ChevronRight, Copy, Eye, EyeOff, Lock, LockOpen, Trash2 } from 'lucide-react';
 import type { PrimNode } from '../three/usdScenegraph';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
- * Une rangée du scenegraph virtualisé — positionnée en absolu dans la cale du virtualiseur.
+ * A row of the virtualised scenegraph, positioned absolutely in the virtualizer's spacer.
  *
- * Elle ne reçoit que des valeurs déjà décidées (drapeaux, libellés) et des fonctions stables :
- * c'est ce qui rend `memo` efficace, et donc ce qui évite de rejouer les vingt rangées montées
- * à chaque événement de défilement. Elle ne monte **aucun** menu contextuel : le panneau n'en
- * tient plus qu'un seul, qui retrouve la rangée visée au clic droit (`data-prim-path`).
+ * It only receives values already decided (flags, labels) and stable functions: this is what makes
+ * `memo` effective, and therefore what avoids replaying the twenty mounted rows on each scroll event.
+ * It mounts **no** context menu: the panel holds only one, which finds the targeted row on right-click
+ * (`data-prim-path`).
  */
 
 /**
- * Position et mesure d'une rangée dans la liste virtualisée. Les quatre champs sont passés
- * **à plat** et non dans un objet : un objet reconstruit à chaque rendu ferait échouer `memo`.
+ * Position and measurement of a row in the virtualised list. The four fields are passed **flat**
+ * and not in an object: an object rebuilt on each render would defeat `memo`.
  */
 interface Placement {
   index: number;
   start: number;
-  /** Mesure réelle de la rangée (`virtualizer.measureElement`) — hauteur du texte du lecteur. */
+  /** Real measurement of the row (`virtualizer.measureElement`): height of the reader's text. */
   measure: (node: Element | null) => void;
-  /** Déplacement du focus clavier d'une rangée à l'autre (flèches). */
+  /** Moves the keyboard focus from one row to another (arrows). */
   onMove: (from: number, delta: number) => void;
 }
 
 const ROW_BASE =
   'group absolute left-0 top-0 flex w-full cursor-default items-center gap-1 rounded py-0.5 pr-1 text-xs';
 
-/** Flèches haut/bas : le panneau défile jusqu'à la rangée visée avant de lui donner le focus. */
+/** Up/down arrows: the panel scrolls to the targeted row before giving it focus. */
 function arrowMove(e: React.KeyboardEvent, index: number, onMove: Placement['onMove']): boolean {
   if (e.key !== 'ArrowDown' && e.key !== 'ArrowUp') return false;
   e.preventDefault();
@@ -64,13 +64,13 @@ export const PrimRow = memo(function PrimRow({
   selected: boolean;
   locked: boolean;
   hidden: boolean;
-  /** Masqué par un ancêtre : le rétablir ici n'aurait aucun effet visible. */
+  /** Hidden by an ancestor: restoring it here would have no visible effect. */
   byAncestor: boolean;
   rendered: boolean;
-  /** Noms des jeux de variantes du prim, ou `null` s'il n'en porte pas (badge). */
+  /** Names of the prim's variant sets, or `null` if it carries none (badge). */
   variants: string | null;
   onToggle: (path: string) => void;
-  /** Clic sur la rangée — la sélection (simple/additive/plage) est arbitrée par le panneau. */
+  /** Click on the row: the selection (plain / additive / range) is arbitrated by the panel. */
   onClick: (path: string, e: React.MouseEvent | React.KeyboardEvent) => void;
   onLock: (path: string) => void;
   onEye: (path: string, alt: boolean, hidden: boolean) => void;
@@ -139,7 +139,7 @@ export const PrimRow = memo(function PrimRow({
       <button
         onClick={(e) => {
           e.stopPropagation();
-          // Alt+clic = solo : isole ce prim (tout le reste est masqué) — façon DCC.
+          // Alt+click = solo: isolates this prim (everything else is hidden), DCC-style.
           onEye(node.path, e.altKey, hidden);
         }}
         disabled={byAncestor}
@@ -154,7 +154,7 @@ export const PrimRow = memo(function PrimRow({
   );
 });
 
-/** Rangée d'un clone de mise en scène (C1) : badge dédié, supprimable, sans menu contextuel. */
+/** Row of a staging clone (C1): dedicated badge, deletable, without context menu. */
 export const CloneRow = memo(function CloneRow({
   path,
   name,

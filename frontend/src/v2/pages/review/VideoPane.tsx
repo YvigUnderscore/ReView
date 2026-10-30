@@ -28,9 +28,9 @@ import { usePlaylistChain } from '../playlist/usePlaylistChain';
 import { useT } from '../../i18n';
 
 /**
- * Pane vidéo de la review (14.B) : lecteur **custom** (plus de `controls` natif) + overlay
- * d'annotation, timeline unique (scrub + marqueurs commentaires + boucle I/O + trim) et
- * barre de transport HUD. Raccourcis clavier via useReviewShortcuts (espace/JKL/←→/I-O/M).
+ * Video pane of the review (14.B): **custom** player (no more native `controls`) + annotation
+ * overlay, single timeline (scrub + comment markers + I/O loop + trim) and HUD transport bar.
+ * Keyboard shortcuts via useReviewShortcuts (space/JKL/←→/I-O/M).
  */
 export default function VideoPane({
   src,
@@ -55,15 +55,15 @@ export default function VideoPane({
   onLoopChange,
 }: {
   src: string;
-  /** Média affiché — marqueurs de timeline partagés (34.C). */
+  /** Displayed media — shared timeline markers (34.C). */
   mediaId: number;
-  /** Master HLS servi par le proxy auth (Phase 23) — prioritaire sur `src` (MP4) si MSE dispo. */
+  /** HLS master served by the auth proxy (Phase 23) — takes priority over `src` (MP4) when MSE is available. */
   hlsUrl?: string | null;
   videoRef: RefObject<HTMLVideoElement | null>;
-  /** Drapeau partagé : distingue un seek programmatique d'un déplacement manuel (qui désélectionne). */
+  /** Shared flag: distinguishes a programmatic seek from a manual move (which deselects). */
   programmaticSeekRef: { current: boolean };
   overlay: ReactNode;
-  /** Overlay de comparaison A/B en mode wipe (couvre la zone vidéo, 14.C). */
+  /** A/B comparison overlay in wipe mode (covers the video area, 14.C). */
   compareOverlay?: ReactNode;
   comments: ReviewComment[];
   selectedId: number | null;
@@ -74,42 +74,42 @@ export default function VideoPane({
   fpsDetected: boolean;
   setFpsOverride: (fps: number) => void;
   startFrame: number;
-  /** Fenêtre de trim (secondes) — zones hors coupe grisées sur la timeline (10.G-V10). */
+  /** Trim window (seconds) — areas outside the cut are grayed out on the timeline (10.G-V10). */
   trimRange?: { start: number; end: number } | null;
-  /** Sprite de miniatures de la timeline (filmstrip ~1 vignette / 3 s). */
+  /** Timeline thumbnail sprite (filmstrip, ~1 thumbnail / 3 s). */
   timelineSprite?: { url: string; meta: TimelineSpriteMeta } | null;
-  /** Bascule le plein écran de tout le bloc review (playbar incluse). */
+  /** Toggles fullscreen for the whole review block (playbar included). */
   onFullscreen: () => void;
-  /** Boucle I/O remontée (34.A) : jointe comme plage in→out au prochain commentaire. */
+  /** I/O loop lifted to the parent (34.A): attached as an in→out range to the next comment. */
   onLoopChange?: (loop: { in: number | null; out: number | null }) => void;
 }) {
   const t = useT();
-  // Compteur de frame piloté image par image (`requestVideoFrameCallback`, repli rAF) :
-  // `timeupdate` seul n'émet que quatre fois par seconde, et le numéro affiché retardait
-  // d'un quart de seconde en lecture. L'événement reste branché en filet dans le hook.
+  // Frame counter driven frame by frame (`requestVideoFrameCallback`, rAF fallback):
+  // `timeupdate` alone only fires four times per second, and the displayed number lagged
+  // by a quarter second during playback. The event stays wired in the hook as a safety net.
   const currentFrame = useVideoFrameClock(videoRef, fps);
   const [duration, setDuration] = useState(0);
   const [playing, setPlaying] = useState(false);
   const audio = useVolumeControl(videoRef);
-  // Boucle I/O désactivable sans perdre les points (retours 34) — toggle dans le transport.
+  // I/O loop can be disabled without losing the points (feedback 34) — toggle in the transport.
   const loop = useLoopPoints(videoRef);
-  // Lecture en boucle de toute la vidéo (indépendante de la boucle I/O).
+  // Loops the whole video playback (independent of the I/O loop).
   const [loopAll, setLoopAll] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const hls = useHlsPlayer(videoRef, hlsUrl ?? null, mediaId);
   const buffering = useVideoBuffering(videoRef, src);
-  // Marqueurs de timeline partagés (34.C) — posés par clic droit sur la timeline.
+  // Shared timeline markers (34.C) — placed by right-click on the timeline.
   const markersApi = useTimelineMarkers(mediaId);
-  // Vitesse de lecture affichée (34.C) : shuttle arrière (J) prioritaire sur playbackRate.
+  // Displayed playback speed (34.C): reverse shuttle (J) takes priority over playbackRate.
   const playbackSpeed = usePlaybackSpeed(videoRef, src, playing);
 
-  // Feedback au changement de qualité : toast + spinner (hls.switching) le temps du switch.
+  // Feedback on quality change: toast + spinner (hls.switching) for the duration of the switch.
   const changeQuality = (idx: number) => {
     hls.setLevel(idx);
     toast.success(t('video.qualitySet', { height: hls.levels[idx]?.height ?? '?' }));
   };
-  // Plein écran vidéo immersif (hook dédié) : vidéo plein écran + playbar translucide qui
-  // s'efface après 1 s sans mouvement de souris. Complémentaire du plein écran unifié.
+  // Immersive video fullscreen (dedicated hook): fullscreen video + translucent playbar that
+  // fades after 1 s without mouse movement. Complements the unified fullscreen.
   const paneRef = useRef<HTMLDivElement>(null);
   const {
     active: videoOnlyFs,
@@ -117,29 +117,29 @@ export default function VideoPane({
     poke: pokeControls,
     toggle: toggleVideoFullscreen,
   } = useVideoFullscreen(paneRef);
-  // Boîte d'affichage (fit « contain » calculé) : l'overlay d'annotation, les curseurs
-  // partagés et la comparaison A/B partagent exactement la même. Re-mesurée à l'entrée et
-  // à la sortie du plein écran, sinon la vidéo y garderait sa taille d'avant.
+  // Display box (computed "contain" fit): the annotation overlay, the shared cursors and the
+  // A/B comparison all share exactly the same one. Re-measured on entering and exiting
+  // fullscreen, otherwise the video would keep its previous size.
   //
-  // En comparaison, la boîte se cale sur la zone commune aux panes (`CompareFitProvider`) —
-  // sauf en plein écran d'un seul pane : les panes B, restés à leur taille de mise en page
-  // derrière l'image, rapetisseraient la vidéo au lieu de la laisser couvrir l'écran.
+  // In comparison, the box aligns to the area common to the panes (`CompareFitProvider`) —
+  // except in fullscreen of a single pane: the B panes, left at their layout size behind the
+  // image, would shrink the video instead of letting it cover the screen.
   const { box, setAspect } = useFitBox(containerRef, videoOnlyFs, !videoOnlyFs);
   const boxRef = useRef<HTMLDivElement>(null);
-  // Zoom/pan du lecteur (molette, glissement, `+`/`-`/`0`/`1`) : le viewer image le faisait
-  // depuis toujours, pas la vidéo. La comparaison suit la même transformation.
+  // Player zoom/pan (wheel, drag, `+`/`-`/`0`/`1`): the image viewer always did this, not the
+  // video. The comparison follows the same transform.
   const zoom = useViewportZoom({
     containerRef,
     oneToOneScale: () => (box && videoRef.current ? videoRef.current.videoWidth / box.w : null),
   });
-  // Curseur partagé de la salle live : capté ici, en fraction du cadre.
+  // Shared cursor of the live room: captured here, as a fraction of the frame.
   const livePointer = useLivePointerCapture(boxRef);
-  // Forme d'onde audio (calculée au transcodage) et enchaînement de playlist : deux
-  // réglages logés au clic droit de la timeline, pas en boutons supplémentaires.
+  // Audio waveform (computed at transcoding) and playlist chaining: two settings housed in the
+  // timeline's right-click menu, not in extra buttons.
   const waveform = useWaveform(mediaId);
   const chain = usePlaylistChain(mediaId, videoRef);
 
-  // Boucle remontée à l'orchestrateur : plage in→out du prochain commentaire (34.A).
+  // Loop lifted to the orchestrator: in→out range of the next comment (34.A).
   useEffect(() => {
     onLoopChange?.({ in: loop.loopIn, out: loop.loopOut });
   }, [loop.loopIn, loop.loopOut, onLoopChange]);
@@ -154,10 +154,10 @@ export default function VideoPane({
     onShuttle: playbackSpeed.onShuttle,
   });
 
-  // Coalesceur de seeks : le scrub émet des dizaines de seeks/s ; sans coalescing chaque
-  // `currentTime =` avorte le précédent et hls.js finit dans un état incohérent après le
-  // lâcher (un clic simple = un seul seek ne bugue pas). On n'applique la position suivante
-  // qu'une fois le seek courant terminé, en ne gardant que la dernière demandée.
+  // Seek coalescer: scrubbing emits dozens of seeks/s; without coalescing each
+  // `currentTime =` aborts the previous one and hls.js ends up in an inconsistent state after
+  // release (a single click = a single seek does not bug). We only apply the next position
+  // once the current seek finishes, keeping only the last one requested.
   const seekCoalescerRef = useRef<ReturnType<typeof createSeekCoalescer> | null>(null);
   useEffect(() => {
     const v = videoRef.current;
@@ -182,15 +182,15 @@ export default function VideoPane({
 
   const onTimeUpdate = (e: React.SyntheticEvent<HTMLVideoElement>) => {
     const v = e.currentTarget;
-    // Boucle I/O : au-delà de O, on repart de I — en lecture seulement, la navigation
-    // manuelle dépasse librement le point O (retours 34).
+    // I/O loop: past O, we restart from I — during playback only; manual navigation
+    // freely goes past the O point (feedback 34).
     if (shouldLoopBack(loop.loopIn, loop.loopOut, loop.enabled, v.paused, v.currentTime)) {
       programmaticSeekRef.current = true;
       v.currentTime = loop.loopIn!;
     }
   };
 
-  // Déplacement manuel dans la vidéo → on cache l'annotation et on désélectionne.
+  // Manual move in the video → we hide the annotation and deselect.
   const onSeeking = () => {
     if (programmaticSeekRef.current) {
       programmaticSeekRef.current = false;
@@ -201,9 +201,9 @@ export default function VideoPane({
 
   const togglePlay = () => {
     const v = videoRef.current;
-    // Le clic qui termine un déplacement de la vue n'est pas une commande de lecture.
+    // The click that ends a view move is not a playback command.
     if (!v || zoom.consumeClick()) return;
-    // safePlay : ne démarre que quand l'image est décodable (pas de son sur image figée).
+    // safePlay: only starts once the frame is decodable (no sound over a frozen frame).
     if (v.paused) safePlay(v);
     else {
       cancelPendingPlay(v);
@@ -243,16 +243,16 @@ export default function VideoPane({
           <video
             ref={videoRef}
             src={hls.active ? undefined : src}
-            // anonymous : autorise la capture canvas de la frame courante (menu clic droit,
-            // miniature) — MinIO/nginx renvoient les en-têtes CORS nécessaires.
+            // anonymous: allows canvas capture of the current frame (right-click menu,
+            // thumbnail) — MinIO/nginx return the required CORS headers.
             crossOrigin="anonymous"
             loop={loopAll}
             className="block h-full w-full cursor-pointer"
             onClick={togglePlay}
             onPlay={() => {
               setPlaying(true);
-              // Le timecode avance : l'annotation du commentaire sélectionné n'est plus
-              // alignée → on la masque (même logique que le seek manuel).
+              // The timecode advances: the selected comment's annotation is no longer
+              // aligned → we hide it (same logic as a manual seek).
               onManualSeek();
             }}
             onPause={() => setPlaying(false)}
@@ -264,25 +264,25 @@ export default function VideoPane({
             }}
             onSeeking={onSeeking}
           />
-          {/* Annotations sur plage in→out (34.A) : visibles pendant toute la plage. */}
+          {/* Annotations over an in→out range (34.A): visible for the whole range. */}
           <RangeAnnotationsOverlay comments={comments} currentFrame={currentFrame} selectedId={selectedId} />
-          {/* Curseurs des autres participants de la salle live : dans le calque
-              transformé, donc justes au zoom comme à l'ajustement. */}
+          {/* Other participants' cursors in the live room: inside the transformed layer,
+              so they stay accurate under zoom as well as fit. */}
           <LivePointers />
           {overlay}
         </div>
-        {/* La comparaison A/B (wipe, différence) subit la même transformation que le
-            calque principal : les deux images sont centrées dans la même zone, elles
-            restent donc superposées au pixel près une fois zoomées. */}
+        {/* The A/B comparison (wipe, difference) undergoes the same transform as the main
+            layer: both images are centered in the same area, so they stay superimposed to the
+            pixel once zoomed. */}
         {compareOverlay && (
           <div className="absolute inset-0" style={zoom.style}>
             {compareOverlay}
           </div>
         )}
-        {/* Après la comparaison, sans quoi elle les recouvrirait : le calque média est un
-            contexte d'empilement dès qu'il est zoomé (34.G). */}
+        {/* After the comparison, otherwise it would cover them: the media layer is a stacking
+            context as soon as it is zoomed (34.G). */}
         <ZoomedGuidesLayer box={box} zoomStyle={zoom.style} />
-        {/* Repères flottants : zoom, vitesse de lecture, chargement. */}
+        {/* Floating markers: zoom, playback speed, loading. */}
         <ViewerBadges
           zoom={zoom}
           playbackSpeed={playbackSpeed}
@@ -291,8 +291,8 @@ export default function VideoPane({
         />
       </div>
 
-      {/* Playbar : en mode immersif, bandeau translucide sombre en surimpression, masqué
-          après 1 s d'inactivité ; sinon, éléments normaux du flux (display:contents). */}
+      {/* Playbar: in immersive mode, a dark translucent strip overlaid, hidden after 1 s of
+          inactivity; otherwise, normal flow elements (display:contents). */}
       <div
         className={
           videoOnlyFs
@@ -302,7 +302,7 @@ export default function VideoPane({
             : 'contents'
         }
       >
-        {/* Timeline unique : scrub + marqueurs commentaires + boucle I/O + trim */}
+        {/* Single timeline: scrub + comment markers + I/O loop + trim */}
         {duration > 0 && (
           <VideoTimeline
             currentTime={currentFrame / fps}
@@ -322,11 +322,11 @@ export default function VideoPane({
           />
         )}
 
-        {/* Forme d'onde audio sous la timeline : où le dialogue commence, où il coupe,
-            si le son colle à l'image — invisible jusqu'ici, faute d'être calculée. */}
+        {/* Audio waveform under the timeline: where the dialogue starts, where it cuts, whether
+            the sound sticks to the picture — invisible until now, since it was not computed. */}
         <WaveformStrip track={waveform} duration={duration} time={currentFrame / fps} onSeek={seekTo} />
 
-        {/* Transport custom (remplace controls natif) */}
+        {/* Custom transport (replaces native controls) */}
         <VideoTransport
           playing={playing}
           onPlayPause={togglePlay}

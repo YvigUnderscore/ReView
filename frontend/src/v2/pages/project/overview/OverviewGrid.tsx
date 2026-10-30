@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { Suspense, lazy, useState } from 'react';
-import WidgetShell, { type WidgetDragHandle } from '../../../components/widgets/WidgetShell';
-import RetakePanel from '../../../components/production/RetakePanel';
-import type { WidgetSettings, WidgetsPref } from '../../../lib/widgetLayout';
+import WidgetShell, { type WidgetDragHandle } from '@/v2/components/widgets/WidgetShell';
+import RetakePanel from '@/v2/components/production/RetakePanel';
+import type { WidgetSettings, WidgetsPref } from '@/v2/lib/widgetLayout';
 import CountsWidget, { type ProjectCounts } from './CountsWidget';
 import LatestMediaWidget from './LatestMediaWidget';
 import ProgressWidget from './ProgressWidget';
@@ -12,14 +12,14 @@ import ActivityWidget from './ActivityWidget';
 import TasksWidget from './TasksWidget';
 import MyTasksWidget from './MyTasksWidget';
 import AttentionWidget from './AttentionWidget';
-import WidgetResizeHandle, { WidgetRowsChoice } from './WidgetResizeHandle';
+import WidgetResizeHandle, { WidgetRowsChoice } from '@/v2/components/widgets/WidgetResizeHandle';
 import {
-  OVERVIEW_GRID_CLASS,
+  WIDGET_ROW_GRID_CLASS,
   listCapacity,
   rowSpanClass,
-  type OverviewRows,
+  type WidgetRows,
   type WidgetSize,
-} from './overviewSizing';
+} from '@/v2/components/widgets/widgetSizing';
 import {
   OVERVIEW_WIDGET_DEFS,
   isOverviewWidget,
@@ -30,23 +30,21 @@ import {
   visibleOverviewWidgets,
   type OverviewWidgetId,
 } from './overviewWidgets';
-import { useT } from '../../../i18n';
+import { useT } from '@/v2/i18n';
 
 /**
- * Grille de la vue d'ensemble : douze colonnes, des rangées, et des blocs qui se tirent.
+ * The overview grid: twelve columns, rows, and blocks that can be dragged.
  *
- * Elle alignait ses blocs par le haut et les laissait prendre la hauteur de leur contenu.
- * Un bloc court ouvrait donc sous lui un trou que rien ne pouvait combler — les zones vides
- * entourées en rouge sur la capture. Chaque bloc porte désormais une **emprise** : une
- * largeur en colonnes et une hauteur en rangées, réglées d'un seul geste à la poignée de
- * coin, et la grille **tasse** (`grid-flow-row-dense`) : les rangées qu'un bloc court
- * libère sont prises par le premier bloc suivant qui y tient.
+ * It used to align its blocks to the top and let them take the height of their content. A short
+ * block therefore opened a hole beneath it that nothing could fill: the empty areas circled in red
+ * on the screenshot. Each block now carries a **footprint**: a width in columns and a height in
+ * rows, set in a single gesture on the corner handle. The grid **packs** (`grid-flow-row-dense`):
+ * the rows a short block frees are taken by the first following block that fits there.
  *
- * Le glisser-déposer suit la même règle qu'à l'accueil — @dnd-kit n'est téléchargé qu'à
- * l'entrée en composition. Hors composition, c'est une page : ni poignée, ni bordure, ni
- * bouton sur les blocs.
+ * Drag-and-drop follows the same rule as on the home page: @dnd-kit is only downloaded on entering
+ * composition. Outside composition it is a page: no handle, no border, no button on the blocks.
  */
-const WidgetSortable = lazy(() => import('../../../components/widgets/WidgetSortable'));
+const WidgetSortable = lazy(() => import('@/v2/components/widgets/WidgetSortable'));
 
 export interface OverviewGridProps {
   projectId: number;
@@ -60,7 +58,7 @@ export interface OverviewGridProps {
   onGo: (tab: string) => void;
 }
 
-/** Taille montrée pendant un glissement, avant tout enregistrement. */
+/** Size shown during a drag, before anything is saved. */
 interface Preview extends WidgetSize {
   id: OverviewWidgetId;
 }
@@ -78,8 +76,8 @@ export default function OverviewGrid({
 }: OverviewGridProps) {
   const t = useT();
   const ids = visibleOverviewWidgets(layout, canManage);
-  // La taille sous le curseur ne passe pas par les préférences : un cran franchi est un
-  // aperçu, pas une décision. Seul le relâchement enregistre.
+  // The size under the cursor does not go through the preferences: a notch crossed is a preview,
+  // not a decision. Only release saves.
   const [preview, setPreview] = useState<Preview | null>(null);
 
   const content = (id: OverviewWidgetId, size: WidgetSize) => {
@@ -106,7 +104,7 @@ export default function OverviewGrid({
   const widget = (id: OverviewWidgetId, index: number, drag?: WidgetDragHandle) => {
     const definition = OVERVIEW_WIDGET_DEFS[id];
     const saved = overviewWidgetSettings(id, layout);
-    // L'aperçu ne vaut que pour le bloc qu'on tire ; les autres gardent leur emprise.
+    // The preview applies only to the block being dragged; the others keep their footprint.
     const size: WidgetSize =
       preview?.id === id
         ? { span: preview.span, rows: preview.rows }
@@ -116,8 +114,8 @@ export default function OverviewGrid({
 
     const apply = (patch: WidgetSettings) => onLayout(setOverviewWidgetSetting(id, patch, layout));
     const resize = (next: WidgetSize) => onLayout(setOverviewWidgetSize(id, next, layout));
-    const setRows = (rows: OverviewRows) => resize({ span: size.span, rows });
-    // Déplacement d'une place : le voisin sert de cible, la même fonction que le glisser.
+    const setRows = (rows: WidgetRows) => resize({ span: size.span, rows });
+    // Moving by one place: the neighbour serves as target, through the same function as the drag.
     const move = (direction: -1 | 1) => {
       const neighbour = ids[index + direction];
       if (neighbour) onLayout(reorderOverviewWidgets(id, neighbour, layout));
@@ -142,8 +140,8 @@ export default function OverviewGrid({
         rowSizing={{
           className: rowSpanClass(size.rows),
           control: <WidgetRowsChoice rows={size.rows} onRows={setRows} />,
-          // La poignée est une commande de composition : elle vit avec la poignée de
-          // déplacement, et disparaît avec elle.
+          // The handle is a composition command: it lives with the move handle, and disappears
+          // with it.
           handle: editing ? (
             <WidgetResizeHandle
               name={title}
@@ -162,17 +160,17 @@ export default function OverviewGrid({
     );
   };
 
-  const grid = <div className={OVERVIEW_GRID_CLASS}>{ids.map((id, index) => widget(id, index))}</div>;
+  const grid = <div className={WIDGET_ROW_GRID_CLASS}>{ids.map((id, index) => widget(id, index))}</div>;
 
   if (!editing) return grid;
 
-  // Repli identique à la grille finale : le temps que le module arrive, la page ne bouge
-  // pas — seules les poignées ne répondent pas encore.
+  // Fallback identical to the final grid: while the module arrives, the page does not move. Only
+  // the handles do not respond yet.
   return (
     <Suspense fallback={grid}>
       <WidgetSortable
         ids={ids}
-        className={OVERVIEW_GRID_CLASS}
+        className={WIDGET_ROW_GRID_CLASS}
         onReorder={(from, to) => {
           if (isOverviewWidget(from) && isOverviewWidget(to))
             onLayout(reorderOverviewWidgets(from, to, layout));

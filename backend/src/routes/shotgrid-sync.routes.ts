@@ -3,7 +3,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { prisma } from '../lib/prisma';
 import { notFound } from '../lib/errors';
@@ -17,14 +17,14 @@ import { resolveConflict } from '../services/shotgrid/ShotgridConflictService';
 import { listImportableVersions, pullVersions } from '../services/shotgrid/ShotgridVersionSync';
 import { SyncJournal } from '../services/shotgrid/ShotgridSyncJournal';
 
-/** Synchronisations, journal, comparaison et import de publishes à la carte. */
+/** Syncs, journal, comparison, and on-demand import of publishes. */
 const router = Router();
 router.use(authenticate);
 
 const projectParam = z.object({ projectId: z.coerce.number().int().positive() });
 const runParam = z.object({ runId: z.coerce.number().int().positive() });
 
-/** Lance une synchronisation. `full` reprend tout, `reconcile` la fenêtre de rattrapage. */
+/** Starts a sync. `full` takes everything, `reconcile` the catch-up window. */
 router.post(
   '/projects/:projectId/sync',
   validate({
@@ -38,13 +38,13 @@ router.post(
   }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId);
+    await assertProjectManager(requireUser(req), projectId);
     const result =
       req.body.kind === 'reconcile'
         ? await Sync.runReconcile(projectId)
         : await Sync.runSync(projectId, {
             kind: 'full',
-            triggeredById: req.user!.id,
+            triggeredById: requireUser(req).id,
             withMedia: req.body.withMedia,
           });
     res.json({ result });
@@ -53,7 +53,7 @@ router.post(
 
 router.get('/projects/:projectId/runs', validate({ params: projectParam }), async (req, res) => {
   const projectId = Number(req.params.projectId);
-  await assertProjectManager(req.user!, projectId, { allowMembers: true });
+  await assertProjectManager(requireUser(req), projectId, { allowMembers: true });
   const conn = await Config.getConnectionOrThrow(projectId);
   res.json({
     runs: await Journal.listRuns(conn.id),
@@ -61,15 +61,16 @@ router.get('/projects/:projectId/runs', validate({ params: projectParam }), asyn
   });
 });
 
+const logsQuery = z.object({
+  level: z.enum(['info', 'warn', 'error', 'conflict']).optional(),
+  skip: z.coerce.number().int().min(0).default(0),
+  take: z.coerce.number().int().min(1).max(500).default(200),
+});
 router.get(
   '/runs/:runId/logs',
   validate({
     params: runParam,
-    query: z.object({
-      level: z.enum(['info', 'warn', 'error', 'conflict']).optional(),
-      skip: z.coerce.number().int().min(0).default(0),
-      take: z.coerce.number().int().min(1).max(500).default(200),
-    }),
+    query: logsQuery,
   }),
   async (req, res) => {
     const runId = Number(req.params.runId);
@@ -78,18 +79,19 @@ router.get(
       include: { connection: { select: { projectId: true } } },
     });
     if (!run) throw notFound('Run not found');
-    await assertProjectManager(req.user!, run.connection.projectId, { allowMembers: true });
-    const { level, skip, take } = req.query as unknown as { level?: string; skip: number; take: number };
+    await assertProjectManager(requireUser(req), run.connection.projectId, { allowMembers: true });
+    // Re-read: the coercion of `validate` does not persist on `req.query` under Express 5.
+    const { level, skip, take } = logsQuery.parse(req.query);
     res.json(await Journal.listLogs(runId, { level, skip, take }));
   },
 );
 
-/** Arbitrage d'un conflit laissé en attente (politique manuelle). */
+/** Resolution of a conflict left pending (manual policy). */
 /**
- * Arbitrage d'un conflit. Le journal ne se contente pas d'être classé : la décision
- * s'applique. « ShotGrid » relit l'entité distante et l'écrit par-dessus la locale ;
- * « ReView » pousse la valeur locale vers le site. Marquer la ligne résolue sans rien
- * faire laisserait l'écart en place, ce qui est pire que de ne rien proposer.
+ * Resolution of a conflict. The journal does not merely classify it: the decision is applied. "ShotGrid"
+ * re-reads the remote entity and writes it over the local one; "ReView" pushes the local value to the site.
+ * Marking the row resolved without doing anything would leave the gap in place, which is worse than
+ * offering nothing.
  */
 router.post(
   '/logs/:logId/resolve',
@@ -104,13 +106,13 @@ router.post(
       include: { run: { include: { connection: { select: { projectId: true } } } } },
     });
     if (!log) throw notFound('Log entry not found');
-    await assertProjectManager(req.user!, log.run.connection.projectId);
+    await assertProjectManager(requireUser(req), log.run.connection.projectId);
 
     const applied = await resolveConflict(
       log.run.connection.projectId,
       log,
       req.body.resolution,
-      req.user!.id,
+      requireUser(req).id,
     );
     await prisma.shotgridSyncLog.update({
       where: { id: logId },
@@ -121,30 +123,30 @@ router.post(
 );
 
 /**
- * Correspondances du projet — l'interface en tire les liens directs vers les fiches
- * ShotGrid. Une requête par projet plutôt qu'une par carte affichée.
+ * The project's matches: the interface draws direct links to the ShotGrid records from them.
+ * One request per project rather than one per displayed card.
  */
 router.get('/projects/:projectId/links', validate({ params: projectParam }), async (req, res) => {
   const projectId = Number(req.params.projectId);
-  await assertProjectManager(req.user!, projectId, { allowMembers: true });
+  await assertProjectManager(requireUser(req), projectId, { allowMembers: true });
   const conn = await Config.getConnection(projectId);
   if (!conn?.active) return res.json({ links: [] });
   res.json({ links: await listForUi(conn.id) });
 });
 
 /**
- * Comparaison des deux côtés. Aucune écriture : elle sert à décider, pas à corriger.
+ * Comparison of both sides. No write: it serves to decide, not to correct.
  */
 router.get('/projects/:projectId/diff', validate({ params: projectParam }), async (req, res) => {
   const projectId = Number(req.params.projectId);
-  await assertProjectManager(req.user!, projectId, { allowMembers: true });
+  await assertProjectManager(requireUser(req), projectId, { allowMembers: true });
   res.json({ diff: await buildDiff(projectId) });
 });
 
-/** Publishes ShotGrid disponibles, importés ou non. */
+/** Available ShotGrid publishes, imported or not. */
 router.get('/projects/:projectId/versions', validate({ params: projectParam }), async (req, res) => {
   const projectId = Number(req.params.projectId);
-  await assertProjectManager(req.user!, projectId, { allowMembers: true });
+  await assertProjectManager(requireUser(req), projectId, { allowMembers: true });
   const ctx = await Config.openConnection(projectId, { verifyProject: false });
   const journal = await SyncJournal.start(ctx.connection.id, 'diff');
   try {
@@ -161,7 +163,7 @@ router.get('/projects/:projectId/versions', validate({ params: projectParam }), 
   }
 });
 
-/** Import à la carte : la sélection passe outre le filtre de statuts. */
+/** On-demand import: the selection overrides the status filter. */
 router.post(
   '/projects/:projectId/import-versions',
   validate({
@@ -170,9 +172,9 @@ router.post(
   }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId);
+    await assertProjectManager(requireUser(req), projectId);
     const ctx = await Config.openConnection(projectId);
-    const journal = await SyncJournal.start(ctx.connection.id, 'import-versions', req.user!.id);
+    const journal = await SyncJournal.start(ctx.connection.id, 'import-versions', requireUser(req).id);
     try {
       await pullVersions(
         {

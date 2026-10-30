@@ -9,27 +9,25 @@ import { runSync } from './ShotgridSyncService';
 import { can, parseSettings } from './shotgridSettings';
 
 /**
- * Arbitrage d'un conflit.
+ * Arbitration of a conflict.
  *
- * Une ligne de conflit signale que les deux côtés ont bougé entre deux
- * synchronisations. La classer « résolue » sans rien faire laisserait l'écart intact —
- * c'est exactement ce qu'un bouton « Garder ShotGrid » ne doit pas se contenter de
- * faire. Choisir ShotGrid relit l'entité distante et l'applique ; choisir ReView pousse
- * la valeur locale vers le site.
+ * A conflict row signals that both sides moved between two synchronizations. Marking it "resolved" without doing anything would
+ * leave the gap intact: this is exactly what a "Keep ShotGrid" button must not merely do. Choosing ShotGrid re-reads the remote
+ * entity and applies it; choosing ReView pushes the local value to the site.
  */
 export type Resolution = 'sg' | 'review';
 
 export interface ResolutionOutcome {
   direction: Resolution;
   /**
-   * Ce qui a réellement été déclenché, pour le retour à l'utilisateur.
-   * `blocked` : l'écriture vers le site est fermée dans les réglages — la ligne se ferme,
-   * mais l'écart persistera. Le dire vaut mieux qu'un « résolu » qui ne l'est pas.
+   * What was actually triggered, for feedback to the user.
+   * `blocked`: writing to the site is closed in the settings: the row closes, but the gap will persist. Saying so is better than a
+   * "resolved" that is not.
    */
   action: 'pulled' | 'pushed' | 'blocked' | 'nothing';
 }
 
-/** Domaine de réglage qui gouverne l'écriture, par type d'entité locale. */
+/** Settings domain governing the write, per local entity type. */
 const WRITE_DOMAIN: Record<string, 'tasks' | 'hierarchy' | 'versions'> = {
   task: 'tasks',
   shot: 'hierarchy',
@@ -39,12 +37,10 @@ const WRITE_DOMAIN: Record<string, 'tasks' | 'hierarchy' | 'versions'> = {
 };
 
 /**
- * Remet la valeur ReView d'avant l'écrasement, quand la politique `sg_wins` l'a déjà
- * remplacée par celle du site.
+ * Puts back the ReView value from before the overwrite, when the `sg_wins` policy has already replaced it with the site's.
  *
- * Sans cette étape, « ReView gagne » renvoyait au site… la valeur du site : le local
- * avait été écrasé pendant la synchronisation, et la ligne de conflit est le seul
- * endroit où la valeur d'origine subsiste (`vars.review`).
+ * Without this step, "ReView wins" sent the site back... the site's value: the local value had been overwritten during the
+ * synchronization, and the conflict row is the only place where the original value survives (`vars.review`).
  */
 async function restoreReviewValue(
   projectId: number,
@@ -57,7 +53,7 @@ async function restoreReviewValue(
 
   const status = await prisma.pipelineStatus.findFirst({
     where: { code, OR: [{ projectId }, { projectId: null }] },
-    orderBy: { projectId: 'desc' }, // le statut du projet prime sur celui du studio
+    orderBy: { projectId: 'desc' }, // the project's status takes precedence over the studio's
   });
   if (!status) return;
 
@@ -87,14 +83,14 @@ export async function resolveConflict(
 ): Promise<ResolutionOutcome> {
   if (resolution === 'sg') {
     if (!log.sgType || !log.sgId) return { direction: 'sg', action: 'nothing' };
-    // Relecture ciblée de la seule entité en cause : ShotGrid écrase la valeur locale.
+    // Targeted re-read of the only entity at stake: ShotGrid overwrites the local value.
     await runSync(projectId, {
       kind: 'incremental',
       onlySgIds: [{ sgType: log.sgType, sgId: log.sgId }],
       withMedia: false,
       triggeredById: actorId,
     });
-    logger.info({ projectId, sgType: log.sgType, sgId: log.sgId }, 'Conflit arbitré en faveur de ShotGrid');
+    logger.info({ projectId, sgType: log.sgType, sgId: log.sgId }, 'Conflict resolved in favor of ShotGrid');
     return { direction: 'sg', action: 'pulled' };
   }
 
@@ -104,9 +100,9 @@ export async function resolveConflict(
 }
 
 /**
- * Renvoie la valeur locale vers ShotGrid, selon la nature de l'entité en conflit.
- * Un type sans écriture correspondante ne fait rien plutôt que d'échouer : la ligne
- * est tout de même classée, et la comparaison dira si l'écart persiste.
+ * Pushes the local value to ShotGrid, depending on the nature of the conflicting entity.
+ * A type with no matching write does nothing rather than fail: the row is still classified, and the comparison will say whether the
+ * gap persists.
  */
 async function pushLocalValue(
   projectId: number,
@@ -115,9 +111,8 @@ async function pushLocalValue(
 ): Promise<ResolutionOutcome['action']> {
   if (!log.localType || !log.localId) return 'nothing';
 
-  // Enfiler un job dont le domaine est fermé en écriture ne produit rien : le worker
-  // sort en silence. Le vérifier ici permet de le dire à l'utilisateur au lieu de lui
-  // annoncer un envoi qui n'aura pas lieu.
+  // Enqueuing a job whose domain is closed for writing produces nothing: the worker exits silently. Checking it here lets us tell
+  // the user instead of announcing a send that will not happen.
   const domain = WRITE_DOMAIN[log.localType];
   if (domain) {
     const connection = await prisma.shotgridConnection.findUnique({ where: { projectId } });
@@ -148,13 +143,13 @@ async function pushLocalValue(
     default:
       logger.info(
         { localType: log.localType },
-        'Conflit classé sans écriture : type sans équivalent poussable',
+        'Conflict closed without a write: type with no pushable equivalent',
       );
       return 'nothing';
   }
 }
 
-/** Conflits encore ouverts d'un projet — bannière et écran de comparaison. */
+/** Still-open conflicts of a project: banner and comparison screen. */
 export async function openConflictCount(projectId: number): Promise<number> {
   const connection = await prisma.shotgridConnection.findUnique({ where: { projectId } });
   if (!connection) return 0;

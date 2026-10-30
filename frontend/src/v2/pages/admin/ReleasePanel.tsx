@@ -4,7 +4,7 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ExternalLink, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { Badge } from '../../components/ui/badge';
 import { Button } from '../../components/ui/button';
@@ -14,13 +14,14 @@ import { useT, intlLocale, type Tr } from '../../i18n';
 import { Panel, Row } from './AdminPrimitives';
 import { displayVersion, formatBuildDate } from './aboutInstance';
 import { releaseErrorLabel, type OpsOverview, type ReleaseInfo } from './ops';
+import { sanitizeHtml } from '@/v2/lib/sanitizeHtml';
 
 /**
- * Ce que fait tourner cette instance, ce qui est paru depuis, et ce que ça change.
+ * What this instance runs, what has been released since, and what that changes.
  *
- * Les notes de version viennent du dépôt suivi : c'est du markdown **distant**, rendu par
- * `renderDocHtml`, qui échappe le HTML brut. Un dépôt tiers n'injecte donc rien dans
- * l'écran d'administration de personne.
+ * The release notes come from the tracked repository: this is **remote** markdown, rendered by
+ * `renderDocHtml`, which escapes raw HTML. A third-party repository therefore injects nothing into
+ * anyone's administration screen.
  */
 export default function ReleasePanel({ overview }: { overview: OpsOverview }) {
   const t = useT();
@@ -90,7 +91,7 @@ export default function ReleasePanel({ overview }: { overview: OpsOverview }) {
   );
 }
 
-/** Date lisible dans la langue du lecteur — jamais un ISO brut, jamais un fuseau imposé. */
+/** Readable date in the reader's language — never a raw ISO, never an imposed time zone. */
 function formatMoment(iso: string): string {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return iso;
@@ -98,8 +99,8 @@ function formatMoment(iso: string): string {
 }
 
 /**
- * Toutes les versions parues depuis celle en service, pas seulement la dernière : sauter
- * trois versions d'un coup est le cas courant, et ce qui change vient alors des trois.
+ * All the versions released since the one in service, not only the latest: skipping
+ * three versions at once is the common case, and what changes then comes from all three.
  */
 function ChangeList({ releases, t }: { releases: ReleaseInfo[]; t: Tr }) {
   const calloutLabels = useCalloutLabels();
@@ -128,9 +129,9 @@ function ChangeList({ releases, t }: { releases: ReleaseInfo[]; t: Tr }) {
           <div className="border-t border-border px-3 py-2">
             <article
               className="prose-doc max-w-none text-sm text-card-foreground"
-              // Markdown d'un dépôt distant : `renderDocHtml` échappe le HTML brut.
+              // Markdown from a remote repository: `renderDocHtml` escapes raw HTML.
               dangerouslySetInnerHTML={{
-                __html: renderDocHtml(entry.notesMd, 'CHANGELOG.md', calloutLabels),
+                __html: sanitizeHtml(renderDocHtml(entry.notesMd, 'CHANGELOG.md', calloutLabels)),
               }}
             />
             <a

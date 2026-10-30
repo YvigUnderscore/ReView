@@ -20,14 +20,14 @@ const zoomAt = (scale: number, reset = () => {}): ViewportZoom => ({
 const still = { visible: false, speed: 1 };
 
 describe('ViewerBadges', () => {
-  it('lecteur au repos, ajusté : aucun repère à l’écran', () => {
+  it('idle player, fitted: no marker on screen', () => {
     const { container } = render(
       <ViewerBadges zoom={zoomAt(1)} playbackSpeed={still} buffering={false} switchingQuality={false} />,
     );
     expect(container).toBeEmptyDOMElement();
   });
 
-  it('zoomé : le taux s’affiche et ramène à l’ajustement d’un clic', () => {
+  it('zoomed: the level is shown and one click returns to fit', () => {
     const reset = vi.fn();
     render(
       <ViewerBadges
@@ -43,7 +43,7 @@ describe('ViewerBadges', () => {
     expect(reset).toHaveBeenCalledTimes(1);
   });
 
-  it('lecture arrière et chargement se signalent chacun de leur côté', () => {
+  it('reverse playback and loading each signal themselves separately', () => {
     const { container } = render(
       <ViewerBadges
         zoom={zoomAt(1)}

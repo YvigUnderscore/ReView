@@ -4,7 +4,7 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, ListVideo } from 'lucide-react';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { reviewPath } from '../../lib/slug';
 import type { PlaylistDetail, PlaylistItemEntry } from '../../types/api';
@@ -12,9 +12,9 @@ import { carryParams, findPlayableNeighbor } from './playlistNav';
 import { useT } from '../../i18n';
 
 /**
- * Lecture enchaînée d'une playlist (33.A) : actif quand la review est ouverte avec
- * `?playlist=ID`. Affiche nom + position (n/N) et navigue précédent/suivant vers le
- * premier média visible des versions voisines, en conservant le contexte d'URL.
+ * Sequential playback of a playlist (33.A): active when the review is opened with
+ * `?playlist=ID`. Shows the name + position (n/N) and navigates previous/next to the first
+ * visible media of the neighbouring versions, keeping the URL context.
  */
 export default function PlaylistNavigator({ versionId }: { versionId: number }) {
   const t = useT();

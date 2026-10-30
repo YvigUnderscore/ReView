@@ -2,28 +2,28 @@
 # SPDX-FileCopyrightText: 2026 Yvig Bidon
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-"""Analyse d'une scene USD pour le worker ReView (Phase 45, 45.B).
+"""Analyse a USD scene for the ReView worker (Phase 45, 45.B).
 
-Ce script est le seul endroit du pipeline qui parle reellement USD : il s'appuie sur le
-runtime OpenUSD officiel (module `pxr`, paquet `usd-core` installe dans /opt/usdenv) pour
-repondre a trois questions que ni assimp ni Blender ne savent traiter proprement :
+This script is the only place in the pipeline that really speaks USD: it relies on the
+official OpenUSD runtime (`pxr` module, `usd-core` package installed in /opt/usdenv) to
+answer three questions that neither assimp nor Blender can handle cleanly:
 
-  1. **quelle couche est la racine** d'une livraison en archive (graphe de dependances) ;
-  2. **quels assets manquent** (textures/couches non resolues) — sinon le modele arrive
-     silencieusement gris en review ;
-  3. **quelles variantes et quels purposes** la scene expose, pour pouvoir la recomposer.
+  1. **which layer is the root** of an archived delivery (dependency graph);
+  2. **which assets are missing** (unresolved textures or layers), otherwise the model
+     silently arrives grey in review;
+  3. **which variants and which purposes** the scene exposes, so it can be recomposed.
 
-Il ecrit **un seul objet JSON sur stdout** ; tout le reste (avertissements USD) part sur
-stderr. Toute erreur fatale sort en code != 0 avec un message sur stderr.
+It writes **a single JSON object on stdout**; everything else (USD warnings) goes to
+stderr. Any fatal error exits with a non-zero code and a message on stderr.
 
-Modes :
-  scan    --input <dossier>            -> { "layers": [ { "layer", "deps" } ] }
-  inspect --input <fichier usd/usdz>   -> description complete de la scene
-          [--variants-file <json>] [--overlay-out <fichier.usda>]
+Modes:
+  scan    --input <folder>             -> { "layers": [ { "layer", "deps" } ] }
+  inspect --input <file usd/usdz>      -> full description of the scene
+          [--variants-file <json>] [--overlay-out <file.usda>]
 
-L'option --overlay-out ecrit une **couche d'overlay** qui sous-couche la racine et force une
-selection de variantes. C'est la maniere USD de recomposer sans toucher au fichier d'origine
-et sans aplatir la scene (un Flatten casserait les chemins relatifs vers les textures).
+The --overlay-out option writes an **overlay layer** that sublayers the root and forces a
+variant selection. This is the USD way to recompose without touching the original file
+and without flattening the scene (a Flatten would break the relative paths to textures).
 """
 
 import argparse
@@ -32,16 +32,16 @@ import os
 import sys
 
 USD_EXTENSIONS = (".usd", ".usda", ".usdc")
-# Bornes de parcours : une scene de production peut contenir des millions de prims, on ne
-# lit que ce qu'il faut pour la fiche technique sans immobiliser le worker.
+# Traversal bounds: a production scene can contain millions of prims, so we
+# read only what the spec sheet needs without tying up the worker.
 MAX_PRIMS_SCANNED = 200000
 MAX_VARIANT_SETS = 200
 MAX_MISSING_REPORTED = 50
-# Scenegraph (46.A) : au-dela, l'arbre est tronque — une scene de production peut porter
-# des millions de prims, la review n'en affiche jamais autant.
+# Scenegraph (46.A): beyond this, the tree is truncated; a production scene can carry
+# millions of prims, and the review never shows that many.
 MAX_PRIMS_REPORTED = 5000
-# Materiaux rapportes pour la cuisson des variantes : ils servent a peupler le masque
-# d'import de Blender, pas a l'affichage — inutile d'en lister des dizaines de milliers.
+# Materials reported for variant baking: they populate Blender's import mask,
+# not the display, so there is no point listing tens of thousands of them.
 MAX_MATERIALS_REPORTED = 2000
 
 
@@ -66,7 +66,7 @@ def _list_usd_layers(directory):
 
 
 def _dependencies(asset_path):
-    """(couches, assets, non_resolus) transitifs d'une couche, via UsdUtils."""
+    """(layers, assets, unresolved) transitively for a layer, via UsdUtils."""
     from pxr import UsdUtils
 
     layers, assets, unresolved = UsdUtils.ComputeAllDependencies(asset_path)
@@ -75,7 +75,7 @@ def _dependencies(asset_path):
 
 
 def cmd_scan(directory):
-    """Graphe de dependances entre couches — la racine est choisie cote TypeScript."""
+    """Dependency graph between layers: the root is chosen on the TypeScript side."""
     layers = _list_usd_layers(directory)
     result = []
     for layer_path in layers:
@@ -114,14 +114,14 @@ def _variant_sets(stage):
 
 
 def _scan_stage(stage):
-    """Purposes, taille, squelette et chemins des materiaux — en un seul parcours.
+    """Purposes, size, skeleton and material paths, in a single pass.
 
-    Les chemins de materiaux ne servent pas la fiche technique mais la **cuisson des
-    variantes** : Blender masque l'import d'une option a son prim porteur, et un masque de
-    peuplement USD retire du stage tout ce qui est en dehors. Un materiau range ailleurs
-    (bibliotheque partagee `/World/mtl`) devient alors introuvable et le maillage arrive
-    sans materiau — donc en metal blanc miroir dans le viewer, la spec glTF imposant le
-    materiau par defaut. Les chemins collectes ici sont ajoutes au masque (46.G).
+    Material paths do not serve the spec sheet but the **baking of variants**: Blender masks
+    the import of an option to its carrier prim, and a population mask of USD removes
+    everything outside it from the stage. A material stored elsewhere (shared library
+    `/World/mtl`) then becomes unreachable, and the mesh arrives without material: white
+    mirror metal in the viewer, since the glTF spec imposes the default material. The paths
+    collected here are added to the mask (46.G).
     """
     from pxr import UsdGeom
 
@@ -147,12 +147,12 @@ def _scan_stage(stage):
 
 
 def _prim_tree(stage):
-    """Arbre des prims a plat (Phase 46, 46.A) — structure du scenegraph affiche en review.
+    """Flat list of prims (Phase 46, 46.A): the scenegraph structure displayed in review.
 
-    A plat plutot qu'imbrique : la validation Zod et le transport sont plus simples, et le
-    front reconstruit la hierarchie a partir des chemins. Contient aussi les prims **non
-    rendus** (variante inactive, purpose filtre) : c'est justement l'interet d'un vrai
-    scenegraph par rapport a l'arbre des noeuds glTF.
+    Flat rather than nested: Zod validation and transport are simpler, and the front end
+    rebuilds the hierarchy from the paths. It also contains the **unrendered** prims
+    (inactive variant, filtered purpose): that is precisely the point of a real scenegraph
+    compared with the glTF node tree.
     """
     from pxr import UsdGeom
 
@@ -184,7 +184,7 @@ def _prim_tree(stage):
 
 
 def _apply_variant_selections(stage, selections):
-    """Applique {prim: {variantSet: valeur}} sur la cible d'edition courante."""
+    """Applies {prim: {variantSet: value}} to the current edit target."""
     applied = []
     for prim_path, wanted in selections.items():
         prim = stage.OverridePrim(prim_path)
@@ -207,7 +207,7 @@ def _apply_variant_selections(stage, selections):
 
 
 def _write_overlay(root_path, selections, overlay_out):
-    """Couche d'overlay sous-couchant la racine, portant la selection de variantes."""
+    """Overlay layer sublayering the root, carrying the variant selection."""
     from pxr import Sdf, Usd
 
     overlay_dir = os.path.dirname(os.path.abspath(overlay_out)) or "."
@@ -216,7 +216,7 @@ def _write_overlay(root_path, selections, overlay_out):
         os.remove(overlay_out)
 
     layer = Sdf.Layer.CreateNew(overlay_out)
-    # Chemin relatif : l'overlay vit a cote de la racine, les assets restent resolus.
+    # Relative path: the overlay lives next to the root, and the assets stay resolved.
     layer.subLayerPaths.append(_relative(os.path.abspath(root_path), overlay_dir))
     stage = Usd.Stage.Open(layer)
     applied = _apply_variant_selections(stage, selections)
@@ -225,13 +225,13 @@ def _write_overlay(root_path, selections, overlay_out):
 
 
 def cmd_overlays(root_path, manifest):
-    """Ecrit N couches d'overlay en une seule invocation (46.P).
+    """Writes N overlay layers in a single invocation (46.P).
 
-    `prepareVariantLayers` invoquait ce script une fois **par option a cuire**, chaque appel
-    recomposant la scene entiere — une scene de production (Kitchen_set : 200 jeux de
-    variantes) rendait la preparation prohibitive. Ici, aucune composition : la selection est
-    posee en pur Sdf (`over` + `variantSelections`), la validite des options ayant deja ete
-    etablie par l'inspection initiale.
+    `prepareVariantLayers` used to invoke this script **once per option to bake**, each call
+    recomposing the whole scene: on a production scene (Kitchen_set: 200 variant sets) the
+    preparation was prohibitive. Here there is no composition: the selection is set in pure
+    Sdf (`over` + `variantSelections`), the validity of the options having already been
+    established by the initial inspection.
     """
     from pxr import Sdf
 
@@ -243,7 +243,7 @@ def cmd_overlays(root_path, manifest):
         if os.path.exists(out):
             os.remove(out)
         layer = Sdf.Layer.CreateNew(out)
-        # Chemin relatif : l'overlay vit a cote de la racine, les assets restent resolus.
+        # Relative path: the overlay lives next to the root, and the assets stay resolved.
         layer.subLayerPaths.append(_relative(os.path.abspath(root_path), overlay_dir))
         for prim_path, wanted in entry["variants"].items():
             spec = Sdf.CreatePrimInLayer(layer, prim_path)

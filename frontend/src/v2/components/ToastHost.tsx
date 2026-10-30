@@ -5,29 +5,29 @@ import { Toaster } from 'sonner';
 import type { Theme } from '../stores/useTheme';
 
 /**
- * Hauteur libérée au-dessus du premier toast : la barre du haut mesure `h-14` (3,5 rem) et
- * on lui laisse une gouttière. Exportée parce que c'est la seule chose à vérifier — un toast
- * qui démarre plus haut recouvrirait la recherche, la cloche et le suivi des envois.
+ * Height freed above the first toast: the top bar measures `h-14` (3.5 rem), and
+ * we leave it a gutter. Exported because it is the only thing to verify: a toast
+ * that starts higher would cover the search, the bell and the upload tracker.
  */
 export const TOAST_TOP_OFFSET = '4.25rem';
 
 /**
- * Les toasts de l'application, **en haut et au centre**.
+ * The application's toasts, **at the top and centred**.
  *
- * Ils tombaient en bas à droite, où ils recouvraient ce que le coin contenait déjà : le
- * suivi des envois, la conversation ancrée, la pagination des listes, le HUD du viewer. Deux
- * emplacements hauts étaient possibles, et le choix n'est pas indifférent :
+ * They used to fall at the bottom right, where they covered what the corner already held: the
+ * upload tracker, the anchored conversation, list pagination, the viewer HUD. Two
+ * top positions were possible, and the choice matters:
  *
- * - `top-right` place une pile de 356 px de large sous le bout droit de la rangée — c'est-à-dire
- *   exactement sous la recherche, la cloche et le suivi des envois, les trois surfaces qu'on
- *   vient d'y installer. On remplacerait un recouvrement par un autre.
- * - `top-center` tombe sous le milieu de la rangée, que le fil d'Ariane (aligné à gauche)
- *   laisse libre, et loin du groupe de droite.
+ * - `top-right` places a 356 px wide stack under the right end of the row, which is
+ *   exactly under the search, the bell and the upload tracker: the three surfaces we
+ *   have just installed there. We would be trading one overlap for another.
+ * - `top-center` falls under the middle of the row, which the breadcrumb (left-aligned)
+ *   leaves free, and far from the right-hand group.
  *
- * D'où `top-center`, décalé de {@link TOAST_TOP_OFFSET} pour passer SOUS la barre du haut
- * plutôt que par-dessus : le décalage par défaut de sonner (24 px) l'aurait posé en plein
- * milieu d'une barre haute de 56 px. Le même décalage vaut en fenêtre téléphone
- * (`mobileOffset`), où la pile occupe toute la largeur.
+ * Hence `top-center`, offset by {@link TOAST_TOP_OFFSET} to pass BELOW the top bar
+ * rather than over it: sonner's default offset (24 px) would have placed it in the
+ * middle of a 56 px top bar. The same offset applies in phone width
+ * (`mobileOffset`), where the stack takes the full width.
  */
 export default function ToastHost({ theme }: { theme: Theme }) {
   return (

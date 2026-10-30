@@ -4,13 +4,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
 /**
- * PERF-03 — le coût du contrôle d'accès d'un lot se mesure en REQUÊTES, pas au chronomètre.
+ * PERF-03: the cost of a batch's access check is measured in QUERIES, not by stopwatch.
  *
- * Avant : chaque identifiant repassait par un résolveur de projet (1 à 3 requêtes selon le
- * domaine) puis par `checkProjectAccess` (2 requêtes), et les médias par `assertMediaManage`
- * (6). Sur les deux cents identifiants que la route autorise, cela faisait un bon millier de
- * requêtes séquentielles avant la première écriture — toutes rendant le même projet et la
- * même appartenance. Ce fichier fige le nombre d'appels, domaine par domaine.
+ * Before: each identifier went through a project resolver (1 to 3 queries depending on the domain), then
+ * through `checkProjectAccess` (2 queries), and media through `assertMediaManage` (6). For the two hundred
+ * identifiers the route allows, that made roughly a thousand sequential queries before the first write, all
+ * returning the same project and the same membership. This file pins the number of calls, domain by domain.
  */
 vi.mock('../lib/prisma', () => ({
   prisma: {
@@ -73,7 +72,7 @@ import { Role, VersionStatus } from '@prisma/client';
 const admin = { id: 1, role: Role.ADMIN };
 const artist = { id: 3, role: Role.ARTIST };
 
-/** Les deux cents identifiants que `routes/bulk.routes.ts` autorise (`z.array(…).max(200)`). */
+/** The two hundred identifiers that `routes/bulk.routes.ts` allows (`z.array(...).max(200)`). */
 const ids = Array.from({ length: 200 }, (_, index) => index + 1);
 const chain = { asset: null, task: { shot: { projectId: 7 }, asset: null } };
 
@@ -83,8 +82,8 @@ beforeEach(() => {
   vi.mocked(effectiveProjectRole).mockResolvedValue(Role.ARTIST);
 });
 
-describe('contrôle d’accès d’un lot — nombre de requêtes', () => {
-  it('200 plans : une lecture, un contrôle d’accès projet', async () => {
+describe('batch access check: number of queries', () => {
+  it('200 shots: one read, one project access check', async () => {
     vi.mocked(prisma.shot.findMany).mockResolvedValue(ids.map((id) => ({ id, projectId: 7 })) as never);
 
     await bulkDelete(admin, 'shots', ids);
@@ -94,20 +93,20 @@ describe('contrôle d’accès d’un lot — nombre de requêtes', () => {
     expect(softDeleteShots).toHaveBeenCalledWith(ids);
   });
 
-  it('200 versions : une lecture (auteur compris), un contrôle d’accès projet', async () => {
+  it('200 versions: one read (author included), one project access check', async () => {
     vi.mocked(prisma.version.findMany).mockResolvedValue(
       ids.map((id) => ({ id, authorId: 3, ...chain })) as never,
     );
 
     await bulkDelete(artist, 'versions', ids);
 
-    // L'auteur était relu par un `version.findUnique` supplémentaire, id par id.
+    // The author used to be re-read by an extra `version.findUnique`, one id at a time.
     expect(prisma.version.findMany).toHaveBeenCalledTimes(1);
     expect(checkProjectAccess).toHaveBeenCalledTimes(1);
     expect(softDeleteVersions).toHaveBeenCalledWith(ids);
   });
 
-  it('200 médias d’un même projet : une lecture et UNE garde MediaService', async () => {
+  it('200 media from the same project: one read and ONE MediaService guard', async () => {
     vi.mocked(prisma.mediaObject.findMany).mockResolvedValue(
       ids.map((id) => ({ id, uploaderId: 3, version: chain })) as never,
     );
@@ -115,13 +114,13 @@ describe('contrôle d’accès d’un lot — nombre de requêtes', () => {
     await bulkDelete(artist, 'media', ids);
 
     expect(prisma.mediaObject.findMany).toHaveBeenCalledTimes(1);
-    // Avant : 200 appels, soit ~1 200 requêtes avant la première écriture.
+    // Before: 200 calls, i.e. about 1,200 queries before the first write.
     expect(assertMediaManage).toHaveBeenCalledTimes(1);
     expect(effectiveProjectRole).toHaveBeenCalledTimes(1);
     expect(softDeleteMedias).toHaveBeenCalledWith(ids);
   });
 
-  it('une sélection à cheval sur trois projets : trois contrôles, pas deux cents', async () => {
+  it('a selection spanning three projects: three checks, not two hundred', async () => {
     vi.mocked(prisma.shot.findMany).mockResolvedValue(
       ids.map((id) => ({ id, projectId: 7 + (id % 3) })) as never,
     );
@@ -131,7 +130,7 @@ describe('contrôle d’accès d’un lot — nombre de requêtes', () => {
     expect(checkProjectAccess).toHaveBeenCalledTimes(3);
   });
 
-  it('200 tâches : une seule résolution du projet porteur', async () => {
+  it('200 tasks: a single resolution of the owning project', async () => {
     vi.mocked(prisma.task.findMany).mockResolvedValue(
       ids.map((id) => ({ id, shot: { projectId: 7 }, asset: null })) as never,
     );
@@ -141,7 +140,7 @@ describe('contrôle d’accès d’un lot — nombre de requêtes', () => {
     expect(prisma.task.findMany).toHaveBeenCalledTimes(1);
   });
 
-  it('200 versions à repasser en statut : une seule résolution du projet porteur', async () => {
+  it('200 versions to move to a status: a single resolution of the owning project', async () => {
     vi.mocked(prisma.version.findMany).mockResolvedValue(
       ids.map((id) => ({ id, authorId: 3, ...chain })) as never,
     );

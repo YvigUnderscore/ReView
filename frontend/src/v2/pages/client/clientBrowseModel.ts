@@ -4,19 +4,18 @@
 import type { ClientMedia, ShareBrowse, SharePlaylistCard } from '../../types/api';
 
 /**
- * Ce que la page publique affiche, et où l'on se trouve dedans — **pur**, donc testable.
+ * What the public page displays, and where one is within it: **pure**, so testable.
  *
- * Deux règles tiennent tout le module :
- *  - une tuile de média n'existe qu'une fois, dans le tableau `media` du partage ; les nœuds
- *    (playlist, séquence, plan, asset) ne portent que des identifiants, qu'on résout ici ;
- *  - **un onglet vide ne s'affiche pas**. La page d'un lien qui ne partage qu'un asset ne
- *    doit pas proposer « Sequences » et « Shots » pour rien : ce que le lien n'ouvre pas ne
- *    doit même pas être nommé.
+ * Two rules hold the whole module:
+ *  - a media tile exists only once, in the `media` array of the share; the nodes (playlist,
+ *    sequence, shot, asset) only carry identifiers, which are resolved here;
+ *  - **an empty tab is not shown**. The page of a link sharing only an asset must not offer
+ *    "Sequences" and "Shots" for nothing: what the link does not open must not even be named.
  */
 
 export type ClientTab = 'review' | 'sequences' | 'shots' | 'assets';
 
-/** L'endroit où se trouve le visiteur. L'accueil est l'état de repos. */
+/** Where the visitor is. Home is the resting state. */
 export type ClientView =
   | { kind: 'home' }
   | { kind: 'tab'; tab: ClientTab }
@@ -32,7 +31,7 @@ const TABS: readonly ClientTab[] = ['review', 'sequences', 'shots', 'assets'];
 const isTab = (value: string | null): value is ClientTab =>
   value !== null && (TABS as readonly string[]).includes(value);
 
-/** Entier strictement positif d'un paramètre d'URL, sinon `null` (un `?seq=abc` ne navigue pas). */
+/** Strictly positive integer from a URL parameter, otherwise `null` (a `?seq=abc` does not navigate). */
 function idParam(params: URLSearchParams, name: string): number | null {
   const raw = params.get(name);
   if (raw === null) return null;
@@ -41,8 +40,8 @@ function idParam(params: URLSearchParams, name: string): number | null {
 }
 
 /**
- * Lit la vue dans l'URL. L'ordre de priorité va du plus précis au plus général : un lien
- * recopié qui porte à la fois `?tab=` et `?shot=` ouvre le plan, pas l'onglet.
+ * Reads the view from the URL. Priority goes from most specific to most general: a copied
+ * link carrying both `?tab=` and `?shot=` opens the shot, not the tab.
  */
 export function parseClientView(params: URLSearchParams): ClientView {
   const sequence = idParam(params, 'seq');
@@ -57,14 +56,14 @@ export function parseClientView(params: URLSearchParams): ClientView {
   return isTab(tab) ? { kind: 'tab', tab } : HOME;
 }
 
-/** Média ouvert dans le viewer, indépendant de la vue de navigation sous-jacente. */
+/** Media open in the viewer, independent of the underlying navigation view. */
 export function parseClientMediaId(params: URLSearchParams): number | null {
   return idParam(params, 'm');
 }
 
 /**
- * Paramètres d'URL d'une vue. L'accueil n'en porte aucun : l'adresse nue du lien est
- * l'accueil, et c'est ce que le destinataire recopie.
+ * URL parameters of a view. Home carries none: the bare link address is home, and that is
+ * what the recipient copies.
  */
 export function viewParams(view: ClientView, mediaId?: number | null): Record<string, string> {
   const params: Record<string, string> = {};
@@ -92,8 +91,8 @@ export function viewParams(view: ClientView, mediaId?: number | null): Record<st
 }
 
 /**
- * Onglets réellement peuplés. « Review » apparaît dès qu'il y a un média — c'est la vue à
- * plat, celle qui ne peut jamais mentir sur ce que le lien contient.
+ * Tabs actually populated. "Review" appears as soon as there is a media: it is the flat view,
+ * the one that can never misrepresent what the link contains.
  */
 export function visibleTabs(media: readonly ClientMedia[], browse: ShareBrowse | undefined): ClientTab[] {
   if (media.length === 0) return [];
@@ -105,22 +104,22 @@ export function visibleTabs(media: readonly ClientMedia[], browse: ShareBrowse |
 }
 
 /**
- * Résout des identifiants en tuiles, dans l'ordre demandé. Un identifiant absent du tableau
- * `media` est ignoré : il désigne un média hors de la page servie, et une tuile vide vaut
- * moins que pas de tuile.
+ * Resolves identifiers into tiles, in the requested order. An identifier absent from the
+ * `media` array is ignored: it designates a media outside the served page, and an empty tile
+ * is worth less than no tile.
  */
 export function mediaByIds(media: readonly ClientMedia[], ids: readonly number[]): ClientMedia[] {
   const byId = new Map(media.map((m) => [m.id, m]));
   return ids.map((id) => byId.get(id)).filter((m): m is ClientMedia => m !== undefined);
 }
 
-/** Vignette de couverture d'un nœud : celle d'un média déjà signé, jamais une URL de plus. */
+/** Cover thumbnail of a node: that of an already-signed media, never one more URL. */
 export function coverUrl(media: readonly ClientMedia[], coverMediaId: number | null): string | null {
   if (coverMediaId === null) return null;
   return media.find((m) => m.id === coverMediaId)?.thumbnailUrl ?? null;
 }
 
-/** Les plans d'une séquence, dans l'ordre de production. */
+/** The shots of a sequence, in production order. */
 export function shotsOfSequence(browse: ShareBrowse | undefined, sequenceId: number) {
   const sequence = browse?.sequences.find((s) => s.id === sequenceId);
   if (!sequence) return [];
@@ -129,7 +128,7 @@ export function shotsOfSequence(browse: ShareBrowse | undefined, sequenceId: num
     .filter((s): s is NonNullable<typeof s> => s !== undefined);
 }
 
-/** Les médias que la vue courante montre, déjà résolus et ordonnés. */
+/** The media the current view shows, already resolved and ordered. */
 export function mediaOfView(
   view: ClientView,
   media: readonly ClientMedia[],
@@ -152,10 +151,10 @@ export function mediaOfView(
   }
 }
 
-/** Nombre de médias de l'accueil : assez pour donner le ton, pas assez pour noyer. */
+/** Number of home media: enough to set the tone, not enough to drown the page. */
 export const HOME_MEDIA_COUNT = 12;
 
-/** Ordres de lecture proposés au client. */
+/** Reading orders offered to the client. */
 export type ClientSort = 'recent' | 'name' | 'production';
 
 export const CLIENT_SORTS: readonly ClientSort[] = ['recent', 'name', 'production'];
@@ -164,9 +163,9 @@ export const isClientSort = (value: string | null): value is ClientSort =>
   value !== null && (CLIENT_SORTS as readonly string[]).includes(value);
 
 /**
- * Filtre par texte libre : nom de fichier, nom de version, nom de tâche, et — le plus
- * utile — **code et nom du plan ou de l'asset** qui portent le média. Quelqu'un qui cherche
- * tape « SH0240 », qui n'est nulle part dans le nom du fichier.
+ * Free-text filter: file name, version name, task name and, most usefully, **code and name
+ * of the shot or asset** carrying the media. Someone searching for "SH0240" types something
+ * that appears nowhere in the file name.
  */
 export function filterMedia(
   media: readonly ClientMedia[],
@@ -197,10 +196,10 @@ export function filterMedia(
 }
 
 /**
- * Rang de production d'un média : séquence, puis plan, puis date. C'est l'ordre dans lequel
- * un film se regarde — et le seul dans lequel « le raccord entre les deux plans » veut dire
- * quelque chose. Ce que l'arborescence ne situe pas (un asset, un média orphelin) passe
- * après, plutôt que de s'intercaler au hasard.
+ * Production rank of a media: sequence, then shot, then date. This is the order in which a
+ * film is watched, and the only one in which "the cut between two shots" means anything.
+ * What the tree does not place (an asset, an orphan media) goes last, rather than being
+ * interleaved at random.
  */
 function productionRank(m: ClientMedia, browse: ShareBrowse | undefined): [number, number] {
   const sequence = browse?.sequences.findIndex((s) => s.id === m.placement.sequenceId) ?? -1;
@@ -208,7 +207,7 @@ function productionRank(m: ClientMedia, browse: ShareBrowse | undefined): [numbe
   return [sequence < 0 ? Number.MAX_SAFE_INTEGER : sequence, shot < 0 ? Number.MAX_SAFE_INTEGER : shot];
 }
 
-/** Tri stable : à rang égal, le plus récent d'abord — l'ordre dans lequel le lien sert. */
+/** Stable sort: at equal rank, most recent first, the order in which the link serves. */
 export function sortMedia(
   media: readonly ClientMedia[],
   browse: ShareBrowse | undefined,
@@ -222,15 +221,15 @@ export function sortMedia(
       const [bs, bsh] = productionRank(b, browse);
       return as - bs || ash - bsh || a.originalName.localeCompare(b.originalName);
     });
-  return out; // `recent` : le serveur sert déjà du plus récent au plus ancien
+  return out; // `recent`: the server already serves newest first
 }
 
 /**
- * Ce qui attend une réponse du client — la file de l'accueil.
+ * What is awaiting a client response: the home queue.
  *
- * Un lien qui n'a pas le droit de se prononcer n'a pas de file : lui montrer « en attente de
- * votre réponse » serait lui demander ce qu'on ne lui permet pas de donner. On lui sert
- * alors les dernières livraisons, comme avant.
+ * A link without decision rights has no queue: showing it "awaiting your answer" would ask
+ * it for something it is not allowed to give. It is then served the latest deliveries, as
+ * before.
  */
 export function pendingMedia(media: readonly ClientMedia[], canDecide: boolean): ClientMedia[] {
   return canDecide ? media.filter((m) => !m.decided) : [];

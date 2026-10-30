@@ -2,54 +2,50 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Planche des notes annotées, en HTML imprimable.
+ * Sheet of annotated notes, in printable HTML.
  *
- * Le PDF a été écarté sciemment : le produire sans dépendance imposerait d'écrire un
- * encodeur d'images dans le fichier PDF (DCTDecode pour le JPEG, Flate + prédicteurs pour
- * le PNG), soit la partie du format la plus facile à écrire faux — et une planche de notes
- * sans les frames ne vaut rien. Le document produit ici est autonome (images en data URI,
- * styles inclus, aucune ressource externe) : ouvert dans un navigateur, `Ctrl+P` →
- * « Enregistrer au format PDF » donne le PDF attendu, mise en page comprise.
+ * PDF was deliberately set aside: producing it without a dependency would mean writing an image encoder into the PDF
+ * file (DCTDecode for the JPEG, Flate + predictors for the PNG), the part of the format easiest to get wrong — and a
+ * notes sheet without the frames is worthless. The document produced here is standalone (images as data URIs, styles
+ * included, no external resource): opened in a browser, `Ctrl+P` → "Save as PDF" gives the expected PDF, layout included.
  *
- * Le module est PUR : le service lui donne des libellés déjà traduits et des images déjà
- * encodées. Les couleurs sont écrites en dur — c'est un document autonome, pas une surface
- * de l'application, et il doit s'imprimer correctement sur du papier blanc.
+ * The module is PURE: the service gives it already translated labels and already encoded images. Colours are hard-coded:
+ * it is a standalone document, not a surface of the application, and it must print properly on white paper.
  */
 
 import { escapeHtml } from './html';
 
 /**
- * Image d'illustration d'une note. Deux cas : une image entière (miniature du média) ou
- * une tuile de la sprite de timeline — la vignette la plus proche de l'instant commenté,
- * que le worker a déjà calculée pour le survol de la timeline. Découper la sprite en CSS
- * évite d'extraire une frame par note avec ffmpeg, ce qu'une requête HTTP ne peut pas
- * attendre pour trois cents notes.
+ * Illustration image of a note. Two cases: a whole image (media thumbnail) or a tile of the timeline sprite — the
+ * thumbnail closest to the commented instant, which the worker has already computed for the timeline hover. Cutting
+ * the sprite in CSS avoids extracting one frame per note with ffmpeg, which an HTTP request cannot wait for across
+ * three hundred notes.
  */
 export interface SheetImage {
-  /** Data URI complet (`data:image/jpeg;base64,…`). */
+  /** Full data URI (`data:image/jpeg;base64,…`). */
   src: string;
-  /** Dimensions affichées de la vignette, en pixels. */
+  /** Displayed dimensions of the thumbnail, in pixels. */
   width: number;
   height: number;
-  /** Tuile dans une sprite : décalage et taille de la planche entière, en pixels. */
+  /** Tile within a sprite: offset and size of the whole sheet, in pixels. */
   tile?: { offsetX: number; offsetY: number; sheetWidth: number; sheetHeight: number };
 }
 
 export interface SheetNote {
   location: string;
-  /** Frame affichée, telle que la review la montre. */
+  /** Displayed frame, as the review shows it. */
   frame: string | null;
   timecode: string | null;
   author: string;
   createdAt: string;
   state: string;
   decision: string | null;
-  /** Texte de la note, déjà mis à plat. */
+  /** Note text, already flattened. */
   text: string;
   image: SheetImage | null;
-  /** SVG de l'annotation, aux dimensions de la vignette (null = rien de dessiné). */
+  /** SVG of the annotation, at the thumbnail's dimensions (null = nothing drawn). */
   annotationSvg: string | null;
-  /** Note qui répond à une autre : affichée en retrait. */
+  /** Note replying to another: displayed indented. */
   reply: boolean;
 }
 
@@ -69,45 +65,42 @@ export interface SheetInput {
   subtitle: string;
   labels: SheetLabels;
   notes: SheetNote[];
-  /** Avertissement de troncature, déjà traduit (null = planche complète). */
+  /** Truncation warning, already translated (null = complete sheet). */
   truncated: string | null;
 }
 
 /**
- * Balises que `annotationToSvg` émet réellement — et donc les seules admises ici.
+ * Tags that `annotationToSvg` actually emits — and therefore the only ones admitted here.
  *
- * Une liste d'éléments interdits se contourne : il suffit d'en citer un qu'elle ignore
- * (`<animate>`, `<set>`, `<a>`, `<style>`…). La liste des éléments ATTENDUS, elle, ne se
- * contourne pas. Elle doit s'élargir en même temps que le rendu : une forme nouvelle dont
- * la balise manque ici disparaît de la planche, ce qui se voit, plutôt que de passer.
+ * A list of forbidden elements can be bypassed: it is enough to cite one it ignores (`<animate>`, `<set>`, `<a>`,
+ * `<style>`...). The list of EXPECTED elements cannot be bypassed. It must grow together with the renderer: a new shape
+ * whose tag is missing here disappears from the sheet, which is visible, rather than slipping through.
  */
 const ALLOWED_SVG_TAGS = new Set(['svg', 'g', 'path', 'rect', 'ellipse', 'line', 'polygon', 'text']);
 
-/** Toute ouverture de balise, y compris `<!…`, `<?…` et un `<` esseulé (nom vide). */
+/** Any tag opening, including `<!…`, `<?…` and a lone `<` (empty name). */
 const TAG_OPEN = /<\s*\/?\s*([^\s/>]*)/g;
 
 /**
- * Filet de sécurité avant d'incruster un SVG dans le document.
+ * Safety net before embedding an SVG in the document.
  *
- * Ce n'est qu'un filet : la vraie défense est dans `annotationSvg.ts`, qui ne compose plus
- * ses attributs qu'à partir de valeurs contraintes (couleur hexadécimale, nombres finis).
- * Le filtre reste parce que le SVG, lui, traverse ensuite un document HTML ouvert dans un
- * navigateur — et parce que la version précédente de ce filtre a été prise en défaut : sa
- * règle des gestionnaires exigeait un BLANC devant (`\son…=`), si bien qu'un `/onbegin=`
- * — forme que l'analyseur HTML accepte pour séparer deux attributs — passait intact.
+ * It is only a net: the real defence is in `annotationSvg.ts`, which only composes its attributes from constrained values
+ * (hexadecimal colour, finite numbers). The filter stays because the SVG then goes through an HTML document opened in a
+ * browser — and because the previous version of this filter was caught out: its handler rule required a WHITESPACE
+ * before (`\son…=`), so an `/onbegin=` — a form the HTML parser accepts to separate two attributes — passed intact.
  *
- * On rejette donc en bloc plutôt que de recoudre le balisage : une planche sans le dessin
- * reste lisible, une planche piégée non.
+ * We therefore reject in one piece rather than stitching the markup back together: a sheet without the drawing stays
+ * readable, a trapped sheet does not.
  */
 export function sanitizeInlineSvg(svg: string | null): string | null {
   if (!svg) return null;
   for (const match of svg.matchAll(TAG_OPEN)) {
     if (!ALLOWED_SVG_TAGS.has((match[1] ?? '').toLowerCase())) return null;
   }
-  // Un gestionnaire peut être séparé de l'attribut précédent par un blanc, un solidus, ou
-  // le guillemet fermant lui-même : `stroke="x"onload=` est recollé par les navigateurs.
+  // A handler may be separated from the previous attribute by a whitespace, a solidus, or the closing quote itself:
+  // `stroke="x"onload=` is glued together by browsers.
   if (/["'\s/]on[a-z]+\s*=/i.test(svg)) return null;
-  // Aucune forme rendue ne porte de lien : un `href` ici ne peut être qu'ajouté.
+  // No rendered shape carries a link: an `href` here can only have been added.
   if (/["'\s/](?:xlink:)?href\s*=/i.test(svg)) return null;
   if (/(javascript|vbscript)\s*:/i.test(svg)) return null;
   return svg;
@@ -149,19 +142,18 @@ h1 { margin: 0 0 4px; font-size: 20px; }
 `;
 
 /**
- * Data URI d'image, seule forme de source admise dans la planche.
+ * Image data URI, the only form of source admitted in the sheet.
  *
- * Le document se veut autonome : il n'a aucune raison d'aller chercher une ressource
- * ailleurs. Contraindre la source ici évite qu'une URL quelconque — `javascript:`, ou
- * simplement un pixel traçant chez un tiers — n'entre dans un `src` ou dans un `url()`
- * CSS, où l'échappement HTML ne protégerait de rien.
+ * The document is meant to be standalone: it has no reason to fetch a resource elsewhere. Constraining the source here
+ * prevents any arbitrary URL — `javascript:`, or simply a tracking pixel on a third party — from entering a `src` or a
+ * CSS `url()`, where HTML escaping would protect nothing.
  */
 const DATA_IMAGE = /^data:[a-z0-9.+-]+\/[a-z0-9.+-]+;base64,[A-Za-z0-9+/]+={0,2}$/;
 
-/** Le seul type d'image qui embarque du balisage exécutable. */
+/** The only image type that embeds executable markup. */
 const DATA_SVG = /^data:image\/svg/i;
 
-/** Longueur en pixels : un entier positif, jamais une chaîne recopiée dans un style. */
+/** Length in pixels: a positive integer, never a string copied into a style. */
 const px = (value: number, fallback: number): number =>
   Number.isFinite(value) ? Math.max(0, Math.round(value)) : fallback;
 
@@ -206,7 +198,7 @@ function noteBlock(note: SheetNote, labels: SheetLabels): string {
   );
 }
 
-/** Compose la planche complète (document HTML autonome). */
+/** Composes the complete sheet (standalone HTML document). */
 export function renderNotesSheet(input: SheetInput): string {
   const { labels } = input;
   const body = input.notes.length

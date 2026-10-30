@@ -5,11 +5,11 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import type { Line2 } from 'three/addons/lines/Line2.js';
-import { api } from '../../../../../lib/apiClient';
-import { qk } from '../../../../lib/query';
-import { UNDO_PRIORITY, useUndoScope } from '../../../../lib/undoScope';
-import { useUndoToast } from '../../../../lib/useUndoToast';
-import { useT } from '../../../../i18n';
+import { api } from '@/lib/apiClient';
+import { qk } from '@/v2/lib/query';
+import { UNDO_PRIORITY, useUndoScope } from '@/v2/lib/undoScope';
+import { useUndoToast } from '@/v2/lib/useUndoToast';
+import { useT } from '@/v2/i18n';
 import type { SplatPaintStroke } from '../../reviewTypes';
 import type { SceneViewer } from '../../viewer/sceneHandle';
 import { loadLineModules, type LineModules } from './lineModules';
@@ -19,28 +19,27 @@ import { pickStroke } from './surfaceTrace';
 import { useStrokeGesture } from './useStrokeGesture';
 
 /**
- * Brosse de surface 3D de la review : traits peints sur la surface de la scène, stockés en
- * **espace objet** et rattachés au commentaire en cours de rédaction (tableau `annotation`, comme
- * le hotspot) — non destructifs, visibles pour tous, et suivant la transformation du média.
+ * 3D surface brush of the review: strokes painted on the surface of the scene, stored in
+ * **object space** and attached to the comment being written (`annotation` array, like the
+ * hotspot): non-destructive, visible to everyone, and following the media transform.
  *
- * Elle sert les **deux types spatiaux** depuis le lot 13 : le hook ne reçoit plus le viewer splat
- * mais un `SceneViewer` (`viewer/sceneHandle`), que le modèle 3D remplit aussi. Le nom du fichier
- * et celui du hook sont restés — le type de part stocké dans les commentaires est `splat-paint`,
- * et renommer l'un sans pouvoir renommer l'autre n'aurait fait qu'ajouter un nom de plus pour la
- * même chose.
+ * It serves the **two spatial types** since lot 13: the hook no longer receives the splat viewer
+ * but a `SceneViewer` (`viewer/sceneHandle`), which the 3D model fills too. The file name and the
+ * hook name stayed: the part type stored in comments is `splat-paint`, and renaming one without
+ * being able to rename the other would only have added one more name for the same thing.
  *
- * Ce hook tient l'état et la persistance ; le geste vit dans `useStrokeGesture`, la géométrie
- * dans `surfaceTrace`, le rendu dans `strokes`/`strokeFrame`, le rayon dans `surfaceRay` — seul
- * endroit qui sache encore qu'un nuage et un maillage ne se raycastent pas pareil.
+ * This hook holds the state and persistence; the gesture lives in `useStrokeGesture`, the geometry
+ * in `surfaceTrace`, the rendering in `strokes`/`strokeFrame`, the ray in `surfaceRay`: the only
+ * place that still knows that a cloud and a mesh do not raycast the same way.
  *
- * La gomme est le second outil de la brosse (`armed === 'erase'`) : elle retire un trait en
- * préparation, et — si le spectateur est l'auteur du commentaire consulté — un trait déjà
- * envoyé, en réécrivant la liste des parts de son annotation. Il n'y avait jusqu'ici aucun
- * moyen de revenir sur un trait autre que « tout effacer avant d'envoyer ».
+ * The eraser is the brush's second tool (`armed === 'erase'`): it removes a stroke being prepared
+ * and, if the viewer is the author of the consulted comment, a stroke already sent, by rewriting
+ * the list of parts of its annotation. Until now the only way to undo a stroke was to erase
+ * everything before sending.
  */
 export type PaintTool = 'paint' | 'erase';
 
-/** Trait affiché : le trait, sa ligne 3D, et sa place dans l'annotation du commentaire. */
+/** Displayed stroke: the stroke, its 3D line, and its place in the comment's annotation. */
 interface ShownStroke {
   stroke: SplatPaintStroke;
   line: Line2;
@@ -49,7 +48,7 @@ interface ShownStroke {
 
 export function useSplatPaint(viewer: SceneViewer, spatial: boolean, mediaId: number) {
   const { getSceneHandle: sceneHandle, ready } = viewer;
-  // Poignée **peignable** : la poignée commune rend `mesh` facultatif, la brosse en a besoin.
+  // **Paintable** handle: the common handle makes `mesh` optional, but the brush needs it.
   const getSceneHandle = useCallback(
     (): PaintSceneHandle | null => paintHandle(sceneHandle()),
     [sceneHandle],
@@ -63,20 +62,20 @@ export function useSplatPaint(viewer: SceneViewer, spatial: boolean, mediaId: nu
   const [pendingCount, setPendingCount] = useState(0);
   const [redoCount, setRedoCount] = useState(0);
   const [lines, setLines] = useState<LineModules | null>(null);
-  // Commentaire consulté : son annotation brute (pour réécrire la liste des parts) et son
-  // identifiant, non nul **seulement si le spectateur en est l'auteur** — c'est ce que le
-  // serveur autorise à réécrire, et la gomme ne doit pas promettre davantage.
+  // Consulted comment: its raw annotation (to rewrite the list of parts) and its identifier,
+  // non-null **only if the viewer is its author**: this is what the server allows rewriting, and
+  // the eraser must not promise more.
   const [viewed, setViewed] = useState<{ annotation: unknown; commentId: number | null }>({
     annotation: null,
     commentId: null,
   });
   const pendingRef = useRef<{ stroke: SplatPaintStroke; line: Line2 }[]>([]);
-  // Traits annulés, en attente d'un rétablissement. On ne garde que la DONNÉE du trait : sa
-  // ligne Three a été libérée en l'annulant (`disposeStrokeLine` rend sa géométrie), elle est
-  // donc reconstruite au rétablissement — un objet libéré ne se remet pas dans la scène.
+  // Strokes undone, awaiting redo. Only the stroke DATA is kept: its Three line was released on
+  // undoing (`disposeStrokeLine` frees its geometry), so it is rebuilt on redo, since a released
+  // object does not go back into the scene.
   const undoneRef = useRef<SplatPaintStroke[]>([]);
   const shownRef = useRef<ShownStroke[]>([]);
-  // Miroirs lus depuis les gestionnaires (jamais pendant le render — règle react-hooks/refs).
+  // Mirrors read from the handlers (never during render: react-hooks/refs rule).
   const viewedRef = useRef(viewed);
   const linesRef = useRef<LineModules | null>(null);
   useEffect(() => {
@@ -85,13 +84,13 @@ export function useSplatPaint(viewer: SceneViewer, spatial: boolean, mediaId: nu
   }, [viewed, lines]);
 
   /*
-   * Classes Line2 importées dès que la scène est MONTÉE : tout le reste est ensuite synchrone.
+   * `Line2` classes imported as soon as the scene is MOUNTED: everything else is then synchronous.
    *
-   * Attendre `ready` n'est pas une précaution de style — avant lui, il n'y a ni surface à peindre
-   * ni trait à afficher, et l'import se faisait en concurrence du chargement du viewer, qui a
-   * bien d'autres modules à aller chercher. L'échec de l'import est attrapé ici : la promesse
-   * d'un `import()` qui se rejette sans `catch` remonte en rejet non capturé, et la brosse se
-   * contente alors de ne pas peindre (la barre d'options reste, elle n'écrira simplement rien).
+   * Waiting for `ready` is not a stylistic precaution: before it, there is neither surface to paint
+   * nor stroke to display, and the import ran concurrently with the viewer's loading, which has many
+   * other modules to fetch. The import failure is caught here: the promise of an `import()` that
+   * rejects without a `catch` surfaces as an uncaught rejection, and the brush then simply does not
+   * paint (the options bar stays, it just writes nothing).
    */
   useEffect(() => {
     if (!spatial || !ready) return;
@@ -109,7 +108,7 @@ export function useSplatPaint(viewer: SceneViewer, spatial: boolean, mediaId: nu
     };
   }, [spatial, ready, t]);
 
-  /** Construit et monte des traits dans la scène, sans toucher à la pile de rétablissement. */
+  /** Builds and mounts strokes in the scene, without touching the undo stack. */
   const attachStrokes = useCallback(
     (strokes: SplatPaintStroke[]) => {
       const handle = getSceneHandle();
@@ -125,11 +124,11 @@ export function useSplatPaint(viewer: SceneViewer, spatial: boolean, mediaId: nu
     [getSceneHandle],
   );
 
-  /** Pose les traits d'un geste (un geste coupé sur un trou en produit plusieurs). */
+  /** Lays the strokes of a gesture (a gesture cut by a hole yields several). */
   const addStrokes = useCallback(
     (strokes: SplatPaintStroke[]) => {
       attachStrokes(strokes);
-      // Un trait neuf rend le futur inatteignable — règle de toute pile d'historique.
+      // A new stroke makes the future unreachable: the rule of any history stack.
       undoneRef.current = [];
       setRedoCount(0);
     },
@@ -140,12 +139,12 @@ export function useSplatPaint(viewer: SceneViewer, spatial: boolean, mediaId: nu
   const gesture = useStrokeGesture({ getSceneHandle, getLines, color, width, onStrokes: addStrokes });
   const { cancel: cancelGesture } = gesture;
 
-  // Désarmer la brosse abandonne l'aperçu en cours : plus aucun geste ne le porte.
+  // Disarming the brush abandons the preview in progress: no gesture carries it any more.
   useEffect(() => {
     if (armed !== 'paint') cancelGesture();
   }, [armed, cancelGesture]);
 
-  /** Annule le dernier trait du composer. */
+  /** Undoes the last stroke of the composer. */
   const undoStroke = useCallback(() => {
     const last = pendingRef.current.pop();
     if (!last) return;
@@ -155,7 +154,7 @@ export function useSplatPaint(viewer: SceneViewer, spatial: boolean, mediaId: nu
     setRedoCount(undoneRef.current.length);
   }, []);
 
-  /** Rétablit le dernier trait annulé — il n'y avait aucun moyen de revenir sur un Ctrl+Z. */
+  /** Redoes the last undone stroke: there was no way to go back on a Ctrl+Z before. */
   const redoStroke = useCallback(() => {
     const stroke = undoneRef.current.pop();
     if (!stroke) return;
@@ -163,7 +162,7 @@ export function useSplatPaint(viewer: SceneViewer, spatial: boolean, mediaId: nu
     setRedoCount(undoneRef.current.length);
   }, [attachStrokes]);
 
-  /** Retire tous les traits du composer (après envoi du commentaire, ou abandon). */
+  /** Removes all strokes from the composer (after sending the comment, or abandoning it). */
   const clearPending = useCallback(() => {
     for (const p of pendingRef.current) disposeStrokeLine(p.line);
     pendingRef.current = [];
@@ -173,16 +172,15 @@ export function useSplatPaint(viewer: SceneViewer, spatial: boolean, mediaId: nu
   }, []);
 
   /**
-   * Ctrl+Z / Ctrl+Maj+Z / Ctrl+Y sur les traits en préparation.
+   * Ctrl+Z / Ctrl+Shift+Z / Ctrl+Y on the strokes being prepared.
    *
-   * Le bouton « annuler le dernier trait » de la barre d'options était le seul retour en
-   * arrière de la brosse, et il n'avait pas de réciproque. Les traits en préparation sont
-   * PUREMENT LOCAUX — ils partiront avec le commentaire, rien n'est encore chez le serveur :
-   * un vrai historique, donc un vrai Ctrl+Z, sans rien promettre qu'on ne tienne.
+   * The "undo last stroke" button of the options bar was the brush's only way back, and it had no
+   * counterpart. Strokes being prepared are PURELY LOCAL: they leave with the comment and nothing is
+   * yet on the server, so a real history, hence a real Ctrl+Z, promises nothing that cannot be kept.
    *
-   * Le périmètre reste inscrit tant qu'un trait est en préparation, même brosse désarmée :
-   * on désarme souvent avant de se relire. Il passe avant l'éditeur de splat, qui écoute les
-   * mêmes touches (`lib/undoScope`), et se retire dès qu'il n'a plus rien à rendre.
+   * The scope stays registered as long as a stroke is being prepared, even with the brush disarmed:
+   * one often disarms before re-reading. It comes before the splat editor, which listens to the same
+   * keys (`lib/undoScope`), and is removed as soon as it has nothing left to restore.
    */
   useUndoScope({
     enabled: spatial && (armed !== null || pendingCount > 0 || redoCount > 0),
@@ -193,14 +191,14 @@ export function useSplatPaint(viewer: SceneViewer, spatial: boolean, mediaId: nu
     redo: redoStroke,
   });
 
-  /** Parties d'annotation à joindre au commentaire en cours d'envoi. */
+  /** Comment parts to attach to the comment being sent. */
   const serializePending = useCallback((): SplatPaintStroke[] => {
     return pendingRef.current.map((p) => p.stroke);
   }, []);
 
   /**
-   * Affiche les traits du commentaire sélectionné (annotation nulle = masquer). `commentId` n'est
-   * passé que si le spectateur peut réécrire ce commentaire : il ouvre la gomme sur ses traits.
+   * Shows the strokes of the selected comment (null annotation = hide). `commentId` is only passed
+   * if the viewer can rewrite this comment: it then opens the eraser on its strokes.
    */
   const showFromAnnotation = useCallback((annotation: unknown, commentId: number | null = null) => {
     setViewed((prev) =>
@@ -208,8 +206,8 @@ export function useSplatPaint(viewer: SceneViewer, spatial: boolean, mediaId: nu
     );
   }, []);
 
-  // Rendu des traits du commentaire consulté. L'index de part est conservé trait par trait :
-  // c'est lui qui permet d'en retirer un sans toucher aux autres parts (points, anim caméra).
+  // Renders the strokes of the consulted comment. The part index is kept stroke by stroke: it is
+  // what allows removing one without touching the others (points, camera animation).
   useEffect(() => {
     for (const shown of shownRef.current) disposeStrokeLine(shown.line);
     shownRef.current = [];
@@ -226,18 +224,18 @@ export function useSplatPaint(viewer: SceneViewer, spatial: boolean, mediaId: nu
   }, [viewed, lines, getSceneHandle]);
 
   /**
-   * Retire un trait d'un commentaire déjà envoyé (auteur seulement, côté serveur aussi).
+   * Removes a stroke from a comment already sent (author only, server-side too).
    *
-   * Ici, pas de Ctrl+Z : le trait est **parti**, il est dans le commentaire que les autres
-   * lisent, et l'effacer réécrit la liste des parts côté serveur. Le cran se propose donc dans
-   * le toast, et il ne promet que celui-là — on tient la liste d'avant, rien de plus. Un
-   * historique local sur des données déjà partagées mentirait au premier rechargement.
+   * No Ctrl+Z here: the stroke has **left**, it is in the comment others read, and erasing it
+   * rewrites the list of parts on the server side. The undo is therefore offered in the toast, and
+   * only promises that one: the previous list is kept, nothing more. A local history on already
+   * shared data would lie at the first reload.
    */
   const eraseSent = useCallback(
     async (commentId: number, annotation: unknown, partIndex: number) => {
       const parts = Array.isArray(annotation) ? annotation : [];
       const next = parts.filter((_, index) => index !== partIndex);
-      /** Pose une liste de parts et rafraîchit le fil. Elle laisse remonter son échec. */
+      /** Sets a list of parts and refreshes the thread. Its failure is propagated. */
       const writeParts = async (value: unknown[]): Promise<void> => {
         await api.patch(`/api/comments/${commentId}`, { annotation: value });
         setViewed({ annotation: value, commentId });
@@ -253,7 +251,7 @@ export function useSplatPaint(viewer: SceneViewer, spatial: boolean, mediaId: nu
     [qc, mediaId, t, done],
   );
 
-  /** Gomme au clic : le trait en préparation le plus proche, sinon celui du commentaire lu. */
+  /** Erases on click: the closest stroke being prepared, otherwise the one of the consulted comment. */
   const eraseAt = useCallback(
     (point: [number, number], viewport: Viewport) => {
       const handle = getSceneHandle();
@@ -286,7 +284,7 @@ export function useSplatPaint(viewer: SceneViewer, spatial: boolean, mediaId: nu
     [getSceneHandle, eraseSent, t],
   );
 
-  // Nettoyage au démontage (la page remonte par média : la scène disparaît avec les lignes).
+  // Cleanup on unmount (the page remounts per media: the scene disappears with its lines).
   useEffect(
     () => () => {
       for (const p of pendingRef.current) disposeStrokeLine(p.line);
@@ -298,7 +296,7 @@ export function useSplatPaint(viewer: SceneViewer, spatial: boolean, mediaId: nu
   );
 
   return {
-    /** Outil de brosse armé par le rail (null : aucun — l'overlay n'est pas monté). */
+    /** Brush tool armed by the rail (null: none, the overlay is not mounted). */
     armed: spatial ? armed : null,
     setArmed,
     color,
@@ -306,7 +304,7 @@ export function useSplatPaint(viewer: SceneViewer, spatial: boolean, mediaId: nu
     width,
     setWidth,
     pendingCount,
-    /** Traits annulés, rétablissables (grise le bouton « rétablir »). */
+    /** Undone strokes, restorable (greys out the "redo" button). */
     redoCount,
     gesture,
     eraseAt,

@@ -11,14 +11,14 @@ import type { SgConnection, SgSyncRun } from '../../types/shotgrid';
 import { syncOutcome } from './syncOutcome';
 
 /**
- * Exécutions de synchronisation : lancement, compteurs, journal détaillé et arbitrage
- * des conflits laissés en attente. Le journal enregistre des clés de message, traduites
- * ici : une synchronisation d'il y a six mois se relit dans la langue du lecteur.
+ * Sync runs: launching, counters, detailed log and resolution of conflicts left pending.
+ * The log stores message keys, translated here: a sync from six months ago is read back
+ * in the reader's language.
  */
 
 /**
- * Libellé du champ en litige. Le journal ne stocke qu'un identifiant : la table vit ici
- * pour qu'un conflit relu dans une autre langue se lise dans celle du lecteur.
+ * Label of the disputed field. The log only stores an identifier: the table lives here so
+ * that a conflict re-read in another language appears in the reader's language.
  */
 function fieldLabel(t: ReturnType<typeof useT>, field: string): string {
   if (field === 'status') return t('shotgrid.conflict.field.status');
@@ -41,8 +41,8 @@ export default function SgSyncPanel({
   const launch = async (kind: 'full' | 'reconcile') => {
     try {
       const r = await runSync.mutateAsync({ kind });
-      // Le choix du ton et du message vit dans `syncOutcome` : c'est la table qui
-      // empêche « deferred » de repasser en vert, et elle se relit sans monter l'écran.
+      // Tone and message selection live in `syncOutcome`: that table is what prevents
+      // "deferred" from turning green again, and it can be re-read without mounting the screen.
       const { tone, key } = syncOutcome(r.result?.status);
       toast[tone](t(key));
     } catch (err) {
@@ -51,8 +51,8 @@ export default function SgSyncPanel({
   };
 
   const conflicts = data?.openConflicts ?? [];
-  // Les clés de libellé sont énumérées : le serveur ne nomme que ces cinq domaines, et
-  // une chaîne libre venue de la base ne doit pas devenir une clé de traduction.
+  // Label keys are enumerated: the server only names these five domains, and a free-form
+  // string coming from the database must not become a translation key.
   const DOMAIN_LABELS = {
     tasks: 'shotgrid.domain.tasks',
     hierarchy: 'shotgrid.domain.hierarchy',
@@ -67,9 +67,9 @@ export default function SgSyncPanel({
   const applyResolution = async (logId: number, resolution: 'sg' | 'review') => {
     try {
       const { applied } = await resolve.mutateAsync({ logId, resolution });
-      // « blocked » : la ligne se ferme mais rien n'est parti — l'écriture du domaine est
-      // fermée dans les réglages. L'annoncer comme résolu laisserait l'écart revenir à
-      // la prochaine synchronisation sans que personne comprenne pourquoi.
+      // "blocked": the row closes but nothing was sent, because writes for the domain are
+      // switched off in the settings. Reporting it as resolved would let the gap come back at
+      // the next sync without anyone understanding why.
       if (applied.action === 'blocked') toast.warning(t('shotgrid.conflict.writeBlocked'));
       else toast.success(t('shotgrid.conflict.resolved'));
     } catch (err) {
@@ -107,9 +107,9 @@ export default function SgSyncPanel({
         )}
       </div>
 
-      {/* Un projet qui ne publie pas vers ShotGrid le fait en silence : la version se
-          publie ici, rien ne part là-bas, et personne ne l'apprend avant de constater
-          l'absence. Une connexion neuve naît dans cet état. */}
+      {/* A project that does not publish to ShotGrid does so silently: the version is
+          published here, nothing is sent there, and nobody learns of it before noticing the
+          absence. A new connection starts in this state. */}
       {connection.settings?.push?.publishMode === 'off' && (
         <p className="flex items-center gap-1.5 rounded-md border border-warning/40 bg-warning/10 p-2.5 text-xs">
           <AlertTriangle size={13} className="shrink-0" />
@@ -117,9 +117,8 @@ export default function SgSyncPanel({
         </p>
       )}
 
-      {/* Écritures refusées par la matrice de droits. Le job de file se terminait « ok » :
-          l'utilisateur voyait sa modification prise dans ReView et cherchait ensuite
-          pourquoi le site ne bougeait pas. */}
+      {/* Writes refused by the rights matrix. The queue job ended "ok": the user saw their
+          change taken into account in ReView and then wondered why the site did not move. */}
       {blockedDomains.length > 0 && (
         <p className="flex items-start gap-1.5 rounded-md border border-warning/40 bg-warning/10 p-2.5 text-xs">
           <AlertTriangle size={13} className="mt-0.5 shrink-0" />
@@ -143,10 +142,9 @@ export default function SgSyncPanel({
                   <span className="font-medium">
                     {String(c.vars?.name ?? `${c.localType} #${c.localId}`)}
                   </span>
-                  {/* Ce qui diverge, en toutes lettres : sans cela, « garder ShotGrid »
-                      revient à trancher à l'aveugle. Les conflits enregistrés avant que
-                      ces valeurs soient relevées le disent, plutôt que d'aligner des
-                      tirets qu'on prendrait pour des valeurs vides. */}
+                  {/* What differs, spelled out: without it, "keep ShotGrid" amounts to deciding
+                      blindly. Conflicts recorded before these values were captured say so,
+                      rather than aligning dashes that would be taken for empty values. */}
                   <span className="block text-xs text-muted-foreground">
                     {c.vars?.field
                       ? t('shotgrid.conflict.detail', {

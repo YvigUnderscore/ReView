@@ -28,15 +28,15 @@ import type { DashboardData } from './home/homeTypes';
 import { useT } from '../i18n';
 
 /**
- * Page Accueil (racine « / ») — composable (C2).
+ * Home page (root "/") — composable (C2).
  *
- * Hors édition, c'est une page : aucune poignée, aucune bordure, aucune barre en pointillés
- * — celle qui proposait les blocs masqués restait affichée en permanence. En édition, chaque
- * bloc gagne sa poignée et ses réglages (largeur, hauteur, densité, variante, cadre), et le
- * catalogue des blocs retirés apparaît.
+ * Outside edit mode, it is a page: no handle, no border, no dashed bar
+ * — the one that offered the hidden blocks stayed on screen permanently. In edit mode, each
+ * block gains its handle and its settings (width, height, density, variant, frame), and the
+ * catalogue of removed blocks appears.
  *
- * On y entre de trois façons, comme demandé : par le bouton de l'en-tête, par le clic droit
- * sur le fond de page, ou par le clic droit sur un bloc.
+ * There are three ways in, as requested: via the header button, via a right click
+ * on the page background, or via a right click on a block.
  */
 export default function HomePage() {
   const t = useT();
@@ -55,8 +55,8 @@ export default function HomePage() {
   const lastMedia = useRecents((s) => s.recents.find((r) => r.type === 'media'));
   const hidden = hiddenWidgets(pref);
 
-  // Les préférences ne sont pas encore là : composer maintenant écraserait la disposition
-  // enregistrée, le serveur fusionnant la clé `homeWidgets` en bloc.
+  // Preferences are not there yet: composing now would overwrite the saved layout,
+  // since the server merges the `homeWidgets` key as a whole block.
   const ready = !prefsQ.isPending;
   const savePref = (next: HomeWidgetsPref) => {
     if (!ready) return;
@@ -101,7 +101,7 @@ export default function HomePage() {
     },
   ];
 
-  // Résumé actionnable de l'en-tête : mes chiffres, sinon la phrase d'ambiance.
+  // Actionable summary of the header: my figures, otherwise the ambient sentence.
   const headline = data
     ? data.stats.myRetakes + data.stats.awaitingMyReview > 0
       ? t('home.headline', { retakes: data.stats.myRetakes, pending: data.stats.awaitingMyReview })
@@ -168,7 +168,7 @@ export default function HomePage() {
                 onHide={(id: HomeWidgetId) => savePref(toggleWidget(id, false, pref))}
                 onEnterEdit={() => setEditing(true)}
               />
-              {/* Catalogue des blocs retirés : visible en édition seulement. */}
+              {/* Catalogue of removed blocks: visible in edit mode only. */}
               {editing && hidden.length > 0 && (
                 <div className="flex flex-wrap items-center gap-2 rounded-lg border border-dashed border-border p-3">
                   <span className="flex items-center gap-1.5 text-xs text-muted-foreground">

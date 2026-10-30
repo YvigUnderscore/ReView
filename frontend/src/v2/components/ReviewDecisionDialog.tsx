@@ -19,9 +19,9 @@ import type { ReviewDecision, ReviewStatus } from '../types/api';
 import { useT } from '../i18n';
 
 /**
- * Décision de review d'une version (Phase 31) : pose d'un statut (SUPERVISOR+)
- * avec commentaire optionnel + historique complet (qui/quand/commentaire).
- * Ouvert depuis le clic droit d'une carte de version ou l'en-tête de review.
+ * Review decision for a version (Phase 31): sets a status (SUPERVISOR+)
+ * with an optional comment and full history (who, when, comment).
+ * Opened from the right click of a version card or the review header.
  */
 export default function ReviewDecisionDialog({
   versionId,
@@ -36,7 +36,7 @@ export default function ReviewDecisionDialog({
   open: boolean;
   onOpenChange: (open: boolean) => void;
   canDecide: boolean;
-  /** Restreint les statuts proposés au vocabulaire du projet (ShotGrid le cas échéant). */
+  /** Restricts the proposed statuses to the project's vocabulary (ShotGrid where applicable). */
   projectId?: number;
 }) {
   const t = useT();
@@ -51,7 +51,7 @@ export default function ReviewDecisionDialog({
         .then((d) => d.decisions),
     enabled: open,
   });
-  // Référence stable exigée par l'effet de pré-sélection (exhaustive-deps).
+  // Stable reference required by the pre-selection effect (exhaustive-deps).
   const statuses = useMemo(() => statusesQ.data ?? [], [statusesQ.data]);
   const history = historyQ.data ?? [];
   const current = history[0]?.status ?? null;
@@ -60,7 +60,7 @@ export default function ReviewDecisionDialog({
   const [comment, setComment] = useState('');
   const [saving, setSaving] = useState(false);
 
-  // Pré-sélection : décision courante, sinon statut par défaut du studio.
+  // Pre-selection: current decision, otherwise the studio's default status.
   useEffect(() => {
     if (!open) return;
     setComment('');

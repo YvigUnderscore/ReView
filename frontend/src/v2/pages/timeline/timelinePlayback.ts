@@ -4,14 +4,14 @@
 import type { TimelineClip } from '../../types/api';
 
 /**
- * Lecture continue d'un montage — analyse PURE, testée (Phase 46).
+ * Continuous playback of a montage — PURE analysis, tested (Phase 46).
  *
- * Le montage se joue comme un film : une seule barre de temps, de zéro à la fin, et aucune
- * interruption au passage d'un plan ou d'une séquence. Ce fichier tient la correspondance
- * entre ce temps global et le plan qui doit être à l'écran, à sa propre position.
+ * The montage plays like a film: a single time bar, from zero to the end, with no interruption
+ * when moving from one shot or sequence to the next. This file holds the mapping between this
+ * global time and the shot that must be on screen, at its own position.
  */
 
-/** Le plan qui occupe l'instant `t` du montage (le dernier si `t` dépasse la fin). */
+/** The shot occupying the instant `t` of the montage (the last one if `t` exceeds the end). */
 export function clipIndexAt(items: readonly TimelineClip[], t: number): number {
   if (items.length === 0) return -1;
   for (let i = 0; i < items.length; i++) {
@@ -21,17 +21,17 @@ export function clipIndexAt(items: readonly TimelineClip[], t: number): number {
   return items.length - 1;
 }
 
-/** Position à l'intérieur du plan, bornée à sa durée. */
+/** Position inside the shot, clamped to its duration. */
 export function localTimeAt(clip: TimelineClip, t: number): number {
   return Math.min(Math.max(t - clip.startTime, 0), clip.duration);
 }
 
-/** Temps global correspondant à une position locale dans un plan. */
+/** Global time corresponding to a local position in a shot. */
 export function globalTimeOf(clip: TimelineClip, localTime: number): number {
   return clip.startTime + Math.min(Math.max(localTime, 0), clip.duration);
 }
 
-/** Bande d'une séquence sur la barre de temps : de quand à quand, sous quel code. */
+/** Band of a sequence on the time bar: from when to when, under which code. */
 export interface SequenceSpan {
   sequenceId: number | null;
   sequenceCode: string | null;
@@ -40,11 +40,11 @@ export interface SequenceSpan {
 }
 
 /**
- * Regroupe les plans consécutifs d'une même séquence.
+ * Groups consecutive shots of the same sequence.
  *
- * La barre de temps doit montrer d'un coup d'œil où l'on est dans le film : un trait fin
- * par plan ne suffit pas, il faut la respiration des séquences. Les plans hors séquence
- * forment leurs propres bandes plutôt que de fusionner avec la précédente.
+ * The time bar must show at a glance where we are in the film: a thin line per shot is not enough,
+ * the rhythm of sequences is needed. Shots outside any sequence form their own bands rather than
+ * merging with the previous one.
  */
 export function sequenceSpans(items: readonly TimelineClip[]): SequenceSpan[] {
   const spans: SequenceSpan[] = [];
@@ -65,10 +65,10 @@ export function sequenceSpans(items: readonly TimelineClip[]): SequenceSpan[] {
 }
 
 /**
- * Indices des plans qui ouvrent une séquence.
+ * Indices of the shots that open a sequence.
  *
- * Même règle que `sequenceSpans` : un plan sans séquence ouvre toujours sa propre bande,
- * sinon deux shots orphelins seraient présentés comme s'ils appartenaient au même bloc.
+ * Same rule as `sequenceSpans`: a shot without a sequence always opens its own band, otherwise two
+ * orphan shots would be presented as if they belonged to the same block.
  */
 export function sequenceStarts(items: readonly TimelineClip[]): number[] {
   const starts: number[] = [];
@@ -78,7 +78,7 @@ export function sequenceStarts(items: readonly TimelineClip[]): number[] {
   return starts;
 }
 
-/** Place d'un plan sur la bande, en pourcentage de sa largeur. */
+/** Position of a shot on the band, as a percentage of its width. */
 export interface TrackSlot {
   index: number;
   leftPct: number;
@@ -86,12 +86,11 @@ export interface TrackSlot {
 }
 
 /**
- * Découpe la bande du montage : chaque plan y occupe sa durée, à la suite du précédent.
+ * Lays out the montage band: each shot occupies its duration, one after the previous.
  *
- * C'est ce qui fait d'elle une vraie timeline et non une liste de vignettes — la largeur
- * dit la durée. Tant qu'aucune durée n'est connue, les plans se partagent la bande à
- * parts égales : mieux vaut une bande approximative qu'une bande vide, sur laquelle on ne
- * pourrait même pas cliquer.
+ * This is what makes it a real timeline rather than a list of thumbnails — the width says the
+ * duration. As long as no duration is known, the shots share the band equally: an approximate band
+ * is better than an empty one, on which one could not even click.
  */
 export function trackLayout(items: readonly TimelineClip[], total: number): TrackSlot[] {
   if (items.length === 0) return [];
@@ -107,36 +106,35 @@ export function trackLayout(items: readonly TimelineClip[], total: number): Trac
 }
 
 /**
- * Ce plan est-il tenu par une horloge plutôt que par un élément vidéo ?
+ * Is this shot held by a clock rather than by a video element?
  *
- * Deux cas s'y retrouvent : le carton (aucun média publié) et l'**image fixe**. Une image
- * confiée à une balise `<video>` échoue au démultiplexage (`DEMUXER_ERROR_COULD_NOT_OPEN`)
- * et la lecture ne démarre jamais — c'est ce qui bloquait tout montage dont le premier plan
- * portait une image : le bouton restait sur « Lire » et le compteur sur `00:00`, sans un mot.
- * `preferPlayable` côté serveur privilégie la vidéo, mais un plan dont la seule version
- * publiée est une image arrive tel quel dans le montage.
+ * Two cases fall here: the placeholder (no published media) and the **still image**. An image handed
+ * to a `<video>` tag fails demuxing (`DEMUXER_ERROR_COULD_NOT_OPEN`) and playback never starts — this
+ * is what blocked any montage whose first shot carried an image: the button stayed on "Play" and
+ * the counter on `00:00`, without a word. `preferPlayable` on the server favours video, but a shot
+ * whose only published version is an image arrives in the montage as is.
  */
 export function holdsOnClock(clip: TimelineClip | null | undefined): boolean {
   if (!clip) return false;
   return clip.mediaId === null || clip.mediaKind === 'IMAGE';
 }
 
-/** Vrai quand le plan porte une image fixe à afficher (et non un carton vide). */
+/** True when the shot carries a still image to display (and not an empty placeholder). */
 export function isStillClip(clip: TimelineClip | null | undefined): boolean {
   return !!clip && clip.mediaId !== null && clip.mediaKind === 'IMAGE';
 }
 
 /**
- * Le plan lisible suivant — celui qu'un tampon vidéo peut précharger. Les cartons **et les
- * images** n'ont rien à charger dans un élément vidéo : ils sont sautés ici et tenus par
- * l'horloge le moment venu.
+ * The next playable shot — the one a video buffer can preload. Placeholders **and images** have
+ * nothing to load in a video element: they are skipped here and held by the clock when their time
+ * comes.
  */
 export function nextPlayableIndex(items: readonly TimelineClip[], from: number): number {
   for (let i = from + 1; i < items.length; i++) if (!holdsOnClock(items[i])) return i;
   return -1;
 }
 
-/** Position `mm:ss` d'un instant du montage, pour l'afficher à côté de la durée totale. */
+/** `mm:ss` position of an instant of the montage, to display next to the total duration. */
 export function formatTimecode(seconds: number): string {
   const safe = Number.isFinite(seconds) && seconds > 0 ? seconds : 0;
   const total = Math.floor(safe);

@@ -10,13 +10,13 @@ import { inhibitOrbit } from '../controlsLock';
 import { DEFAULT_GIZMO_SETTINGS, type GizmoSettings } from './gizmoSettings';
 import { readMeshTransform } from './meshTransform';
 
-/** Mode du gizmo de transformation, calqué sur les DCC 3D (déplacer / tourner / mettre à l'échelle). */
+/** Transform gizmo mode, modelled on 3D DCC tools (move / rotate / scale). */
 export type GizmoMode = 'translate' | 'rotate' | 'scale';
 
-/** Mode de transformation du viewer 3D : navigation (aucun gizmo) ou gizmo TRS. */
+/** Transform mode of the 3D viewer: navigation (no gizmo) or TRS gizmo. */
 export type TransformMode = 'navigate' | GizmoMode;
 
-/** Applique espace/snaps/taille au TransformControls (réglages par cible, 11.G). */
+/** Applies space/snaps/size to the TransformControls (per-target settings, 11.G). */
 function applyGizmoSettings(control: TransformControls, s: GizmoSettings): void {
   control.setSpace(s.space);
   control.setTranslationSnap(s.translationSnap);
@@ -26,25 +26,25 @@ function applyGizmoSettings(control: TransformControls, s: GizmoSettings): void 
 }
 
 /**
- * Gizmo de transformation 3D (10.G, généralisé Phase 17) : greffe un `TransformControls`
- * (three addons) sur l'objet principal du viewer (`handle.mesh` : SplatMesh ou root du modèle
- * 3D) — ou sur `target` (ex. SDF d'un volume de crop) s'il est fourni — via la poignée de scène
- * commune (`SceneViewer`). Le gizmo est **visible dans la scène** (plus de sliders en menu) ;
- * l'orbite est gelée pendant un drag, et chaque changement remonte la TRS de l'objet manipulé
- * via `onChange`. Import dynamique pour rester hors du bundle initial. Toute la logique Three
- * vit ici, pas dans les composants.
+ * 3D transform gizmo (10.G, generalised in Phase 17): attaches a `TransformControls`
+ * (three addons) to the viewer's main object (`handle.mesh`: SplatMesh or the 3D model root),
+ * or to `target` (e.g. the SDF of a crop volume) when provided, through the shared scene handle
+ * (`SceneViewer`). The gizmo is **visible in the scene** (no more sliders in a menu); the orbit
+ * is frozen during a drag, and every change reports the TRS of the manipulated object via
+ * `onChange`. Dynamic import to stay out of the initial bundle. All the Three logic lives here,
+ * not in the components.
  */
 export function useTransformGizmo(
   viewer: SceneViewer,
   opts: {
     enabled: boolean;
     mode: GizmoMode;
-    /** Cible du gizmo (par défaut : `handle.mesh` — SplatMesh ou root du modèle). */
+    /** Gizmo target (default: `handle.mesh` — SplatMesh or model root). */
     target?: THREE.Object3D | null;
-    /** Réglages espace/snap/taille par cible (11.G) — défauts « splat » si absent. */
+    /** Per-target space/snap/size settings (11.G) — "splat" defaults if absent. */
     settings?: GizmoSettings;
     onChange: (t: SplatTransform) => void;
-    /** Fin de manipulation (Phase 26) : TRS avant/après le drag → opération annulable. */
+    /** End of manipulation (Phase 26): TRS before/after the drag → undoable operation. */
     onCommit?: (before: SplatTransform, after: SplatTransform) => void;
   },
 ): void {
@@ -76,22 +76,22 @@ export function useTransformGizmo(
       const { TransformControls } = await import('three/addons/controls/TransformControls.js');
       if (disposed) return;
       const control = new TransformControls(camera, dom);
-      applyGizmoSettings(control, settingsRef.current); // réglages courants (effet dédié ci-dessous)
-      control.setMode(modeRef.current); // mode courant sans dépendance d'effet (voir effet ci-dessous)
+      applyGizmoSettings(control, settingsRef.current); // current settings (dedicated effect below)
+      control.setMode(modeRef.current); // current mode without an effect dependency (see effect below)
       control.attach(attached);
       const helper = control.getHelper();
       scene.add(helper);
 
       let dragStart: SplatTransform | null = null;
-      // Inhibiteur d'orbite du drag (cf. `controlsLock`). Le gizmo écrivait `controls.enabled`
-      // en clair, et son démontage le remettait à `true` : armer puis désarmer un gizmo pendant
-      // un vol rendait l'orbite EN PLEIN VOL, derrière le dos de `flyControls`. Il ne relâche
-      // plus que son propre jeton.
+      // Orbit inhibitor for the drag (see `controlsLock`). The gizmo used to write
+      // `controls.enabled` directly, and its unmount set it back to `true`: arming then disarming
+      // a gizmo during a fly restored the orbit MID-FLIGHT, behind the back of `flyControls`. It
+      // now only releases its own token.
       let releaseOrbit: (() => void) | null = null;
       const onDragging = (event: { value: unknown }) => {
         if (event.value) {
           releaseOrbit ??= inhibitOrbit(controls, 'gizmo-drag');
-          dragStart = readMeshTransform(attached); // début de drag : snapshot pour l'historique
+          dragStart = readMeshTransform(attached); // drag start: snapshot for the history
           return;
         }
         releaseOrbit?.();
@@ -111,7 +111,7 @@ export function useTransformGizmo(
         control.detach();
         scene.remove(helper);
         control.dispose();
-        releaseOrbit?.(); // démontage en plein drag : on rend le jeton, pas l'orbite
+        releaseOrbit?.(); // unmount mid-drag: release the token, not the orbit
         releaseOrbit = null;
         controlRef.current = null;
       };
@@ -123,12 +123,12 @@ export function useTransformGizmo(
     };
   }, [enabled, ready, getSceneHandle, target]);
 
-  // Changement de mode sans réinstaller le gizmo.
+  // Mode change without reinstalling the gizmo.
   useEffect(() => {
     controlRef.current?.setMode(mode);
   }, [mode]);
 
-  // Changement de réglages (espace/snap/taille) à chaud, sans réinstaller le gizmo (11.G).
+  // Settings change (space/snap/size) applied live, without reinstalling the gizmo (11.G).
   useEffect(() => {
     if (controlRef.current) applyGizmoSettings(controlRef.current, settings);
   }, [settings]);

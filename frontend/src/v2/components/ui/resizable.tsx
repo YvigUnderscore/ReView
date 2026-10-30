@@ -6,9 +6,9 @@ import { cn } from '../../lib/utils';
 import { clampSize, readStoredSize, writeStoredSize } from './resizable.helpers';
 
 interface ResizablePanelProps {
-  /** Clé de persistance (localStorage). Une clé = un panneau. */
+  /** Persistence key (localStorage). One key per panel. */
   storageKey: string;
-  /** Bord portant la poignée : `left` pour un panneau ancré à droite (sidebar commentaires). */
+  /** Edge carrying the handle: `left` for a panel anchored on the right (comments sidebar). */
   side?: 'left' | 'right';
   defaultSize: number;
   min?: number;
@@ -18,8 +18,8 @@ interface ResizablePanelProps {
 }
 
 /**
- * Panneau à largeur redimensionnable par poignée, persistée en localStorage.
- * Réutilisable (sidebar commentaires…). Ne gère que l'axe horizontal.
+ * Panel with a width resizable via a handle, persisted in localStorage.
+ * Reusable (comments sidebar…). Only handles the horizontal axis.
  */
 export function ResizablePanel({
   storageKey,
@@ -37,7 +37,7 @@ export function ResizablePanel({
     (e: PointerEvent) => {
       if (!drag.current) return;
       const delta = e.clientX - drag.current.startX;
-      // Poignée à gauche : glisser vers la gauche agrandit un panneau ancré à droite.
+      // Handle on the left: dragging left enlarges a panel anchored on the right.
       const next = drag.current.startSize + (side === 'left' ? -delta : delta);
       setSize(clampSize(next, min, max));
     },

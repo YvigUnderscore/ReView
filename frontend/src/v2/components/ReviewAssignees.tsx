@@ -17,24 +17,24 @@ import type { ReviewAssignee } from '../types/entities';
 import { useT } from '../i18n';
 
 /**
- * À qui la review de cette version est confiée (Phase 49), et **ce que chacun doit y
+ * Who the review of this version is entrusted to (Phase 49), and **what each one must look at**.
  * regarder**.
  *
- * La décision de review disait ce qu'on avait conclu d'une livraison ; rien ne disait à
- * qui on demandait de la regarder. Ça se disait de vive voix, et l'artiste comme le
- * superviseur perdaient la trace de la file en cours. C'est le même geste que
- * « responsables d'un plan » et il en reprend la forme — mêmes visages, même annuaire
- * cherchable — pour que l'assignation se lise partout de la même façon.
+ * The review decision said what had been concluded from a delivery; nothing said
+ * who was asked to look at it. It was said by word of mouth, and the artist as well as
+ * the supervisor lost track of the queue in progress. This is the same gesture as
+ * "shot owners", and it takes its form: same faces, same searchable directory,
+ * so that assignment reads the same way everywhere.
  *
- * Il y manquait la moitié utile : savoir qu'on est attendu sans savoir SUR QUOI ne fait
- * gagner du temps qu'à celui qui assigne. Chaque personne confiée porte donc une consigne,
- * modifiable ici à tout moment — c'est l'endroit où l'on rattrape celle qu'on a oubliée.
+ * It lacked the useful half: knowing that one is expected, without knowing ON WHAT, only saves
+ * time for whoever assigns. Each entrusted person therefore carries an instruction,
+ * editable here at any moment: this is where one catches up the one that was forgotten.
  *
- * Écriture immédiate : cliquer un nom l'ajoute, le recliquer le retire, une consigne se
- * range en quittant son champ. Un bouton « Enregistrer » aurait ajouté un pied de page à
- * une modale qui en a déjà un, et une liste à cocher dont on peut sortir sans valider ment
- * sur son état. Quand le projet EXIGE la consigne, la personne est mise en attente le temps
- * qu'on l'écrive : l'assigner d'abord pour se faire refuser ensuite serait une fausse
+ * Immediate write: clicking a name adds it, clicking it again removes it, and an instruction is
+ * saved when leaving its field. A "Save" button would have added a footer to
+ * a modal that already has one, and a checklist one can leave without confirming misleads
+ * about its state. When the project REQUIRES the instruction, the person is put on hold while
+ * it is written: assigning them first, only to be refused afterwards, would be a false promise.
  * promesse.
  */
 export default function ReviewAssignees({
@@ -44,18 +44,18 @@ export default function ReviewAssignees({
   enabled = true,
 }: {
   versionId: number;
-  /** Restreint l'annuaire aux membres du projet — le serveur refuse les autres de toute façon. */
+  /** Restricts the directory to project members: the server refuses the others anyway. */
   projectId?: number;
-  /** Seul un gestionnaire du projet, ou l'auteur de la version, répartit les reviews. */
+  /** Only a project manager, or the author of the version, distributes reviews. */
   canAssign: boolean;
-  /** Laissé à `false` tant que la modale porteuse est fermée : rien n'est demandé. */
+  /** Left at `false` while the hosting modal is closed: nothing is requested. */
   enabled?: boolean;
 }) {
   const t = useT();
   const qc = useQueryClient();
   const [picking, setPicking] = useState(false);
   const [pendingId, setPendingId] = useState<number | null>(null);
-  // Personne choisie dont on attend la consigne, quand le projet l'exige.
+  // Person chosen whose instruction we are waiting for, when the project requires it.
   const [staged, setStaged] = useState<{ id: number; name: string } | null>(null);
   const members = useProjectMembers(projectId ?? 0);
   const rule = useReviewRequestRule(projectId, enabled);
@@ -72,8 +72,8 @@ export default function ReviewAssignees({
 
   const store = (people: ReviewAssignee[]) => {
     qc.setQueryData(qk.versionReviewers(versionId), people);
-    // L'encart « Assigned to me » de la page Reviews lit la même donnée : sans cette
-    // invalidation, la personne qu'on vient d'assigner ne la verrait qu'au rechargement.
+    // The "Assigned to me" block of the Reviews page reads the same data: without this
+    // invalidation, the person we have just assigned would only see it on reload.
     void qc.invalidateQueries({ queryKey: ['reviews'] });
   };
   const failed = (err: unknown) =>
@@ -104,7 +104,7 @@ export default function ReviewAssignees({
     onError: failed,
   });
 
-  /** L'état courant, tel qu'on le renvoie au serveur — consignes comprises. */
+  /** The current state, as sent back to the server, instructions included. */
   const current = () => reviewers.map((p) => ({ userId: p.id, note: p.note ?? null }));
 
   const toggle = (person: { id: number; name: string }) => {
@@ -114,8 +114,8 @@ export default function ReviewAssignees({
       save.mutate(current().filter((entry) => entry.userId !== person.id));
       return;
     }
-    // Consigne obligatoire : on met la personne en attente au lieu de l'assigner pour se
-    // faire refuser. Sinon, le geste reste d'un seul clic.
+    // Mandatory instruction: we put the person on hold instead of assigning them, so as not to
+    // get refused. Otherwise the gesture remains a single click.
     if (rule.requireNote) {
       setStaged(person);
       setPicking(false);
@@ -156,8 +156,8 @@ export default function ReviewAssignees({
       {reviewers.length === 0 ? (
         <p className="text-xs text-muted-foreground">{t('reviewers.none')}</p>
       ) : canAssign ? (
-        // Confier quelqu'un, c'est pouvoir lui dire quoi regarder : l'un ne va pas sans
-        // l'autre, donc la consigne s'édite là où la liste se compose.
+        // Entrusting someone means being able to tell them what to look at: one does not go without
+        // the other, so the instruction is edited where the list is composed.
         <div className="space-y-2">
           {reviewers.map((person) => (
             <ReviewerNoteField

@@ -2,6 +2,8 @@ node_modules/
 dev_data/
 storage/
 .env
+.env.*
+!.env.example
 .claude
 /.jules
 *.bat
@@ -37,6 +39,7 @@ design_handoff_review_chrome/
 # Playwright output
 frontend/test-results/
 frontend/playwright-report/
+frontend/e2e-logs/
 frontend/blob-report/
 
 # Production TLS certificates (mounted into nginx): never committed
@@ -59,9 +62,13 @@ deploy/
 ops/queue/
 ops/state/
 
-# Python bytecode
+# Python bytecode and tooling caches
 __pycache__/
 *.pyc
+.venv/
+*.egg-info/
+.ruff_cache/
+.mypy_cache/
 
 # Tesseract workshop (`motion/`) for the documentation's animated renders.
 #

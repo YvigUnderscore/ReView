@@ -6,9 +6,9 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 
 const { api } = vi.hoisted(() => ({ api: { get: vi.fn(), put: vi.fn(), post: vi.fn() } }));
-// `useAuth` (importé par l'onglet) enregistre son gestionnaire de session au chargement du
-// module : le mock doit porter cet export, sinon l'import de l'onglet échoue avant tout test.
-vi.mock('../../../lib/apiClient', () => ({ api, setSessionExpiredHandler: vi.fn() }));
+// `useAuth` (imported by the tab) registers its session handler when the
+// module loads: the mock must export it, otherwise the tab's import fails before any test runs.
+vi.mock('@/lib/apiClient', () => ({ api, setSessionExpiredHandler: vi.fn() }));
 vi.mock('sonner', () => ({ toast: { success: vi.fn(), error: vi.fn() } }));
 
 import SmtpTab from './SmtpTab';
@@ -34,7 +34,7 @@ const mount = () => {
   );
 };
 
-/** La case « envoi non chiffré », désignée par son libellé traduit. */
+/** The "unencrypted send" checkbox, found by its translated label. */
 const insecureBox = () => screen.getByLabelText<HTMLInputElement>(t('smtp.allowInsecure'));
 
 beforeEach(() => {
@@ -46,26 +46,26 @@ beforeEach(() => {
 afterEach(cleanup);
 
 /**
- * `allowInsecure` retire STARTTLS du transport : sans représentation à l'écran, le réglage
- * n'existait que pour qui écrit dans la base à la main, et un studio dont le relais n'annonce
- * pas STARTTLS n'avait aucun recours. L'écran doit le montrer, dire ce qu'il coûte, et
- * l'envoyer — dans les deux sens.
+ * `allowInsecure` removes STARTTLS from the transport: with no on-screen representation, the setting
+ * only existed for whoever writes to the database by hand, and a studio whose relay does not advertise
+ * STARTTLS had no recourse. The screen must show it, say what it costs, and
+ * send it — in both directions.
  */
-describe('SmtpTab — envoi non chiffré (allowInsecure)', () => {
-  it('affiche la case et énonce l’exposition qu’elle accepte', async () => {
+describe('SmtpTab — unencrypted sending (allowInsecure)', () => {
+  it('shows the checkbox and states the exposure it accepts', async () => {
     mount();
     expect(await screen.findByText(t('smtp.allowInsecure'))).toBeTruthy();
-    // La conséquence est écrite à l'écran, pas seulement dans la documentation.
+    // The consequence is written on screen, not only in the documentation.
     expect(screen.getByText(t('smtp.allowInsecureHint'))).toBeTruthy();
   });
 
-  it('reflète le réglage enregistré', async () => {
+  it('reflects the saved setting', async () => {
     api.get.mockResolvedValue({ smtp: { ...CONFIG, allowInsecure: true } });
     mount();
     await waitFor(() => expect(insecureBox().checked).toBe(true));
   });
 
-  it('transmet l’autorisation quand on la coche', async () => {
+  it('sends the authorisation when ticked', async () => {
     mount();
     await waitFor(() => expect(insecureBox()).toBeTruthy());
     fireEvent.click(insecureBox());
@@ -74,14 +74,14 @@ describe('SmtpTab — envoi non chiffré (allowInsecure)', () => {
     expect(api.put.mock.calls[0]?.[1]).toMatchObject({ allowInsecure: true });
   });
 
-  it('transmet le retour en sécurité quand on la décoche seule', async () => {
+  it('sends the return to safety when unticked on its own', async () => {
     api.get.mockResolvedValue({ smtp: { ...CONFIG, allowInsecure: true } });
     mount();
     await waitFor(() => expect(insecureBox().checked).toBe(true));
     fireEvent.click(insecureBox());
     fireEvent.click(screen.getByText(t('common.save')));
-    // Le service conserve la valeur en place quand le champ est absent du corps : un
-    // `allowInsecure` omis aurait laissé le relais en clair malgré la case décochée.
+    // The service keeps the value in place when the field is absent from the body: an
+    // omitted `allowInsecure` would have left the relay in plain text despite the unticked box.
     await waitFor(() => expect(api.put).toHaveBeenCalled());
     expect(api.put.mock.calls[0]?.[1]).toMatchObject({ allowInsecure: false });
   });

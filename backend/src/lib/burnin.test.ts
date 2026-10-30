@@ -20,7 +20,7 @@ const cfg = (patch: Partial<BurninConfig> = {}): BurninConfig => ({
 const ctx = { shotLabel: 'SQ010 · SH020', versionLabel: 'v003', fps: 24 };
 
 describe('escapeDrawtext', () => {
-  it('neutralise les caractères du parser de filtres', () => {
+  it('neutralises the characters of the filter parser', () => {
     expect(escapeDrawtext('a:b,c;d[e]')).toBe('a\\:b\\,c\\;d\\[e\\]');
     expect(escapeDrawtext('50%')).toBe('50\\%');
     expect(escapeDrawtext("l'ombre")).toBe('l’ombre');
@@ -29,11 +29,11 @@ describe('escapeDrawtext', () => {
 });
 
 describe('buildBurninFilters', () => {
-  it('vide quand désactivé', () => {
+  it('empty when disabled', () => {
     expect(buildBurninFilters({ ...BURNIN_FALLBACK, enabled: false }, ctx, 1080)).toEqual([]);
   });
 
-  it('shot + version + timecode par défaut', () => {
+  it('shot + version + timecode by default', () => {
     const f = buildBurninFilters(cfg(), ctx, 1080);
     expect(f).toHaveLength(3);
     expect(f[0]).toContain("text='SQ010 · SH020'");
@@ -43,7 +43,7 @@ describe('buildBurninFilters', () => {
     expect(f[2]).toContain('rate=24');
   });
 
-  it('ignore les éléments sans donnée et ajoute le texte libre', () => {
+  it('ignores elements without data and adds the free text', () => {
     const f = buildBurninFilters(
       cfg({ customText: 'CONFIDENTIEL', showTimecode: false }),
       { shotLabel: null, versionLabel: null, fps: null },
@@ -53,7 +53,7 @@ describe('buildBurninFilters', () => {
     expect(f[0]).toContain("text='CONFIDENTIEL'");
   });
 
-  it('fontsize proportionnel à la hauteur et fps arrondi', () => {
+  it('fontsize proportional to the height and fps rounded', () => {
     const f1080 = buildBurninFilters(cfg(), ctx, 1080);
     const f360 = buildBurninFilters(cfg(), { ...ctx, fps: 23.976 }, 360);
     expect(f1080[0]).toContain('fontsize=34');
@@ -63,7 +63,7 @@ describe('buildBurninFilters', () => {
 });
 
 describe('slate', () => {
-  it('construit les lignes sans champ vide', () => {
+  it('builds the lines without an empty field', () => {
     const lines = buildSlateLines({
       studioName: 'Studio X',
       projectName: 'Film',
@@ -82,7 +82,7 @@ describe('slate', () => {
     ]);
   });
 
-  it('génère un drawtext centré par ligne, titre plus grand', () => {
+  it('generates a centred drawtext per line, larger title', () => {
     const f = buildSlateFilters(['Titre', 'Ligne'], 1080);
     expect(f).toHaveLength(2);
     expect(f[0]).toContain('x=(w-tw)/2');

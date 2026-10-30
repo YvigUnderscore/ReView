@@ -3,13 +3,14 @@
 
 import { useState } from 'react';
 import { Smile } from 'lucide-react';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import type { ReviewComment } from '../../types/api';
 import { useT } from '../../i18n';
+import { notifyError } from '@/v2/lib/notifyError';
 
 const EMOJIS = ['👍', '❤️', '😂', '🎉', '👀', '🔥', '✅', '❓'];
 
-/** Chips de réactions groupées par emoji + sélecteur d'emoji (toggle par utilisateur). */
+/** Reaction chips grouped by emoji, plus an emoji picker (per-user toggle). */
 export default function CommentReactions({
   comment: c,
   currentUserId,
@@ -31,8 +32,8 @@ export default function CommentReactions({
       if (mine) await api.del(`/api/comments/${c.id}/reactions/${encodeURIComponent(emoji)}`);
       else await api.post(`/api/comments/${c.id}/reactions`, { emoji });
       reload();
-    } catch {
-      /* ignore */
+    } catch (err) {
+      notifyError(err);
     }
   };
 

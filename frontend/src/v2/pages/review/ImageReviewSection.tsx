@@ -20,10 +20,10 @@ import type { CompareMode } from './useCompareState';
 import type { Role } from '../../types/api';
 
 /**
- * Branche **image** du viewer de review : visionneuse annotable, ou surcouche de comparaison
- * (wipe / différence) à la place du viewport. Les deux vivent **dans** le chrome : la
- * comparaison le démontait, et la bascule de mode comme les réglages A/B disparaissaient à
- * l'instant où l'on en avait besoin.
+ * **Image** branch of the review viewer: annotatable viewer, or a comparison overlay
+ * (wipe / difference) in place of the viewport. Both live **inside** the chrome: the
+ * comparison used to unmount it, and the mode toggle and A/B settings vanished exactly
+ * when they were needed.
  */
 export default function ImageReviewSection({
   data,
@@ -58,9 +58,9 @@ export default function ImageReviewSection({
   imageViewApiRef?: ComponentProps<typeof ImageReviewViewer>['viewApiRef'];
   onImageUserView?: () => void;
   /**
-   * Sortie de la lecture d'un commentaire annoté — posée DANS la zone média, hors du calque
-   * zoomé (qui crée son propre contexte d'empilement) : la pilule reste au-dessus du dessin
-   * et à l'échelle de l'écran, quel que soit l'agrandissement.
+   * Exit of an annotated comment playback — placed INSIDE the media area, outside the zoomed
+   * layer (which creates its own stacking context): the pill stays above the drawing and at
+   * screen scale, whatever the magnification.
    */
   exit?: ReactNode;
   onFullscreen: () => void;
@@ -69,18 +69,18 @@ export default function ImageReviewSection({
   compareIds: number[];
   compareMode: CompareMode;
   onCompareModeChange: (mode: CompareMode) => void;
-  /** Choix exclusif du média B (réglage B, armement du mode « Compare »). */
+  /** Exclusive choice of the B media (B setting, arming the "Compare" mode). */
   onSetCompare: (mediaId: number) => void;
   closeCompare: () => void;
   sharedWipe?: ComponentProps<typeof ImageWipeOverlay>['sharedWipe'];
 }) {
   const compareId = compareIds[0] ?? null;
-  // Transformée d'affichage (OCIO) de l'image A. Les surcouches de comparaison gardent
-  // l'image brute : comparer deux versions suppose de les regarder dans le même état.
+  // Display transform (OCIO) of image A. The comparison overlays keep the raw image:
+  // comparing two versions means looking at them in the same state.
   const display = useDisplayTransform(data.url, data.projectColor);
 
-  // Le wipe et la différence remplacent le viewport, le zoom y étant suspendu — mais pas le
-  // chrome : `imageCompareOverlay` ne décide que du contenu de la zone média.
+  // Wipe and difference replace the viewport, with zoom suspended there — but not the
+  // chrome: `imageCompareOverlay` only decides the content of the media area.
   const overlay = imageCompareOverlay(compareId, compareMode);
 
   return (
@@ -147,19 +147,19 @@ export default function ImageReviewSection({
                   alpha={ann.alpha}
                   info={{ format: data.media.originalName.split('.').pop()?.toUpperCase() ?? null }}
                   onFullscreen={onFullscreen}
-                  // Le viewer jugé porte `F` / `H` ; les panes de comparaison, non.
+                  // The judged viewer carries `F` / `H`; the comparison panes do not.
                   viewShortcuts
                   viewApiRef={imageViewApiRef}
                   onUserView={onImageUserView}
                   onViewChange={compareId != null ? imageSync.onMasterView : undefined}
                   pinned={
                     <>
-                      {/* Gestion de couleur : l'image transformée se pose **au-dessus** de
-                        l'originale dans le plan zoomé. Passer par `src` referait le cadrage
-                        à chaque cran d'exposition. */}
+                      {/* Color management: the transformed image sits **above** the original
+                        in the zoomed plane. Going through `src` would redo the framing on
+                        every exposure step. */}
                       <DisplayTransformOverlay url={display.url} />
-                      {/* Repères de composition : l'overlay n'était monté que dans le lecteur
-                        vidéo, et l'onglet « Repères » du dock image ne faisait donc rien. */}
+                      {/* Composition guides: the overlay was only mounted in the video player,
+                        so the "Guides" tab of the image dock did nothing. */}
                       <CompositionGuides />
                       <ReviewCanvasRefs
                         mediaId={data.media.id}
@@ -173,12 +173,12 @@ export default function ImageReviewSection({
                 />
               </div>
               <ReviewCanvasRefsControls ann={ann} annotating={ann.annotating} />
-              {/* Rendue après le calque zoomé, donc au-dessus de lui sans dépendre d'un z-index
-                  qu'un contexte d'empilement local aurait avalé. */}
+              {/* Rendered after the zoomed layer, so it sits above it without relying on a
+                  z-index that a local stacking context would swallow. */}
               {exit}
             </div>
           </ReviewContextMenu>
-          {/* Comparaison A/B image côte à côte — zoom/pan répliqué. */}
+          {/* Image A/B side-by-side comparison — mirrored zoom/pan. */}
           {compareId != null && compareMode === 'side' && (
             <ImageComparePane
               compareId={compareId}

@@ -2,66 +2,168 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Messages d'erreur du backend : anglais, et rien d'autre (D2).
+ * Backend error and log messages: English, and nothing else (D2).
  *
- * Ils étaient écrits en français — cent-soixante-quatorze occurrences dans soixante-dix
- * fichiers — et arrivaient tels quels à l'écran, y compris sur la page publique d'un
- * partage client. L'arbitrage est de les réécrire en anglais plutôt que de les traduire :
- * ce contrôle empêche le français de revenir par la porte du prochain correctif.
+ * They were written in French — a hundred and seventy-four occurrences across seventy
+ * files — and reached the screen as they were, including on the public page of a client
+ * share. The decision was to rewrite them in English rather than translate them: this check
+ * stops French from creeping back in through the next fix.
  *
- * Le repérage se fait sur les mots-outils du français, pas sur les accents : « Media
- * introuvable » n'en porte aucun et reste du français. À l'inverse « déjà » dans un
- * commentaire ne concerne personne — seuls les messages levés sont lus.
+ * Detection relies on French function words, not on accents: "Media introuvable" carries none
+ * and is still French. Conversely, "déjà" in a comment concerns nobody — only the thrown
+ * messages and the log messages are read.
  *
- * Usage : node scripts/check-backend-english.mjs [--list]
+ * Out of scope: the user-facing texts that are localized on purpose (emails, notifications, the
+ * ShotGrid journal). They do not live in the source but in the `src/i18n/messages/*.json` catalogs,
+ * reached through `t(key)`: a catalog key is an identifier, not a sentence, and passes this check.
+ *
+ * Usage: node scripts/check-backend-english.mjs [--list]
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
-const ROOT = 'backend/src';
-
-/** Les fonctions dont le premier argument atterrit dans une réponse HTTP. */
-const THROWING = /\b(badRequest|notFound|forbidden|conflict|unauthorized|tooManyRequests|new Error)\s*\(/;
+/** Resolved from the script, so the check runs from any working directory. */
+const ROOT = resolve(fileURLToPath(import.meta.url), '../../backend/src');
 
 /**
- * Mots qui ne laissent aucun doute : ils n'existent pas en anglais technique. Un seul
- * suffit à conclure.
+ * Calls whose string arguments a human reads: the error factories and the JSON bodies written by hand
+ * (`res.status(403).json({ error: … })`) end up in an HTTP response, the logger in front of whoever
+ * operates the server. The logger form covers `logger.warn(…)`, `req.log.error(…)` and the child
+ * loggers named `log`.
  */
-const FRENCH_STRONG =
-  /\b(introuvable|invalide|réservé|réservée|impossible|déjà|aucun|aucune|inconnu|inconnue|échoué|échouée|volumineux|volumineuse|corbeille|séquence|tâche|fichier|attendu|attendue|requis|requise|vide|trop)\b/i;
+const CALLS =
+  /(?:\b(?:badRequest|notFound|forbidden|conflict|unauthorized|tooManyRequests|new \w*Error|(?:logger|log)\.(?:fatal|error|warn|info|debug|trace))|\.json)\s*\(/g;
+
+/** An error code (`'BAD_NAME'`), not a sentence: never French, never read as one. */
+const ERROR_CODE = /^[A-Z][A-Z0-9_.]*$/;
 
 /**
- * Mots-outils du français. Isolés, ils se rencontrent en anglais technique — « non-HTTP »,
- * « par » dans une URL — donc il en faut **deux distincts** pour conclure. Sans cette
- * règle, un message anglais parfaitement correct serait signalé.
+ * The string literals passed to a call that starts at `open` (the index of its `(`), up to the matching
+ * `)`. Reads across lines — a message wrapped by Prettier onto the next line is still the message — and
+ * through template literals, whose `${…}` parts are replaced by a space. Quotes inside a literal (the
+ * apostrophe of "l'objet") do not end it: the scanner knows the delimiter it opened.
  */
-const FRENCH_WEAK =
-  /\b(le|la|les|un|une|des|du|de|au|aux|ce|cet|cette|ces|est|sont|pas|non|pour|avec|sans|sur|dans|par|vers|votre|vos|ne|se|qui|que|encore|doit|doivent|peut|peuvent)\b/gi;
-
-/** Ce que le message contient de toute façon : accents typiquement français. */
-const FRENCH_LETTERS = /[àâäçéèêëîïôöùûüœ]/i;
-
-/** Les littéraux passés à une fonction de levée, ligne par ligne. */
-export function messagesOf(source) {
+function literalsOfCall(source, open) {
   const out = [];
-  for (const [index, line] of source.split(/\r?\n/).entries()) {
-    if (!THROWING.test(line)) continue;
-    // Le premier littéral de la ligne : c'est le message, le second est le code d'erreur.
-    const literal = /['`]([^'`]{4,})['`]/.exec(line);
-    if (literal) out.push({ line: index + 1, text: literal[1] });
+  let depth = 0;
+  let i = open;
+  while (i < source.length) {
+    const c = source[i];
+    if (c === '(' || c === '[' || c === '{') depth++;
+    else if (c === ')' || c === ']' || c === '}') {
+      depth--;
+      if (depth === 0) break;
+    } else if (c === '/' && source[i + 1] === '/') {
+      i = source.indexOf('\n', i);
+      if (i < 0) break;
+      continue;
+    } else if (c === '/' && source[i + 1] === '*') {
+      i = source.indexOf('*/', i + 2);
+      if (i < 0) break;
+      i += 2;
+      continue;
+    } else if (c === "'" || c === '"' || c === '`') {
+      const begin = i;
+      const { text, end } = readLiteral(source, i);
+      out.push({ index: begin, text });
+      i = end + 1;
+      continue;
+    }
+    i++;
   }
   return out;
 }
 
-/** Ce message est-il écrit en français ? */
+/** Reads the literal opened at `start`; returns its text (interpolations blanked) and closing index. */
+function readLiteral(source, start) {
+  const quote = source[start];
+  let text = '';
+  let i = start + 1;
+  while (i < source.length) {
+    const c = source[i];
+    if (c === '\\') {
+      text += source[i + 1] ?? '';
+      i += 2;
+      continue;
+    }
+    if (c === quote) return { text, end: i };
+    if (quote === '`' && c === '$' && source[i + 1] === '{') {
+      // Skip the interpolation, nested braces and strings included.
+      let depth = 1;
+      i += 2;
+      while (i < source.length && depth > 0) {
+        const d = source[i];
+        if (d === "'" || d === '"' || d === '`') {
+          i = readLiteral(source, i).end + 1;
+          continue;
+        }
+        if (d === '{') depth++;
+        else if (d === '}') depth--;
+        i++;
+      }
+      text += ' ';
+      continue;
+    }
+    if (quote !== '`' && c === '\n') return { text, end: i };
+    text += c;
+    i++;
+  }
+  return { text, end: i };
+}
+
+/** Line (1-based) of an index in the source. */
+function lineAt(source, index) {
+  let line = 1;
+  for (let i = 0; i < index; i++) if (source.charCodeAt(i) === 10) line++;
+  return line;
+}
+
+/** The human-read literals of a source: arguments of the error factories and of the logger. */
+export function messagesOf(source) {
+  const out = [];
+  for (const match of source.matchAll(CALLS)) {
+    const open = match.index + match[0].length - 1;
+    for (const literal of literalsOfCall(source, open)) {
+      const text = literal.text.trim();
+      if (text.length < 4 || ERROR_CODE.test(text)) continue;
+      out.push({ line: lineAt(source, literal.index), text });
+    }
+  }
+  return out;
+}
+
+/**
+ * Words that leave no doubt: they do not exist in technical English. One alone is enough to
+ * conclude.
+ */
+const FRENCH_STRONG =
+  /\b(introuvables?|invalides?|réservée?s?|impossibles?|déjà|aucune?s?|inconnue?s?|échouée?s?|volumineux|volumineuses?|corbeilles?|séquences?|tâches?|fichiers?|attendue?s?|requise?s?|vides?|trop|illisibles?|indisponibles?|interrompue?s?|imparfaite?s?|fermeture|plafond|planches?|attente)\b/i;
+
+/**
+ * French function words. On their own they also turn up in technical English — "non-HTTP",
+ * "par" in a URL — so **two distinct ones** are needed to conclude. Without this rule, a
+ * perfectly correct English message would be flagged.
+ */
+const FRENCH_WEAK =
+  /\b(le|la|les|un|une|des|du|de|au|aux|ce|cet|cette|ces|est|sont|pas|non|pour|avec|sans|sur|dans|par|vers|votre|vos|ne|se|qui|que|encore|doit|doivent|peut|peuvent)\b/gi;
+
+/** Elided article or pronoun before a word: `d'une`, `l'entrée`, `n'est`, `qu'un`. */
+const FRENCH_ELISION = /\b(?:d|l|n|qu|j|s|c)['’][a-zàâäçéèêëîïôöùûü]/i;
+
+/** What the message contains regardless: accents typical of French. */
+const FRENCH_LETTERS = /[àâäçéèêëîïôöùûüœ]/i;
+
+/** Is this message written in French? */
 export function looksFrench(text) {
   const weak = new Set((text.match(FRENCH_WEAK) ?? []).map((w) => w.toLowerCase()));
+  // An elision (`d'une`, `l'archive`, `qu'il`) is a French function word of its own.
+  if (FRENCH_ELISION.test(text)) weak.add("'");
   return FRENCH_STRONG.test(text) || FRENCH_LETTERS.test(text) || weak.size >= 2;
 }
 
-/** Messages français d'un fichier — l'unité que le contrôle rapporte. */
+/** French messages of a file — the unit the check reports. */
 export function offendersOf(source) {
   return messagesOf(source).filter((m) => looksFrench(m.text));
 }
@@ -102,5 +204,5 @@ function main() {
   process.exitCode = 1;
 }
 
-// Importé par son test : on ne parcourt le dépôt que lorsqu'on est la commande lancée.
+// Imported by its test: the repository is only walked when this is the command being run.
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) main();

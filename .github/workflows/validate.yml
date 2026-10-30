@@ -1,14 +1,13 @@
 # SPDX-FileCopyrightText: 2026 Yvig Bidon
 # SPDX-License-Identifier: AGPL-3.0-or-later
 
-# Intégration continue : rejoue `scripts/validate.sh`, la suite de validation du dépôt.
+# Continuous integration: replays `scripts/validate.sh`, the repository validation suite.
 #
-# Principe protégé (CLAUDE.md) : la suite ne se contourne pas et ne s'allège pas. Ce
-# workflow ne fait que l'exécuter telle quelle — pas de sous-ensemble de contrôles, pas de
-# `--max-warnings` relevé, pas de `|| true` sur la commande. Toute évolution doit étendre la
-# suite, jamais la réduire.
+# Protected principle (CLAUDE.md): the suite must not be bypassed or weakened. This
+# workflow runs it as-is: no subset of checks, no raised `--max-warnings`, no `|| true` on
+# the command. Any change must extend the suite, never shrink it.
 #
-# Node 22 : version des images d'exécution (backend/Dockerfile `node:22-slim`,
+# Node 22: version of the runtime images (backend/Dockerfile `node:22-slim`,
 # frontend/Dockerfile `node:22-alpine`).
 name: Validation
 
@@ -18,32 +17,32 @@ on:
   pull_request:
   workflow_dispatch:
 
-# Lecture seule : le workflow ne publie rien et n'a besoin d'aucun droit d'écriture.
+# Read-only: the workflow publishes nothing and needs no write permission.
 permissions:
   contents: read
 
-# Un seul run par référence : une nouvelle poussée annule le run précédent.
+# One run per ref: a new push cancels the previous run.
 concurrency:
   group: validation-${{ github.ref }}
   cancel-in-progress: true
 
 env:
   NODE_VERSION: '22'
+  PYTHON_VERSION: '3.12'
+  RUFF_VERSION: '0.16.9'
 
 jobs:
-  # ---------------------------------------------------------------------------
-  # Suite complète sans services : SPDX, notices tierces, i18n, tokens de couleur,
-  # budgets, lint/format/typecheck/build/tests unitaires des deux paquets.
-  # ---------------------------------------------------------------------------
+  # Full suite without services: SPDX, third-party notices, i18n, color tokens, budgets,
+  # lint/format/typecheck/build/unit tests for both packages.
   validate:
     name: validate.sh (unitaire)
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
-    # `backend/src/config/env.ts` valide l'environnement au chargement et arrête le process
-    # s'il manque une variable : sans `backend/.env` en CI, tout test unitaire qui importe la
-    # configuration mourrait avant de s'exécuter. Valeurs factices — aucun service n'est
-    # joignable dans ce job, et rien ici n'est un secret.
+    # `backend/src/config/env.ts` validates the environment at load time and stops the
+    # process if a variable is missing: without `backend/.env` in CI, any unit test importing
+    # the configuration would die before running. Dummy values: no service is reachable in
+    # this job, and nothing here is a secret.
     env:
       DATABASE_URL: postgresql://validate:validate@localhost:5432/validate
       JWT_SECRET: ci-placeholder-secret-not-used-outside-ci
@@ -66,8 +65,17 @@ jobs:
             backend/package-lock.json
             frontend/package-lock.json
 
-      # `npm ci` (et non `npm install`) : l'installation suit le lockfile à la lettre, ce
-      # dont dépend le contrôle de fraîcheur de THIRD-PARTY-NOTICES.md.
+      # `npm ci` (not `npm install`) follows the lockfile exactly, which the freshness check
+      # of THIRD-PARTY-NOTICES.md depends on.
+      - name: Installer Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # `ruff` is mandatory in validate.sh (no silent skip when absent).
+      - name: Installer ruff
+        run: pip install "ruff==${{ env.RUFF_VERSION }}"
+
       - name: Dépendances backend (npm ci)
         run: npm ci
         working-directory: backend
@@ -79,15 +87,13 @@ jobs:
       - name: Suite de validation
         run: bash scripts/validate.sh
 
-  # ---------------------------------------------------------------------------
-  # Même suite, plus les tests d'intégration (Postgres + Redis + MinIO réels).
+  # Same suite, plus integration tests (real Postgres + Redis + MinIO).
   #
-  # BLOQUANT. Il ne l'était pas : le test d'upload résumable recevait un 429 du limiteur de
-  # débit, saturé par la suite elle-même — plus de deux cents appels sur la même app depuis
-  # la même adresse. `createApp({ rateLimit: false })` a réglé la cause, la suite est verte,
-  # et `continue-on-error` est retiré. Ne pas le remettre : un job qui ne bloque jamais
-  # finit par ne plus être lu, ce qui est exactement ce qui s'était produit.
-  # ---------------------------------------------------------------------------
+  # BLOCKING. It was not before: the resumable upload test received a 429 from the rate
+  # limiter, saturated by the suite itself: more than two hundred calls to the same app from
+  # the same address. `createApp({ rateLimit: false })` fixed the cause, the suite is green,
+  # and `continue-on-error` has been removed. Do not reinstate it: a job that never blocks
+  # eventually stops being read, which is exactly what had happened.
   integration:
     name: validate.sh --with-integration (Postgres + Redis + MinIO)
     runs-on: ubuntu-latest
@@ -95,7 +101,7 @@ jobs:
 
     services:
       postgres:
-        image: postgres:16-alpine
+        image: postgres:16.15-alpine@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab
         env:
           POSTGRES_USER: review
           POSTGRES_PASSWORD: review_ci
@@ -103,13 +109,13 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U review"
+          --health-cmd "pg_isready -U review -d review_itest"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 10
 
       redis:
-        image: redis:7-alpine
+        image: redis:7.4.12-alpine@sha256:8da19c7399dca900c6822a1cf30f9d2285585e2c4b457ff4095b0f4500054d3f
         ports:
           - 6379:6379
         options: >-
@@ -118,22 +124,22 @@ jobs:
           --health-timeout 5s
           --health-retries 10
 
-      # MinIO n'est pas ici : un conteneur de service GitHub Actions ne reçoit ni commande ni
-      # arguments, or l'image MinIO exige `server /data` pour démarrer autre chose que son
-      # aide en ligne. Il est donc lancé en `docker run` ci-dessous, sur le même réseau hôte.
+      # MinIO is not here: a GitHub Actions service container receives no command or
+      # arguments, and the MinIO image requires `server /data` to start anything other than its
+      # help output. It is therefore started with `docker run` below, on the same host network.
 
     env:
       DATABASE_URL: postgresql://review:review_ci@localhost:5432/review_itest?schema=public
       JWT_SECRET: ci-placeholder-secret-not-used-outside-ci
       S3_ENDPOINT: http://localhost:9000
-      S3_ACCESS_KEY: minioadmin
-      S3_SECRET_KEY: minioadmin
+      S3_ACCESS_KEY: ci-minio-user
+      S3_SECRET_KEY: ci-minio-password-0123456789
       S3_BUCKET: review
       S3_FORCE_PATH_STYLE: 'true'
       REDIS_URL: redis://localhost:6379
-      # Le contrôle de dérive schema.prisma ↔ migrations se saute quand aucune base n'est
-      # joignable (poste sans docker). Ici il y en a une : il devient obligatoire, sinon
-      # le seul endroit où il pourrait tourner serait aussi le seul à ne pas l'exiger.
+      # The schema.prisma <-> migrations drift check is skipped when no database is reachable
+      # (machine without docker). Here one is, so it becomes mandatory; otherwise the only place
+      # it could run would also be the only place not requiring it.
       REVIEW_REQUIRE_DRIFT_CHECK: '1'
 
     steps:
@@ -149,14 +155,18 @@ jobs:
             backend/package-lock.json
             frontend/package-lock.json
 
-      # Même image et même version que docker-compose.yml (scripts/ci-workflow.test.mjs y
-      # veille) : `minio/minio` n'est plus publié, `latest` a fait tomber ce job le jour où
-      # le dépôt a disparu du Docker Hub.
+      # Same image and version as docker-compose.yml (scripts/ci-workflow.test.mjs checks this):
+      # `minio/minio` is no longer published, and `latest` broke this job the day the repository
+      # disappeared from Docker Hub.
       - name: Démarrer MinIO
+        env:
+          MINIO_ROOT_USER: ${{ env.S3_ACCESS_KEY }}
+          MINIO_ROOT_PASSWORD: ${{ env.S3_SECRET_KEY }}
         run: |
+          # Variable NAMES only (values come from the step env): nothing secret on the command line.
           docker run -d --name minio -p 9000:9000 \
-            -e MINIO_ROOT_USER=minioadmin \
-            -e MINIO_ROOT_PASSWORD=minioadmin \
+            -e MINIO_ROOT_USER \
+            -e MINIO_ROOT_PASSWORD \
             pgsty/minio:RELEASE.2026-08-04T00-00-00Z server /data
           for _ in $(seq 1 30); do
             if curl -fsS http://localhost:9000/minio/health/live >/dev/null; then
@@ -169,14 +179,25 @@ jobs:
           docker logs minio >&2 || true
           exit 1
 
-      # Le bucket n'est créé qu'au démarrage du serveur (`server.ts` → `ensureBucket`) ; les
-      # tests d'intégration montent l'app sans passer par là, donc on le crée ici.
-      # `MC_HOST_<alias>` évite d'avoir à persister une configuration `mc` entre deux runs ;
-      # le `mc` est celui de l'image serveur, comme pour la sonde du compose et backup.sh.
+      # The bucket is only created at server startup (`server.ts` -> `ensureBucket`); integration
+      # tests mount the app without going through there, so it is created here.
+      # `MC_HOST_<alias>` avoids persisting an `mc` configuration between runs; the `mc` is the
+      # one from the server image, as for the compose probe and backup.sh.
       - name: Créer le bucket de stockage
+        env:
+          MC_HOST_ci: http://${{ env.S3_ACCESS_KEY }}:${{ env.S3_SECRET_KEY }}@localhost:9000
         run: |
-          docker exec -e MC_HOST_ci=http://minioadmin:minioadmin@localhost:9000 \
+          docker exec -e MC_HOST_ci \
             minio mc mb --ignore-existing ci/review
+
+      - name: Installer Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # `ruff` is mandatory in validate.sh (no silent skip when absent).
+      - name: Installer ruff
+        run: pip install "ruff==${{ env.RUFF_VERSION }}"
 
       - name: Dépendances backend (npm ci)
         run: npm ci
@@ -186,12 +207,196 @@ jobs:
         run: npm ci
         working-directory: frontend
 
-      # Base éphémère du job : le schéma vient des migrations versionnées, jamais d'un
-      # `db push`. Les tests d'intégration sont écrits pour une base vierge comme pour une
-      # base déjà peuplée (cf. src/integration/api.itest.ts).
+      # Ephemeral job database: the schema comes from versioned migrations, never from a
+      # `db push`. Integration tests are written for both a blank database and an already
+      # populated one (cf. src/integration/api.itest.ts).
       - name: Appliquer les migrations Prisma
         run: npx prisma migrate deploy
         working-directory: backend
 
       - name: Suite de validation + tests d'intégration
         run: bash scripts/validate.sh --with-integration
+
+  # Python client (clients/python): zero runtime dependency, so only the linter is installed.
+  # ruff is mandatory here too: no silent skip.
+  python-client:
+    name: Client Python (ruff + compileall + unittest)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: clients/python
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v5
+
+      - name: Installer Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      - name: Installer le client et ruff
+        run: pip install -e . "ruff==${{ env.RUFF_VERSION }}"
+
+      - name: Lint (ruff)
+        run: ruff check .
+
+      - name: Syntaxe (compileall)
+        env:
+          PYTHONPYCACHEPREFIX: ${{ runner.temp }}/pycache
+        run: python -m compileall -q review tests
+
+      - name: Tests (unittest)
+        run: python -m unittest discover -s tests -t . -v
+
+  # E2E: the same suite through its `--with-e2e` path (integration + Playwright smoke, which
+  # starts backend and frontend). Same services as `integration`.
+  e2e:
+    name: validate.sh --with-e2e (Playwright + Postgres + Redis + MinIO)
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+
+    services:
+      postgres:
+        image: postgres:16.15-alpine@sha256:0cefaabd882e42bcb2a2f3dc56d3ce4770560ba62fd7f197f1a2e008fd5731ab
+        env:
+          POSTGRES_USER: review
+          POSTGRES_PASSWORD: review_ci
+          # The application's own database, as on a development machine. The integration suite
+          # derives and resets `review_itest` itself (backend/src/integration/itestEnv.ts); pointing
+          # the app at that database made the E2E run on what the integration tests left there — a
+          # studio whose admin is `ci-admin@review.local` — so every Playwright sign-in was refused.
+          POSTGRES_DB: review
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U review -d review"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+      redis:
+        image: redis:7.4.12-alpine@sha256:8da19c7399dca900c6822a1cf30f9d2285585e2c4b457ff4095b0f4500054d3f
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+      # MinIO is not here: a GitHub Actions service container receives no command or
+      # arguments, and the MinIO image requires `server /data` to start anything other than its
+      # help output. It is therefore started with `docker run` below, on the same host network.
+
+    env:
+      DATABASE_URL: postgresql://review:review_ci@localhost:5432/review?schema=public
+      JWT_SECRET: ci-placeholder-secret-not-used-outside-ci
+      S3_ENDPOINT: http://localhost:9000
+      S3_ACCESS_KEY: ci-minio-user
+      S3_SECRET_KEY: ci-minio-password-0123456789
+      S3_BUCKET: review
+      S3_FORCE_PATH_STYLE: 'true'
+      REDIS_URL: redis://localhost:6379
+      # The schema.prisma <-> migrations drift check is skipped when no database is reachable
+      # (machine without docker). Here one is, so it becomes mandatory; otherwise the only place
+      # it could run would also be the only place not requiring it.
+      REVIEW_REQUIRE_DRIFT_CHECK: '1'
+      # Backend output of the Playwright run (playwright.config.ts), kept for the failure steps below.
+      E2E_SERVER_LOG: ${{ github.workspace }}/frontend/e2e-logs/backend.log
+
+    steps:
+      - name: Récupérer le dépôt
+        uses: actions/checkout@v5
+
+      - name: Installer Node ${{ env.NODE_VERSION }}
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: npm
+          cache-dependency-path: |
+            backend/package-lock.json
+            frontend/package-lock.json
+
+      # Same image and version as docker-compose.yml (scripts/ci-workflow.test.mjs checks this):
+      # `minio/minio` is no longer published, and `latest` broke this job the day the repository
+      # disappeared from Docker Hub.
+      - name: Démarrer MinIO
+        env:
+          MINIO_ROOT_USER: ${{ env.S3_ACCESS_KEY }}
+          MINIO_ROOT_PASSWORD: ${{ env.S3_SECRET_KEY }}
+        run: |
+          # Variable NAMES only (values come from the step env): nothing secret on the command line.
+          docker run -d --name minio -p 9000:9000 \
+            -e MINIO_ROOT_USER \
+            -e MINIO_ROOT_PASSWORD \
+            pgsty/minio:RELEASE.2026-08-04T00-00-00Z server /data
+          for _ in $(seq 1 30); do
+            if curl -fsS http://localhost:9000/minio/health/live >/dev/null; then
+              echo "MinIO prêt."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "MinIO n'a pas répondu en 60 s." >&2
+          docker logs minio >&2 || true
+          exit 1
+
+      # The bucket is only created at server startup (`server.ts` -> `ensureBucket`); integration
+      # tests mount the app without going through there, so it is created here.
+      # `MC_HOST_<alias>` avoids persisting an `mc` configuration between runs; the `mc` is the
+      # one from the server image, as for the compose probe and backup.sh.
+      - name: Créer le bucket de stockage
+        env:
+          MC_HOST_ci: http://${{ env.S3_ACCESS_KEY }}:${{ env.S3_SECRET_KEY }}@localhost:9000
+        run: |
+          docker exec -e MC_HOST_ci \
+            minio mc mb --ignore-existing ci/review
+
+      - name: Installer Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v6
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+
+      # `ruff` is mandatory in validate.sh (no silent skip when absent).
+      - name: Installer ruff
+        run: pip install "ruff==${{ env.RUFF_VERSION }}"
+
+      - name: Dépendances backend (npm ci)
+        run: npm ci
+        working-directory: backend
+
+      - name: Dépendances frontend (npm ci)
+        run: npm ci
+        working-directory: frontend
+
+      # Ephemeral job database: the schema comes from versioned migrations, never from a
+      # `db push`. Integration tests are written for both a blank database and an already
+      # populated one (cf. src/integration/api.itest.ts).
+      # Browser for the Playwright smoke (frontend/e2e); system libraries included.
+      - name: Installer Chromium (Playwright)
+        run: npx playwright install --with-deps chromium
+        working-directory: frontend
+
+      - name: Appliquer les migrations Prisma
+        run: npx prisma migrate deploy
+        working-directory: backend
+
+      - name: Suite de validation + E2E Playwright
+        run: bash scripts/validate.sh --with-e2e
+
+      - name: Journal du backend (E2E)
+        if: failure()
+        run: tail -n 400 "$E2E_SERVER_LOG" || echo "Pas de journal backend (le serveur n'a pas démarré ?)."
+
+      - name: Artefacts Playwright (traces, rapport, journal backend)
+        if: failure()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: playwright-e2e
+          path: |
+            frontend/test-results
+            frontend/playwright-report
+            frontend/e2e-logs
+          if-no-files-found: ignore
+          retention-days: 14

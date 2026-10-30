@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Couleur stable dérivée d'un identifiant utilisateur (14.F). Partagée entre les avatars,
- * la présence temps réel et la couleur d'annotation par défaut : un même utilisateur porte
- * partout la même teinte.
+ * Stable colour derived from a user identifier (14.F). Shared between avatars,
+ * real-time presence and the default annotation colour: the same user carries
+ * the same hue everywhere.
  */
 export const USER_COLORS = [
   '#ef4444',
@@ -26,7 +26,7 @@ export function userColor(seed: number | string): string {
   return USER_COLORS[n % USER_COLORS.length];
 }
 
-/** Luminance relative WCAG d'une couleur `#rrggbb`. */
+/** WCAG relative luminance of a `#rrggbb` colour. */
 function luminance(hex: string): number {
   const c = hex.replace('#', '');
   const channels = [0, 2, 4]
@@ -35,19 +35,19 @@ function luminance(hex: string): number {
   return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
 }
 
-/** Rapport de contraste entre deux couleurs `#rrggbb`. */
+/** Contrast ratio between two `#rrggbb` colours. */
 export function contrastRatio(a: string, b: string): number {
   const [l1, l2] = [luminance(a), luminance(b)];
   return (Math.max(l1, l2) + 0.05) / (Math.min(l1, l2) + 0.05);
 }
 
 /**
- * Encre lisible sur une couleur d'avatar — noire ou blanche, celle qui contraste le plus.
+ * Readable ink on an avatar colour — black or white, whichever contrasts the most.
  *
- * Les initiales étaient écrites en blanc sur toute la palette. Aucune des douze teintes ne
- * tenait alors le seuil AA de 4,5:1 : de 1,98:1 sur le vert à 4,47:1 au mieux. Le noir, lui,
- * passe partout (4,70:1 au minimum) — mais le choix se CALCULE plutôt que de se figer, pour
- * qu'une teinte ajoutée demain à la palette ne réintroduise pas le problème en silence.
+ * Initials used to be written in white across the whole palette. None of the twelve hues
+ * then met the AA threshold of 4.5:1: from 1.98:1 on green to 4.47:1 at best. Black, on the other hand,
+ * passes everywhere (4.70:1 at minimum) — but the choice is COMPUTED rather than hard-coded, so
+ * that a hue added to the palette tomorrow does not silently reintroduce the problem.
  */
 export function readableInk(background: string): '#000000' | '#ffffff' {
   return contrastRatio(background, '#000000') >= contrastRatio(background, '#ffffff') ? '#000000' : '#ffffff';

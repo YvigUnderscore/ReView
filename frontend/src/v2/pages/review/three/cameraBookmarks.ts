@@ -1,26 +1,25 @@
 // SPDX-FileCopyrightText: 2026 Yvig Bidon
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
-import { t } from '../../../i18n';
+import { t } from '@/v2/i18n';
 import type { CameraBookmark, SplatCamera } from '../reviewTypes';
 
-/** Nombre maximal de bookmarks — aligné sur les raccourcis clavier Alt+1 à Alt+9. */
+/** Maximum number of bookmarks, aligned with the keyboard shortcuts Alt+1 to Alt+9. */
 export const MAX_BOOKMARKS = 9;
 
-/** Touches physiques du rappel de vue : rangée des chiffres ou pavé numérique. */
+/** Physical keys of the view recall: digit row or numeric keypad. */
 const DIGIT_CODE = /^(?:Digit|Numpad)([1-9])$/;
 
 /**
- * Indice du bookmark visé par une frappe, ou `null` si la frappe ne le concerne pas.
+ * Index of the bookmark targeted by a keystroke, or `null` if the keystroke does not concern it.
  *
- * Les chiffres nus appartiennent à la bascule de mode du chrome, dans les quatre viewers :
- * sur un média spatial, `1`/`2`/`3` rappelaient une vue **et** changeaient de mode, deux
- * réponses pour une frappe. Le rappel passe donc sous **Alt**, ce qui libère les neuf slots
- * au lieu des seuls 4-9 que laissait la bascule.
+ * Bare digits belong to the chrome's mode switch, in all four viewers: on a spatial media, `1`/`2`/`3`
+ * recalled a view **and** changed mode, two responses for one keystroke. Recall therefore goes under
+ * **Alt**, which frees the nine slots instead of the only 4-9 left by the switch.
  *
- * La touche est lue par sa **position** (`code`) et non par le caractère produit : sous Alt,
- * `key` vaut le caractère de la disposition (`&` en AZERTY, `¡` sur macOS) — jamais `1`.
- * Même parti pris que la navigation en vol (ZQSD = WASD).
+ * The key is read by its **position** (`code`) and not by the character produced: under Alt, `key`
+ * holds the character of the layout (`&` on AZERTY, `¡` on macOS), never `1`.
+ * Same choice as flight navigation (ZQSD = WASD).
  */
 export function bookmarkShortcutIndex(
   e: Pick<KeyboardEvent, 'code' | 'altKey' | 'ctrlKey' | 'metaKey'>,
@@ -34,16 +33,16 @@ export function bookmarkShortcutIndex(
 }
 
 /**
- * Logique pure des bookmarks caméra (39.D), partagée par le hook et testée isolément.
- * Ajoute la vue courante avec un libellé auto (« Vue N ») ; renvoie `null` si la liste est pleine
- * (le hook affiche alors une erreur, sans mutation).
+ * Pure logic of the camera bookmarks (39.D), shared by the hook and tested in isolation.
+ * Adds the current view with an automatic label ("View N"); returns `null` if the list is full
+ * (the hook then shows an error, without mutation).
  */
 export function appendBookmark(list: CameraBookmark[], camera: SplatCamera): CameraBookmark[] | null {
   if (list.length >= MAX_BOOKMARKS) return null;
   return [...list, { camera, label: t('camera.viewN', { n: list.length + 1 }) }];
 }
 
-/** Retire le bookmark d'indice `index` (hors bornes → liste inchangée). */
+/** Removes the bookmark at index `index` (out of bounds: list unchanged). */
 export function removeBookmarkAt(list: CameraBookmark[], index: number): CameraBookmark[] {
   if (index < 0 || index >= list.length) return list;
   return list.filter((_, i) => i !== index);

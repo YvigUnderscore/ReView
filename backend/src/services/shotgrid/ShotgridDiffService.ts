@@ -9,22 +9,20 @@ import { mapSgToLocal } from './shotgridLinks';
 import { sgDeepLink } from './shotgridSettings';
 
 /**
- * Comparaison ReView ↔ ShotGrid.
+ * ReView <-> ShotGrid comparison.
  *
- * Une synchronisation peut avoir manqué des événements : instance arrêtée, webhook
- * tombé, coupure réseau. Plutôt que de faire confiance au dernier horodatage, cette
- * comparaison relit les deux côtés et énumère les écarts, entité par entité, sans rien
- * modifier. Elle répond à une question simple : « qu'est-ce qui ne colle pas ? »
+ * A synchronization may have missed events: instance stopped, webhook dropped, network cut. Rather than trusting the last timestamp,
+ * this comparison reads both sides and enumerates the gaps, entity by entity, without changing anything. It answers a simple question:
+ * "what does not match?"
  *
- * Rien n'est corrigé ici. La correction est un geste séparé et explicite
- * (« Tout réaligner sur ShotGrid »), parce qu'écraser du travail mérite une décision.
+ * Nothing is corrected here. Correction is a separate, explicit gesture ("Realign everything on ShotGrid"), because overwriting work deserves a decision.
  */
 
 export type DiffKind =
-  | 'missing_local' // présent dans ShotGrid, absent de ReView
-  | 'missing_remote' // présent dans ReView, absent de ShotGrid (ou retiré)
-  | 'field_differs' // les deux existent, une valeur diverge
-  | 'unlinked'; // entité locale jamais reliée
+  | 'missing_local' // present in ShotGrid, absent from ReView
+  | 'missing_remote' // present in ReView, absent from ShotGrid (or removed)
+  | 'field_differs' // both exist, a value diverges
+  | 'unlinked'; // local entity never linked
 
 export interface DiffEntry {
   kind: DiffKind;
@@ -33,7 +31,7 @@ export interface DiffEntry {
   sgId: number | null;
   localId: number | null;
   sgUrl: string | null;
-  /** Écarts champ par champ, en valeurs déjà lisibles. */
+  /** Field-by-field gaps, in values already readable. */
   fields?: Array<{ field: string; review: string | null; shotgrid: string | null }>;
 }
 
@@ -41,7 +39,7 @@ export interface DiffReport {
   generatedAt: string;
   sgProjectId: number;
   sgProjectName: string;
-  /** Le projet distant porte-t-il toujours le nom attendu ? */
+  /** Does the remote project still carry the expected name? */
   projectNameOk: boolean;
   remoteProjectName: string | null;
   counts: Record<string, { review: number; shotgrid: number }>;
@@ -70,8 +68,8 @@ function normalise(value: unknown): string | null {
 }
 
 /**
- * Compare le contenu des deux côtés pour le projet lié.
- * Les entités locales mises à la corbeille sont ignorées : elles ne sont pas des écarts.
+ * Compares the content of both sides for the linked project.
+ * Local entities placed in the trash are ignored: they are not gaps.
  */
 export async function buildDiff(projectId: number): Promise<DiffReport> {
   const ctx = await openConnection(projectId, { verifyProject: false });
@@ -91,9 +89,8 @@ export async function buildDiff(projectId: number): Promise<DiffReport> {
   const keep = (records: SgRecord[]) => records.filter((r) => belongsToProject(r, scope).ok);
 
   const [sgSequences, sgShots, sgAssets, sgTasks, sgVersions] = await Promise.all([
-    // `sg_status_list` demandé : l'écran de comparaison ne regardait que le code, si bien
-    // qu'un statut de séquence divergent restait invisible — la seule entité dont l'écart
-    // ne se voyait nulle part.
+    // `sg_status_list` requested: the comparison screen only looked at the code, so a diverging sequence status
+    // stayed invisible: the only entity whose gap was visible nowhere.
     ctx.client
       .search('Sequence', { fields: ['code', 'sg_status_list', 'updated_at', 'project'], filters })
       .then(keep),
@@ -144,7 +141,7 @@ export async function buildDiff(projectId: number): Promise<DiffReport> {
 
   const url = (type: string, id: number) => sgDeepLink(ctx.connection.site.baseUrl, type, id);
 
-  // ── Séquences
+  // ── Sequences
   for (const sg of sgSequences) {
     const link = seqLinks.get(sg.id);
     const local = link ? sequences.find((s) => s.id === link.localId) : undefined;
@@ -188,7 +185,7 @@ export async function buildDiff(projectId: number): Promise<DiffReport> {
       });
   }
 
-  // ── Plans
+  // ── Shots
   for (const sg of sgShots) {
     const link = shotLinks.get(sg.id);
     const local = link ? shots.find((s) => s.id === link.localId) : undefined;
@@ -263,7 +260,7 @@ export async function buildDiff(projectId: number): Promise<DiffReport> {
       });
   }
 
-  // ── Tâches
+  // ── Tasks
   for (const sg of sgTasks) {
     const link = taskLinks.get(sg.id);
     const local = link ? tasks.find((t) => t.id === link.localId) : undefined;

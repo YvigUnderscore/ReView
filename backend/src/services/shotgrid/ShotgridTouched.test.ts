@@ -3,10 +3,10 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// `vi.mock` est remonté en tête de fichier : la doublure doit l'être aussi.
+// `vi.mock` is hoisted to the top of the file: the double must be too.
 const { emitToProject, isWorkerProcess, publishWorkerEvent } = vi.hoisted(() => ({
   emitToProject: vi.fn(),
-  // Par défaut on se place dans le process web : c'est le chemin que ces cas décrivent.
+  // By default we sit in the web process: that is the path these cases describe.
   isWorkerProcess: vi.fn(() => false),
   publishWorkerEvent: vi.fn(),
 }));
@@ -23,12 +23,11 @@ import { DETAIL_LIMIT, flushTouched, TouchedEntities } from './ShotgridTouched';
 beforeEach(() => vi.clearAllMocks());
 
 /**
- * Une passe complète émettait un événement socket par entité — jusqu'à douze mille, que
- * le client multipliait ensuite par cinq invalidations. Le collecteur tranche en fin de
- * passe : détail tant que la passe reste petite, résumé au-delà.
+ * A full pass used to emit one socket event per entity — up to twelve thousand, which the client then multiplied by five invalidations. The collector decides at the
+ * end of the pass: detail while the pass stays small, summary beyond.
  */
 describe('TouchedEntities', () => {
-  it('rejoue le détail d’une passe ciblée', () => {
+  it('replays the detail of a targeted pass', () => {
     const touched = new TouchedEntities();
     touched.add('shot', 12);
     touched.add('task', 7, { shotId: 12, assetId: null });
@@ -41,7 +40,7 @@ describe('TouchedEntities', () => {
     expect(touched.summary()).toEqual({ counts: { shot: 1, task: 1 }, total: 2, detailed: true });
   });
 
-  it('ne compte qu’une fois une entité touchée deux fois', () => {
+  it('counts an entity touched twice only once', () => {
     const touched = new TouchedEntities();
     touched.add('shot', 12);
     touched.add('shot', 12, { ignored: true });
@@ -50,27 +49,26 @@ describe('TouchedEntities', () => {
     expect(touched.detail()).toHaveLength(1);
   });
 
-  it('distingue deux familles portant le même identifiant', () => {
+  it('tells apart two families carrying the same identifier', () => {
     const touched = new TouchedEntities();
     touched.add('shot', 5);
     touched.add('task', 5);
     expect(touched.summary().counts).toEqual({ shot: 1, task: 1 });
   });
 
-  it('abandonne le détail au-delà du seuil et ne garde que le décompte', () => {
+  it('drops the detail beyond the threshold and keeps only the count', () => {
     const touched = new TouchedEntities();
     for (let i = 0; i <= DETAIL_LIMIT; i += 1) touched.add('shot', i);
 
     expect(touched.total).toBe(DETAIL_LIMIT + 1);
     expect(touched.detailed).toBe(false);
-    // Rien à rejouer : c'est précisément la rafale qu'on supprime.
+    // Nothing to replay: this is precisely the burst we are removing.
     expect(touched.detail()).toEqual([]);
     expect(touched.summary().counts).toEqual({ shot: DETAIL_LIMIT + 1 });
   });
 
-  it('compte notes et playlists sans leur inventer d’événement fin', () => {
-    // Le client n'écoute rien pour ces deux familles : elles ne voyagent qu'en décompte,
-    // et c'est ce décompte qui lui dit de recharger commentaires et séances.
+  it('counts notes and playlists without inventing a fine-grained event for them', () => {
+    // The client listens to nothing for these two families: they only travel as a count, and it is that count which tells it to reload comments and sessions.
     const touched = new TouchedEntities();
     touched.add('comment', 3);
     touched.add('playlist', 4);
@@ -83,18 +81,17 @@ describe('TouchedEntities', () => {
     });
   });
 
-  it('rend un résumé vide quand la passe n’a rien touché', () => {
+  it('returns an empty summary when the pass touched nothing', () => {
     const touched = new TouchedEntities();
     expect(touched.summary()).toEqual({ counts: {}, total: 0, detailed: true });
   });
 });
 
 /**
- * Contrat d'émission, sur lequel le pont socket du client s'appuie : `detailed` dit si
- * les événements fins ont déjà été envoyés, donc si le client doit recharger largement.
+ * Emission contract, on which the client's socket bridge relies: `detailed` says whether the fine-grained events have already been sent, hence whether the client must reload broadly.
  */
 describe('flushTouched', () => {
-  it('rejoue le détail puis annonce un résumé « détaillé »', () => {
+  it('replays the detail then announces a "detailed" summary', () => {
     const touched = new TouchedEntities();
     touched.add('shot', 12);
     touched.add('task', 7, { shotId: 12, assetId: null });
@@ -119,8 +116,8 @@ describe('flushTouched', () => {
     });
   });
 
-  it('n’émet qu’un résumé quand la passe a débordé', () => {
-    // C'est le correctif : une passe complète n'envoie plus douze mille événements.
+  it('emits only a summary when the pass overflowed', () => {
+    // This is the fix: a full pass no longer sends twelve thousand events.
     const touched = new TouchedEntities();
     for (let i = 0; i <= DETAIL_LIMIT; i += 1) touched.add('shot', i);
 
@@ -137,7 +134,7 @@ describe('flushTouched', () => {
     });
   });
 
-  it('annonce même une passe qui n’a rien touché — le client suit l’état du run', () => {
+  it('announces even a pass that touched nothing: the client follows the run state', () => {
     flushTouched(42, 901, 'error', new TouchedEntities());
 
     expect(emitToProject).toHaveBeenCalledTimes(1);
@@ -153,12 +150,11 @@ describe('flushTouched', () => {
 });
 
 /**
- * La synchronisation ShotGrid tourne dans le process worker, où `io` n'existe pas :
- * `emitToProject` y était un no-op silencieux et aucun écran ne se rafraîchissait après
- * une passe. Le worker doit passer par le canal Redis, que le serveur relaie.
+ * The ShotGrid synchronization runs in the worker process, where `io` does not exist: `emitToProject` was a silent no-op there and no screen refreshed after a pass.
+ * The worker must go through the Redis channel, which the server relays.
  */
-describe('flushTouched — selon le process', () => {
-  it('émet directement depuis le process web', () => {
+describe('flushTouched: depending on the process', () => {
+  it('emits directly from the web process', () => {
     isWorkerProcess.mockReturnValue(false);
     const touched = new TouchedEntities();
     touched.add('shot', 12);
@@ -167,7 +163,7 @@ describe('flushTouched — selon le process', () => {
     expect(publishWorkerEvent).not.toHaveBeenCalled();
   });
 
-  it('publie sur le canal Redis depuis le worker', () => {
+  it('publishes on the Redis channel from the worker', () => {
     isWorkerProcess.mockReturnValue(true);
     const touched = new TouchedEntities();
     touched.add('shot', 12);

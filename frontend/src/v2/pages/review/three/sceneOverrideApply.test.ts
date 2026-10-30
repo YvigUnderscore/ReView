@@ -29,12 +29,12 @@ const indexed = (entries: [string, Partial<BaseState>?][]): IndexedObject<string
   entries.map(([primPath, b]) => ({ object: primPath, primPath, base: base(b) }));
 
 describe('planOverride', () => {
-  it('sans override, chaque objet garde son état d’origine', () => {
+  it('without an override, each object keeps its original state', () => {
     const plans = planOverride(indexed([['/W/A', { position: [1, 2, 3] }]]), null);
     expect(plans[0]).toMatchObject({ position: [1, 2, 3], scale: [1, 1, 1], visible: true });
   });
 
-  it('la translation et la rotation s’ajoutent, l’échelle se multiplie', () => {
+  it('translation and rotation add up, scale multiplies', () => {
     const override = setPrimEdit(emptyOverride(), '/W/A', {
       transform: { t: [1, 0, 0], r: [0, Math.PI, 0], s: [2, 2, 2] },
     });
@@ -44,14 +44,14 @@ describe('planOverride', () => {
     expect(plans[0].scale).toEqual([6, 6, 6]);
   });
 
-  it('la visibilité forcée l’emporte, sinon celle d’origine est conservée', () => {
+  it('forced visibility wins, otherwise the original one is kept', () => {
     const override = setPrimEdit(emptyOverride(), '/W/A', { visible: false });
     const plans = planOverride(indexed([['/W/A'], ['/W/B', { visible: false }]]), override);
     expect(plans[0].visible).toBe(false);
     expect(plans[1].visible).toBe(false);
   });
 
-  it('n’applique le delta qu’au prim visé', () => {
+  it('applies the delta only to the targeted prim', () => {
     const override = setPrimEdit(emptyOverride(), '/W/A', {
       transform: { t: [9, 9, 9], r: [0, 0, 0], s: [1, 1, 1] },
     });
@@ -60,7 +60,7 @@ describe('planOverride', () => {
     expect(plans[1].position).toEqual([0, 0, 0]);
   });
 
-  it('est idempotent : replanifier depuis l’état d’origine ne cumule pas', () => {
+  it('is idempotent: replanning from the original state does not accumulate', () => {
     const items = indexed([['/W/A']]);
     const override = setPrimEdit(emptyOverride(), '/W/A', {
       transform: { t: [1, 0, 0], r: [0, 0, 0], s: [1, 1, 1] },
@@ -69,7 +69,7 @@ describe('planOverride', () => {
     expect(planOverride(items, override)[0].position).toEqual([1, 0, 0]);
   });
 
-  it('revenir à un override vide rétablit l’état d’origine', () => {
+  it('reverting to an empty override restores the original state', () => {
     const items = indexed([['/W/A', { position: [4, 0, 0] }]]);
     const override = setPrimEdit(emptyOverride(), '/W/A', {
       transform: { t: [1, 1, 1], r: [0, 0, 0], s: [1, 1, 1] },
@@ -79,7 +79,7 @@ describe('planOverride', () => {
   });
 });
 
-describe('variantes cuites dans le GLB (46.G)', () => {
+describe('variants baked into the GLB (46.G)', () => {
   const defaults = { '/W/Asset': { modelingVariant: 'hero' } };
   const scene: IndexedObject<string>[] = [
     {
@@ -97,7 +97,7 @@ describe('variantes cuites dans le GLB (46.G)', () => {
     { object: 'commun', primPath: '/W/Asset', base: base() },
   ];
 
-  it('seule l’option active est visible, l’autre est masquée', () => {
+  it('only the active option is visible, the other is hidden', () => {
     const plans = planOverride(scene, null, defaults);
     expect(plans.map((p) => [p.object, p.visible])).toEqual([
       ['hero', true],
@@ -106,7 +106,7 @@ describe('variantes cuites dans le GLB (46.G)', () => {
     ]);
   });
 
-  it('changer de variante bascule la visibilité sans reconversion', () => {
+  it('switching variant toggles visibility without reconversion', () => {
     const override = setPrimEdit(emptyOverride(), '/W/Asset', { variants: { modelingVariant: 'lo' } });
     const plans = planOverride(scene, override, defaults);
     expect(plans.map((p) => [p.object, p.visible])).toEqual([
@@ -116,36 +116,36 @@ describe('variantes cuites dans le GLB (46.G)', () => {
     ]);
   });
 
-  it('une option non retenue reste masquée même si l’override la demande visible', () => {
+  it('a non-kept option stays hidden even if the override asks for it visible', () => {
     const override = setPrimEdit(emptyOverride(), '/W/Asset/Geo', { visible: true });
     expect(planOverride(scene, override, defaults)[1].visible).toBe(false);
   });
 
-  it('sans défaut connu, aucune option n’est retenue', () => {
+  it('without a known default, no option is kept', () => {
     expect(planOverride(scene, null, {}).map((p) => p.visible)).toEqual([false, false, true]);
   });
 });
 
-describe('prims à plusieurs jeux de variantes (46.R — assiettes Kitchen_set)', () => {
-  // Une assiette porte modelingVariant (PlateA/PlateB) ET shadingVariant (Clean/Dirty).
+describe('prims with several variant sets (46.R — Kitchen_set plates)', () => {
+  // A plate carries modelingVariant (PlateA/PlateB) AND shadingVariant (Clean/Dirty).
   const prim = '/K/PlateBClean_1';
   const defaults = { [prim]: { modelingVariant: 'PlateB', shadingVariant: 'Clean' } };
   const scene: IndexedObject<string>[] = [
-    // Scène de base : composée avec les deux jeux à leur défaut.
+    // Base scene: composed with both sets at their default.
     {
       object: 'base',
       primPath: `${prim}/Geo`,
       base: base(),
       variant: { prim, selections: { modelingVariant: 'PlateB', shadingVariant: 'Clean' } },
     },
-    // Option modeling cuite (shading resté au défaut pendant la cuisson).
+    // Modeling option baked (shading left at default during baking).
     {
       object: 'plateA',
       primPath: `${prim}/Geo`,
       base: base(),
       variant: { prim, selections: { modelingVariant: 'PlateA', shadingVariant: 'Clean' } },
     },
-    // Option shading cuite (modeling resté au défaut).
+    // Shading option baked (modeling left at default).
     {
       object: 'dirty',
       primPath: `${prim}/Geo`,
@@ -158,57 +158,57 @@ describe('prims à plusieurs jeux de variantes (46.R — assiettes Kitchen_set)'
       .filter((p) => p.visible)
       .map((p) => p.object);
 
-  it('au défaut, seule la scène de base est visible', () => {
+  it('at default, only the base scene is visible', () => {
     expect(visible(null)).toEqual(['base']);
   });
 
-  it('changer un jeu masque la base — plus de géométrie en double', () => {
-    // C'était le bug : la base ne portait qu'une appartenance (écrasée), donc elle restait
-    // affichée à côté de l'option cuite — deux assiettes à l'écran.
+  it('changing one set hides the base — no more duplicated geometry', () => {
+    // That was the bug: the base only carried one membership (overwritten), so it stayed
+    // displayed next to the baked option — two plates on screen.
     const override = setPrimEdit(emptyOverride(), prim, { variants: { modelingVariant: 'PlateA' } });
     expect(visible(override)).toEqual(['plateA']);
   });
 
-  it('changer l’autre jeu bascule vers son option, seule', () => {
+  it('changing the other set toggles to its option, alone', () => {
     const override = setPrimEdit(emptyOverride(), prim, { variants: { shadingVariant: 'Dirty' } });
     expect(visible(override)).toEqual(['dirty']);
   });
 
-  it('une combinaison non cuite ne montre rien plutôt qu’un mélange faux', () => {
+  it('an uncooked combination shows nothing rather than a false mix', () => {
     const override = setPrimEdit(emptyOverride(), prim, {
       variants: { modelingVariant: 'PlateA', shadingVariant: 'Dirty' },
     });
     expect(visible(override)).toEqual([]);
   });
 
-  describe('variantOptionRenderable (46.U — le menu grise au lieu de faire disparaître)', () => {
+  describe('variantOptionRenderable (46.U — the menu greys out instead of making things disappear)', () => {
     const renderable = (override: SceneOverride | null, set: string, option: string) =>
       variantOptionRenderable(scene, override, defaults, prim, set, option);
 
-    it('au défaut, chaque option cuite individuellement est montrable', () => {
+    it('at default, each individually baked option is displayable', () => {
       expect(renderable(null, 'modelingVariant', 'PlateA')).toBe(true);
       expect(renderable(null, 'shadingVariant', 'Dirty')).toBe(true);
       expect(renderable(null, 'shadingVariant', 'Clean')).toBe(true);
     });
 
-    it('PlateA retenu : Dirty devient une combinaison non cuite — grisé', () => {
+    it('PlateA kept: Dirty becomes an uncooked combination — greyed out', () => {
       const override = setPrimEdit(emptyOverride(), prim, { variants: { modelingVariant: 'PlateA' } });
       expect(renderable(override, 'shadingVariant', 'Dirty')).toBe(false);
-      // Revenir au shading par défaut reste possible (le sous-arbre PlateA le porte).
+      // Going back to the default shading remains possible (the PlateA subtree carries it).
       expect(renderable(override, 'shadingVariant', 'Clean')).toBe(true);
     });
 
-    it('Dirty retenu : PlateA grisé, retour à PlateB possible', () => {
+    it('Dirty kept: PlateA greyed out, going back to PlateB possible', () => {
       const override = setPrimEdit(emptyOverride(), prim, { variants: { shadingVariant: 'Dirty' } });
       expect(renderable(override, 'modelingVariant', 'PlateA')).toBe(false);
       expect(renderable(override, 'modelingVariant', 'PlateB')).toBe(true);
     });
 
-    it('une option jamais cuite n’est pas montrable', () => {
+    it('an option never baked is not displayable', () => {
       expect(renderable(null, 'modelingVariant', 'PlateZ')).toBe(false);
     });
 
-    it('sans porteur connu du jeu (vieux GLB non étiqueté), ne bloque rien', () => {
+    it('without a known carrier of the set (old untagged GLB), blocks nothing', () => {
       const unlabeled = indexed([[`${prim}/Geo`]]);
       expect(variantOptionRenderable(unlabeled, null, defaults, prim, 'shadingVariant', 'Dirty')).toBe(true);
     });
@@ -216,8 +216,8 @@ describe('prims à plusieurs jeux de variantes (46.R — assiettes Kitchen_set)'
 });
 
 /**
- * Faux `Object3D` : la couture entre la scène impérative et la logique pure se réduit à
- * `traverse`, `userData` et trois vecteurs — assez pour vérifier l'indexation sans WebGL.
+ * Fake `Object3D`: the seam between the imperative scene and the pure logic boils down to
+ * `traverse`, `userData` and three vectors — enough to check indexing without WebGL.
  */
 interface FakeVec {
   x: number;
@@ -269,13 +269,13 @@ function fakeObject(userData: Record<string, unknown>, children: FakeNode[] = []
 const asObject3D = (o: FakeNode) => o as unknown as THREE.Object3D;
 
 describe('indexPrimObjects', () => {
-  it('indexe les objets porteurs d’un usdPath et ignore les autres', () => {
+  it('indexes objects carrying a usdPath and ignores the others', () => {
     const root = fakeObject({}, [fakeObject({ usdPath: '/World/Asset/Geo' }), fakeObject({ nothing: true })]);
     const indexedObjects = indexPrimObjects(asObject3D(root), ['/World/Asset/Geo']);
     expect(indexedObjects.map((i) => i.primPath)).toEqual(['/World/Asset/Geo']);
   });
 
-  it('relève l’état d’origine, référence du delta idempotent', () => {
+  it('records the original state, the reference of the idempotent delta', () => {
     const child = fakeObject({ usdPath: '/W/A' });
     child.position.set(1, 2, 3);
     child.visible = false;
@@ -283,7 +283,7 @@ describe('indexPrimObjects', () => {
     expect(entry.base).toMatchObject({ position: [1, 2, 3], scale: [1, 1, 1], visible: false });
   });
 
-  it('lit les appartenances multi-jeux (46.R) comme l’ancien format à jeu unique', () => {
+  it('reads multi-set memberships (46.R) like the legacy single-set format', () => {
     const multi = fakeObject({
       usdPath: '/K/Plate_1/Geo',
       usdVariantPrim: '/K/Plate_1',
@@ -303,7 +303,7 @@ describe('indexPrimObjects', () => {
     expect(b.variant).toEqual({ prim: '/W/Asset', selections: { modelingVariant: 'lo' } });
   });
 
-  it('replie sur le chemin brut quand aucun prim USD ne correspond', () => {
+  it('falls back to the raw path when no USD prim matches', () => {
     const child = fakeObject({ usdPath: '/Inconnu/Truc' });
     const [entry] = indexPrimObjects(asObject3D(fakeObject({}, [child])), ['/W/A']);
     expect(entry.primPath).toBe('/Inconnu/Truc');
@@ -311,7 +311,7 @@ describe('indexPrimObjects', () => {
 });
 
 describe('applyPlan', () => {
-  it('écrit position, rotation, échelle et visibilité sur la scène', () => {
+  it('writes position, rotation, scale and visibility to the scene', () => {
     const child = fakeObject({ usdPath: '/W/A' });
     const items = indexPrimObjects(asObject3D(fakeObject({}, [child])), ['/W/A']);
     const override = setPrimEdit(emptyOverride(), '/W/A', {
@@ -326,22 +326,22 @@ describe('applyPlan', () => {
 });
 
 describe('makePrimResolver', () => {
-  it('remonte du mesh touché jusqu’au prim indexé', () => {
+  it('climbs from the hit mesh up to the indexed prim', () => {
     const mesh = fakeObject({});
     const geo = fakeObject({ usdPath: '/W/Asset/Geo/Geo' }, [mesh]);
     const items = indexPrimObjects(asObject3D(fakeObject({}, [geo])), ['/W/Asset/Geo']);
-    // Le chemin glTF a un niveau de plus : l'index a déjà rétabli le prim USD réel.
+    // The glTF path has one extra level: the index has already restored the real USD prim.
     expect(items[0].primPath).toBe('/W/Asset/Geo');
     expect(makePrimResolver(items)(asObject3D(mesh))).toBe('/W/Asset/Geo');
   });
 
-  it('renvoie null pour un objet hors de la scène USD', () => {
+  it('returns null for an object outside the USD scene', () => {
     expect(makePrimResolver([])(asObject3D(fakeObject({})))).toBeNull();
   });
 });
 
 describe('transformDeltaFrom', () => {
-  it('est l’inverse exact de planOverride : base + delta redonne la pose manipulée', () => {
+  it('is the exact inverse of planOverride: base + delta gives back the manipulated pose', () => {
     const origin = base({ position: [1, 0, 0], rotation: [0, 0.5, 0], scale: [2, 2, 2] });
     const pose = {
       position: { x: 3, y: 1, z: 0 },
@@ -352,7 +352,7 @@ describe('transformDeltaFrom', () => {
     expect(delta.t).toEqual([2, 1, 0]);
     expect(delta.r[1]).toBeCloseTo(1);
     expect(delta.s).toEqual([2, 1, 1]);
-    // Round-trip par planOverride : l'objet revient exactement à la pose du gizmo.
+    // Round trip through planOverride: the object comes back exactly to the gizmo's pose.
     const override = setPrimEdit(emptyOverride(), '/W/A', { transform: delta });
     const plan = planOverride(
       [{ object: 'o', primPath: '/W/A', base: origin }] as IndexedObject<string>[],
@@ -363,7 +363,7 @@ describe('transformDeltaFrom', () => {
     expect(plan.scale).toEqual([4, 2, 2]);
   });
 
-  it('pose inchangée → delta identité (donc rien à stocker)', () => {
+  it('unchanged pose → identity delta (so nothing to store)', () => {
     const origin = base({ position: [5, 5, 5] });
     const delta = transformDeltaFrom(origin, {
       position: { x: 5, y: 5, z: 5 },
@@ -373,7 +373,7 @@ describe('transformDeltaFrom', () => {
     expect(delta).toEqual({ t: [0, 0, 0], r: [0, 0, 0], s: [1, 1, 1] });
   });
 
-  it('ne produit pas de NaN sur une base d’échelle nulle', () => {
+  it('does not produce NaN on a zero-scale base', () => {
     const delta = transformDeltaFrom(base({ scale: [0, 1, 1] }), {
       position: { x: 0, y: 0, z: 0 },
       rotation: { x: 0, y: 0, z: 0 },
@@ -384,18 +384,18 @@ describe('transformDeltaFrom', () => {
 });
 
 describe('isDrawn', () => {
-  it('suit la visibilité héritée : un enfant d’un objet masqué n’est plus dessiné', () => {
+  it('follows inherited visibility: a child of a hidden object is no longer drawn', () => {
     const child = fakeObject({ usdPath: '/W/A/Mesh' });
     const parent = fakeObject({ usdPath: '/W/A' }, [child]);
     expect(isDrawn(asObject3D(child))).toBe(true);
     parent.visible = false;
-    // Three ne touche pas au `visible` des enfants : sans remontée, le halo resterait affiché
-    // autour d'un objet devenu invisible.
+    // Three does not touch the children's `visible`: without walking up, the halo would stay
+    // displayed around an object that became invisible.
     expect(child.visible).toBe(true);
     expect(isDrawn(asObject3D(child))).toBe(false);
   });
 
-  it('un objet masqué lui-même n’est pas dessiné', () => {
+  it('a hidden object itself is not drawn', () => {
     const object = fakeObject({});
     object.visible = false;
     expect(isDrawn(asObject3D(object))).toBe(false);
@@ -403,7 +403,7 @@ describe('isDrawn', () => {
 });
 
 describe('renderedPrimPaths', () => {
-  it('déduplique les chemins des objets rendus', () => {
+  it('deduplicates the paths of the rendered objects', () => {
     expect(renderedPrimPaths(indexed([['/W/A'], ['/W/A'], ['/W/B']]))).toEqual(['/W/A', '/W/B']);
   });
 });

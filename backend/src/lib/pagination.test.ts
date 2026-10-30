@@ -26,55 +26,55 @@ const params = (over: Partial<ReturnType<typeof readPagination>> = {}) => ({
   ...over,
 });
 
-describe('schéma de pagination', () => {
-  it('sépare le défaut du plafond', () => {
-    // Le plafond ÉTAIT le défaut (max 100 / default 100) : un appelant ne pouvait rien
-    // demander de plus que ce qu'on lui servait, la pagination n'existait donc pas.
+describe('pagination schema', () => {
+  it('separates the default from the ceiling', () => {
+    // The ceiling WAS the default (max 100 / default 100): a caller could not ask for anything more than what was served,
+    // so pagination did not exist.
     expect(DEFAULT_PAGE_SIZE).toBeLessThan(MAX_PAGE_SIZE);
     expect(paginationQuery.parse({}).pageSize).toBe(DEFAULT_PAGE_SIZE);
     expect(paginationQuery.parse({ pageSize: '400' }).pageSize).toBe(400);
   });
 
-  it('refuse au-delà du plafond et en deçà de 1', () => {
+  it('refuses beyond the ceiling and below 1', () => {
     expect(() => paginationQuery.parse({ pageSize: String(MAX_PAGE_SIZE + 1) })).toThrow();
     expect(() => paginationQuery.parse({ page: '0' })).toThrow();
   });
 
-  it('accepte un curseur sur la variante dédiée', () => {
+  it('accepts a cursor on the dedicated variant', () => {
     expect(cursorPaginationQuery.parse({ cursor: 'abc' }).cursor).toBe('abc');
     expect(cursorPaginationQuery.parse({}).cursor).toBeUndefined();
   });
 });
 
 describe('readPagination', () => {
-  it('coerce les chaînes de req.query', () => {
+  it('coerces the strings of req.query', () => {
     expect(readPagination({ page: '3', pageSize: '25' })).toMatchObject({ page: 3, pageSize: 25 });
   });
 
-  it('applique le défaut propre à la route quand rien n’est demandé', () => {
+  it("applies the route's own default when nothing is requested", () => {
     expect(readPagination({}, { defaultPageSize: 500 }).pageSize).toBe(500);
   });
 
-  it('laisse toujours la main à l’appelant', () => {
+  it('always leaves the last word to the caller', () => {
     expect(readPagination({ pageSize: '10' }, { defaultPageSize: 500 }).pageSize).toBe(10);
   });
 
-  it('ne laisse pas un défaut de route franchir le plafond', () => {
+  it('does not let a route default cross the ceiling', () => {
     expect(readPagination({}, { defaultPageSize: 99999 }).pageSize).toBe(MAX_PAGE_SIZE);
   });
 });
 
 describe('pageArgs / paginate', () => {
-  it('décale de (page - 1) × pageSize', () => {
+  it('shifts by (page - 1) × pageSize', () => {
     expect(pageArgs(params({ page: 3, pageSize: 20 }))).toEqual({ skip: 40, take: 20 });
   });
 
-  it('ignore le décalage quand un curseur est fourni', () => {
-    // Cumuler skip et curseur sauterait une page entière.
+  it('ignores the offset when a cursor is supplied', () => {
+    // Combining skip and cursor would skip a whole page.
     expect(pageArgs(params({ page: 3, pageSize: 20, cursor: 'c' }))).toEqual({ skip: 0, take: 20 });
   });
 
-  it('expose un total exploitable : pageCount et hasMore', () => {
+  it('exposes a usable total: pageCount and hasMore', () => {
     const p = params({ page: 1, pageSize: 100 });
     expect(paginate(new Array(100).fill(0), 250, p)).toMatchObject({
       total: 250,
@@ -87,11 +87,11 @@ describe('pageArgs / paginate', () => {
     });
   });
 
-  it('pageCount vaut 1 sur une liste vide', () => {
+  it('pageCount is 1 on an empty list', () => {
     expect(paginate([], 0, params()).pageCount).toBe(1);
   });
 
-  it('en mode curseur, une page pleine annonce une suite', () => {
+  it('in cursor mode, a full page announces a continuation', () => {
     const p = params({ pageSize: 2, cursor: 'c' });
     expect(paginate([1, 2], 999, p).hasMore).toBe(true);
     expect(paginate([1], 999, p).hasMore).toBe(false);
@@ -99,21 +99,21 @@ describe('pageArgs / paginate', () => {
 });
 
 describe('stableOrderBy', () => {
-  it('ajoute un départage sur id, dans le même sens', () => {
+  it('adds a tie-break on id, in the same direction', () => {
     expect(stableOrderBy(params({ sort: 'name', order: 'asc' }), ['name'], { name: 'asc' })).toEqual([
       { name: 'asc' },
       { id: 'asc' },
     ]);
   });
 
-  it('retombe sur le tri par défaut si la colonne n’est pas autorisée', () => {
+  it('falls back on the default sort if the column is not allowed', () => {
     expect(stableOrderBy(params({ sort: 'passwordHash' }), ['name'], { createdAt: 'desc' })).toEqual([
       { createdAt: 'desc' },
       { id: 'desc' },
     ]);
   });
 
-  it('ne double pas le départage quand on trie déjà par id', () => {
+  it('does not double the tie-break when already sorting by id', () => {
     expect(stableOrderBy(params({ sort: 'id', order: 'asc' }), ['id'], { id: 'asc' })).toEqual([
       { id: 'asc' },
     ]);
@@ -121,53 +121,53 @@ describe('stableOrderBy', () => {
 });
 
 describe('curseur', () => {
-  it('fait un aller-retour sur un entier, une chaîne et une date', () => {
+  it('round-trips an integer, a string and a date', () => {
     const date = new Date('2026-08-21T10:00:00.000Z');
     expect(decodeCursor(encodeCursor(0, 42))).toEqual({ value: 0, id: 42 });
     expect(decodeCursor(encodeCursor('SH010', 7))).toEqual({ value: 'SH010', id: 7 });
     expect(decodeCursor(encodeCursor(date, 9))).toEqual({ value: date, id: 9 });
   });
 
-  it('ne rend pas un nombre sous forme de chaîne', () => {
-    // Une comparaison Prisma sur le mauvais type est une erreur 500, pas un tri bancal.
+  it('does not return a number as a string', () => {
+    // A Prisma comparison on the wrong type is a 500 error, not a lopsided sort.
     expect(typeof decodeCursor(encodeCursor(12, 1))!.value).toBe('number');
   });
 
-  it('traite un curseur illisible comme une absence de curseur', () => {
+  it('treats an unreadable cursor as no cursor', () => {
     expect(decodeCursor(undefined)).toBeNull();
     expect(decodeCursor('pas-du-base64-json')).toBeNull();
     expect(decodeCursor(Buffer.from('{"k":"n","v":1}').toString('base64url'))).toBeNull();
     expect(decodeCursor(Buffer.from('{"k":"d","v":"jamais","i":1}').toString('base64url'))).toBeNull();
   });
 
-  it('compare le couple (valeur, id), pas la seule valeur', () => {
-    // C'est tout l'intérêt : deux mille plans à order = 0 ne peuvent se départager que
-    // par l'id, sinon la page suivante repart du premier ex æquo.
+  it('compares the pair (value, id), not the value alone', () => {
+    // That is the whole point: two thousand shots at order = 0 can only be told apart by id, otherwise the next page
+    // restarts from the first tie.
     expect(cursorWhere('order', 'asc', { value: 0, id: 12 })).toEqual({
       OR: [{ order: { gt: 0 } }, { AND: [{ order: 0 }, { id: { gt: 12 } }] }],
     });
   });
 
-  it('inverse la comparaison en tri descendant', () => {
+  it('inverts the comparison in descending sort', () => {
     expect(cursorWhere('createdAt', 'desc', { value: 5, id: 3 })).toEqual({
       OR: [{ createdAt: { lt: 5 } }, { AND: [{ createdAt: 5 }, { id: { lt: 3 } }] }],
     });
   });
 
-  it('se réduit à l’id quand c’est déjà la clé de tri', () => {
+  it('reduces to the id when it is already the sort key', () => {
     expect(cursorWhere('id', 'asc', { value: 4, id: 4 })).toEqual({ id: { gt: 4 } });
   });
 });
 
 describe('withCursor', () => {
-  it('laisse le filtre intact sans curseur', () => {
+  it('leaves the filter intact without a cursor', () => {
     const where = { projectId: 1 };
     expect(withCursor(where, params(), 'order', 'asc')).toBe(where);
   });
 
-  it('empile la condition dans AND sans écraser un OR existant', () => {
-    // Une tâche pend à un plan OU à un asset : étaler le curseur à la racine écraserait
-    // ce OR et la liste renverrait les tâches de tout le studio.
+  it('stacks the condition in AND without overwriting an existing OR', () => {
+    // A task hangs from a shot OR an asset: spreading the cursor at the root would overwrite that OR and the list
+    // would return the tasks of the whole studio.
     const where = { OR: [{ shotId: 1 }, { assetId: 2 }] };
     const out = withCursor(where, params({ cursor: encodeCursor(0, 5) }), 'order', 'asc') as {
       OR: unknown[];
@@ -178,7 +178,7 @@ describe('withCursor', () => {
     expect(out.AND[0]).toEqual(cursorWhere('order', 'asc', { value: 0, id: 5 }));
   });
 
-  it('conserve un AND déjà présent', () => {
+  it('keeps an AND already present', () => {
     const where = { AND: [{ deletedAt: null }] };
     const out = withCursor(where, params({ cursor: encodeCursor(1, 2) }), 'order', 'asc') as {
       AND: unknown[];
@@ -194,19 +194,19 @@ describe('nextCursor / paginateCursor', () => {
     { id: 2, order: 0 },
   ];
 
-  it('ne rend pas de curseur sur une page incomplète', () => {
+  it('returns no cursor on an incomplete page', () => {
     expect(nextCursor(rows, 10, (r) => r.order)).toBeNull();
     expect(nextCursor([], 10, (r: { id: number }) => r.id)).toBeNull();
   });
 
-  it('rend le couple de la dernière ligne servie sur une page pleine', () => {
+  it('returns the pair of the last row served on a full page', () => {
     expect(decodeCursor(nextCursor(rows, 2, (r) => r.order) ?? undefined)).toEqual({
       value: 0,
       id: 2,
     });
   });
 
-  it('joint le curseur à l’enveloppe standard', () => {
+  it('attaches the cursor to the standard envelope', () => {
     const page = paginateCursor(rows, 40, params({ pageSize: 2 }), (r) => r.order);
     expect(page).toMatchObject({ total: 40, page: 1, pageSize: 2, pageCount: 20, hasMore: true });
     expect(decodeCursor(page.nextCursor ?? undefined)).toEqual({ value: 0, id: 2 });

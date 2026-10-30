@@ -4,19 +4,19 @@
 import { create } from 'zustand';
 
 /**
- * Historique local des dernières entités visitées (sidebar « Récents »).
- * Persisté en localStorage, borné à 5 entrées, dédupliqué par `key`.
- * Alimenté par EntityBreadcrumb (seul endroit où le contexte de chaque page est résolu).
+ * Local history of the most recently visited entities (sidebar "Recents").
+ * Persisted in localStorage, capped at 5 entries, deduplicated by `key`.
+ * Fed by EntityBreadcrumb (the only place where each page's context is resolved).
  */
 
 export type RecentType = 'project' | 'sequence' | 'shot' | 'asset' | 'task' | 'version' | 'media';
 
 export interface RecentEntry {
-  key: string; // ex. « media:12 » ou « project:3:Kanban »
+  key: string; // e.g. "media:12" or "project:3:Kanban"
   type: RecentType;
   label: string;
-  sublabel?: string; // nom du projet parent (absent si l'entrée EST un projet)
-  to: string; // URL exacte de la page visitée (pathname + search)
+  sublabel?: string; // name of the parent project (absent if the entry IS a project)
+  to: string; // exact URL of the visited page (pathname + search)
   at: number;
 }
 
@@ -38,7 +38,7 @@ interface RecentsState {
   push: (entry: Omit<RecentEntry, 'at'>) => void;
 }
 
-/** Retire les paramètres de session éphémères : un récent ne doit pas re-rejoindre un live (33.B). */
+/** Strips ephemeral session parameters: a recent entry must not rejoin a live session (33.B). */
 const stripEphemeral = (to: string): string => {
   const [path, search] = to.split('?');
   if (!search) return to;
@@ -61,5 +61,5 @@ export const useRecents = create<RecentsState>((set) => ({
     }),
 }));
 
-/** Helper module-level (appelable hors composant, référence stable). */
+/** Module-level helper (callable outside a component, stable reference). */
 export const trackRecent = (entry: Omit<RecentEntry, 'at'>): void => useRecents.getState().push(entry);

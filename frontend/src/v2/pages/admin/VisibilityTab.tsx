@@ -23,13 +23,13 @@ import { useT } from '../../i18n';
 import { Hint } from '../../components/ui/hint';
 
 /**
- * Masquage d'éléments (admin).
+ * Hiding elements (admin).
  *
- * Un studio traîne toujours dans son registre de production des séquences de test, des
- * plans « _TMP » et des assets de recette que personne ne veut voir. Les mettre à la
- * corbeille les ferait revenir à la synchronisation suivante — et perdrait leur travail.
- * Une règle est donc déclarative et rejouée : elle vaut pour ce qui existe comme pour ce
- * qui arrivera.
+ * A studio always has test sequences, "_TMP" shots and acceptance-test assets lying around in its
+ * production register that nobody wants to see. Moving them to the trash would bring them back at the
+ * next sync — and would lose their work.
+ * A rule is therefore declarative and replayed: it applies to what exists as well as to
+ * what will arrive.
  */
 export default function VisibilityTab() {
   const t = useT();
@@ -41,7 +41,7 @@ export default function VisibilityTab() {
   const update = useUpdateRule();
   const apply = useApplyRules();
 
-  /** Le compte rendu d'un recalcul : combien masqués, combien rendus. */
+  /** The report of a recalculation: how many hidden, how many shown. */
   const report = (applied: { hidden: number; revealed: number }) =>
     toast.success(t('visibility.applied', { hidden: applied.hidden, revealed: applied.revealed }));
 

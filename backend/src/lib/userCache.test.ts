@@ -26,43 +26,43 @@ beforeEach(() => {
 });
 
 describe('getAuthUser', () => {
-  it('ne lit la base qu’une fois pour des appels rapprochés', async () => {
-    // C'est tout l'objet : une navigation déclenche vingt à quarante appels d'API.
+  it('reads the database only once for closely spaced calls', async () => {
+    // That is the whole point: one navigation triggers twenty to forty API calls.
     await getAuthUser(1);
     await getAuthUser(1);
     await getAuthUser(1);
     expect(db.user.findUnique).toHaveBeenCalledTimes(1);
   });
 
-  // A1-01 : un droit qu'on ne charge pas est un droit qu'on ne peut pas refuser. Sans cette
-  // colonne, `middleware/auth` n'avait rien à tester pour un compte sorti du studio.
-  it('charge la date de désactivation avec l’identité', async () => {
+  // A1-01: a right that is not loaded is a right that cannot be refused. Without this column,
+  // `middleware/auth` had nothing to test for an account that had left the studio.
+  it('loads the deactivation date with the identity', async () => {
     await getAuthUser(1);
     const call = db.user.findUnique.mock.calls[0]![0] as { select: Record<string, boolean> };
     expect(call.select).toMatchObject({ disabledAt: true });
   });
 
-  it('rend la même identité depuis le cache', async () => {
+  it('returns the same identity from the cache', async () => {
     expect(await getAuthUser(1)).toEqual(user);
     db.user.findUnique.mockResolvedValue({ ...user, role: Role.ADMIN });
     expect(await getAuthUser(1)).toEqual(user);
   });
 
-  it('relit la base une fois le délai écoulé', async () => {
+  it('re-reads the database once the delay has elapsed', async () => {
     await getAuthUser(1);
     __testing.cache.set(1, { user, until: Date.now() - 1 });
     await getAuthUser(1);
     expect(db.user.findUnique).toHaveBeenCalledTimes(2);
   });
 
-  it('met aussi en cache l’absence de compte', async () => {
+  it('also caches the absence of an account', async () => {
     db.user.findUnique.mockResolvedValue(null);
     expect(await getAuthUser(42)).toBeNull();
     expect(await getAuthUser(42)).toBeNull();
     expect(db.user.findUnique).toHaveBeenCalledTimes(1);
   });
 
-  it('sépare les comptes', async () => {
+  it('keeps accounts separate', async () => {
     db.user.findUnique.mockResolvedValueOnce(user).mockResolvedValueOnce({ ...user, id: 2 });
     expect((await getAuthUser(1))?.id).toBe(1);
     expect((await getAuthUser(2))?.id).toBe(2);
@@ -70,7 +70,7 @@ describe('getAuthUser', () => {
 });
 
 describe('invalidateAuthUser', () => {
-  it('force la relecture — un rôle rétrogradé s’applique tout de suite', async () => {
+  it('forces a re-read: a demoted role applies immediately', async () => {
     await getAuthUser(1);
     invalidateAuthUser(1);
     db.user.findUnique.mockResolvedValue({ ...user, role: Role.CLIENT });
@@ -78,29 +78,29 @@ describe('invalidateAuthUser', () => {
     expect(db.user.findUnique).toHaveBeenCalledTimes(2);
   });
 
-  it('ne touche pas aux autres comptes', async () => {
+  it('does not touch other accounts', async () => {
     await getAuthUser(1);
     invalidateAuthUser(999);
     await getAuthUser(1);
     expect(db.user.findUnique).toHaveBeenCalledTimes(1);
   });
 
-  // Sans notification, rétrograder un compte n'aurait vidé le cache que de la réplique qui
-  // a traité l'écriture : les autres auraient servi l'ancien rôle jusqu'à trente secondes.
-  it('prévient les autres répliques', async () => {
+  // Without notification, demoting an account would have emptied the cache only in the replica
+  // that handled the write: the others would have served the old role for up to thirty seconds.
+  it('notifies the other replicas', async () => {
     await getAuthUser(1);
     invalidateAuthUser(1);
     expect(redis.published).toEqual([{ channel: __testing.INVALIDATE_CHANNEL, payload: '1' }]);
   });
 
-  it('oublie l’entrée sur notification d’une autre réplique', async () => {
+  it('forgets the entry on notification from another replica', async () => {
     await getAuthUser(1);
     __redisTesting.deliver(__testing.INVALIDATE_CHANNEL, '1');
     db.user.findUnique.mockResolvedValue({ ...user, role: Role.CLIENT });
     expect((await getAuthUser(1))?.role).toBe(Role.CLIENT);
   });
 
-  it('ignore une notification illisible plutôt que de vider tout le cache', async () => {
+  it('ignores an unreadable notification rather than emptying the whole cache', async () => {
     await getAuthUser(1);
     __redisTesting.deliver(__testing.INVALIDATE_CHANNEL, 'pas-un-id');
     await getAuthUser(1);
@@ -108,8 +108,8 @@ describe('invalidateAuthUser', () => {
   });
 });
 
-describe('bornes du cache', () => {
-  it('se vide au lieu de croître sans fin', async () => {
+describe('cache bounds', () => {
+  it('empties itself instead of growing without limit', async () => {
     for (let i = 0; i < 5_001; i += 1) __testing.cacheSet(i, user);
     expect(__testing.cache.size).toBeLessThanOrEqual(5_000);
   });

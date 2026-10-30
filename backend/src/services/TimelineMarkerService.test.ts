@@ -14,8 +14,8 @@ vi.mock('../lib/prisma', () => ({
       update: vi.fn(),
       delete: vi.fn(),
     },
-    // Le rôle par projet (38.E) est lu en base par `lib/projectRoles`, laissé RÉEL ici :
-    // mocker la garde qu'on teste rendrait le test aveugle au contournement A1-03.
+    // The per-project role (38.E) is read from the database by `lib/projectRoles`, left REAL here:
+    // mocking the guard under test would make the test blind to the A1-03 bypass.
     projectMembership: { findUnique: vi.fn() },
   },
 }));
@@ -49,7 +49,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(resolveProjectIdForMedia).mockResolvedValue(7);
   vi.mocked(checkProjectAccess).mockResolvedValue(true);
-  // Membre sans rôle local : le rôle effectif retombe sur le rôle global.
+  // Member without a local role: the effective role falls back on the global role.
   vi.mocked(prisma.projectMembership.findUnique).mockResolvedValue({
     userId: 2,
     projectId: 7,
@@ -58,14 +58,14 @@ beforeEach(() => {
 });
 
 describe('TimelineMarkerService (34.C)', () => {
-  it('list : RBAC projet puis vue sérialisée (authorName)', async () => {
+  it('list: project RBAC, then serialized view (authorName)', async () => {
     vi.mocked(prisma.timelineMarker.findMany).mockResolvedValue([dbMarker()] as never);
     const out = await list(artist, 9);
     expect(checkProjectAccess).toHaveBeenCalledWith(2, Role.ARTIST, 7);
     expect(out[0]).toMatchObject({ id: 5, frame: 24, name: 'Plan 2', authorName: 'artist' });
   });
 
-  it('list : média introuvable → 404 ; non-membre → 403', async () => {
+  it('list: media not found → 404; non-member → 403', async () => {
     vi.mocked(resolveProjectIdForMedia).mockResolvedValue(null);
     await expect(list(artist, 9)).rejects.toMatchObject({ statusCode: 404 });
     vi.mocked(resolveProjectIdForMedia).mockResolvedValue(7);
@@ -73,7 +73,7 @@ describe('TimelineMarkerService (34.C)', () => {
     await expect(list(artist, 9)).rejects.toMatchObject({ statusCode: 403 });
   });
 
-  it('create : refusé aux clients ; couleur validée ; émet markers:changed', async () => {
+  it('create: refused to clients; colour validated; emits markers:changed', async () => {
     await expect(create(client, 9, { frame: 1, name: 'x', color: '#112233' })).rejects.toMatchObject({
       statusCode: 403,
     });
@@ -87,20 +87,20 @@ describe('TimelineMarkerService (34.C)', () => {
     expect(emitToReview).toHaveBeenCalledWith(9, 'markers:changed', { mediaId: 9 });
   });
 
-  it('update/remove : auteur ou superviseur seulement, marqueur du bon média', async () => {
+  it('update/remove: author or supervisor only, marker of the right media', async () => {
     vi.mocked(prisma.timelineMarker.findUnique).mockResolvedValue(dbMarker());
     vi.mocked(prisma.timelineMarker.update).mockResolvedValue(dbMarker({ name: 'Plan 2b' }));
-    // Un autre artiste (id 4) : refusé.
+    // Another artist (id 4): refused.
     await expect(update({ id: 4, role: Role.ARTIST }, 9, 5, { name: 'x' })).rejects.toMatchObject({
       statusCode: 403,
     });
-    // L'auteur : OK.
+    // The author: OK.
     const out = await update(artist, 9, 5, { name: 'Plan 2b' });
     expect(out.name).toBe('Plan 2b');
-    // Marqueur d'un autre média : 404.
+    // Marker of another media: 404.
     vi.mocked(prisma.timelineMarker.findUnique).mockResolvedValue(dbMarker({ mediaObjectId: 99 }));
     await expect(remove(admin, 9, 5)).rejects.toMatchObject({ statusCode: 404 });
-    // Admin sur le bon média : OK + broadcast.
+    // Admin on the right media: OK + broadcast.
     vi.mocked(prisma.timelineMarker.findUnique).mockResolvedValue(dbMarker());
     await remove(admin, 9, 5);
     expect(prisma.timelineMarker.delete).toHaveBeenCalledWith({ where: { id: 5 } });
@@ -109,12 +109,11 @@ describe('TimelineMarkerService (34.C)', () => {
 });
 
 /**
- * A1-03 — le service lisait le rôle GLOBAL après n'avoir vérifié que l'appartenance :
- * un ARTIST rétrogradé CLIENT sur le projet gardait son `ProjectMembership`, donc
- * `checkProjectAccess` disait oui, et il écrivait quand même les marqueurs partagés.
+ * A1-03: the service read the GLOBAL role after having only checked membership: an ARTIST demoted to CLIENT on the project kept their `ProjectMembership`,
+ * so `checkProjectAccess` said yes, and they still wrote the shared markers.
  */
-describe('TimelineMarkerService — rôle effectif par projet (38.E)', () => {
-  /** Global ARTIST, rétrogradé CLIENT sur le projet 7 ; auteur du marqueur 5. */
+describe('TimelineMarkerService: effective role per project (38.E)', () => {
+  /** Global ARTIST, demoted to CLIENT on project 7; author of marker 5. */
   const demoted = { id: 2, role: Role.ARTIST };
 
   beforeEach(() => {
@@ -125,7 +124,7 @@ describe('TimelineMarkerService — rôle effectif par projet (38.E)', () => {
     } as never);
   });
 
-  it('create : rétrogradé CLIENT sur le projet → 403 ROLE_FORBIDDEN, rien n’est écrit', async () => {
+  it('create: demoted to CLIENT on the project → 403 ROLE_FORBIDDEN, nothing is written', async () => {
     vi.mocked(prisma.timelineMarker.count).mockResolvedValue(0);
     await expect(create(demoted, 9, { frame: 24, name: 'x', color: '#22d3ee' })).rejects.toMatchObject({
       statusCode: 403,
@@ -134,7 +133,7 @@ describe('TimelineMarkerService — rôle effectif par projet (38.E)', () => {
     expect(prisma.timelineMarker.create).not.toHaveBeenCalled();
   });
 
-  it('update/remove : il ne touche plus ses propres marqueurs non plus', async () => {
+  it('update/remove: they no longer touch their own markers either', async () => {
     vi.mocked(prisma.timelineMarker.findUnique).mockResolvedValue(dbMarker()); // authorId: 2
     await expect(update(demoted, 9, 5, { name: 'x' })).rejects.toMatchObject({ statusCode: 403 });
     await expect(remove(demoted, 9, 5)).rejects.toMatchObject({ statusCode: 403 });
@@ -142,7 +141,7 @@ describe('TimelineMarkerService — rôle effectif par projet (38.E)', () => {
     expect(prisma.timelineMarker.delete).not.toHaveBeenCalled();
   });
 
-  it('inversement : un ARTIST promu SUPERVISOR localement gère le marqueur d’un autre', async () => {
+  it("conversely: an ARTIST promoted to SUPERVISOR locally manages another person's marker", async () => {
     vi.mocked(prisma.projectMembership.findUnique).mockResolvedValue({
       userId: 4,
       projectId: 7,

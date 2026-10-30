@@ -2,13 +2,13 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Lint des scripts d'outillage de la racine (`scripts/*.mjs`).
+ * Lints the root tooling scripts (`scripts/*.mjs`).
  *
- * Passe par l'API Node d'ESLint plutôt que par le binaire : ESLint ne sait pas
- * appliquer une configuration à des fichiers situés hors de son répertoire de
- * base, or la configuration du dépôt vit dans `backend/` et les scripts à la
- * racine. On emprunte donc l'ESLint du backend (aucune dépendance nouvelle) en
- * lui donnant la racine comme base et une config plate posée ici même.
+ * Goes through ESLint's Node API rather than the binary: ESLint cannot
+ * apply a configuration to files located outside its base
+ * directory, yet the repository configuration lives in `backend/` and the scripts at the
+ * root. We therefore borrow the backend's ESLint (no new dependency) by
+ * giving it the root as base and a flat config placed right here.
  */
 
 import { createRequire } from 'node:module';
@@ -22,9 +22,9 @@ const js = requireBackend('@eslint/js');
 const globals = requireBackend('globals');
 
 /**
- * Linte les cibles données (répertoires ou fichiers `.mjs`) et rend les résultats
- * bruts, leur rendu « stylish » et le total d'erreurs. `cwd` sert de répertoire de
- * base à ESLint : les cibles doivent vivre dessous.
+ * Lints the given targets (directories or `.mjs` files) and returns the raw results,
+ * their "stylish" rendering and the error total. `cwd` serves as the ESLint
+ * base directory: the targets must live under it.
  */
 export async function lintScripts(targets = [path.join(ROOT, 'scripts')], cwd = ROOT) {
   const eslint = new ESLint({
@@ -48,7 +48,7 @@ export async function lintScripts(targets = [path.join(ROOT, 'scripts')], cwd = 
   return { results, output, errorCount };
 }
 
-// Exécuté directement (et non importé par un test) → on lance.
+// Run directly (and not imported by a test) → launch it.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const { output, errorCount } = await lintScripts();
   if (output.trim()) console.log(output);

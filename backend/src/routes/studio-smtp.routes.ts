@@ -4,20 +4,20 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import { badRequest } from '../lib/errors';
 import { logger } from '../lib/logger';
 import * as AuditService from '../services/AuditService';
-import * as SmtpService from '../services/SmtpService';
+import * as SmtpService from '../lib/smtpSettings';
 import * as UserService from '../services/UserService';
 import { resolveUserLocale } from '../lib/settings';
 import { sendMail } from '../lib/mailer';
 import { mailLayout } from '../lib/mailTemplate';
 import { t } from '../i18n';
 
-/** Relais SMTP sortant du studio (admin) : lecture, écriture et test d'envoi. */
+/** The studio's outgoing SMTP relay (admin): read, write, and test send. */
 const router = Router();
 router.use(authenticate, requireRole(Role.ADMIN));
 
@@ -27,42 +27,42 @@ const smtpSchema = z.object({
   secure: z.boolean().optional(),
   user: z.string().max(255).optional(),
   from: z.string().max(255).optional(),
-  password: z.string().max(255).optional(), // write-only (jamais renvoyé)
+  password: z.string().max(255).optional(), // write-only (never returned)
   /**
-   * Échappatoire assumée du relais interne sans certificat (cf. `SmtpService`).
+   * Accepted escape hatch for the internal relay without a certificate (cf. `SmtpService`).
    *
-   * Sans cette ligne, Zod la retirait du corps — `z.object` strippe les champs inconnus —
-   * et le réglage n'atteignait jamais la base : un studio dont le relais n'annonce pas
-   * STARTTLS n'avait plus AUCUN recours par l'API pour remettre ses envois en route.
-   * Omise, la valeur en place est conservée ; posée, elle est explicite et auditée.
+   * Without this line, Zod stripped it from the body (`z.object` strips unknown fields), and the setting
+   * never reached the database: a studio whose relay does not announce STARTTLS no longer had any recourse
+   * through the API to put its emails back on track. When omitted, the value in place is kept; when set,
+   * it is explicit and audited.
    */
   allowInsecure: z.boolean().optional(),
 });
 
-// GET /api/studio/smtp — config SMTP sans mot de passe (admin)
+// GET /api/studio/smtp — SMTP config without the password (admin)
 router.get('/smtp', async (_req, res) => {
   res.json({ smtp: await SmtpService.getPublicConfig() });
 });
 
-// PUT /api/studio/smtp — enregistre la config (mot de passe chiffré, write-only) (admin)
+// PUT /api/studio/smtp — records the config (password encrypted, write-only) (admin)
 router.put('/smtp', validate({ body: smtpSchema }), async (req, res) => {
   const smtp = await SmtpService.setConfig(req.body);
-  // `lib/mailer` n'avertit qu'une fois par process, au premier envoi : dans un backend qui
-  // tourne des semaines, la ligne est loin derrière quand on cherche pourquoi le trafic
-  // SMTP est en clair. Le moment de la DÉCISION, lui, se retrouve toujours.
+  // `lib/mailer` warns only once per process, at the first send: in a backend that runs for weeks, the
+  // line is far behind when one looks for why the SMTP traffic is in clear. The moment of the DECISION,
+  // for its part, is always found.
   if (smtp.allowInsecure)
     logger.warn(
-      { host: smtp.host, userId: req.user!.id },
-      '[smtp] dialogue en clair autorisé pour ce relais : identifiants et liens d’invitation circuleront sans chiffrement.',
+      { host: smtp.host, userId: requireUser(req).id },
+      '[smtp] plaintext dialogue allowed for this relay: credentials and invitation links will travel unencrypted.',
     );
-  // Le relais SMTP sortant est un pivot : qui le change peut detourner tout le courrier
-  // de l'instance. Jamais le mot de passe dans le journal, seulement le fait du changement.
+  // The outgoing SMTP relay is a pivot: whoever changes it can divert all the instance's mail.
+  // Never the password in the log, only the fact of the change.
   AuditService.logAudit({
-    userId: req.user!.id,
+    userId: requireUser(req).id,
     action: 'SMTP_UPDATE',
     entityType: 'Setting',
-    // `allowInsecure` remet les identifiants SMTP et les liens d'invitation en clair sur
-    // le réseau : le geste doit être daté et attribué, pas seulement effectif.
+    // `allowInsecure` puts the SMTP credentials and the invitation links back in clear on the network: the
+    // gesture must be dated and attributed, not merely effective.
     metadata: {
       host: req.body.host ?? null,
       passwordChanged: req.body.password !== undefined,
@@ -72,19 +72,19 @@ router.put('/smtp', validate({ body: smtpSchema }), async (req, res) => {
   res.json({ smtp });
 });
 
-// POST /api/studio/smtp/test — envoie un email de test (admin)
+// POST /api/studio/smtp/test — sends a test email (admin)
 router.post('/smtp/test', validate({ body: z.object({ to: z.string().email() }) }), async (req, res) => {
-  // L'email part dans la langue de l'admin qui déclenche le test : c'est lui qui le lit.
-  const locale = await resolveUserLocale(await UserService.getPreferences(req.user!.id));
+  // The email goes out in the language of the admin who triggers the test: it is they who read it.
+  const locale = await resolveUserLocale(await UserService.getPreferences(requireUser(req).id));
   const ok = await sendMail(
     req.body.to,
     t(locale, 'smtp.test.subject'),
     mailLayout(locale, t(locale, 'smtp.test.title'), `<p>${t(locale, 'smtp.test.body')}</p>`),
   );
   if (!ok) {
-    // Un envoi refusé parce que le secret stocké ne se déchiffre plus (rotation de clé)
-    // ressemblait à « non configuré » : l'admin ressaisissait host et port sans rien
-    // réparer. On nomme la cause, seule action utile étant de ressaisir le mot de passe.
+    // A send refused because the stored secret can no longer be decrypted (key rotation) looked like
+    // "not configured": the admin re-entered host and port without repairing anything. The cause is
+    // named here, since the only useful action is to re-enter the password.
     if ((await SmtpService.getPublicConfig()).passwordUnreadable)
       throw badRequest(
         'Stored SMTP password can no longer be decrypted — re-enter it',

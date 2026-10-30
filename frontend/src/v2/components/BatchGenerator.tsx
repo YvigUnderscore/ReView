@@ -9,9 +9,9 @@ import { useT } from '../i18n';
 export type { GeneratedItem };
 
 /**
- * Générateur de codes en lot, semi-automatisé.
- * Ex : préfixe « SH » + départ 10 + pas 10 + 3 chiffres + 4 éléments → SH010 SH020 SH030 SH040.
- * Pour les shots, une destination (séquence) peut être choisie.
+ * Batch code generator, semi-automated.
+ * E.g.: prefix "SH" + start 10 + step 10 + 3 digits + 4 items → SH010 SH020 SH030 SH040.
+ * For shots, a destination (sequence) can be chosen.
  */
 export default function BatchGenerator({
   defaults,
@@ -19,7 +19,7 @@ export default function BatchGenerator({
   onSubmit,
 }: {
   defaults: { prefix: string; step: number; padding: number };
-  /** Si fourni → mode shots avec sélection de la séquence de destination. */
+  /** If provided → shots mode with selection of the destination sequence. */
   sequences?: { id: number; code: string; name: string }[];
   onSubmit: (items: GeneratedItem[]) => Promise<void>;
 }) {

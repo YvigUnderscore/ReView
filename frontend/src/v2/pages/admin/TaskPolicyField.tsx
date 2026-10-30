@@ -8,20 +8,20 @@ import { Panel } from './AdminPrimitives';
 import { useT, type MessageKey } from '../../i18n';
 
 /**
- * Qui peut écrire sur une tâche.
+ * Who may write on a task.
  *
- * Un studio de trente personnes et douze étapes propose à chaque artiste la totalité du
- * pipe : douze départements pour quelqu'un qui n'en touche qu'un, et rien n'empêche
- * l'animateur de faire avancer une tâche de compositing par mégarde.
+ * A studio of thirty people and twelve steps offers each artist the whole
+ * pipe: twelve departments for someone who touches only one, and nothing prevents
+ * the animator from accidentally moving a compositing task forward.
  *
- * Le réglage est du **studio**, pas du projet : la façon de travailler d'une maison ne
- * change pas d'un film à l'autre, et le régler par projet aurait produit des règles
- * différentes selon l'écran où l'on se trouve. Il vit avec les départements qu'il borne,
- * dans les défauts de projet — et non plus seul, avec son propre bouton, au milieu des
- * quotas et des webhooks.
+ * The setting belongs to the **studio**, not the project: a house's way of working
+ * does not change from one film to the next, and setting it per project would have produced rules
+ * that differ depending on the screen one is on. It lives with the departments it bounds,
+ * in the project defaults — and no longer alone, with its own button, in the middle of
+ * quotas and webhooks.
  *
- * Dans les deux modes, **tout le monde voit tout** : la production a besoin que chacun
- * sache où en sont les étapes voisines.
+ * In both modes, **everyone sees everything**: production needs each person
+ * to know where the neighbouring steps stand.
  */
 
 export const TASK_POLICY_KEY = 'task_department_policy';

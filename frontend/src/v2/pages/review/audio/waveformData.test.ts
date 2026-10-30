@@ -7,12 +7,12 @@ import { decodeWaveformPeaks, waveformBars } from './waveformData';
 const encode = (bytes: number[]): string => btoa(String.fromCharCode(...bytes));
 
 describe('decodeWaveformPeaks', () => {
-  it('déplie les crêtes base64', () => {
+  it('unfolds the base64 peaks', () => {
     const peaks = decodeWaveformPeaks({ bins: 3, peaks: encode([0, 128, 255]) });
     expect([...peaks!]).toEqual([0, 128, 255]);
   });
 
-  it('absente, vide ou corrompue : rien à afficher', () => {
+  it('absent, empty or corrupted: nothing to display', () => {
     expect(decodeWaveformPeaks(null)).toBeNull();
     expect(decodeWaveformPeaks(undefined)).toBeNull();
     expect(decodeWaveformPeaks({ bins: 0, peaks: '' })).toBeNull();
@@ -21,23 +21,23 @@ describe('decodeWaveformPeaks', () => {
 });
 
 describe('waveformBars', () => {
-  it('réduit en gardant la crête, jamais la moyenne', () => {
-    // Un transitoire isolé au milieu d'un silence doit survivre à la réduction.
+  it('reduces by keeping the peak, never the average', () => {
+    // An isolated transient in the middle of silence must survive the reduction.
     const peaks = Uint8Array.from([0, 0, 0, 255, 0, 0, 0, 0]);
     expect(waveformBars(peaks, 2)).toEqual([1, 0]);
   });
 
-  it('hauteurs normalisées 0..1', () => {
+  it('heights normalized to 0..1', () => {
     expect(waveformBars(Uint8Array.from([255, 0]), 2)).toEqual([1, 0]);
   });
 
-  it('plus de barres que de crêtes : pas de trou', () => {
+  it('more bars than peaks: no gap', () => {
     const bars = waveformBars(Uint8Array.from([255, 128]), 6);
     expect(bars).toHaveLength(6);
     expect(bars.every((v) => v > 0)).toBe(true);
   });
 
-  it('aucune crête : que du silence', () => {
+  it('no peak: only silence', () => {
     expect(waveformBars(new Uint8Array(0), 3)).toEqual([0, 0, 0]);
   });
 });

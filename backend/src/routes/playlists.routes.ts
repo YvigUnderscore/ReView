@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { z } from 'zod';
 import { Role } from '@prisma/client';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { assertProjectAccess, requireRole } from '../middleware/rbac';
 import { validate } from '../middleware/validate';
 import * as PlaylistService from '../services/PlaylistService';
@@ -16,7 +16,7 @@ router.use(authenticate);
 const idsSchema = z.array(z.number().int().positive()).max(200);
 const canWrite = requireRole(Role.ADMIN, Role.SUPERVISOR, Role.ARTIST);
 
-// GET /api/playlists?projectId= — playlists du projet (Phase 33)
+// GET /api/playlists?projectId= — the project's playlists (Phase 33)
 router.get(
   '/',
   validate({ query: z.object({ projectId: z.coerce.number().int().positive() }) }),
@@ -28,31 +28,27 @@ router.get(
 );
 
 /**
- * GET /api/playlists/candidates?projectId= — catalogue des versions à mettre en playlist.
+ * GET /api/playlists/candidates?projectId=: catalog of the versions that can be put into a playlist.
  *
- * Déclarée avant `/:id` pour que « candidates » ne soit pas lu comme un identifiant.
+ * Declared before `/:id` so that "candidates" is not read as an identifier.
  */
-router.get(
-  '/candidates',
-  validate({
-    query: z.object({
-      projectId: z.coerce.number().int().positive(),
-      q: z.string().trim().max(120).optional(),
-      sequenceId: z.union([z.coerce.number().int().positive(), z.literal('none')]).optional(),
-      department: z.string().trim().max(40).optional(),
-      latestOnly: z.coerce.boolean().optional(),
-      limit: z.coerce.number().int().min(1).max(300).optional(),
-    }),
-  }),
-  async (req, res) => {
-    const projectId = Number(req.query.projectId);
-    await assertProjectAccess(req, projectId);
-    const query = req.query as unknown as PlaylistCandidateService.CandidateQuery;
-    res.json({ candidates: await PlaylistCandidateService.list(projectId, req.user!.id, query) });
-  },
-);
+const candidatesQuery = z.object({
+  projectId: z.coerce.number().int().positive(),
+  q: z.string().trim().max(120).optional(),
+  sequenceId: z.union([z.coerce.number().int().positive(), z.literal('none')]).optional(),
+  department: z.string().trim().max(40).optional(),
+  latestOnly: z.coerce.boolean().optional(),
+  limit: z.coerce.number().int().min(1).max(300).optional(),
+});
+router.get('/candidates', validate({ query: candidatesQuery }), async (req, res) => {
+  // Re-read through the schema: under Express 5 the coercion of `validate` does not persist on
+  // `req.query` (`limit` would reach Prisma as a string).
+  const { projectId, ...query } = candidatesQuery.parse(req.query);
+  await assertProjectAccess(req, projectId);
+  res.json({ candidates: await PlaylistCandidateService.list(projectId, requireUser(req).id, query) });
+});
 
-// POST /api/playlists — créer (items initiaux depuis versions et/ou médias sélectionnés)
+// POST /api/playlists — creates (initial items from the selected versions and/or media)
 router.post(
   '/',
   canWrite,
@@ -72,12 +68,12 @@ router.post(
       mediaIds?: number[];
     };
     await assertProjectAccess(req, projectId);
-    const playlist = await PlaylistService.create(req.user!, projectId, name, versionIds, mediaIds);
+    const playlist = await PlaylistService.create(requireUser(req), projectId, name, versionIds, mediaIds);
     res.status(201).json({ playlist });
   },
 );
 
-// GET /api/playlists/:id — détail (items ordonnés + premier média visible par version)
+// GET /api/playlists/:id — detail (ordered items + first visible media per version)
 router.get(
   '/:id',
   validate({ params: z.object({ id: z.coerce.number().int().positive() }) }),
@@ -85,11 +81,11 @@ router.get(
     const id = Number(req.params.id);
     const owning = await PlaylistService.getOwning(id);
     await assertProjectAccess(req, owning.projectId);
-    res.json({ playlist: await PlaylistService.getDetail(req.user!, id) });
+    res.json({ playlist: await PlaylistService.getDetail(requireUser(req), id) });
   },
 );
 
-// PATCH /api/playlists/:id — renommer et/ou réordonner (itemIds = nouvel ordre complet)
+// PATCH /api/playlists/:id — renames and/or reorders (itemIds = new complete order)
 router.patch(
   '/:id',
   canWrite,
@@ -105,13 +101,13 @@ router.patch(
     const owning = await PlaylistService.getOwning(id);
     await assertProjectAccess(req, owning.projectId);
     const { name, itemIds } = req.body as { name?: string; itemIds?: number[] };
-    if (name !== undefined) await PlaylistService.rename(req.user!, id, name);
-    if (itemIds !== undefined) await PlaylistService.reorder(req.user!, id, itemIds);
-    res.json({ playlist: await PlaylistService.getDetail(req.user!, id) });
+    if (name !== undefined) await PlaylistService.rename(requireUser(req), id, name);
+    if (itemIds !== undefined) await PlaylistService.reorder(requireUser(req), id, itemIds);
+    res.json({ playlist: await PlaylistService.getDetail(requireUser(req), id) });
   },
 );
 
-// POST /api/playlists/:id/items — ajouter des versions/médias en fin (dédupliqué)
+// POST /api/playlists/:id/items — adds versions/media at the end (deduplicated)
 router.post(
   '/:id/items',
   canWrite,
@@ -128,11 +124,11 @@ router.post(
     const owning = await PlaylistService.getOwning(id);
     await assertProjectAccess(req, owning.projectId);
     const { versionIds, mediaIds } = req.body as { versionIds?: number[]; mediaIds?: number[] };
-    res.json(await PlaylistService.addItems(req.user!, id, versionIds, mediaIds));
+    res.json(await PlaylistService.addItems(requireUser(req), id, versionIds, mediaIds));
   },
 );
 
-// DELETE /api/playlists/:id/items/:itemId — retirer un item
+// DELETE /api/playlists/:id/items/:itemId — removes an item
 router.delete(
   '/:id/items/:itemId',
   canWrite,
@@ -146,12 +142,12 @@ router.delete(
     const id = Number(req.params.id);
     const owning = await PlaylistService.getOwning(id);
     await assertProjectAccess(req, owning.projectId);
-    await PlaylistService.removeItem(req.user!, id, Number(req.params.itemId));
+    await PlaylistService.removeItem(requireUser(req), id, Number(req.params.itemId));
     res.status(204).end();
   },
 );
 
-// DELETE /api/playlists/:id — supprimer la playlist (références seulement, pas de contenu)
+// DELETE /api/playlists/:id — deletes the playlist (references only, no content)
 router.delete(
   '/:id',
   canWrite,
@@ -160,7 +156,7 @@ router.delete(
     const id = Number(req.params.id);
     const owning = await PlaylistService.getOwning(id);
     await assertProjectAccess(req, owning.projectId);
-    await PlaylistService.remove(req.user!, id);
+    await PlaylistService.remove(requireUser(req), id);
     res.status(204).end();
   },
 );

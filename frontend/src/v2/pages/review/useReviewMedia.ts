@@ -2,18 +2,18 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { useQuery } from '@tanstack/react-query';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import type { MediaResp } from './reviewTypes';
 import { assemblingPollMs } from './videoPlayback';
 
 /**
- * Le média de la page de review.
+ * The review page's media.
  *
- * staleTime Infinity : le GET régénère des URLs présignées à chaque appel — un refetch en
- * arrière-plan rechargerait le viewer en pleine lecture. Les mutations (publication,
- * reprocess) invalident explicitement. Seule exception, l'assemblage d'une séquence : il
- * n'y a alors rien à lire, donc rien à interrompre (cf. `assemblingPollMs`).
+ * staleTime Infinity: the GET regenerates presigned URLs on every call — a background refetch would
+ * reload the viewer in the middle of playback. Mutations (publication, reprocess) invalidate
+ * explicitly. The only exception is the assembly of a sequence: there is then nothing to read, hence
+ * nothing to interrupt (see `assemblingPollMs`).
  */
 export function useReviewMedia(id: number) {
   return useQuery({

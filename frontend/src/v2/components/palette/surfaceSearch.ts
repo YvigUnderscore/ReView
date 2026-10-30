@@ -9,55 +9,47 @@ import type { Tr } from '../../i18n';
 import type { Role } from '../../types/api';
 
 /**
- * Les deux familles de résultats qui ne sont pas des lignes de base : la **documentation**
- * et les **réglages**.
+ * The two families of results that are not baseline rows: the **documentation** and the **settings**.
  *
- * Les treize autres familles viennent de `GET /api/search` — ce sont des données, filtrées
- * par le serveur. Celles-ci sont des **écrans** : ce qu'on cherche en tapant « watermark »
- * n'est pas un enregistrement, c'est l'endroit où on le règle. Elles se calculent donc ici,
- * pour trois raisons tenant ensemble :
+ * The thirteen other families come from `GET /api/search`: they are data, filtered by the server. These are **screens**:
+ * what one searches for by typing "watermark" is not a record, it is the place where it is set. They are therefore computed
+ * here, for three reasons that hold together:
  *
- *  - l'index des réglages **existe déjà** côté client (`admin/settingsSearch`, écrit pour la
- *    recherche interne de l'onglet Réglages) ; en écrire un second côté serveur, c'est se
- *    donner deux tables qui divergeront au premier renommage de section ;
- *  - les libellés de sections sont traduits dans la langue du lecteur, que le serveur ne
- *    connaît pas ;
- *  - le corpus `DOCUMENTATION/` n'est pas dans l'image du backend (son contexte de build est
- *    `backend/`) : le seul index existant est le manifest servi par le frontend.
+ *  - the settings index **already exists** on the client (`admin/settingsSearch`, written for the internal search of the
+ *    Settings tab); writing a second one on the server would give two tables that diverge at the first section rename;
+ *  - section labels are translated into the reader's language, which the server does not know;
+ *  - the `DOCUMENTATION/` corpus is not in the backend image (its build context is `backend/`): the only existing index is
+ *    the manifest served by the frontend.
  *
- * **Cloisonnement.** Même exigence que pour les familles serveur : le filtre d'accès est
- * posé à la source, pas sur les résultats produits. `/admin/*` est refusé à tout autre rôle
- * qu'ADMIN (`AdminPage` rend « accès restreint ») — proposer ces écrans à un artiste, ce
- * serait lui promettre une porte fermée. `/docs` est en revanche ouvert à tous les rôles
- * connectés (lien de la barre latérale sans condition), et la documentation est publique
- * dans le produit : elle n'a pas de cloisonnement à porter.
+ * **Segregation.** The same requirement as for the server families: the access filter is applied at the source, not on the
+ * results produced. `/admin/*` is refused to every role other than ADMIN (`AdminPage` renders "restricted access"): offering
+ * these screens to an artist would promise them a closed door. `/docs`, on the other hand, is open to all logged-in roles
+ * (sidebar link without condition), and the documentation is public within the product: it carries no segregation to bear.
  */
 
-/** Une destination proposée par la palette : un écran, pas un enregistrement. */
+/** A destination offered by the palette: a screen, not a record. */
 export interface SurfaceHit {
-  /** Identifiant stable pour cmdk (`value`) et pour la clé de rendu. */
+  /** Stable identifier for cmdk (`value`) and for the render key. */
   id: string;
   label: string;
-  /** Ligne secondaire : d'où vient ce résultat, ou pourquoi il correspond. */
+  /** Secondary line: where this result comes from, or why it matches. */
   hint: string;
   to: string;
 }
 
 /**
- * Nombre de résultats par famille. Même échelle que les référentiels côté serveur
- * (`EXTRA_LIMITS`) : ce sont des écrans uniques, pas des listes qui suivent la production,
- * et la palette doit rester lisible d'un coup d'œil.
+ * Number of results per family. Same scale as the reference data on the server (`EXTRA_LIMITS`): these are unique
+ * screens, not lists that follow production, and the palette must stay readable at a glance.
  */
 export const SURFACE_LIMITS = { docs: 4, settings: 5 } as const;
 
 /**
- * Pages de documentation répondant à la saisie — par leur titre **et par leur contenu**,
- * les titres de chapitre du manifest tenant lieu de table des matières.
+ * Documentation pages answering the input, by their title **and by their content**, the chapter titles of the manifest
+ * serving as a table of contents.
  *
- * Le classement lui-même n'est plus ici : c'est `pages/docs/docsSearch`, le moteur que le
- * sommaire de `/docs` emploie aussi. Tant qu'il vivait dans la palette, chercher
- * « watermark » ouvrait la bonne page depuis Ctrl+K et ne rendait rien depuis la page de
- * documentation. Ici on ne fait plus que borner la liste et l'habiller.
+ * The ranking itself is no longer here: it lives in `pages/docs/docsSearch`, the engine that the `/docs` table of contents
+ * also uses. While it lived in the palette, searching "watermark" opened the right page from Ctrl+K but rendered nothing from
+ * the documentation page. Here one only limits the list and dresses it.
  */
 export function searchDocSurfaces(sections: DocsSection[], query: string, t: Tr): SurfaceHit[] {
   return searchDocs(sections, query)
@@ -71,14 +63,13 @@ export function searchDocSurfaces(sections: DocsSection[], query: string, t: Tr)
 }
 
 /**
- * Écrans de réglages répondant à la saisie.
+ * Settings screens answering the input.
  *
- * L'index est celui de la recherche interne de l'onglet Réglages : les libellés de sections,
- * leurs mots-clés d'usage (« filigrane » autant que « watermark ») et les libellés de champs
- * de la section fourre-tout. Rien n'est recopié ici.
+ * The index is that of the internal search of the Settings tab: section labels, their usage keywords ("filigrane" as much as
+ * "watermark") and the field labels of the catch-all section. Nothing is copied here.
  *
- * Le rôle est lu **avant** de constituer la liste : un artiste n'obtient pas une liste
- * filtrée, il n'obtient rien — l'écran lui serait refusé.
+ * The role is read **before** the list is built: an artist does not get a filtered list, they get nothing, since the screen
+ * would be refused to them.
  */
 export function searchSettingsSurfaces(query: string, role: Role | undefined, t: Tr): SurfaceHit[] {
   if (role !== 'ADMIN') return [];
@@ -88,9 +79,8 @@ export function searchSettingsSurfaces(query: string, role: Role | undefined, t:
   return (
     adminSections(t)
       .filter((section) => sectionMatches(sectionHaystack(section.key, section.label, t), needle))
-      // Le libellé de l'écran prime sur ses mots-clés : « corbeille » doit rendre la Corbeille
-      // avant la section fourre-tout, qui porte le mot dans sa liste de synonymes. Tri stable :
-      // à égalité, l'ordre de la barre latérale départage.
+      // The screen's label takes precedence over its keywords: "corbeille" must render the Corbeille before the catch-all
+      // section, which carries the word in its list of synonyms. Stable sort: on a tie, the sidebar order decides.
       .map((section) => ({ section, score: fold(section.label).includes(fold(needle)) ? 2 : 1 }))
       .sort((a, b) => b.score - a.score)
       .slice(0, SURFACE_LIMITS.settings)

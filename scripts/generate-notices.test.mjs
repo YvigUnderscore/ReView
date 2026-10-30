@@ -21,7 +21,7 @@ import {
   vendoredLicense,
 } from './generate-notices.mjs';
 
-/** Lockfile minimal : racine → a → b, plus une devDependency isolée et un doublon imbriqué. */
+/** Minimal lockfile: root → a → b, plus an isolated devDependency and a nested duplicate. */
 const lock = {
   packages: {
     '': { name: 'app', dependencies: { a: '^1.0.0' }, devDependencies: { tooling: '^9.0.0' } },
@@ -33,35 +33,35 @@ const lock = {
 };
 
 describe('resolveEntry', () => {
-  it('préfère le node_modules imbriqué', () => {
+  it('prefers the nested node_modules', () => {
     expect(resolveEntry(lock.packages, 'node_modules/a', 'b')).toBe('node_modules/a/node_modules/b');
   });
 
-  it('remonte vers le parent quand rien n’est imbriqué', () => {
+  it('goes up to the parent when nothing is nested', () => {
     expect(resolveEntry(lock.packages, 'node_modules/tooling', 'a')).toBe('node_modules/a');
   });
 
-  it('rend null pour un paquet absent', () => {
+  it('returns null for a missing package', () => {
     expect(resolveEntry(lock.packages, '', 'introuvable')).toBeNull();
   });
 });
 
 describe('productionTree', () => {
-  it('suit les dépendances transitives depuis la racine', () => {
+  it('follows the transitive dependencies from the root', () => {
     expect(productionTree(lock)).toEqual(['node_modules/a', 'node_modules/a/node_modules/b']);
   });
 
-  it('écarte les devDependencies, jamais redistribuées', () => {
+  it('leaves out the devDependencies, never redistributed', () => {
     expect(productionTree(lock)).not.toContain('node_modules/tooling');
   });
 
-  it('supporte un lockfile sans dépendances', () => {
+  it('supports a lockfile without dependencies', () => {
     expect(productionTree({ packages: { '': {} } })).toEqual([]);
   });
 });
 
 describe('packageName', () => {
-  it('extrait le nom, y compris imbriqué et scopé', () => {
+  it('extracts the name, including nested and scoped', () => {
     expect(packageName('node_modules/a')).toBe('a');
     expect(packageName('node_modules/a/node_modules/b')).toBe('b');
     expect(packageName('node_modules/@scope/pkg')).toBe('@scope/pkg');
@@ -69,7 +69,7 @@ describe('packageName', () => {
 });
 
 describe('repositoryUrl', () => {
-  it('normalise les formes usuelles', () => {
+  it('normalises the usual forms', () => {
     expect(repositoryUrl({ repository: { url: 'git+https://github.com/o/r.git' } })).toBe(
       'https://github.com/o/r',
     );
@@ -77,14 +77,14 @@ describe('repositoryUrl', () => {
     expect(repositoryUrl({ repository: 'github:o/r' })).toBe('https://github.com/o/r');
   });
 
-  it('rend null quand le champ manque', () => {
+  it('returns null when the field is missing', () => {
     expect(repositoryUrl({})).toBeNull();
     expect(repositoryUrl(undefined)).toBeNull();
   });
 });
 
 describe('declaredLicense', () => {
-  it('lit la chaîne, l’objet et la forme historique', () => {
+  it('reads the string, the object and the historical form', () => {
     expect(declaredLicense({ license: 'MIT' })).toBe('MIT');
     expect(declaredLicense({ license: { type: 'ISC' } })).toBe('ISC');
     expect(declaredLicense({ licenses: [{ type: 'MIT' }, { type: 'Apache-2.0' }] })).toBe(
@@ -92,7 +92,7 @@ describe('declaredLicense', () => {
     );
   });
 
-  it('rend null quand rien n’est déclaré', () => {
+  it('returns null when nothing is declared', () => {
     expect(declaredLicense({})).toBeNull();
   });
 });
@@ -122,28 +122,28 @@ describe('renderNotices', () => {
     },
   ];
 
-  it('récapitule les licences et le total', () => {
+  it('summarises the licences and the total', () => {
     const out = renderNotices(sections);
     expect(out).toContain('| MIT | 1 |');
     expect(out).toContain('| ISC | 1 |');
     expect(out).toContain('| **Total** | **2** |');
   });
 
-  it('rappelle la licence du projet et l’agrégation des services', () => {
+  it('recalls the project licence and the aggregation of the services', () => {
     const out = renderNotices(sections);
     expect(out).toContain('GNU Affero General Public License');
     expect(out).toContain('FFmpeg (GPL-2.0-or-later, Debian build)');
   });
 
-  it('inclut le texte de licence verbatim de chaque paquet', () => {
+  it('includes the verbatim licence text of each package', () => {
     expect(renderNotices(sections)).toContain('Copyright (c) 2020 Someone');
   });
 
-  it('signale explicitement un paquet sans fichier de licence', () => {
+  it('explicitly reports a package without a licence file', () => {
     expect(renderNotices(sections)).toContain('No license file shipped');
   });
 
-  it('allonge la clôture quand le texte contient déjà des backticks', () => {
+  it('lengthens the fence when the text already contains backticks', () => {
     const withTicks = [
       {
         label: 'Backend (Node.js runtime)',
@@ -162,11 +162,11 @@ describe('renderNotices', () => {
     expect(renderNotices(withTicks)).toContain('````text');
   });
 
-  it('produit une sortie déterministe', () => {
+  it('produces deterministic output', () => {
     expect(renderNotices(sections)).toBe(renderNotices(sections));
   });
 
-  it('ajoute le chapitre des copies internes sans toucher à ce qui précède', () => {
+  it('adds the internal-copies chapter without touching what precedes it', () => {
     const vendored = [
       { id: 'js-yaml@4.1.1', workspace: 'frontend', hosts: ['mermaid'], license: 'MIT', basis: 'x' },
     ];
@@ -178,29 +178,29 @@ describe('renderNotices', () => {
 });
 
 describe('isAllowedLicense', () => {
-  it('accepte les licences permissives rencontrées dans l’arbre de production', () => {
+  it('accepts the permissive licences found in the production tree', () => {
     for (const id of ['MIT', 'Apache-2.0', 'ISC', 'BSD-3-Clause', '0BSD', 'MPL-2.0', 'OFL-1.1']) {
       expect(isAllowedLicense(id)).toBe(true);
     }
   });
 
-  it('exige que les deux branches d’un AND soient acceptables', () => {
+  it('requires both branches of an AND to be acceptable', () => {
     expect(isAllowedLicense('(MIT AND Zlib)')).toBe(true);
     expect(isAllowedLicense('(MIT AND SSPL-1.0)')).toBe(false);
   });
 
-  it('se contente d’une branche acceptable dans un OR', () => {
+  it('is satisfied with one acceptable branch in an OR', () => {
     expect(isAllowedLicense('(MPL-2.0 OR Apache-2.0)')).toBe(true);
     expect(isAllowedLicense('(SSPL-1.0 OR MIT)')).toBe(true);
     expect(isAllowedLicense('(SSPL-1.0 OR BUSL-1.1)')).toBe(false);
   });
 
-  it('ignore l’exception d’un WITH et juge la licence qu’elle accompagne', () => {
+  it('ignores the exception of a WITH and judges the licence it accompanies', () => {
     expect(isAllowedLicense('Apache-2.0 WITH LLVM-exception')).toBe(true);
     expect(isAllowedLicense('SSPL-1.0 WITH whatever-exception')).toBe(false);
   });
 
-  it('refuse le source-available, le copyleft « only » et l’absence de licence', () => {
+  it('refuses source-available, copyleft "only" and a missing licence', () => {
     for (const id of ['SSPL-1.0', 'BUSL-1.1', 'Elastic-2.0', 'GPL-2.0-only', 'UNKNOWN', 'UNLICENSED']) {
       expect(isAllowedLicense(id)).toBe(false);
     }
@@ -208,12 +208,12 @@ describe('isAllowedLicense', () => {
     expect(isAllowedLicense(null)).toBe(false);
   });
 
-  it('traite le suffixe + comme un « or later »', () => {
+  it('treats the + suffix as "or later"', () => {
     expect(isAllowedLicense('GPL-2.0+')).toBe(true);
     expect(isAllowedLicense('SSPL-1.0+')).toBe(false);
   });
 
-  it('rejette une expression mal formée plutôt que de l’accepter à moitié', () => {
+  it('rejects a malformed expression rather than accepting it half-way', () => {
     expect(isAllowedLicense('(MIT')).toBe(false);
     expect(isAllowedLicense('MIT)')).toBe(false);
     expect(isAllowedLicense('MIT AND')).toBe(false);
@@ -221,30 +221,30 @@ describe('isAllowedLicense', () => {
 });
 
 describe('vendoredIdsFrom', () => {
-  it('repère le module recopié derrière le marqueur du bundler', () => {
-    // Forme réelle trouvée dans mermaid : le code de js-yaml 4.1.1 est recopié tel quel.
+  it('spots the copied module behind the bundler marker', () => {
+    // Real shape found in mermaid: the js-yaml 4.1.1 code is copied as is.
     const code =
       'var require_js_yaml = __commonJS({"../node_modules/.pnpm/js-yaml@4.1.1/node_modules/js-yaml/dist/js-yaml.mjs"(e){}});';
     expect([...vendoredIdsFrom(code)]).toEqual(['js-yaml@4.1.1']);
   });
 
-  it('comprend la graphie pnpm d’un paquet scopé (`@a+b` côté magasin)', () => {
+  it('understands the pnpm spelling of a scoped package (`@a+b` in the store)', () => {
     const code = '"/.pnpm/@scope+pkg@2.3.0/node_modules/@scope/pkg/index.js"';
     expect([...vendoredIdsFrom(code)]).toEqual(['@scope/pkg@2.3.0']);
   });
 
-  it('tolère le suffixe de pairs des installations pnpm', () => {
+  it('tolerates the peer suffix of pnpm installations', () => {
     const code = '"/.pnpm/foo@1.2.3_bar@2.0.0/node_modules/foo/lib/x.js"';
     expect([...vendoredIdsFrom(code)]).toEqual(['foo@1.2.3']);
   });
 
-  it('ne retient pas un chemin qui désigne un autre paquet que celui du dossier', () => {
-    // `.pnpm/a@1.0.0/node_modules/b/` : b n'est pas recopié, il est simplement résolu
-    // depuis le dossier de a. Le confondre inventerait des composants.
+  it('does not keep a path that designates another package than the folder one', () => {
+    // `.pnpm/a@1.0.0/node_modules/b/`: b is not copied, it is simply resolved
+    // from a's folder. Confusing the two would invent components.
     expect([...vendoredIdsFrom('"/.pnpm/a@1.0.0/node_modules/b/index.js"')]).toEqual([]);
   });
 
-  it('laisse de côté un chemin sans version, inattribuable', () => {
+  it('sets aside a path without a version, which cannot be attributed', () => {
     expect([...vendoredIdsFrom('"../node_modules/lodash/index.js"')]).toEqual([]);
   });
 });
@@ -255,7 +255,7 @@ describe('collectVendored', () => {
     for (const dir of dirs) rmSync(dir, { recursive: true, force: true });
   });
 
-  /** Mini-workspace sur disque : un paquet de production et ses fichiers livrés. */
+  /** Mini workspace on disk: one production package and its shipped files. */
   const makeWorkspace = (packages, files) => {
     const root = mkdtempSync(path.join(tmpdir(), 'review-notices-'));
     dirs.push(root);
@@ -270,13 +270,13 @@ describe('collectVendored', () => {
 
   const marker = (id, name) => `__commonJS({"../node_modules/.pnpm/${id}/node_modules/${name}/i.js"(){}});`;
 
-  it('compte les copies internes du paquet, y compris celle que le lockfile ne voit pas', async () => {
+  it('counts the internal copies of the package, including the one the lockfile does not see', async () => {
     const { root, lock } = makeWorkspace(
       {
         '': { dependencies: { host: '^1.0.0' } },
         'node_modules/host': { version: '1.0.0', license: 'MIT' },
-        // js-yaml n'existe dans le lockfile qu'en 4.3.1, tiré par un outil de
-        // développement : la copie 4.1.1 recopiée dans `host` part pourtant en production.
+        // js-yaml only exists in the lockfile as 4.3.1, pulled in by a tool
+        // of development: the 4.1.1 copy copied into `host` nevertheless ships to production.
         'node_modules/js-yaml': { version: '4.3.1', license: 'MIT', dev: true },
       },
       {

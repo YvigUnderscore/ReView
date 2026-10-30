@@ -4,27 +4,25 @@
 import { z } from 'zod';
 
 /**
- * Pagination + tri serveur standardisés (10.D1, révisés pour la volumétrie long-métrage).
+ * Standardised server-side pagination and sorting (10.D1, revised for feature-film volumes).
  *
- * Toute route de liste borne ses résultats via `paginationQuery` (schéma Zod commun)
- * et répond avec l'enveloppe `{ items, total, page, pageSize, pageCount, hasMore }`.
+ * Every list route bounds its results via `paginationQuery` (shared Zod schema) and answers with the envelope
+ * `{ items, total, page, pageSize, pageCount, hasMore }`.
  *
- * Le défaut et le plafond étaient confondus (`max(100).default(100)`) : un appelant ne
- * pouvait rien demander de plus que ce qu'on lui servait déjà, si bien que la pagination
- * n'existait que sur le papier. Ils sont désormais distincts — défaut raisonnable pour
- * un écran, plafond assez haut pour un client qui sait ce qu'il fait.
+ * The default and the ceiling were conflated (`max(100).default(100)`): a caller could ask for nothing more than what was
+ * already served, so pagination existed only on paper. They are now distinct — a reasonable default for a screen, a ceiling
+ * high enough for a client that knows what it is doing.
  *
- * Deux modes coexistent, la réponse a la même forme dans les deux cas :
- * - **page/pageSize** : `skip`/`take`, le seul qui sache sauter à la page N ;
- * - **curseur** (`cursor`) : reprend après la dernière ligne servie. À 2000 plans, c'est
- *   le mode qui ne duplique ni ne saute de ligne quand une création s'intercale, et qui
- *   n'impose pas à Postgres de traverser N lignes avant de commencer à en rendre.
+ * Two modes coexist, the response has the same shape in both cases:
+ * - **page/pageSize**: `skip`/`take`, the only one able to jump to page N;
+ * - **cursor** (`cursor`): resumes after the last row served. At 2000 shots, this is the mode that neither duplicates nor
+ *   skips rows when a creation slips in, and that does not force Postgres to walk N rows before starting to return any.
  */
 
-/** Taille de page servie quand l'appelant n'en demande pas. */
+/** Page size served when the caller does not ask for one. */
 export const DEFAULT_PAGE_SIZE = 100;
 
-/** Plafond dur : au-delà, ce n'est plus une page mais un export. */
+/** Hard ceiling: beyond it, it is no longer a page but an export. */
 export const MAX_PAGE_SIZE = 500;
 
 export const paginationQuery = z.object({
@@ -35,8 +33,8 @@ export const paginationQuery = z.object({
 });
 
 /**
- * Variante des grandes listes (plans, tâches) : le curseur est opaque et vient toujours
- * du `nextCursor` d'une réponse précédente. Fourni, il prime sur `page`.
+ * Variant for large lists (shots, tasks): the cursor is opaque and always comes from the `nextCursor` of a previous
+ * response. When supplied, it takes precedence over `page`.
  */
 export const cursorPaginationQuery = paginationQuery.extend({
   cursor: z.string().min(1).max(300).optional(),
@@ -45,14 +43,12 @@ export const cursorPaginationQuery = paginationQuery.extend({
 export type PaginationParams = z.infer<typeof cursorPaginationQuery>;
 
 /**
- * Extrait + coerce les paramètres de pagination depuis `req.query`.
- * En Express 5, `req.query` est un getter : la coercition faite par le middleware
- * `validate` ne persiste pas (les valeurs restent des chaînes). On re-parse donc ici
- * pour obtenir des nombres fiables (les clés inconnues sont ignorées par le schéma).
+ * Extracts and coerces the pagination parameters from `req.query`.
+ * In Express 5, `req.query` is a getter: the coercion done by the `validate` middleware does not persist (the values
+ * remain strings). We therefore re-parse here to obtain reliable numbers (unknown keys are ignored by the schema).
  *
- * `defaultPageSize` sert aux listes qu'un écran consomme d'un bloc (arbre de séquences,
- * destinations d'upload) : elles restent bornées, mais pas à la taille d'une page de
- * cartes. Une valeur explicite de l'appelant l'emporte toujours.
+ * `defaultPageSize` serves the lists a screen consumes in one block (sequence tree, upload destinations): they remain
+ * bounded, but not to the size of a page of cards. An explicit value from the caller always wins.
  */
 export function readPagination(query: unknown, opts: { defaultPageSize?: number } = {}): PaginationParams {
   const parsed = cursorPaginationQuery.parse(query);
@@ -69,35 +65,35 @@ export interface Paginated<T> {
   total: number;
   page: number;
   pageSize: number;
-  /** Nombre de pages (≥ 1), pour que le client n'ait pas à refaire l'arrondi. */
+  /** Number of pages (≥ 1), so that the client does not have to redo the rounding. */
   pageCount: number;
-  /** Reste-t-il des lignes après celles-ci ? C'est ce que lit un « charger la suite ». */
+  /** Are there rows left after these? This is what a "load more" reads. */
   hasMore: boolean;
 }
 
-/** Enveloppe des listes qui acceptent un curseur — `null` = fin de liste. */
+/** Envelope of lists that accept a cursor — `null` = end of list. */
 export interface CursorPaginated<T> extends Paginated<T> {
   nextCursor: string | null;
 }
 
-/** Arguments Prisma `skip`/`take` dérivés de la page demandée. */
+/** Prisma `skip`/`take` arguments derived from the requested page. */
 export function pageArgs(p: PaginationParams): { skip: number; take: number } {
-  // Un curseur remplace le décalage : cumuler les deux sauterait une page entière.
+  // A cursor replaces the offset: combining the two would skip a whole page.
   return { skip: p.cursor ? 0 : (p.page - 1) * p.pageSize, take: p.pageSize };
 }
 
-/** Emballe une page de résultats dans l'enveloppe standard. */
+/** Wraps a page of results in the standard envelope. */
 export function paginate<T>(items: T[], total: number, p: PaginationParams): Paginated<T> {
   const pageCount = Math.max(1, Math.ceil(total / p.pageSize));
-  // En mode curseur on ignore combien de lignes ont précédé : une page pleine signifie
-  // qu'il en reste probablement, une page courte que la liste est finie.
+  // In cursor mode we ignore how many rows came before: a full page means there are probably more, a short page means the
+  // list is finished.
   const hasMore = p.cursor ? items.length >= p.pageSize : (p.page - 1) * p.pageSize + items.length < total;
   return { items, total, page: p.page, pageSize: p.pageSize, pageCount, hasMore };
 }
 
 /**
- * Tri Prisma sûr : n'autorise que les colonnes de la liste blanche (défaut sinon),
- * évitant l'injection d'un champ arbitraire dans `orderBy`.
+ * Safe Prisma sort: only allows the columns of the allow-list (default otherwise), avoiding injection of an arbitrary field
+ * into `orderBy`.
  */
 export function orderByFrom(
   p: PaginationParams,
@@ -109,12 +105,11 @@ export function orderByFrom(
 }
 
 /**
- * Le même tri, rendu **total** par un départage sur `id`.
+ * The same sort, made **total** by a tie-break on `id`.
  *
- * Sans lui, `orderBy: { order: 'asc' }` sur deux mille plans importés par passes — tous
- * à `order = 0` — laisse Postgres libre de rendre les ex æquo dans un ordre différent
- * d'une requête à l'autre : la page 2 réaffiche des lignes de la page 1 et en saute
- * d'autres. Le départage est obligatoire dès qu'un `skip`/`take` s'applique.
+ * Without it, `orderBy: { order: 'asc' }` on two thousand shots imported in passes — all at `order = 0` — leaves Postgres free
+ * to return the ties in a different order from one query to the next: page 2 redisplays rows from page 1 and skips others.
+ * The tie-break is mandatory as soon as a `skip`/`take` applies.
  */
 export function stableOrderBy(
   p: PaginationParams,
@@ -127,7 +122,7 @@ export function stableOrderBy(
   return [primary, { id: direction }];
 }
 
-/** Valeurs de tri qu'un curseur sait transporter. */
+/** Sort values a cursor can carry. */
 export type CursorValue = number | string | Date;
 
 export interface DecodedCursor {
@@ -136,9 +131,8 @@ export interface DecodedCursor {
 }
 
 /**
- * Curseur opaque : la valeur de tri de la dernière ligne servie, plus son `id` de
- * départage. Le type est marqué (`n`/`s`/`d`) pour qu'un entier ne revienne pas en
- * chaîne — une comparaison Prisma sur le mauvais type est une erreur 500.
+ * Opaque cursor: the sort value of the last row served, plus its tie-break `id`. The type is marked (`n`/`s`/`d`) so that an
+ * integer does not come back as a string — a Prisma comparison on the wrong type is a 500 error.
  */
 export function encodeCursor(value: CursorValue, id: number): string {
   const tagged =
@@ -151,9 +145,8 @@ export function encodeCursor(value: CursorValue, id: number): string {
 }
 
 /**
- * Décode un curseur. Un curseur illisible (tronqué, forgé, d'une version antérieure)
- * vaut « pas de curseur » : la liste repart du début plutôt que de répondre 500 pour un
- * paramètre que l'utilisateur n'a jamais tapé lui-même.
+ * Decodes a cursor. An unreadable cursor (truncated, forged, from an earlier version) counts as "no cursor": the list starts
+ * over from the beginning rather than answering 500 for a parameter the user never typed themselves.
  */
 export function decodeCursor(raw: string | undefined): DecodedCursor | null {
   if (!raw) return null;
@@ -175,8 +168,8 @@ export function decodeCursor(raw: string | undefined): DecodedCursor | null {
 }
 
 /**
- * Filtre « strictement après ce curseur », en comparaison de couple `(champ, id)` :
- * c'est le pendant exact du tri `[{ champ }, { id }]`.
+ * "Strictly after this cursor" filter, as a comparison of the `(field, id)` pair: the exact counterpart of the sort
+ * `[{ field }, { id }]`.
  */
 export function cursorWhere(
   field: string,
@@ -191,11 +184,10 @@ export function cursorWhere(
 }
 
 /**
- * Ajoute la condition de curseur à un `where` existant.
+ * Adds the cursor condition to an existing `where`.
  *
- * Le filtre est empilé dans `AND` et jamais fusionné à la racine : plusieurs de nos
- * listes portent déjà un `OR` (une tâche pend à un plan **ou** à un asset), qu'un
- * étalement écraserait — et la liste renverrait alors tout le studio.
+ * The filter is stacked in `AND` and never merged at the root: several of our lists already carry an `OR` (a task hangs from
+ * a shot **or** an asset), which a spread would overwrite — and the list would then return the whole studio.
  */
 export function withCursor<W>(where: W, p: PaginationParams, field: string, direction: 'asc' | 'desc'): W {
   const cur = decodeCursor(p.cursor);
@@ -208,8 +200,8 @@ export function withCursor<W>(where: W, p: PaginationParams, field: string, dire
 }
 
 /**
- * Curseur à servir pour la suite. Une page incomplète marque la fin de la liste :
- * inutile de faire redemander au client une page qu'on sait vide.
+ * Cursor to serve for the continuation. An incomplete page marks the end of the list: no need to make the client request a
+ * page we know to be empty.
  */
 export function nextCursor<T extends { id: number }>(
   rows: T[],
@@ -221,7 +213,7 @@ export function nextCursor<T extends { id: number }>(
   return encodeCursor(pick(last), last.id);
 }
 
-/** Emballe une page de résultats en y joignant le curseur de suite. */
+/** Wraps a page of results, attaching the continuation cursor. */
 export function paginateCursor<T extends { id: number }>(
   items: T[],
   total: number,

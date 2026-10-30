@@ -17,62 +17,62 @@ import {
 
 const URL = 'https://review.example.com/invite/abc123';
 
-describe('InvitationService — email d’invitation (Phase 47)', () => {
-  it('porte le lien d’activation en bouton ET en clair', () => {
+describe('InvitationService: invitation email (Phase 47)', () => {
+  it('carries the activation link as a button AND in plain text', () => {
     const html = renderInvitationHtml('en', 'Marie', 'Yvig', URL);
-    // Deux fois : le bouton, et le repli pour les clients qui n'affichent pas les liens
-    // stylés — c'est justement le cas des messageries d'entreprise les plus verrouillées.
-    expect(html.split(URL).length - 1).toBe(3); // href du bouton, href du repli, texte du repli
+    // Twice: the button, and the fallback for clients that do not display styled links — precisely the case
+    // of the most locked-down corporate messaging systems.
+    expect(html.split(URL).length - 1).toBe(3); // button href, fallback href, fallback text
     expect(html).toContain('Activate my account');
   });
 
-  it('nomme celui qui invite quand on le connaît, reste impersonnel sinon', () => {
+  it('names the person inviting when they are known, stays impersonal otherwise', () => {
     expect(renderInvitationHtml('en', 'Marie', 'Yvig', URL)).toContain('Yvig created an account');
     const anonymous = renderInvitationHtml('en', 'Marie', null, URL);
     expect(anonymous).toContain('An account has been created for you');
     expect(anonymous).not.toContain('Yvig');
   });
 
-  it('annonce la durée de validité réellement appliquée', () => {
+  it('announces the validity period actually applied', () => {
     const html = renderInvitationHtml('en', 'Marie', null, URL);
     expect(html).toContain(`expires in ${INVITATION_TTL_DAYS} days`);
   });
 
-  it('échappe le nom du destinataire — un nom n’est pas du HTML', () => {
+  it("escapes the recipient's name — a name is not HTML", () => {
     const html = renderInvitationHtml('en', '<script>alert(1)</script>', null, URL);
     expect(html).not.toContain('<script>');
     expect(html).toContain('&lt;script&gt;');
   });
 
-  it('échappe l’adresse dans l’attribut href du lien de repli, pas seulement dans son texte', () => {
-    // `url` vaut `APP_URL` + jeton : rien n'y échappe aujourd'hui. Mais `APP_URL` est une
-    // variable d'environnement, et le bouton (`mailButton`) échappe déjà son href — le
-    // repli était le dernier attribut brut du message. Un guillemet y referme l'attribut
-    // et la suite de la ligne devient du balisage, sous l'habillage du studio.
+  it('escapes the address in the href attribute of the fallback link, not only in its text', () => {
+    // `url` is `APP_URL` + token: nothing escapes in it today. But `APP_URL` is an environment variable, and
+    // the button (`mailButton`) already escapes its href — the fallback was the last raw attribute of the
+    // message. A quotation mark there would close the attribute and the rest of the line would become markup,
+    // under the studio's styling.
     const hostile = 'https://review.example.com/invite/a" onmouseover="alert(1)';
     const html = renderInvitationHtml('en', 'Marie', null, hostile);
-    // Aucun guillemet brut ne sort de l'adresse : l'attribut ne se referme pas.
+    // No raw quotation mark comes out of the address: the attribute does not close.
     expect(html).not.toContain('/invite/a" onmouseover');
-    // Et les TROIS emplacements portent la même forme échappée — le href du bouton, celui
-    // du repli, et le texte du repli. Avant le correctif il n'y en avait que deux.
+    // And the THREE locations carry the same escaped form — the button's href, the fallback's href, and the
+    // fallback text. Before the fix there were only two.
     const escaped = 'https://review.example.com/invite/a&quot; onmouseover=&quot;alert(1)';
     expect(html.split(escaped).length - 1).toBe(3);
   });
 
-  it('reste dans l’enveloppe de marque', () => {
+  it('stays within the brand envelope', () => {
     const html = renderInvitationHtml('en', 'Marie', null, URL);
     expect(html).toContain('Welcome to ReView');
-    expect(html).toContain('collaborative review platform'); // pied traduit
+    expect(html).toContain('collaborative review platform'); // translated footer
   });
 });
 
 /**
- * A1-01 — cinquième porte. Un lien d'invitation encore en boîte mail à l'heure du départ ne
- * pose pas seulement un mot de passe : il OUVRE une session dans la foulée (auth.routes.ts,
- * « activer son compte vaut connexion »). Un compte désactivé n'a donc plus d'invitation
- * valide, ni à l'aperçu ni à l'activation.
+ * A1-01 — fifth gate. An invitation link still in a mailbox at the time of departure does not merely set a
+ * password: it OPENS a session straight away (auth.routes.ts, "activating one's account means logging in").
+ * An account that is disabled therefore has no valid invitation any more, neither at preview nor at
+ * activation.
  */
-describe('InvitationService — invitation d’un compte désactivé', () => {
+describe('InvitationService: invitation of a disabled account', () => {
   const invitationFor = (disabledAt: Date | null) => ({
     id: 3,
     userId: 7,
@@ -88,14 +88,14 @@ describe('InvitationService — invitation d’un compte désactivé', () => {
     db.user.update.mockResolvedValue({ id: 7 });
   });
 
-  it('traite le lien comme périmé à l’aperçu', async () => {
+  it('treats the link as expired at preview', async () => {
     db.invitation.findUnique.mockResolvedValue(invitationFor(new Date()));
     await expect(describeInvitation('jeton')).rejects.toMatchObject({ code: 'INVITATION_INVALID' });
   });
 
-  // Le point dur : sans cette garde, l'activation posait un mot de passe neuf sur le compte
-  // d'un partant — et lui rendait la main.
-  it('refuse l’activation sans rien écrire', async () => {
+  // The hard point: without this guard, activation would set a new password on a departing person's account —
+  // and hand it back to them.
+  it('refuses activation without writing anything', async () => {
     db.invitation.findUnique.mockResolvedValue(invitationFor(new Date()));
     await expect(acceptInvitation('jeton', 'Motdepasse1')).rejects.toMatchObject({
       code: 'INVITATION_INVALID',
@@ -104,7 +104,7 @@ describe('InvitationService — invitation d’un compte désactivé', () => {
     expect(db.user.update).not.toHaveBeenCalled();
   });
 
-  it('laisse passer un compte actif', async () => {
+  it('lets an active account through', async () => {
     db.invitation.findUnique.mockResolvedValue(invitationFor(null));
     await expect(acceptInvitation('jeton', 'Motdepasse1')).resolves.toEqual({ id: 7 });
   });

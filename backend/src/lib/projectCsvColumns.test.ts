@@ -8,7 +8,7 @@ const fields = (headers: string[], overrides?: Parameters<typeof detectColumns>[
   detectColumns(headers, overrides).map((c) => c.field);
 
 describe('normaliseHeader', () => {
-  it('ignore casse, accents, séparateurs et BOM', () => {
+  it('ignores case, accents, separators and BOM', () => {
     expect(normaliseHeader('﻿Échéance')).toBe('echeance');
     expect(normaliseHeader('Cut In')).toBe('cutin');
     expect(normaliseHeader('sg_status_list')).toBe('sgstatuslist');
@@ -16,7 +16,7 @@ describe('normaliseHeader', () => {
 });
 
 describe('detectColumns', () => {
-  it('reconnaît les en-têtes des trackers usuels', () => {
+  it('recognises the headers of the usual trackers', () => {
     expect(fields(['sg_sequence', 'Shot Code', 'Shot Name', 'sg_cut_in', 'sg_cut_out'])).toEqual([
       'sequence',
       'shot',
@@ -33,15 +33,15 @@ describe('detectColumns', () => {
     ]);
   });
 
-  it('un « status » nu vise la tâche quand le fichier a une colonne de tâche', () => {
+  it('a bare "status" targets the task when the file has a task column', () => {
     expect(fields(['shot', 'task', 'status'])).toEqual(['shot', 'task', 'taskStatus']);
   });
 
-  it('un « status » nu vise le plan quand le fichier n’a pas de tâche', () => {
+  it('a bare "status" targets the shot when the file has no task', () => {
     expect(fields(['shot', 'status'])).toEqual(['shot', 'shotStatus']);
   });
 
-  it('n’écrase pas une colonne de statut déjà explicite', () => {
+  it('does not overwrite an already explicit status column', () => {
     expect(fields(['shot', 'task', 'task_status', 'status'])).toEqual([
       'shot',
       'task',
@@ -50,11 +50,11 @@ describe('detectColumns', () => {
     ]);
   });
 
-  it('laisse la colonne inconnue sans champ plutôt que de deviner', () => {
+  it('leaves the unknown column without a field rather than guessing', () => {
     expect(fields(['shot', 'sg_uploaded_movie'])).toEqual(['shot', null]);
   });
 
-  it('la correspondance manuelle prime sur l’en-tête et sait neutraliser une colonne', () => {
+  it('the manual match takes precedence over the header and can neutralise a column', () => {
     const columns = detectColumns(
       ['identifiant', 'libelle', 'description'],
       [
@@ -67,11 +67,11 @@ describe('detectColumns', () => {
     expect(columns.map((c) => c.manual)).toEqual([true, true, true]);
   });
 
-  it('deux colonnes ne peuvent pas viser le même champ : la seconde est ignorée', () => {
+  it('two columns cannot target the same field: the second is ignored', () => {
     expect(fields(['shot', 'shot_code'])).toEqual(['shot', null]);
   });
 
-  it('indexByField rend la position de chaque champ reconnu', () => {
+  it('indexByField returns the position of each recognised field', () => {
     expect(indexByField(detectColumns(['seq', 'shot', 'inconnu', 'tasks']))).toEqual({
       sequence: 0,
       shot: 1,

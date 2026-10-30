@@ -4,29 +4,28 @@
 import { Role } from '@prisma/client';
 import { badRequest } from '../lib/errors';
 import { checkProjectAccess } from '../middleware/rbac';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 import { NOTE_KINDS, resolveProject, type NoteKind } from './EntityNoteService';
 
 /**
- * Les images qu'une fiche porte elle-même.
+ * The images that a sheet carries itself.
  *
- * Une fiche ne pouvait montrer que des images déjà en ligne ailleurs : on collait une URL,
- * et la planche mourait avec le serveur d'en face. Les images vivent donc désormais dans le
- * bucket, déposées comme une vignette d'entité — présignature, puis PUT direct depuis le
- * navigateur, sans jamais traverser l'API.
+ * A sheet could only show images already online elsewhere: one pasted a URL, and the sheet died with the
+ * remote server. Images now live in the bucket, uploaded like an entity
+ * thumbnail — presigned, then a direct PUT from the browser, never passing through the API.
  *
- * Ce qui est **écrit dans la fiche est la clé**, pas une URL : une URL présignée expire au
- * bout d'une heure, et un brief se relit six mois plus tard. Le texte reste donc stable, et
- * `resolveMany` refait des URL de lecture à chaque affichage.
+ * What is **written in the sheet is the key**, not a URL: a presigned URL expires after an hour, and a brief
+ * gets re-read six months later. The text therefore stays stable, and
+ * `resolveMany` regenerates read URLs at each display.
  *
- * La clé porte l'entité (`note-images/{kind}/{id}/…`) et c'est elle qui décide de l'accès :
- * lire l'image d'un plan revient à lire ce plan, donc à être membre de son projet. Sans ce
- * contrôle, une clé devinée aurait suffi à sortir la planche d'un projet fermé.
+ * The key carries the entity (`note-images/{kind}/{id}/…`) and it is that which decides access: reading a
+ * shot's image amounts to reading that shot, hence being a member of its project.
+ * Without this check, a guessed key would have sufficed to pull the sheet out of a closed project.
  */
 
 export const NOTE_IMAGE_PREFIX = 'note-images/';
 
-/** Nombre de clés résolues d'un coup — une planche entière tient largement dedans. */
+/** Number of keys resolved at once — a whole sheet fits comfortably. */
 export const MAX_RESOLVE_KEYS = 80;
 
 const EXTENSIONS: Record<string, string> = {
@@ -38,18 +37,18 @@ const EXTENSIONS: Record<string, string> = {
   'image/avif': '.avif',
 };
 
-/** Le nom déposé sert de repère humain dans le bucket — il ne décide de rien. */
+/** The uploaded name serves as a human marker in the bucket — it decides nothing. */
 function safeName(filename: string): string {
   const base = filename.replace(/\.[^.]*$/, '').replace(/[^a-zA-Z0-9._-]/g, '_');
   return base.slice(0, 60) || 'image';
 }
 
 /**
- * L'entité désignée par une clé, ou `null` si la clé n'est pas une image de fiche.
+ * The entity designated by a key, or `null` if the key is not a sheet image.
  *
- * Fonction pure, et volontairement stricte : un identifiant non numérique, un segment de
- * plus, un `..` — tout ce qui ne ressemble pas exactement à la convention est refusé plutôt
- * qu'interprété. C'est ce qui rend le contrôle d'accès en aval fiable.
+ * Pure function, and deliberately strict: a non-numeric identifier, one segment too many, a `..` — anything
+ * that does not look exactly like the convention is refused rather than
+ * interpreted. This is what makes the downstream access check reliable.
  */
 export function parseNoteImageKey(key: string): { kind: NoteKind; id: number } | null {
   if (key.includes('..')) return null;
@@ -62,7 +61,7 @@ export function parseNoteImageKey(key: string): { kind: NoteKind; id: number } |
   return { kind, id };
 }
 
-/** La clé d'une image à déposer — calculée ici, jamais reçue du client. */
+/** The key of an image to upload — computed here, never received from the client. */
 export function buildNoteImageKey(kind: NoteKind, id: number, filename: string, contentType: string) {
   const ext = EXTENSIONS[contentType];
   if (!ext) throw badRequest('Unsupported image type', 'BAD_CONTENT_TYPE');
@@ -70,10 +69,10 @@ export function buildNoteImageKey(kind: NoteKind, id: number, filename: string, 
 }
 
 /**
- * URL de dépôt, et l'URL de lecture qui va avec.
+ * Upload URL, and the read URL that goes with it.
  *
- * La seconde évite un aller-retour : l'image doit s'afficher dans l'éditeur à la seconde
- * où elle est déposée, sinon on croit que le dépôt a échoué et on recommence.
+ * The second avoids a round trip: the image must display in the editor the second it is uploaded, otherwise
+ * one believes the upload failed and starts again.
  */
 export async function presign(kind: NoteKind, id: number, filename: string, contentType: string) {
   const key = buildNoteImageKey(kind, id, filename, contentType);
@@ -85,12 +84,11 @@ export async function presign(kind: NoteKind, id: number, filename: string, cont
 }
 
 /**
- * Les URL de lecture d'un lot de clés.
+ * The read URLs of a batch of keys.
  *
- * Les clés sont groupées par entité pour ne vérifier l'accès qu'une fois par plan : une
- * planche de vingt images ne doit pas coûter vingt requêtes d'appartenance. Une clé
- * étrangère à la convention est ignorée sans erreur — une fiche ancienne peut encore
- * pointer vers l'extérieur, et ce n'est pas une faute.
+ * Keys are grouped by entity so that access is checked only once per shot: a board of twenty images must not
+ * cost twenty membership queries. A key foreign to the convention is ignored
+ * without error — an old sheet may still point outside, and that is not a fault.
  */
 export async function resolveMany(
   viewer: { id: number; role: Role },
@@ -111,9 +109,9 @@ export async function resolveMany(
   const out: Record<string, string> = {};
   await Promise.all(
     [...byEntity.values()].map(async ({ kind, id, keys: entityKeys }) => {
-      // Une entité disparue ne fait pas échouer le lot : une fiche peut citer l'image d'un
-      // plan supprimé depuis, et refuser tout le lot ferait disparaître les vingt images
-      // valides de la planche pour une référence morte.
+      // A vanished entity does not fail the batch: a sheet may cite the image of a shot deleted since, and
+      // refusing the whole batch would make the twenty valid images of the board disappear
+      // for a dead reference.
       const projectId = await resolveProject(kind, id).catch(() => null);
       if (projectId === null) return;
       if (!(await checkProjectAccess(viewer.id, viewer.role, projectId))) return;

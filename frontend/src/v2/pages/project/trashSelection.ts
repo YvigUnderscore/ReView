@@ -4,21 +4,21 @@
 import type { BulkDeleteDomain } from '../../lib/bulkApi';
 
 /**
- * Sélection de la corbeille, **toutes sections confondues**.
+ * Trash selection, **across all sections**.
  *
- * Chaque section avait la sienne : cocher « tout » dans les plans ne touchait ni les
- * séquences, ni les assets, ni les versions. Vider une corbeille de fin de projet demandait
- * donc six passes, et il fallait penser aux six. La sélection est désormais unique, indexée
- * par domaine — ce que les routes de masse attendent de toute façon.
+ * Each section used to have its own: ticking "all" in the shots touched neither the sequences, nor
+ * the assets, nor the versions. Emptying an end-of-project trash therefore required six passes, and
+ * one had to remember all six. The selection is now unique, indexed by domain, which is what the
+ * bulk routes expect anyway.
  *
- * Logique pure, sans React : c'est ce qui permet de tester la règle du « tout » sans monter
- * six listes.
+ * Pure logic, without React: this is what makes it possible to test the "all" rule without mounting
+ * six lists.
  */
 
-/** Les identifiants retenus, par domaine. Un domaine absent vaut « rien de sélectionné ». */
+/** The identifiers retained, by domain. An absent domain means nothing selected. */
 export type TrashSelection = Partial<Record<BulkDeleteDomain, number[]>>;
 
-/** Ce que la corbeille contient, par domaine — la référence du « tout ». */
+/** What the trash contains, by domain: the reference for "all". */
 export type TrashInventory = Partial<Record<BulkDeleteDomain, number[]>>;
 
 export const idsOf = (selection: TrashSelection, domain: BulkDeleteDomain): number[] =>
@@ -27,21 +27,21 @@ export const idsOf = (selection: TrashSelection, domain: BulkDeleteDomain): numb
 export const isSelected = (selection: TrashSelection, domain: BulkDeleteDomain, id: number): boolean =>
   idsOf(selection, domain).includes(id);
 
-/** Nombre total d'éléments retenus, tous domaines confondus. */
+/** Total number of retained items, across all domains. */
 export const countSelected = (selection: TrashSelection): number =>
   Object.values(selection).reduce((n, ids) => n + (ids?.length ?? 0), 0);
 
-/** Nombre total d'éléments présents dans la corbeille. */
+/** Total number of items present in the trash. */
 export const countAll = (inventory: TrashInventory): number => countSelected(inventory);
 
-/** Bascule un élément. */
+/** Toggles an item. */
 export function toggle(selection: TrashSelection, domain: BulkDeleteDomain, id: number): TrashSelection {
   const ids = idsOf(selection, domain);
   const next = ids.includes(id) ? ids.filter((v) => v !== id) : [...ids, id];
   return { ...selection, [domain]: next };
 }
 
-/** Coche ou décoche une section entière. */
+/** Ticks or unticks a whole section. */
 export function toggleDomain(
   selection: TrashSelection,
   domain: BulkDeleteDomain,
@@ -52,11 +52,11 @@ export function toggleDomain(
 }
 
 /**
- * Coche ou décoche **toute** la corbeille.
+ * Ticks or unticks **all** of the trash.
  *
- * « Tout » veut dire tout : si une seule section est incomplète, le geste coche le reste
- * plutôt que de décocher ce qui l'était déjà — c'est ce qu'on attend d'une case « tout
- * sélectionner » à moitié cochée.
+ * "All" means all: if a single section is incomplete, the gesture ticks the rest rather than
+ * unticking what was already ticked. This is what one expects from a half-ticked "select all"
+ * checkbox.
  */
 export function toggleEverything(selection: TrashSelection, inventory: TrashInventory): TrashSelection {
   const everything = countSelected(selection) === countAll(inventory) && countAll(inventory) > 0;
@@ -68,7 +68,7 @@ export function toggleEverything(selection: TrashSelection, inventory: TrashInve
   return next;
 }
 
-/** Les domaines qui portent au moins un élément retenu — ceux à traiter, et eux seuls. */
+/** The domains carrying at least one retained item: those to process, and those alone. */
 export function selectedDomains(selection: TrashSelection): BulkDeleteDomain[] {
   return (Object.keys(selection) as BulkDeleteDomain[]).filter((d) => idsOf(selection, d).length > 0);
 }

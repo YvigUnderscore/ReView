@@ -4,29 +4,27 @@
 import { useBranding } from './branding';
 
 /**
- * Mode brouillon — le seul endroit du frontend qui décide si le studio travaille en deux
- * temps (déposer, puis publier) ou en un seul (un média naît publié).
+ * Draft mode — the only place in the frontend that decides whether the studio works in two steps
+ * (upload, then publish) or in one (a media is born published).
  *
- * Depuis la Phase 50, un média est publié dès l'upload : le brouillon n'est plus le
- * parcours normal mais une **option de studio**, éteinte par défaut. Tout ce qui parle de
- * brouillon à l'écran — la pastille des brouillons en attente, le filtre « Mes
- * brouillons » — se règle donc sur ce réglage, et non sur une constante.
+ * Since Phase 50, a media is published on upload: drafting is no longer the normal path but a
+ * **studio option**, off by default. Everything that talks about drafts on screen — the pending
+ * drafts badge, the "My drafts" filter — is therefore driven by this setting, not by a constant.
  *
- * Le réglage voyage avec l'identité publique du studio (`/api/studio/branding`) : c'est le
- * seul canal que TOUT le monde peut lire, y compris un artiste qui n'a pas accès aux
- * réglages d'administration. `useStudioSettings` ne sert qu'à l'écrire.
+ * The setting travels with the studio's public identity (`/api/studio/branding`): it is the only
+ * channel EVERYONE can read, including an artist who has no access to the admin settings.
+ * `useStudioSettings` only serves to write it.
  */
 
-/** Clé du réglage dans la table `Setting` — contrat partagé avec le backend. */
+/** Key of the setting in the `Setting` table — contract shared with the backend. */
 export const DRAFT_MODE_KEY = 'draftMode';
 
 /**
- * Le réglage est-il actif ?
+ * Is the setting active?
  *
- * La table `Setting` ne stocke que du texte : le réglage arrive donc tantôt en booléen
- * (branding), tantôt en chaîne (écran d'administration). Un seul verdict pour les deux, et
- * tout ce qui n'est pas explicitement vrai vaut faux — un réglage absent doit donner le
- * comportement par défaut, la publication d'office.
+ * The `Setting` table only stores text: the setting therefore arrives sometimes as a boolean
+ * (branding), sometimes as a string (admin screen). A single verdict for both, and everything that
+ * is not explicitly true is false — an absent setting must yield the default behaviour, immediate publication.
  */
 export function isDraftModeOn(value: string | boolean | null | undefined): boolean {
   if (typeof value === 'boolean') return value;
@@ -35,7 +33,7 @@ export function isDraftModeOn(value: string | boolean | null | undefined): boole
   return text === 'true' || text === '1' || text === 'on';
 }
 
-/** Ce que le réglage vaut pour l'écran courant. */
+/** What the setting is worth for the current screen. */
 export function useDraftMode(): boolean {
   const { data } = useBranding();
   return isDraftModeOn(data?.draftMode);

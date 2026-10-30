@@ -2,27 +2,28 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Sélection d'un prim au clic — et la raison pour laquelle elle ne marchait pas.
+ * Selecting a prim on click — and why it did not work.
  *
- * Les contrôles de caméra vivent sur le même élément et traitent le bouton GAUCHE (orbite).
- * Leur `pointerdown` arrêtait la propagation avant que le module de picking n'enregistre
- * l'origine du geste : `down` restait nul, `pointerup` sortait aussitôt, et un clic gauche ne
- * sélectionnait jamais rien. Le clic DROIT, lui, traversait — ces contrôles le traitent
- * autrement (vol libre) — d'où l'asymétrie observée au navigateur : le menu du prim s'ouvrait
- * et « Cadrer » visait le bon objet, mais rien ne se surlignait.
+ * The camera controls live on the same element and handle the LEFT button (orbit). Their
+ * `pointerdown` stopped propagation before the picking module recorded the origin of the gesture:
+ * `down` stayed null, `pointerup` exited immediately, and a left click never selected anything.
+ * The RIGHT click, however, got through — these controls handle it differently (free flight) —
+ * hence the asymmetry seen in the browser: the prim menu opened and "Frame" targeted the right
+ * object, but nothing got highlighted.
  *
- * Ces tests reproduisent le concurrent qui coupe la propagation. Ils échouent si les écouteurs
- * repassent en phase de bulle.
+ * These tests reproduce the competitor that stops propagation. They fail if the listeners go back
+ * to the bubble phase.
  *
- * S'y ajoute la **granularité** du clic : le hook demande au résolveur du viewer la résolution
- * promue (le component englobant) et, Alt enfoncé, la résolution exacte — la feuille touchée.
+ * Added to this is the **granularity** of the click: the hook asks the viewer's resolver for the
+ * promoted resolution (the enclosing component) and, with Alt held, for the exact resolution — the
+ * leaf that was hit.
  */
 
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useUsdPicking } from './useUsdPicking';
 
-/** Le strict nécessaire de Three : un rayon qui touche toujours un objet visible. */
+/** Just the bare minimum of Three: a ray that always hits a visible object. */
 const HIT = { name: 'mesh', visible: true, parent: null };
 const THREE = {
   Vector2: class {
@@ -39,7 +40,7 @@ const THREE = {
   },
 } as unknown as typeof import('three');
 
-/** Le prim que le rayon touche, et le component qui le porte. */
+/** The prim the ray hits, and the component carrying it. */
 const CHAIR = '/Kitchen_set/Props_grp/ChairB_1';
 const LEAF = '/Kitchen_set/Props_grp/ChairB_1/Geom/seat';
 
@@ -48,10 +49,10 @@ function setup(options: { swallowLeftPointerDown: boolean }) {
   document.body.appendChild(dom);
   dom.getBoundingClientRect = () => ({ left: 0, top: 0, width: 100, height: 100 }) as DOMRect;
 
-  // Le concurrent : posé en BULLE sur le même élément, comme les contrôles de caméra, et
-  // qui coupe net la chaîne pour le bouton qu'il traite (l'orbite, donc le gauche).
-  // `stopImmediatePropagation` — et non `stopPropagation` — est ce qui écarte les autres
-  // écouteurs du MÊME élément ; seule la phase de capture y échappe.
+  // The competitor: placed in the BUBBLE phase on the same element, like the camera controls, and
+  // cutting the chain for the button it handles (the orbit, therefore the left one).
+  // `stopImmediatePropagation` — and not `stopPropagation` — is what bypasses the other listeners
+  // of the SAME element; only the capture phase escapes it.
   if (options.swallowLeftPointerDown) {
     dom.addEventListener('pointerdown', (e) => {
       if (e.button === 0) e.stopImmediatePropagation();
@@ -63,14 +64,14 @@ function setup(options: { swallowLeftPointerDown: boolean }) {
 
   const handle = { dom, THREE, camera: {}, modelObject: { name: 'root' } };
   const onSelect = vi.fn();
-  // Le résolveur du viewer (`resolvePick`) : la feuille touchée, promue au component englobant,
-  // sauf si l'appelant demande la résolution exacte (Alt+clic).
+  // The viewer's resolver (`resolvePick`): the hit leaf, promoted to the enclosing component,
+  // unless the caller asks for the exact resolution (Alt+click).
   const resolve = vi.fn((_object: unknown, opts?: { exact?: boolean }) => (opts?.exact ? LEAF : CHAIR));
   renderHook(() => useUsdPicking(() => handle as never, true, onSelect, resolve as never));
   return { dom, onSelect, resolve };
 }
 
-/** Un clic complet, immobile, au même point. */
+/** A complete click, motionless, at the same point. */
 function click(dom: HTMLElement, button = 0) {
   const at = { clientX: 50, clientY: 50, button, bubbles: true, cancelable: true };
   dom.dispatchEvent(new PointerEvent('pointerdown', at));
@@ -82,20 +83,20 @@ beforeEach(() => {
 });
 
 describe('useUsdPicking', () => {
-  it('sélectionne le prim visé par un clic gauche', () => {
+  it('selects the prim targeted by a left click', () => {
     const { dom, onSelect } = setup({ swallowLeftPointerDown: false });
     click(dom);
     expect(onSelect).toHaveBeenCalledWith(CHAIR, { additive: false });
   });
 
-  it('sélectionne encore quand les contrôles de caméra coupent la propagation', () => {
-    // C'est LE cas qui cassait : écouteurs en bulle, `pointerdown` gauche jamais reçu.
+  it('still selects when the camera controls stop propagation', () => {
+    // This IS the case that was broken: bubble listeners, left `pointerdown` never received.
     const { dom, onSelect } = setup({ swallowLeftPointerDown: true });
     click(dom);
     expect(onSelect).toHaveBeenCalledWith(CHAIR, { additive: false });
   });
 
-  it('ne sélectionne pas quand le pointeur a glissé — c’est une orbite, pas un clic', () => {
+  it('does not select when the pointer slid — it is an orbit, not a click', () => {
     const { dom, onSelect } = setup({ swallowLeftPointerDown: true });
     dom.dispatchEvent(
       new PointerEvent('pointerdown', { clientX: 50, clientY: 50, button: 0, bubbles: true }),
@@ -104,7 +105,7 @@ describe('useUsdPicking', () => {
     expect(onSelect).not.toHaveBeenCalled();
   });
 
-  it('descend à la feuille exacte avec Alt — la pièce, pas l’objet entier', () => {
+  it('descends to the exact leaf with Alt — the part, not the whole object', () => {
     const { dom, onSelect, resolve } = setup({ swallowLeftPointerDown: true });
     const at = { clientX: 50, clientY: 50, button: 0, bubbles: true, altKey: true };
     dom.dispatchEvent(new PointerEvent('pointerdown', at));
@@ -113,13 +114,13 @@ describe('useUsdPicking', () => {
     expect(onSelect).toHaveBeenCalledWith(LEAF, { additive: false });
   });
 
-  it('demande la résolution promue quand Alt n’est pas enfoncé', () => {
+  it('requests the promoted resolution when Alt is not held', () => {
     const { dom, resolve } = setup({ swallowLeftPointerDown: true });
     click(dom);
     expect(resolve).toHaveBeenCalledWith(expect.anything(), { exact: false });
   });
 
-  it('ajoute à la sélection avec Ctrl', () => {
+  it('adds to the selection with Ctrl', () => {
     const { dom, onSelect } = setup({ swallowLeftPointerDown: true });
     const at = { clientX: 50, clientY: 50, button: 0, bubbles: true, ctrlKey: true };
     dom.dispatchEvent(new PointerEvent('pointerdown', at));

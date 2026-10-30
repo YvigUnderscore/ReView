@@ -21,31 +21,30 @@ import type { ReactNode } from 'react';
 import type { WidgetDragHandle } from './WidgetShell';
 
 /**
- * Mode réagencement d'une page composable — et **seul** module à connaître @dnd-kit (F5).
+ * Rearrange mode of a composable page — and the **only** module that knows @dnd-kit (F5).
  *
- * Les trois paquets (core, sortable, utilities) pèsent 16,8 ko gzip. Ils étaient dans le
- * fichier d'entrée, donc téléchargés par tout le monde sur toutes les pages, pour un geste
- * facultatif : déplacer des tuiles. Ils arrivent maintenant au moment où l'on entre en
- * édition, et la grille hors édition reste du HTML simple — capteurs, détection de
- * collision et annonces ARIA compris. Chaque page qui l'utilise doit donc l'importer en
- * `lazy()`, jamais directement.
+ * The three packages (core, sortable, utilities) weigh 16.8 kB gzip. They were in the entry
+ * file, and so downloaded by everyone on every page, for an optional gesture: moving tiles.
+ * They now arrive when entering edit mode, and the grid outside edit mode stays plain HTML —
+ * sensors, collision detection and ARIA announcements included. Every page that uses it must
+ * therefore import it through `lazy()`, never directly.
  *
- * Les identifiants circulent en `string` : c'est la page qui connaît son registre, et
- * c'est elle qui écarte ce qu'elle ne reconnaît pas.
+ * Identifiers travel as `string`: the page knows its own registry, and it is the one that
+ * discards what it does not recognise.
  */
 export interface WidgetSortableProps {
   ids: string[];
-  /** Classes de la grille, partagées avec le rendu hors édition : même mise en page. */
+  /** Grid classes, shared with the rendering outside edit mode: same layout. */
   className: string;
   onReorder: (from: string, to: string) => void;
-  /** Rend un bloc ; le troisième argument n'existe que dans ce mode. */
+  /** Renders a block; the third argument only exists in this mode. */
   renderWidget: (id: string, index: number, drag?: WidgetDragHandle) => ReactNode;
 }
 
 export default function WidgetSortable({ ids, className, onReorder, renderWidget }: WidgetSortableProps) {
   const sensors = useSensors(
-    // Un seuil de quelques pixels : sans lui, un simple clic sur un bloc démarrerait un
-    // glissement et avalerait le clic.
+    // A threshold of a few pixels: without it, a simple click on a block would start a
+    // drag and swallow the click.
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
@@ -69,7 +68,7 @@ export default function WidgetSortable({ ids, className, onReorder, renderWidget
   );
 }
 
-/** Un bloc rendu par `renderWidget`, augmenté de ce que `useSortable` lui donne. */
+/** A block rendered by `renderWidget`, augmented with what `useSortable` gives it. */
 function SortableWidget({
   id,
   index,
@@ -84,7 +83,7 @@ function SortableWidget({
     ref: setNodeRef,
     style: { transform: CSS.Translate.toString(transform), transition },
     dragging: isDragging,
-    // Attributs ARIA et écouteurs de dnd-kit, destinés tels quels à la poignée.
+    // dnd-kit's ARIA attributes and listeners, meant as-is for the handle.
     handleProps: { ...attributes, ...listeners },
   });
 }

@@ -5,7 +5,7 @@ import { describe, it, expect, afterEach } from 'vitest';
 import { applyAccent, hexToHsl } from './branding';
 
 describe('branding — hexToHsl (42.B №101)', () => {
-  it('convertit des couleurs de base', () => {
+  it('converts base colours', () => {
     expect(hexToHsl('#000000')).toBe('0 0% 0%');
     expect(hexToHsl('#ffffff')).toBe('0 0% 100%');
     expect(hexToHsl('#ff0000')).toBe('0 100% 50%');
@@ -13,11 +13,11 @@ describe('branding — hexToHsl (42.B №101)', () => {
     expect(hexToHsl('#0000ff')).toBe('240 100% 50%');
   });
 
-  it('accepte avec ou sans « # » et insensible à la casse', () => {
+  it('accepts with or without "#" and is case-insensitive', () => {
     expect(hexToHsl('00B3C4')).toBe(hexToHsl('#00b3c4'));
   });
 
-  it('renvoie null pour une entrée invalide', () => {
+  it('returns null for an invalid input', () => {
     expect(hexToHsl('#abc')).toBeNull();
     expect(hexToHsl('pas une couleur')).toBeNull();
     expect(hexToHsl('')).toBeNull();
@@ -25,12 +25,12 @@ describe('branding — hexToHsl (42.B №101)', () => {
 });
 
 /**
- * L'accent choisi par un administrateur sert à trois choses : l'aplat des boutons, la
- * couleur du texte accentué, et l'anneau de focus. Les deux dernières se lisent SUR le
- * fond : appliquer la même teinte vive aux deux thèmes laissait `#1ec6dc` à 1,93:1 sur le
- * fond clair — focus clavier invisible, liens illisibles.
+ * The accent chosen by an administrator serves three purposes: the button fill, the colour of
+ * accented text, and the focus ring. The last two are read ON the background: applying the same
+ * vivid hue to both themes left `#1ec6dc` at 1.93:1 on the light background — invisible keyboard
+ * focus, unreadable links.
  */
-describe('branding — l’accent studio s’adapte au thème', () => {
+describe('branding — the studio accent adapts to the theme', () => {
   const root = document.documentElement;
   const lightnessOf = (prop: string) =>
     Number.parseFloat(root.style.getPropertyValue(prop).split(' ')[2] ?? '');
@@ -40,26 +40,26 @@ describe('branding — l’accent studio s’adapte au thème', () => {
     root.classList.remove('dark');
   });
 
-  it('assombrit un accent trop clair en thème clair', () => {
+  it('darkens an accent that is too light in light theme', () => {
     root.classList.remove('dark');
-    applyAccent('#1ec6dc'); // L = 49 %
+    applyAccent('#1ec6dc'); // L = 49%
     expect(lightnessOf('--primary')).toBeLessThanOrEqual(38);
     expect(lightnessOf('--ring')).toBeLessThanOrEqual(38);
   });
 
-  it('éclaircit un accent trop sombre en thème sombre', () => {
+  it('lightens an accent that is too dark in dark theme', () => {
     root.classList.add('dark');
-    applyAccent('#0a3d46'); // accent très sombre
+    applyAccent('#0a3d46'); // very dark accent
     expect(lightnessOf('--primary')).toBeGreaterThanOrEqual(45);
   });
 
-  it('laisse un accent déjà lisible tel quel', () => {
+  it('leaves an accent that is already readable as is', () => {
     root.classList.add('dark');
     applyAccent('#1ec6dc');
     expect(lightnessOf('--primary')).toBeCloseTo(49, 0);
   });
 
-  it('rend la main aux tokens du thème quand l’accent est retiré', () => {
+  it('hands control back to the theme tokens when the accent is removed', () => {
     applyAccent('#1ec6dc');
     applyAccent(null);
     expect(root.style.getPropertyValue('--primary')).toBe('');

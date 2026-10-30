@@ -24,7 +24,7 @@ import * as ApiTokenService from './ApiTokenService';
 
 const HASH = bcrypt.hashSync('Motdepasse1', 4);
 
-/** Erreur applicative telle que la voit le middleware d'erreur (statut + code). */
+/** Application error as the error middleware sees it (status + code). */
 const caught = async (fn: () => Promise<unknown>): Promise<AppError> => {
   try {
     await fn();
@@ -45,34 +45,34 @@ beforeEach(() => {
 });
 
 describe('assertActorPassword', () => {
-  it('laisse passer le bon mot de passe', async () => {
+  it('accepts the correct password', async () => {
     db.user.findUnique.mockResolvedValue({ password: HASH });
     await expect(ApiTokenService.assertActorPassword(1, 'Motdepasse1')).resolves.toBeUndefined();
   });
 
-  // 403 et non 401 : un 401 déclencherait le renouvellement de session côté client, qui
-  // purge la session quand il échoue — une faute de frappe déconnecterait l'utilisateur.
-  it('refuse un mot de passe faux avec un 403 codé', async () => {
+  // 403 and not 401: a 401 would trigger session renewal on the client side, which purges the session
+  // when it fails; a typo would log the user out.
+  it('refuses a wrong password with a coded 403', async () => {
     db.user.findUnique.mockResolvedValue({ password: HASH });
     const err = await caught(() => ApiTokenService.assertActorPassword(1, 'MauvaisMdp1'));
     expect(err.statusCode).toBe(403);
     expect(err.code).toBe('CURRENT_PASSWORD_REQUIRED');
   });
 
-  it('refuse l’absence de mot de passe', async () => {
+  it('refuses a missing password', async () => {
     db.user.findUnique.mockResolvedValue({ password: HASH });
     const err = await caught(() => ApiTokenService.assertActorPassword(1, undefined));
     expect(err.statusCode).toBe(403);
   });
 
-  it('refuse un compte introuvable sans comparer quoi que ce soit', async () => {
+  it('refuses an unknown account without comparing anything', async () => {
     const err = await caught(() => ApiTokenService.assertActorPassword(404, 'Motdepasse1'));
     expect(err.statusCode).toBe(403);
   });
 });
 
 describe('createService', () => {
-  it('rejette un scope inconnu en le nommant', async () => {
+  it('rejects an unknown scope, naming it', async () => {
     const err = await caught(() =>
       ApiTokenService.createService(1, { name: 'Farm', scopes: ['versions:write', 'chaos:write'] }),
     );
@@ -82,7 +82,7 @@ describe('createService', () => {
     expect(db.user.create).not.toHaveBeenCalled();
   });
 
-  it('rejette un projet de cantonnement inexistant', async () => {
+  it('rejects a nonexistent scoping project', async () => {
     db.project.findFirst.mockResolvedValue(null);
     const err = await caught(() =>
       ApiTokenService.createService(1, { name: 'Farm', scopes: ['read'], projectId: 77 }),
@@ -91,7 +91,7 @@ describe('createService', () => {
     expect(db.apiToken.create).not.toHaveBeenCalled();
   });
 
-  it('crée le compte porteur, le cantonne au projet et rend le secret une seule fois', async () => {
+  it('creates the bearer account, scopes it to the project and returns the secret only once', async () => {
     const out = await ApiTokenService.createService(1, {
       name: 'Render farm',
       scopes: ['versions:write'],
@@ -109,7 +109,7 @@ describe('createService', () => {
         }),
       }),
     );
-    // Sans membership, un porteur ARTIST ne verrait rien du projet qu'il alimente.
+    // Without membership, an ARTIST bearer would see nothing of the project it feeds.
     expect(db.projectMembership.upsert).toHaveBeenCalledWith(
       expect.objectContaining({ create: { userId: 55, projectId: 4 } }),
     );
@@ -118,22 +118,22 @@ describe('createService', () => {
     expect(data.expiresAt.getTime()).toBeGreaterThan(Date.now());
   });
 
-  it('n’expire jamais quand aucune durée n’est donnée', async () => {
+  it('never expires when no duration is given', async () => {
     await ApiTokenService.createService(1, { name: 'Farm', scopes: ['read'] });
     const data = db.apiToken.create.mock.calls[0]?.[0]?.data as { expiresAt: Date | null };
     expect(data.expiresAt).toBeNull();
     expect(db.projectMembership.upsert).not.toHaveBeenCalled();
   });
 
-  it('réutilise le compte de service existant et ajuste son rôle', async () => {
+  it('reuses the existing service account and adjusts its role', async () => {
     db.user.findUnique.mockResolvedValue({ id: 55, isService: true });
     await ApiTokenService.createService(1, { name: 'Render farm', scopes: ['read'], role: 'CLIENT' });
     expect(db.user.create).not.toHaveBeenCalled();
     expect(db.user.update).toHaveBeenCalledWith({ where: { id: 55 }, data: { role: 'CLIENT' } });
   });
 
-  // Sans cette garde, nommer un token comme une personne détournerait son compte.
-  it('refuse de s’adosser à un compte humain portant la même adresse', async () => {
+  // Without this guard, naming a token like a person would hijack that person's account.
+  it('refuses to bind to a human account carrying the same address', async () => {
     db.user.findUnique.mockResolvedValue({ id: 3, isService: false });
     const err = await caught(() =>
       ApiTokenService.createService(1, { name: 'Render farm', scopes: ['read'] }),
@@ -141,14 +141,14 @@ describe('createService', () => {
     expect(err.statusCode).toBe(409);
   });
 
-  it('refuse un nom sans caractère exploitable', async () => {
+  it('refuses a name with no usable character', async () => {
     const err = await caught(() => ApiTokenService.createService(1, { name: '???', scopes: ['read'] }));
     expect(err.statusCode).toBe(400);
   });
 });
 
-describe('listService et revokeService', () => {
-  it('ne liste que les tokens de service vivants, avec porteur et projet', async () => {
+describe('listService and revokeService', () => {
+  it('lists only live service tokens, with bearer and project', async () => {
     db.apiToken.findMany.mockResolvedValue([]);
     await ApiTokenService.listService();
     const args = db.apiToken.findMany.mock.calls[0]?.[0] as {
@@ -161,14 +161,36 @@ describe('listService et revokeService', () => {
     expect(args.select).not.toHaveProperty('tokenHash');
   });
 
-  it('révoque un token vivant', async () => {
+  it('revokes a live token', async () => {
     db.apiToken.updateMany.mockResolvedValue({ count: 1 });
     await expect(ApiTokenService.revokeService(1, 9)).resolves.toBeUndefined();
   });
 
-  it('signale un token déjà révoqué ou inconnu', async () => {
+  it('reports a token already revoked or unknown', async () => {
     db.apiToken.updateMany.mockResolvedValue({ count: 0 });
     const err = await caught(() => ApiTokenService.revokeService(1, 9));
     expect(err.statusCode).toBe(404);
+  });
+});
+describe('listPersonal and revokePersonal', () => {
+  it("lists the account's live tokens, never their hash", async () => {
+    db.apiToken.findMany.mockResolvedValue([]);
+    await ApiTokenService.listPersonal(7);
+    const args = db.apiToken.findMany.mock.calls[0]?.[0] as {
+      where: Record<string, unknown>;
+      select: Record<string, unknown>;
+    };
+    expect(args.where).toEqual({ userId: 7, revokedAt: null });
+    expect(args.select).not.toHaveProperty('tokenHash');
+  });
+
+  it('revokes only a token of the account, 404 otherwise', async () => {
+    db.apiToken.updateMany.mockResolvedValueOnce({ count: 1 });
+    await expect(ApiTokenService.revokePersonal(7, 3)).resolves.toBeUndefined();
+    expect(db.apiToken.updateMany.mock.calls[0]?.[0]).toMatchObject({
+      where: { id: 3, userId: 7, revokedAt: null },
+    });
+    db.apiToken.updateMany.mockResolvedValueOnce({ count: 0 });
+    expect((await caught(() => ApiTokenService.revokePersonal(7, 4))).statusCode).toBe(404);
   });
 });

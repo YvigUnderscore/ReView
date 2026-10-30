@@ -24,8 +24,8 @@ import type { ReviewComment, TimelineMarker } from '../types/api';
 import type { PoiPoint } from '../pages/review/poi/poiPoints';
 import { useT } from '../i18n';
 
-/** Fil de commentaires de review (racines + réponses imbriquées, clic droit par carte),
- * scandé par les marqueurs de timeline en séparateurs cliquables (retours 34). */
+/** Review comment thread (roots + nested replies, right click per card),
+ * scanned by timeline markers as clickable separators (feedback 34). */
 export default function ReviewComments({
   comments,
   mediaObjectId,
@@ -48,40 +48,40 @@ export default function ReviewComments({
   reload: () => void;
   fps: number;
   startFrame: number;
-  /** Commentaire actuellement affiché dans le viewer (carte mise en avant). */
+  /** Comment currently displayed in the viewer (highlighted card). */
   selectedId: number | null;
-  /** Sélectionne un commentaire : seek + annotation + caméra restaurés ensemble. */
+  /** Selects a comment: seek + annotation + camera restored together. */
   onSelect: (c: ReviewComment) => void;
-  /** Marqueurs de timeline (34.C, vidéo) — affichés en séparateurs du fil. */
+  /** Timeline markers (34.C, video): displayed as separators of the thread. */
   markers?: TimelineMarker[];
-  /** Clic sur un séparateur : seek à la frame du marqueur. */
+  /** Click on a separator: seek to the marker's frame. */
   onMarkerSeek?: (m: TimelineMarker) => void;
   /**
-   * Entrées de menu propres à l'écran, posées en tête du clic droit — le montage y ajoute
-   * « renvoyer sur la review du shot ». Les actions communes restent en dessous, à leur
-   * place habituelle : un même geste ne doit pas ouvrir un menu différent selon la page.
+   * Screen-specific menu entries, placed at the top of the right click; the mount adds to them
+   * "send back to the shot's review". The common actions remain below, in their
+   * usual place: one gesture must not open a different menu depending on the page.
    */
   extraActions?: (comment: ReviewComment) => ReactNode;
-  /** Retour caméra sur un point d'intérêt relu (numéro cliqué dans une carte). */
+  /** Camera return to a point of interest re-read (number clicked in a card). */
   onPoiFocus?: (point: PoiPoint, index: number) => void;
 }) {
   const t = useT();
   const isManager = currentUserRole === 'ADMIN' || currentUserRole === 'SUPERVISOR';
   /**
-   * Créer une tâche depuis un retour est un geste de production, et le droit s'en lit sur
-   * le rôle EFFECTIF du projet : le rôle GLOBAL du compte cachait l'entrée à un superviseur
-   * nommé sur CE projet-là — que le serveur, lui, autorise.
+   * Creating a task from a feedback is a production gesture, and the right to do so is read from
+   * the project's EFFECTIVE role: the account's GLOBAL role hid the entry from a supervisor
+   * named on THAT project, whom the server does authorize.
    */
   const projectId = useProjectContext((s) => s.projectId);
   const { canManage: canCreateTask } = useProjectRole(projectId ?? 0);
-  // Le nom se demande AVANT la création (Phase 50) : c'est lui qu'on relit sur le kanban.
+  // The name is asked BEFORE creation (Phase 50): it is what one reads on the kanban.
   const commentTask = useCommentTaskDialog();
-  // Filtre du fil (D1) : sur une review chargée, on veut lire ce qui reste ouvert.
+  // Thread filter (D1): on a loaded review, one wants to read what remains open.
   const [filter, setFilter] = useState<CommentState | null>(null);
   const setState = useSetCommentState(mediaObjectId);
   const setVisibility = useSetCommentVisibility(mediaObjectId);
 
-  // Lien profond (32.E) : URL de la review courante ciblant ce commentaire.
+  // Deep link (32.E): URL of the current review targeting this comment.
   const copyLink = (c: ReviewComment) =>
     void navigator.clipboard
       .writeText(commentLink(window.location.origin, window.location.pathname, c.id))

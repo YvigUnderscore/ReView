@@ -5,8 +5,8 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { registerSceneHelpers, renderWithoutHelpers, sceneHelperCount } from './sceneHelpers';
 
-describe('sceneHelpers — les objets d’aide hors de la passe PiP', () => {
-  it('masque le temps du rendu, puis restaure', () => {
+describe('sceneHelpers — helper objects kept out of the PiP pass', () => {
+  it('hides them during the render, then restores them', () => {
     const helper = new THREE.Object3D();
     const off = registerSceneHelpers(helper);
     let seen: boolean | null = null;
@@ -18,28 +18,28 @@ describe('sceneHelpers — les objets d’aide hors de la passe PiP', () => {
     off();
   });
 
-  it('laisse caché ce qui l’était déjà pour une autre raison', () => {
+  it('leaves hidden what was already hidden for another reason', () => {
     const helper = new THREE.Object3D();
-    helper.visible = false; // `setVisible(false)` du rig : pas d'animation, pas d'édition
+    helper.visible = false; // `setVisible(false)` of the rig: no animation, no editing
     const off = registerSceneHelpers(helper);
     renderWithoutHelpers(() => undefined);
     expect(helper.visible).toBe(false);
     off();
   });
 
-  it('restaure même si le rendu lève', () => {
+  it('restores even if the render throws', () => {
     const helper = new THREE.Object3D();
     const off = registerSceneHelpers(helper);
     expect(() =>
       renderWithoutHelpers(() => {
-        throw new Error('contexte WebGL perdu');
+        throw new Error('WebGL context lost');
       }),
     ).toThrow();
     expect(helper.visible).toBe(true);
     off();
   });
 
-  it('le retrait rendu par l’enregistrement vide bien le registre (démontage du rig)', () => {
+  it('the removal returned by the registration properly empties the registry (rig unmount)', () => {
     const before = sceneHelperCount();
     const off = registerSceneHelpers(new THREE.Object3D(), new THREE.Object3D());
     expect(sceneHelperCount()).toBe(before + 2);

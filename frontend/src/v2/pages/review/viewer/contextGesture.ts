@@ -4,35 +4,35 @@
 import { CLICK_SLOP_PX, isClickGesture } from '../three/usdPicking';
 
 /**
- * Partage du bouton droit dans les viewers spatiaux (Phase 50, lot 8).
+ * Right-button handling in spatial viewers (Phase 50, lot 8).
  *
- * Le clic droit y porte deux gestes contradictoires : **maintenu**, c'est le vol (regard souris
- * + ZQSD/WASD) ; **bref**, c'est le menu contextuel, qui porte les actions partout ailleurs dans
- * ReView. Les départager demande un seuil, et un seuil se discute : on l'écrit donc une fois,
- * en clair, plutôt que de le disperser dans les gestionnaires.
+ * A right click there carries two conflicting gestures: **held**, it is fly mode (mouse look
+ * + ZQSD/WASD); **short**, it is the context menu, which hosts the actions everywhere else in
+ * ReView. Telling them apart takes a threshold, and a threshold is worth debating: it is
+ * therefore written down once, explicitly, instead of being scattered across the handlers.
  *
- * Deux conditions, car l'une sans l'autre laisse passer un faux positif :
- *  - **immobile** — même tolérance que le clic gauche (`CLICK_SLOP_PX`), un vol commence presque
- *    toujours par un mouvement de souris ;
- *  - **court** — un clic droit maintenu en place, sans bouger, reste une intention de vol (on
- *    s'apprête à avancer au clavier) et ne doit pas ouvrir de menu au relâchement.
+ * Two conditions are needed, since either one alone lets a false positive through:
+ *  - **still**: same tolerance as the left click (`CLICK_SLOP_PX`), because a fly almost
+ *    always starts with a mouse movement;
+ *  - **short**: a right click held in place, without moving, is still a fly intent (the user
+ *    was about to move with the keyboard) and must not open a menu on release.
  */
 
-/** Déplacement maximal du pointeur pour un clic droit bref (px). */
+/** Maximum pointer displacement for a short right click (px). */
 export const CONTEXT_TAP_SLOP_PX = CLICK_SLOP_PX;
 
-/** Durée maximale d'appui pour un clic droit bref (ms) — au-delà, c'était un vol. */
+/** Maximum press duration for a short right click (ms); beyond this it was a fly. */
 export const CONTEXT_TAP_MAX_MS = 250;
 
 export interface ContextTap {
-  /** Déplacement du pointeur entre l'appui et le relâchement (px). */
+  /** Pointer displacement between press and release (px). */
   dx: number;
   dy: number;
-  /** Durée d'appui du bouton droit (ms). */
+  /** Right-button press duration (ms). */
   heldMs: number;
 }
 
-/** Ce geste du bouton droit demande-t-il le menu contextuel (et non un vol) ? */
+/** Should this right-button gesture open the context menu (rather than fly)? */
 export function isContextTap({ dx, dy, heldMs }: ContextTap): boolean {
   return isClickGesture(dx, dy, CONTEXT_TAP_SLOP_PX) && heldMs <= CONTEXT_TAP_MAX_MS;
 }

@@ -3,7 +3,7 @@
 
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { RefreshCw } from 'lucide-react';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { useBranding } from '../../lib/branding';
 import { Button } from '../../components/ui/button';
@@ -81,9 +81,9 @@ export default function SystemTab() {
 }
 
 /**
- * Licence de l'instance. L'AGPL §13 oblige à offrir le code source **correspondant** :
- * un studio qui fait tourner une version modifiée doit renseigner ses propres sources
- * (onglet Réglages → « Code source (AGPL §13) »), sinon le lien renvoie vers l'amont.
+ * Instance licence. AGPL §13 requires offering the **corresponding** source code:
+ * a studio running a modified version must fill in its own sources
+ * (Settings tab → "Source code (AGPL §13)"), otherwise the link points to upstream.
  */
 function LicensePanel() {
   const t = useT();

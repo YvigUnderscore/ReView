@@ -2,14 +2,14 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 import { afterEach, describe, expect, it } from 'vitest';
-import { httpError, mockApi } from '../../../../test/apiMock';
+import { httpError, mockApi } from '@/test/apiMock';
 import { MAX_SPLAT_EDIT_BLOB_BYTES, uploadSplatEditBlobs } from './splatEditUpload';
 import type { SplatEditDraft } from './splatEditPart';
 
 /**
- * Le dépôt des deux binaires d'une proposition. Ce qui est vérifié ici est ce qui coûte cher à
- * découvrir plus tard : qu'on ne téléverse RIEN quand il n'y a rien à téléverser, que les deux
- * refus se prennent avant la première requête, et que la part reçoit des clés — pas des octets.
+ * The upload of the two binaries of a proposal. What is checked here is what is expensive to
+ * discover later: that NOTHING is uploaded when there is nothing to upload, that the two refusals
+ * are taken before the first request, and that the part receives keys, not bytes.
  */
 const draft = (over: Partial<SplatEditDraft> = {}): SplatEditDraft => ({
   edits: { transform: null, volumes: [] },
@@ -25,8 +25,8 @@ afterEach(() => {
 });
 
 /**
- * Le PUT vers MinIO passe par le même `fetch` bouchonné que l'API : la route `PUT /put` est
- * donc le dépôt lui-même, et `called` compte les objets réellement déposés.
+ * The PUT to MinIO goes through the same stubbed `fetch` as the API: the `PUT /put` route is
+ * therefore the upload itself, and `called` counts the objects actually deposited.
  */
 function presign(ok = true) {
   api = mockApi({
@@ -39,8 +39,8 @@ function presign(ok = true) {
   return api;
 }
 
-describe('uploadSplatEditBlobs — les binaires partent en pièces jointes', () => {
-  it('dépose le masque et rend sa clé, son compte et sa pièce jointe', async () => {
+describe('uploadSplatEditBlobs — the binaries go as attachments', () => {
+  it('deposits the mask and returns its key, count and attachment', async () => {
     const calls = presign();
     const out = await uploadSplatEditBlobs(draft(), 0);
     const key = 'comments/attachments/7/splat-mask.bin';
@@ -54,7 +54,7 @@ describe('uploadSplatEditBlobs — les binaires partent en pièces jointes', () 
     expect(calls.called('PUT /put')).toHaveLength(1);
   });
 
-  it('dépose les deux quand l’auteur a supprimé ET transformé un sous-ensemble', async () => {
+  it('deposits both when the author deleted AND transformed a subset', async () => {
     presign();
     const out = await uploadSplatEditBlobs(draft({ subset: { bytes: new Uint8Array(16), count: 1 } }), 0);
     expect(out.refs.mask).not.toBeNull();
@@ -62,7 +62,7 @@ describe('uploadSplatEditBlobs — les binaires partent en pièces jointes', () 
     expect(out.attachments).toHaveLength(2);
   });
 
-  it('ne coûte aucune requête quand il n’y a rien à déposer', async () => {
+  it('costs no request when there is nothing to deposit', async () => {
     const calls = presign();
     const nothing = await uploadSplatEditBlobs(draft({ mask: null }), 0);
     expect(nothing).toEqual({ refs: { mask: null, subset: null }, attachments: [], dropped: null });
@@ -70,7 +70,7 @@ describe('uploadSplatEditBlobs — les binaires partent en pièces jointes', () 
     expect(calls.calls).toHaveLength(0);
   });
 
-  it('refuse un blob au-dessus du plafond, AVANT de téléverser', async () => {
+  it('refuses a blob above the cap, BEFORE uploading', async () => {
     const calls = presign();
     const heavy = draft({ mask: { bytes: new Uint8Array(MAX_SPLAT_EDIT_BLOB_BYTES + 1), count: 9 } });
     const out = await uploadSplatEditBlobs(heavy, 0);
@@ -79,14 +79,14 @@ describe('uploadSplatEditBlobs — les binaires partent en pièces jointes', () 
     expect(calls.called('POST /api/comments/attachments/presign')).toHaveLength(0);
   });
 
-  it('refuse quand le commentaire n’a plus de place dans ses pièces jointes', async () => {
+  it('refuses when the comment no longer has room in its attachments', async () => {
     const calls = presign();
     const out = await uploadSplatEditBlobs(draft({ subset: { bytes: new Uint8Array(8), count: 1 } }), 7);
     expect(out.dropped).toBe('room');
     expect(calls.called('POST /api/comments/attachments/presign')).toHaveLength(0);
   });
 
-  it('remonte un échec de dépôt plutôt que d’annoncer une clé qui ne contient rien', async () => {
+  it('reports a deposit failure rather than announcing a key that contains nothing', async () => {
     presign(false);
     await expect(uploadSplatEditBlobs(draft(), 0)).rejects.toThrow();
   });

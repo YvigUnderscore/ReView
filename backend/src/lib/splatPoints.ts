@@ -6,41 +6,41 @@ import { open } from 'node:fs/promises';
 import type { Readable } from 'node:stream';
 
 /**
- * Lecture **échantillonnée** d'un fichier gaussian splat pour en tirer un nuage de points
- * (position + couleur) exploitable par le rasteriseur de vignettes (`lib/pointThumbnail`).
+ * Samples a Gaussian splat file to extract a point cloud (position + color)
+ * usable by the thumbnail rasterizer (`lib/pointThumbnail`).
  *
- * Pourquoi maison : aucun moteur de rendu headless ne lit les gaussiennes. Blender ne les
- * connaît pas, et la seule autre option honnête serait d'attendre qu'un humain ouvre la
- * review pour capturer le canvas. Or un splat n'a pas besoin d'être *rendu* pour donner une
- * vignette lisible : projeter quelques dizaines de milliers de centres coloriés suffit
- * largement à reconnaître l'objet dans une liste.
+ * Why in-house: no headless rendering engine reads Gaussians. Blender does not
+ * know them, and the only other honest option would be to wait for a human to open
+ * the review and capture the canvas. A splat does not need to be *rendered* to give a
+ * readable thumbnail: projecting a few tens of thousands of colored centers is enough
+ * to recognize the object in a list.
  *
- * Le fichier n'est jamais chargé en mémoire : on lit l'en-tête, puis on parcourt les
- * enregistrements en flux en n'en retenant qu'un sur `step`. Un splat de 2 Go se lit donc
- * sans pic mémoire.
+ * The file is never loaded into memory: we read the header, then walk the records as
+ * a stream, keeping only one out of every `step`. A 2 GB splat is therefore read
+ * without a memory spike.
  *
- * Formats couverts : `.ply` binaire (le format de sortie de tous les entraîneurs) et
- * `.splat` (32 octets par splat). **Volontairement pas** `.spz`, `.ksplat`, `.sog`/`.sogs` :
- * conteneurs compressés dont une lecture approximative produirait une image fausse sans
- * qu'on s'en aperçoive — mieux vaut ne pas enfiler le travail (cf. `spatialThumbSource`).
+ * Supported formats: binary `.ply` (the output format of all trainers) and `.splat`
+ * (32 bytes per splat). **Deliberately not** `.spz`, `.ksplat`, `.sog`/`.sogs`:
+ * compressed containers where an approximate read would produce a wrong image without
+ * anyone noticing — better not to take on the work (cf. `spatialThumbSource`).
  */
 
-/** Conteneurs de splat dont on sait extraire un nuage de points. */
+/** Splat containers from which a point cloud can be extracted. */
 export const SPLAT_PREVIEW_EXTENSIONS = ['.ply', '.splat'] as const;
 
 export const isSplatPreviewSupported = (ext: string): boolean =>
   (SPLAT_PREVIEW_EXTENSIONS as readonly string[]).includes(ext.toLowerCase());
 
-/** En-tête PLY lu au plus sur cette taille : au-delà, le fichier n'est pas un PLY sain. */
+/** Maximum size up to which the PLY header is read: beyond it, the file is not a healthy PLY. */
 export const PLY_HEADER_MAX_BYTES = 128 * 1024;
 
-/** Coefficient SH degré 0 — `f_dc_*` est un coefficient, pas une couleur. */
+/** Degree-0 SH coefficient — `f_dc_*` is a coefficient, not a color. */
 export const SH_C0 = 0.28209479177387814;
 
-/** En-dessous, la gaussienne est transparente : la retenir salirait la vignette. */
+/** Below this, the Gaussian is transparent: keeping it would dirty the thumbnail. */
 export const MIN_VISIBLE_ALPHA = 0.12;
 
-/** Nuage échantillonné : positions XYZ (3 flottants/point) et couleurs RGB (3 octets/point). */
+/** Sampled cloud: XYZ positions (3 floats per point) and RGB colors (3 bytes per point). */
 export interface PointCloud {
   count: number;
   positions: Float32Array;
@@ -84,19 +84,19 @@ interface FieldRef {
   type: PlyScalar;
 }
 
-/** Description d'un enregistrement binaire à taille fixe : de quoi lire un point. */
+/** Description of a fixed-size binary record: what is needed to read one point. */
 export interface SplatLayout {
   rowBytes: number;
   dataOffset: number;
   count: number;
   littleEndian: boolean;
   pos: [FieldRef, FieldRef, FieldRef];
-  /** Couleur déjà en octets (PLY `red/green/blue`, `.splat`). */
+  /** Color already in bytes (PLY `red/green/blue`, `.splat`). */
   rgb: [FieldRef, FieldRef, FieldRef] | null;
-  /** Couleur en coefficients SH degré 0 (`f_dc_*`), forme usuelle des gaussiennes. */
+  /** Color as degree-0 SH coefficients (`f_dc_*`), the usual form for Gaussians. */
   dc: [FieldRef, FieldRef, FieldRef] | null;
   alpha: FieldRef | null;
-  /** `logit` : opacité gaussienne (sigmoïde à appliquer) ; `byte` : 0-255 direct. */
+  /** `logit`: Gaussian opacity (sigmoid to apply); `byte`: 0-255 used directly. */
   alphaScale: 'logit' | 'byte';
 }
 
@@ -125,7 +125,7 @@ function readScalar(buf: Buffer, off: number, type: PlyScalar, le: boolean): num
 
 const clamp255 = (v: number): number => (v <= 0 ? 0 : v >= 255 ? 255 : Math.round(v));
 
-/** Un point lu dans un enregistrement, couleur normalisée en octets et alpha en 0→1. */
+/** A point read from a record, color normalized to bytes and alpha in 0→1. */
 export interface SplatPoint {
   x: number;
   y: number;
@@ -136,7 +136,7 @@ export interface SplatPoint {
   a: number;
 }
 
-/** Lit un enregistrement complet à l'offset donné. */
+/** Reads a complete record at the given offset. */
 export function readPoint(buf: Buffer, at: number, layout: SplatLayout): SplatPoint {
   const le = layout.littleEndian;
   const f = (ref: FieldRef): number => readScalar(buf, at + ref.offset, ref.type, le);
@@ -162,12 +162,12 @@ export function readPoint(buf: Buffer, at: number, layout: SplatLayout): SplatPo
 }
 
 /**
- * Analyse l'en-tête d'un PLY et décrit l'enregistrement de l'élément `vertex`.
+ * Parses a PLY header and describes the record of the `vertex` element.
  *
- * Refus explicites (avec motif, pour que le worker le journalise) : PLY ASCII, PLY compressé
- * PlayCanvas (élément `chunk` + positions empaquetées), propriété de type liste dans les
- * sommets — dans les trois cas la taille d'enregistrement n'est pas fixe ou les valeurs ne
- * sont pas celles qu'on croit lire.
+ * Explicit refusals (with a reason, so the worker can log it): ASCII PLY, PlayCanvas
+ * compressed PLY (`chunk` element + packed positions), list-type property in the
+ * vertices. In all three cases the record size is not fixed or the values are not the
+ * ones we would read.
  */
 export function parsePlyHeader(head: Buffer): PlyHeaderResult {
   if (head.length < 4 || head.subarray(0, 3).toString('latin1') !== 'ply')
@@ -201,8 +201,8 @@ export function parsePlyHeader(head: Buffer): PlyHeaderResult {
       littleEndian = fmt === 'binary_little_endian';
     } else if (parts[0] === 'element') {
       element = parts[1] ?? null;
-      // Un élément `chunk` signe un PLY compressé PlayCanvas : les positions y sont
-      // empaquetées par blocs, les lire comme des flottants donnerait un nuage aberrant.
+      // A `chunk` element marks a PlayCanvas compressed PLY: positions are packed in
+      // blocks there, and reading them as floats would give an aberrant cloud.
       if (element === 'chunk') return { ok: false, reason: 'compressed-ply' };
       if (element === 'vertex') count = Number(parts[2] ?? 0);
     } else if (parts[0] === 'property' && element === 'vertex') {
@@ -239,7 +239,7 @@ export function parsePlyHeader(head: Buffer): PlyHeaderResult {
   };
 }
 
-/** Enregistrement du format `.splat` (antimatter15) : 32 octets, position + échelle + RGBA + quaternion. */
+/** Record of the `.splat` format (antimatter15): 32 bytes, position + scale + RGBA + quaternion. */
 export function splatLayout(fileSize: number): SplatLayout | null {
   if (fileSize <= 0 || fileSize % 32 !== 0) return null;
   return {
@@ -263,14 +263,14 @@ export function splatLayout(fileSize: number): SplatLayout | null {
   };
 }
 
-/** Un point sur `step` est retenu : le pas qui ramène `count` sous `maxPoints`. */
+/** One point out of `step` is kept: the stride that brings `count` below `maxPoints`. */
 export const samplingStep = (count: number, maxPoints: number): number =>
   count <= maxPoints || maxPoints <= 0 ? 1 : Math.ceil(count / maxPoints);
 
 /**
- * Parcourt le flux d'enregistrements et retient un point sur `step`, en écartant les
- * gaussiennes trop transparentes. Le flux est consommé jusqu'au dernier point utile puis
- * abandonné : inutile de lire la queue du fichier quand l'échantillon est complet.
+ * Walks the record stream and keeps one point out of `step`, dropping Gaussians that
+ * are too transparent. The stream is consumed up to the last useful point and then
+ * abandoned: there is no need to read the tail of the file once the sample is complete.
  */
 export async function collectPoints(
   stream: Readable,
@@ -320,9 +320,9 @@ export async function collectPoints(
 export type SplatReadResult = { ok: true; cloud: PointCloud } | { ok: false; reason: string };
 
 /**
- * Lit un fichier splat sur disque et en tire un nuage échantillonné.
- * Ne lève jamais pour un fichier inexploitable : le motif est renvoyé, le worker le journalise
- * et le média reste simplement sans vignette.
+ * Reads a splat file from disk and extracts a sampled cloud from it.
+ * Never throws for an unusable file: the reason is returned, the worker logs it and the
+ * media simply stays without a thumbnail.
  */
 export async function readSplatCloud(
   path: string,

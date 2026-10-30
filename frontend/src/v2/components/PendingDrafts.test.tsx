@@ -8,12 +8,12 @@ import PendingDrafts from './PendingDrafts';
 import { t } from '../i18n';
 
 /**
- * La pastille des brouillons en attente, devenue conditionnelle (Phase 50).
+ * The pending-drafts badge, now conditional (Phase 50).
  *
- * Ce qui se vérifie : sans le réglage `draftMode`, la pastille ne demande RIEN au serveur.
- * Un média naît publié — la liste serait vide sur toutes les instances, et l'aller-retour
- * serait payé par chaque page de chaque compte. Avec le réglage, tout revient : la requête
- * part et la pastille compte ce qu'elle trouve.
+ * What is verified: without the `draftMode` setting, the badge asks the server for NOTHING.
+ * A media is born published: the list would be empty on every instance, and the round trip
+ * would be paid by every page of every account. With the setting, everything returns: the request
+ * goes out and the badge counts what it finds.
  */
 
 const DRAFT = {
@@ -29,7 +29,7 @@ const DRAFT = {
   reviewRequest: { requireNote: false, minNoteLength: 5 },
 };
 
-/** Branding servi par la coquille — c'est lui qui porte le réglage. */
+/** Branding served by the shell: it is what carries the setting. */
 const branding = (draftMode: boolean) => ({
   name: 'Test Studio',
   accent: null,
@@ -39,20 +39,20 @@ const branding = (draftMode: boolean) => ({
 });
 
 describe('PendingDrafts', () => {
-  it('ne demande pas la liste des brouillons quand le studio publie d’office', async () => {
+  it('does not request the list of drafts when the studio publishes by default', async () => {
     const { api } = renderWithProviders(<PendingDrafts />, {
       api: {
         'GET /api/studio/branding': branding(false),
         'GET /api/media/drafts': { drafts: [DRAFT] },
       },
     });
-    // Le branding est bien lu — c'est la preuve que le composant a eu sa chance.
+    // The branding is indeed read: that is the proof the component had its chance.
     await waitFor(() => expect(api.called('GET /api/studio/branding').length).toBeGreaterThan(0));
     expect(api.called('GET /api/media/drafts')).toHaveLength(0);
     expect(screen.queryByText(t('drafts.count', { count: 1 }))).toBeNull();
   });
 
-  it('compte les brouillons quand le studio garde le parcours en deux temps', async () => {
+  it('counts the drafts when the studio keeps the two-step workflow', async () => {
     renderWithProviders(<PendingDrafts />, {
       api: {
         'GET /api/studio/branding': branding(true),

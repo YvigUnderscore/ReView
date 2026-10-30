@@ -9,16 +9,15 @@ import { useSgConnection } from '../../lib/shotgridApi';
 import { useT } from '../../i18n';
 
 /**
- * Créer une séquence ou un plan : un bouton, pas un formulaire posé en permanence.
+ * Create a sequence or a shot: a button, not a form permanently on display.
  *
- * Le générateur de codes occupait le haut de chaque onglet, ouvert en toutes circonstances
- * — six champs et un aperçu, au-dessus de la liste qu'on venait consulter. Or on crée des
- * séquences une fois en début de projet, et on lit la liste tous les jours. Le formulaire
- * passe donc derrière un « + », comme les autres actions rares (UI simple).
+ * The code generator used to occupy the top of every tab, always open: six fields and a preview, above the
+ * list one had come to consult. Sequences are created once at the start of a project, while the list is read
+ * every day. The form therefore sits behind a "+", like the other rarely used actions (simple UI).
  *
- * Quand ShotGrid mène le projet, le bouton ne feint pas : il ouvre directement le
- * formulaire du site, pré-rempli sur le bon projet. Afficher un formulaire local pour se
- * heurter ensuite au refus du serveur n'apprenait rien à personne.
+ * When ShotGrid leads the project, the button does not pretend: it opens the site's own form directly,
+ * pre-filled for the right project. Showing a local form only to meet the server's refusal afterwards taught
+ * nobody anything.
  */
 const SG_ENTITY: Record<'sequence' | 'shot', string> = { sequence: 'Sequence', shot: 'Shot' };
 
@@ -32,7 +31,7 @@ export default function CreateEntityButton({
   projectId: number;
   kind: 'sequence' | 'shot';
   defaults: { prefix: string; step: number; padding: number };
-  /** Fourni pour les plans : la séquence de destination. */
+  /** Provided for shots: the destination sequence. */
   sequences?: { id: number; code: string; name: string }[];
   onSubmit: (items: GeneratedItem[]) => Promise<void>;
 }) {

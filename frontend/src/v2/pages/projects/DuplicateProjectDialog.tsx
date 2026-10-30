@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import type { Project } from '../../types/api';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -13,8 +13,8 @@ import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '
 import { useT } from '../../i18n';
 
 /**
- * Duplication de la structure d'un projet (38.A) : séquences/shots (+ tâches optionnelles),
- * sans médias ni versions. Sert aussi de « nouveau projet depuis un modèle ».
+ * Duplicates the structure of a project (38.A): sequences and shots (plus optional tasks), without
+ * media or versions. Also serves as "new project from a template".
  */
 export default function DuplicateProjectDialog({
   project,

@@ -20,9 +20,9 @@ vi.mock('../config/env', () => ({
 
 vi.mock('../lib/logger', () => ({ logger: { warn: vi.fn(), info: vi.fn(), error: vi.fn() } }));
 
-// Le vrai module, sous surveillance : le service importe `readFile` à son chargement, un
-// `vi.spyOn` posé après coup ne verrait donc jamais rien passer — et le contrôle « n'ouvre
-// que le manifeste » serait un test qui se contente de ne rien observer.
+// The real module, under surveillance: the service imports `readFile` at load time, so a `vi.spyOn`
+// installed afterwards would never see anything pass, and the "only opens the manifest" check would be a
+// test that merely observes nothing.
 vi.mock('node:fs/promises', async () => {
   const actual = await vi.importActual<typeof import('node:fs/promises')>('node:fs/promises');
   return {
@@ -36,12 +36,12 @@ vi.mock('node:fs/promises', async () => {
 
 import { list, parseManifest } from './BackupCatalogService';
 
-/** Un dossier de sauvegardes tel que `scripts/backup.sh` le laisse derrière lui. */
+/** A backup folder as `scripts/backup.sh` leaves it behind. */
 function fixture(entries: Record<string, string | null>): string {
   const root = mkdtempSync(join(tmpdir(), 'review-backups-'));
   for (const [name, manifest] of Object.entries(entries)) {
     mkdirSync(join(root, name));
-    // `db.dump` est toujours écrit : le service doit en prendre la TAILLE sans l'ouvrir.
+    // `db.dump` is always written: the service must take its SIZE without opening it.
     writeFileSync(join(root, name, 'db.dump'), 'x'.repeat(1234));
     if (manifest !== null) writeFileSync(join(root, name, 'manifest.txt'), manifest);
   }
@@ -63,24 +63,24 @@ afterEach(() => {
 });
 
 describe('parseManifest', () => {
-  it('lit les paires clé=valeur et ignore le reste', () => {
+  it('reads key=value pairs and ignores the rest', () => {
     expect(parseManifest('a=1\n\nbruit\nb = deux \n=vide')).toEqual({ a: '1', b: 'deux' });
   });
 
-  it('garde une valeur qui contient un signe égal', () => {
-    // `date=2026-09-10T03:00:00+02:00` n'en contient pas, mais un bucket peut en contenir.
+  it('keeps a value that contains an equals sign', () => {
+    // `date=2026-09-10T03:00:00+02:00` contains none, but a bucket may.
     expect(parseManifest('bucket=a=b')).toEqual({ bucket: 'a=b' });
   });
 });
 
 describe('list', () => {
-  it('dit « indisponible » quand aucun dossier n’est monté', async () => {
-    // Distinct de « aucune sauvegarde » : confondre les deux ferait croire à un exploitant
-    // qu'il n'en a pas, alors que l'application ne fait que ne pas les voir.
+  it('says "unavailable" when no folder is mounted', async () => {
+    // Distinct from "no backups": confusing the two would make an operator believe they have none, when the
+    // application merely cannot see them.
     await expect(list()).resolves.toEqual({ available: false, dir: null, entries: [] });
   });
 
-  it('lit le manifeste et rend l’entrée, la plus récente en tête', async () => {
+  it('reads the manifest and returns the entry, most recent first', async () => {
     config.dir = fixture({ '20260909-030000': MANIFEST, '20260910-030000': MANIFEST });
     const catalog = await list();
     expect(catalog.available).toBe(true);
@@ -95,9 +95,9 @@ describe('list', () => {
     });
   });
 
-  it('ignore le miroir vivant et tout dossier étranger', async () => {
-    // `minio-current/` EST le miroir, pas une sauvegarde — `backup.sh` ne le purge jamais
-    // non plus. Un dossier sans manifeste est une sauvegarde interrompue : rien à en dire.
+  it('ignores the live mirror and any foreign folder', async () => {
+    // `minio-current/` IS the mirror, not a backup: `backup.sh` never purges it either. A folder without a
+    // manifest is an interrupted backup: there is nothing to report about it.
     config.dir = fixture({
       '20260910-030000': MANIFEST,
       'minio-current': MANIFEST,
@@ -108,7 +108,7 @@ describe('list', () => {
     expect(catalog.entries.map((e) => e.id)).toEqual(['20260910-030000']);
   });
 
-  it('retombe sur la taille du fichier quand le manifeste est plus ancien que le champ', async () => {
+  it('falls back to the file size when the manifest is older than the field', async () => {
     config.dir = fixture({ '20260910-030000': 'date=2026-09-10T03:00:00+02:00\nmode=mirror' });
     const { entries } = await list();
     expect(entries).toHaveLength(1);
@@ -116,10 +116,9 @@ describe('list', () => {
     expect(entries[0]?.envIncluded).toBe(false);
   });
 
-  it('n’ouvre jamais autre chose que le manifeste', async () => {
-    // Le dossier contient `env.backup` — les secrets de l'instance, écrits en 600 — et
-    // `db.dump`, c'est-à-dire toute la base. Le montage est en lecture seule ; ce contrôle
-    // interdit qu'on s'en serve, aujourd'hui comme au prochain ajout de champ.
+  it('never opens anything but the manifest', async () => {
+    // The folder contains `env.backup` (the instance secrets, written 600) and `db.dump`, that is the whole
+    // database. The mount is read-only; this check forbids using them, today and with the next added field.
     config.dir = fixture({ '20260910-030000': MANIFEST });
     writeFileSync(join(config.dir, '20260910-030000', 'env.backup'), 'JWT_SECRET=secret');
     await list();
@@ -127,7 +126,7 @@ describe('list', () => {
     for (const path of opened) expect(path).toMatch(/manifest\.txt$/);
   });
 
-  it('reste debout si le dossier monté est illisible', async () => {
+  it('stays up if the mounted folder is unreadable', async () => {
     config.dir = join(tmpdir(), 'review-backups-inexistant-49');
     await expect(list()).resolves.toMatchObject({ available: false, entries: [] });
   });

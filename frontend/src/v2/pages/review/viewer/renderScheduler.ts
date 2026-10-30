@@ -4,68 +4,68 @@
 import { useState } from 'react';
 
 /**
- * Rendu à la demande des viewers WebGL (modèle 3D et splat) — F14.
+ * On-demand rendering for the WebGL viewers (3D model and splat) — F14.
  *
- * Les deux viewers armaient `renderer.setAnimationLoop` au montage et rendaient à la cadence de
- * l'écran jusqu'au démontage, y compris sur une scène strictement immobile : soixante images
- * identiques par seconde, le ventilateur d'un portable pendant qu'on lit des commentaires.
+ * Both viewers used to arm `renderer.setAnimationLoop` on mount and render at the screen's
+ * refresh rate until unmount, even on a strictly static scene: sixty identical frames per
+ * second, a laptop fan spinning while reading comments.
  *
- * Le piège de ce correctif est l'image **figée** : une source de changement oubliée et le viewer
- * ne se rafraîchit plus, ce qui est bien pire que le ventilateur. Trois garde-fous, dans cet
- * ordre, chacun couvrant les manques du précédent :
+ * The trap of this fix is a **frozen** image: if a change source is forgotten, the viewer never
+ * refreshes again, which is far worse than the fan. Three safeguards, in this order, each
+ * covering the gaps of the previous one:
  *
- * 1. **`update` tourne toujours.** Amortissement d'OrbitControls, `AnimationMixer` et abonnés de
- *    frame sont joués à chaque tour ; seules les passes GPU et les mesures de mise en page sont
- *    sautées. Rien de ce qui pilote la scène ne change donc de cadence, et la décision de rendre
- *    est prise **après** ces mises à jour : un déplacement de caméra fait par un abonné
- *    (turntable, animation caméra) est vu dans la frame même où il a lieu.
- * 2. **Sources d'invalidation larges.** `change` d'OrbitControls (orbite, zoom, pan, dolly,
- *    restauration de vue, fin d'amortissement), redimensionnement, et **toute entrée utilisateur
- *    de la fenêtre** — un réglage du HUD qui touche la scène (HDRI, plan de coupe, variante USD,
- *    mode d'affichage, masque splat, gizmo) est toujours précédé d'un clic, d'une touche ou d'un
- *    mouvement de pointeur. La fenêtre de `INPUT_WINDOW_MS` ouverte après chaque entrée couvre
- *    le délai entre le geste et l'effet React qui modifie la scène.
- * 3. **Battement de sécurité.** Même sans aucune invalidation, une image est rendue toutes les
- *    `IDLE_FRAME_INTERVAL_MS`. Une source oubliée — typiquement une arrivée asynchrone : HDRI
- *    chargée, variante cuite, modèle de comparaison, éditions splat persistées — coûte donc au
- *    pire ce délai, jamais un gel. C'est ce qui rend le correctif sûr par construction.
+ * 1. **`update` always runs.** OrbitControls damping, `AnimationMixer` and frame subscribers
+ *    run on every tick; only GPU passes and layout measurements are skipped. Nothing driving the
+ *    scene therefore changes cadence, and the render decision is taken **after** those updates:
+ *    a camera move made by a subscriber (turntable, camera animation) is seen in the very frame
+ *    where it happens.
+ * 2. **Broad invalidation sources.** OrbitControls `change` (orbit, zoom, pan, dolly, view
+ *    restore, end of damping), resize, and **any user input on the window** — a HUD setting that
+ *    touches the scene (HDRI, cutting plane, USD variant, display mode, splat mask, gizmo) is
+ *    always preceded by a click, a key press or a pointer movement. The `INPUT_WINDOW_MS` window
+ *    opened after each input covers the delay between the gesture and the React effect that
+ *    changes the scene.
+ * 3. **Safety heartbeat.** Even without any invalidation, a frame is rendered every
+ *    `IDLE_FRAME_INTERVAL_MS`. A forgotten source — typically an asynchronous arrival: HDRI
+ *    loaded, variant baked, comparison model, persisted splat edits — therefore costs at worst
+ *    this delay, never a freeze. This is what makes the fix safe by construction.
  */
 
-/** Battement de sécurité au repos : une image toutes les 125 ms (8/s au lieu de ~60/s). */
+/** Safety heartbeat at rest: one frame every 125 ms (8/s instead of ~60/s). */
 export const IDLE_FRAME_INTERVAL_MS = 125;
-/** Fenêtre de rendu plein régime ouverte après une entrée utilisateur. */
+/** Full-rate render window opened after a user input. */
 export const INPUT_WINDOW_MS = 300;
-/** Fenêtre ouverte par une demande de miniature (la capture suit immédiatement un rendu). */
+/** Window opened by a thumbnail request (the capture follows a render immediately). */
 export const CAPTURE_WINDOW_MS = 500;
-/** Fenêtre laissée à une scène qui vient d'arriver pour se stabiliser (décodage, LOD, tri). */
+/** Window given to a freshly loaded scene to settle (decoding, LOD, sorting). */
 export const SETTLE_WINDOW_MS = 2000;
 
 export interface RenderScheduler {
-  /** Demande le rendu de la prochaine image, et de toutes celles des `windowMs` à venir. */
+  /** Requests a render of the next frame, and of all frames within the next `windowMs`. */
   invalidate: (windowMs?: number) => void;
-  /** Vrai si cette image doit être rendue — enregistre l'instant du rendu quand elle l'est. */
+  /** True if this frame must be rendered — records the render time when it is. */
   shouldRender: (nowMs: number) => boolean;
 }
 
-/** Émetteur `change` (OrbitControls) — typé au minimum pour rester testable sans WebGL. */
+/** `change` emitter (OrbitControls) — minimally typed to stay testable without WebGL. */
 export interface ChangeEmitter {
   addEventListener: (type: 'change', listener: () => void) => void;
   removeEventListener: (type: 'change', listener: () => void) => void;
 }
 
-/** Hôte de boucle de rendu — `WebGLRenderer` en production, objet simple dans les tests. */
+/** Render loop host — `WebGLRenderer` in production, a simple object in tests. */
 export interface AnimationLoopHost {
   setAnimationLoop: (cb: (() => void) | null) => void;
 }
 
 export interface RenderSchedulerOptions {
   /**
-   * Vrai tant qu'un mouvement continu impose le plein régime : vol, clip d'animation en lecture,
-   * abonné de frame (turntable, animation caméra, fondu A/B, rig caméra), capture en attente.
+   * True while continuous motion forces full rate: flight, animation clip playing, frame
+   * subscriber (turntable, camera animation, A/B fade, camera rig), pending capture.
    */
   isBusy: () => boolean;
   idleIntervalMs?: number;
-  /** Horloge injectable — les tests mesurent un nombre d'images, pas un temps réel. */
+  /** Injectable clock — tests measure a number of frames, not real time. */
   now?: () => number;
 }
 
@@ -73,7 +73,7 @@ export function createRenderScheduler(opts: RenderSchedulerOptions): RenderSched
   const { isBusy } = opts;
   const idleIntervalMs = opts.idleIntervalMs ?? IDLE_FRAME_INTERVAL_MS;
   const clock = opts.now ?? (() => performance.now());
-  let dirty = true; // la première image est toujours rendue
+  let dirty = true; // the first frame is always rendered
   let dirtyUntilMs = 0;
   let lastRenderMs: number | null = null;
 
@@ -99,9 +99,9 @@ export function createRenderScheduler(opts: RenderSchedulerOptions): RenderSched
 }
 
 /**
- * Entrées utilisateur écoutées au niveau de la fenêtre : un réglage du HUD qui modifie la scène
- * passe forcément par l'une d'elles. Écoute **passive et en capture** — aucun comportement de la
- * page n'est modifié, et aucun `preventDefault` n'est possible depuis ces écouteurs.
+ * User inputs listened to at window level: a HUD setting that changes the scene necessarily goes
+ * through one of them. Listens **passively and in capture** — no page behaviour is altered, and
+ * no `preventDefault` is possible from these listeners.
  */
 const INPUT_EVENTS = [
   'pointerdown',
@@ -116,7 +116,7 @@ const INPUT_EVENTS = [
   'touchmove',
 ] as const;
 
-/** Ordonnanceur branché sur ses sources d'invalidation ambiantes. `detach` retire les écouteurs. */
+/** Scheduler wired to its ambient invalidation sources. `detach` removes the listeners. */
 export function armRenderScheduler(
   controls: ChangeEmitter,
   opts: RenderSchedulerOptions,
@@ -127,7 +127,7 @@ export function armRenderScheduler(
   const listenerOpts = { capture: true, passive: true } as const;
   controls.addEventListener('change', onChange);
   for (const type of INPUT_EVENTS) window.addEventListener(type, onInput, listenerOpts);
-  // Retour d'onglet : le navigateur a suspendu la boucle, l'image affichée peut dater.
+  // Tab coming back: the browser suspended the loop, the displayed image may be stale.
   document.addEventListener('visibilitychange', onInput);
   return {
     ...scheduler,
@@ -142,14 +142,14 @@ export function armRenderScheduler(
 export interface RenderLoopOptions {
   renderer: AnimationLoopHost;
   scheduler: RenderScheduler;
-  /** Mises à jour de la scène — jouées à **chaque** tour, rendu ou non (cf. garde-fou 1). */
+  /** Scene updates — run on **every** tick, rendered or not (see safeguard 1). */
   update: (dt: number) => void;
-  /** Passes GPU, mesures de mise en page, échantillonnage — seulement quand le rendu est dû. */
+  /** GPU passes, layout measurements, sampling — only when a render is due. */
   draw: (nowMs: number) => void;
   now?: () => number;
 }
 
-/** Arme la boucle de rendu à la demande. Renvoie la fonction d'arrêt (démontage). */
+/** Arms the on-demand render loop. Returns the stop function (unmount). */
 export function startRenderLoop(opts: RenderLoopOptions): () => void {
   const { renderer, scheduler, update, draw } = opts;
   const clock = opts.now ?? (() => performance.now());
@@ -172,26 +172,26 @@ export interface ViewerLoopOptions extends RenderSchedulerOptions {
 }
 
 /**
- * Portail de rendu d'un viewer WebGL : tout ce que le hook du viewer doit tenir pour passer au
- * rendu à la demande — invalidation, abonnements passifs, comptage des lecteurs de FPS, boucle.
+ * Render gate of a WebGL viewer: everything the viewer hook must hold to switch to on-demand
+ * rendering — invalidation, passive subscriptions, FPS reader counting, loop.
  */
 export interface RenderGate {
-  /** Demande un rendu — sans effet (et sans erreur) tant que la boucle n'est pas armée. */
+  /** Requests a render — no effect (and no error) until the loop is armed. */
   invalidate: (windowMs?: number) => void;
   /**
-   * Abonnement **passif** à la boucle : joué à chaque tour comme les autres, mais sans imposer
-   * le plein régime. `useModelAnimations` s'abonne en permanence pour relire `action.time` ;
-   * sans cette distinction l'ensemble des abonnés ne serait jamais vide côté 3D et le rendu à
-   * la demande ne s'enclencherait jamais. Un clip en lecture reste détecté par `isRunning()`.
+   * **Passive** subscription to the loop: run on every tick like the others, but without forcing
+   * full rate. `useModelAnimations` subscribes permanently to re-read `action.time`; without this
+   * distinction the set of subscribers would never be empty on the 3D side and on-demand
+   * rendering would never kick in. A clip being played is still detected by `isRunning()`.
    */
   subscribeIdle: (cb: (dt: number) => void) => () => void;
   /**
-   * Compte les abonnés d'un échantillonneur de performance : tant qu'un panneau lit le FPS, le
-   * viewer rend en continu — un compteur d'images par seconde qui abaisse la cadence qu'il
-   * mesure ne mesure plus rien, et le chiffre lu par l'artiste ne serait comparable à rien.
+   * Counts the subscribers of a performance sampler: while a panel reads the FPS, the viewer
+   * renders continuously — a frames-per-second counter that lowers the rate it measures measures
+   * nothing, and the figure read by the artist would be comparable to nothing.
    */
   countSub: (off: (() => void) | undefined) => (() => void) | undefined;
-  /** Arme ordonnanceur + boucle. Renvoie l'arrêt (boucle, écouteurs, invalidation). */
+  /** Arms scheduler + loop. Returns the stop function (loop, listeners, invalidation). */
   start: (opts: ViewerLoopOptions) => () => void;
 }
 
@@ -226,8 +226,8 @@ export function createRenderGate(): RenderGate {
       const stop = startRenderLoop({
         renderer: opts.renderer,
         scheduler,
-        // Les abonnés passifs relisent l'état **après** les mises à jour du viewer (le temps
-        // d'animation n'a de sens qu'une fois `mixer.update` passé).
+        // Passive subscribers re-read the state **after** the viewer updates (animation time only
+        // makes sense once `mixer.update` has run).
         update: (dt) => {
           opts.update(dt);
           for (const cb of idleCbs) cb(dt);
@@ -244,7 +244,7 @@ export function createRenderGate(): RenderGate {
   };
 }
 
-/** Portail stable pour la durée de vie du composant (le recréer perdrait la boucle armée). */
+/** Stable gate for the component's lifetime (recreating it would lose the armed loop). */
 export function useRenderGate(): RenderGate {
   const [gate] = useState(createRenderGate);
   return gate;

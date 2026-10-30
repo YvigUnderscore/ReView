@@ -4,7 +4,7 @@
 import { api } from '../../lib/apiClient';
 import type { TaskStatus, VersionStatus } from '../types/api';
 
-/** Client des actions groupées (13.C) — miroir de `routes/bulk.routes.ts`. */
+/** Client for bulk actions (13.C) — mirror of `routes/bulk.routes.ts`. */
 
 export type BulkDeleteDomain =
   'projects' | 'episodes' | 'sequences' | 'shots' | 'assets' | 'versions' | 'media';

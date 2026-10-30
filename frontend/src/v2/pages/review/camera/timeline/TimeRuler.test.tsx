@@ -5,11 +5,11 @@ import { fireEvent, render } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 import TimeRuler from './TimeRuler';
 
-/** Vue de 1 s sur 200 px : 1 px = 5 ms. 10 fps, donc une frame tous les 100 ms. */
+/** 1 s view over 200 px: 1 px = 5 ms. 10 fps, so one frame every 100 ms. */
 const view = { t0: 0, t1: 1000, width: 200 };
 const FPS = 10;
 
-/** Ancre le SVG à une géométrie connue : happy-dom ne mesure rien et ne capture pas le pointeur. */
+/** Anchors the SVG to a known geometry: happy-dom measures nothing and does not capture the pointer. */
 const anchor = (el: Element) => {
   el.getBoundingClientRect = () => ({ left: 0, top: 0, width: 200, height: 22 }) as DOMRect;
   el.setPointerCapture = () => {};
@@ -27,14 +27,14 @@ function setup(over: Partial<Parameters<typeof TimeRuler>[0]> = {}) {
 }
 
 describe('TimeRuler — scrub', () => {
-  it('un appui dans la règle déplace la tête de lecture, snappée à la frame', () => {
+  it('pressing on the ruler moves the playhead, snapped to the frame', () => {
     const { svg, onScrub } = setup();
     fireEvent.pointerDown(svg, { button: 0, clientX: 90, pointerId: 1 });
-    // 90 px = 450 ms, soit entre deux frames → 500 ms.
+    // 90 px = 450 ms, i.e. between two frames → 500 ms.
     expect(onScrub).toHaveBeenCalledWith(500);
   });
 
-  it('le glissement continue de scruber jusqu’au relâchement', () => {
+  it('dragging keeps scrubbing until release', () => {
     const { svg, onScrub } = setup();
     fireEvent.pointerDown(svg, { button: 0, clientX: 20, pointerId: 1 });
     fireEvent.pointerMove(svg, { clientX: 120, pointerId: 1 });
@@ -44,21 +44,21 @@ describe('TimeRuler — scrub', () => {
     expect(onScrub).toHaveBeenCalledTimes(2);
   });
 
-  it('Alt libère le placement entre deux frames', () => {
+  it('Alt releases the placement between two frames', () => {
     const { svg, onScrub } = setup();
     fireEvent.pointerDown(svg, { button: 0, clientX: 90, pointerId: 1, altKey: true });
     expect(onScrub).toHaveBeenCalledWith(450);
   });
 
-  it('un temps négatif est impossible, même en tirant à gauche de zéro', () => {
+  it('a negative time is impossible, even when dragging left of zero', () => {
     const { svg, onScrub } = setup();
     fireEvent.pointerDown(svg, { button: 0, clientX: -80, pointerId: 1, altKey: true });
     expect(onScrub).toHaveBeenCalledWith(0);
   });
 });
 
-describe('TimeRuler — colonnes de clés', () => {
-  it('en édition, tirer un losange retime toute la colonne', () => {
+describe('TimeRuler — key columns', () => {
+  it('when editing, dragging a diamond retimes the whole column', () => {
     const onMoveColumn = vi.fn();
     const onBeginStroke = vi.fn();
     const { svg } = setup({ editable: true, onMoveColumn, onBeginStroke });
@@ -69,7 +69,7 @@ describe('TimeRuler — colonnes de clés', () => {
     expect(onMoveColumn).toHaveBeenCalledWith(500, 700);
   });
 
-  it('hors édition, le losange n’arme rien et la règle scrube comme ailleurs', () => {
+  it('outside editing, the diamond arms nothing and the ruler scrubs as elsewhere', () => {
     const onMoveColumn = vi.fn();
     const { svg, onScrub } = setup({ onMoveColumn });
     const diamond = svg.querySelectorAll('path')[1];

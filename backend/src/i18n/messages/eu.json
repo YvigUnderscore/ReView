@@ -12,7 +12,10 @@
   "digest.by": "{name}(e)k egina",
   "digest.commentOn": "{author}, {media}(e)n",
   "digest.optOut": "Mezu hau jaso duzu zure ReView profilean eguneroko laburpena aktibatuta duzulako.",
-  "digest.preview": { "one": "Atzotik proiektu {count}(e)an mugitu dena.", "other": "Atzotik {count} proiektutan mugitu dena." },
+  "digest.preview": {
+    "one": "Atzotik proiektu {count}(e)an mugitu dena.",
+    "other": "Atzotik {count} proiektutan mugitu dena."
+  },
 
   "weekly.subject": "ReView — asteko produkzio-txostena",
   "weekly.title": "Asteko produkzio-txostena",
@@ -24,7 +27,10 @@
   "weekly.column.retakes": "Retakes",
   "weekly.column.openNotes": "Ohar irekiak",
   "weekly.optOut": "Txosten hau jaso duzu zure ReView profilean aktibatuta dagoelako (gainbegiraleak).",
-  "weekly.preview": { "one": "Astea proiektu {count}(e)an: entregak, erabakiak, ohar irekiak.", "other": "Astea {count} proiektutan: entregak, erabakiak, ohar irekiak." },
+  "weekly.preview": {
+    "one": "Astea proiektu {count}(e)an: entregak, erabakiak, ohar irekiak.",
+    "other": "Astea {count} proiektutan: entregak, erabakiak, ohar irekiak."
+  },
 
   "smtp.test.subject": "ReView — SMTP proba",
   "smtp.test.title": "SMTP proba",
@@ -52,13 +58,19 @@
   "notification.reviewAssigned": "{version} version-aren review esleitu zaizu",
   "notification.reviewNoteUpdated": "Esleitu dizuten review baten jarraibidea aldatu da: {version}",
   "notification.clientDecision": "{name} erabiltzaileak «{status}» erantzun du {version} version-ean, partekatze esteka batetik",
-  "chat.system.joined": { "one": "{names} elkarrizketara batu da", "other": "{names} elkarrizketara batu dira" },
+  "chat.system.joined": {
+    "one": "{names} elkarrizketara batu da",
+    "other": "{names} elkarrizketara batu dira"
+  },
   "chat.system.left": "{name} elkarrizketatik atera da",
   "chat.system.removed": "{name} kendu dute",
   "chat.system.renamed": "Taldearen izena « {title} » da orain",
   "chat.mediaPublished": "🎬 Euskarri berria argitaratuta: {name}",
   "chat.decision": "{icon} « {status} » erabakia {version} version-ari buruz",
-  "chat.decisionBulk": { "one": "{icon} « {status} » erabakia {count} version-i buruz", "other": "{icon} « {status} » erabakia {count} versions-i buruz" },
+  "chat.decisionBulk": {
+    "one": "{icon} « {status} » erabakia {count} version-i buruz",
+    "other": "{icon} « {status} » erabakia {count} versions-i buruz"
+  },
   "chat.newComment": "💬 Iruzkin berria euskarri batean (proiektua #{project})",
   "chat.montageComment": "🎬 Iritzi berria muntaketa batean (proiektua #{project})",
   "share.mail.subject": "{project} atzitzeko esteka",
@@ -72,7 +84,10 @@
   "share.mail.cta": "Ireki esteka",
   "share.mail.expiry": "Esteka hau {date}(e)an iraungitzen da.",
   "share.mail.noExpiry": "Esteka honek ez du iraungitze-datarik.",
-  "share.mail.viewLimit": { "one": "{count} aldiz ireki daiteke guztira.", "other": "{count} aldiz ireki daiteke guztira." },
+  "share.mail.viewLimit": {
+    "one": "{count} aldiz ireki daiteke guztira.",
+    "other": "{count} aldiz ireki daiteke guztira."
+  },
   "share.mail.password": "Pasahitz batez babestuta dago, bereiz bidalia.",
   "share.mail.fallback": "Botoiak funtzionatzen ez badu, itsatsi esteka hau zure nabigatzailean:",
   "notesSheet.title": "Review oharrak",

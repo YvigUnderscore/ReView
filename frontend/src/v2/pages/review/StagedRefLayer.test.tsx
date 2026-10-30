@@ -9,17 +9,17 @@ import { useAnnotations, type Annotations } from './useAnnotations';
 import { t } from '../../i18n';
 
 /**
- * Deux défauts verrouillés ici. Une référence collée ne se déplaçait plus dès que l'annotation
- * était armée : le canvas d'annotation, rendu au-dessus, avalait le pointeur — le calque porte
- * donc ses propres événements, quel que soit l'outil de tracé armé. Et le déplacement restait
- * enfermé dans le cadre du média : il va désormais partout sur le canevas du viewer, au point
- * exact du pointeur, sans jamais laisser la référence sortir de ce qu'on voit.
+ * Two regressions are locked down here. A pasted reference could no longer be moved once
+ * annotation was armed: the annotation canvas, rendered above, swallowed the pointer — so the
+ * layer carries its own events, whatever drawing tool is armed. And moving stayed confined to
+ * the media frame: it now goes everywhere on the viewer canvas, at the exact pointer position,
+ * without ever letting the reference leave what is visible.
  */
 const probe: { ann: Annotations | null } = { ann: null };
-/** État du composer après le dernier rendu — publié hors du render, jamais pendant. */
+/** Composer state after the last render — published outside render, never during it. */
 const ann = () => probe.ann!;
 
-/** Le calque vit dans le plan de l'image, lui-même rogné par le viewer : d'où le conteneur. */
+/** The layer lives in the image plane, itself clipped by the viewer: hence the container. */
 function Host() {
   const composer = useAnnotations();
   useEffect(() => {
@@ -32,20 +32,20 @@ function Host() {
   );
 }
 
-/** Le calque, vide ou non : c'est lui qu'on inspecte, le conteneur restant toujours là. */
+/** The layer, empty or not: it is what we inspect, the container always stays there. */
 const layer = () => screen.getByTestId('viewer');
 
 /**
- * Ancre le calque à une géométrie connue : happy-dom ne mesure rien. `zoom` simule le plan de
- * l'image agrandi — le calque y est rendu, sa boîte grandit d'autant, et le même trajet de
- * souris vaut donc moins en fractions d'image.
+ * Anchors the layer to a known geometry: happy-dom measures nothing. `zoom` simulates the
+ * enlarged image plane — the layer is rendered there, its box grows accordingly, and the same
+ * mouse path is therefore worth fewer image fractions.
  */
 const grab = (zoom = 1) => {
   const box = screen.getByTitle(t('review.ref.drag'));
   const root = box.parentElement!;
   root.getBoundingClientRect = () => ({ left: 0, top: 0, width: 400 * zoom, height: 300 * zoom }) as DOMRect;
-  // Le viewer qui rogne : trois fois large et deux fois haut comme le média, donc de la place
-  // libre tout autour de lui — un letterbox, comme à l'écran.
+  // The clipping viewer: three times as wide and twice as tall as the media, so there is room
+  // free all around it — a letterbox, as on screen.
   layer().getBoundingClientRect = () =>
     ({
       left: -400 * zoom,
@@ -87,7 +87,7 @@ describe('StagedRefLayer', () => {
 
     const box = grab();
     fireEvent.pointerDown(box, { clientX: 100, clientY: 100, button: 0 });
-    // 500 px à droite sur 400 de large : bien au-delà du bord de l'image.
+    // 500 px to the right on 400 wide: well beyond the image edge.
     fireEvent.pointerMove(box, { clientX: 600, clientY: 40 });
     fireEvent.pointerUp(box);
 
@@ -104,7 +104,7 @@ describe('StagedRefLayer', () => {
     fireEvent.pointerMove(box, { clientX: 2100, clientY: 100 });
     fireEvent.pointerUp(box);
 
-    // Bord droit du canevas mesuré (x = 2) moins la part qui doit rester attrapable.
+    // Measured right edge of the canvas (x = 2) minus the part that must remain grabbable.
     expect(ann().stagedRefs[0].x).toBeCloseTo(1.95);
   });
 

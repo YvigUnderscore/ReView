@@ -12,21 +12,21 @@ import type { SplatStats } from './stats';
 import type { SplatSceneCore } from './createScene';
 
 /**
- * Contrats du viewer splat, sortis de `useSplat` (budget lignes) : l'état interne de la scène,
- * la poignée impérative passée à l'édition et l'API rendue à la page. `useSplat` les réexporte,
- * les nombreux appelants continuent donc d'importer depuis `../useSplat`.
+ * Contracts of the splat viewer, moved out of `useSplat` (line budget): the internal state of the
+ * scene, the imperative handle passed to editing, and the API rendered to the page. `useSplat`
+ * re-exports them, so the many callers keep importing from `../useSplat`.
  */
 export type SplatScene = SplatSceneCore & {
   mesh: SplatMesh;
   pivot: THREE.Group;
-  /** Caméra « layout » du PiP (mode layout, Phase 27) — pilotée par le lecteur keyframe. */
+  /** "Layout" camera of the PiP (layout mode, Phase 27): driven by the keyframe player. */
   layoutCam: THREE.PerspectiveCamera;
 };
 
 /**
- * Poignée impérative vers la scène Three.js du splat, exposée aux hooks d'édition (gizmos,
- * sélection). Les composants React de haut niveau n'y touchent pas — seule la couche `editor/`
- * consomme Three via cette poignée, gardant la séparation scène / édition.
+ * Imperative handle to the splat's Three.js scene, exposed to the editing hooks (gizmos,
+ * selection). The high-level React components do not touch it: only the `editor/` layer consumes
+ * Three through this handle, keeping the scene / editing separation.
  */
 export interface SplatSceneHandle {
   THREE: typeof import('three');
@@ -34,8 +34,8 @@ export interface SplatSceneHandle {
   camera: THREE.PerspectiveCamera;
   controls: OrbitControls;
   mesh: SplatMesh;
-  /** Parent du mesh portant le flip d'orientation à l'import (11.E) — les splats frères
-   *  (comparaison A/B) doivent y être ajoutés pour hériter de la même convention d'axes. */
+  /** Parent of the mesh carrying the import orientation flip (11.E): sibling splats
+   *  (A/B comparison) must be added there to inherit the same axis convention. */
   pivot: THREE.Group;
   spark: SparkRenderer;
   dom: HTMLElement;
@@ -45,61 +45,61 @@ export interface SplatViewer {
   containerRef: React.RefObject<HTMLDivElement | null>;
   ready: boolean;
   loadError: boolean;
-  /** Progression du téléchargement réseau du fichier splat (0..1) tant qu'il arrive, puis null
-   *  une fois le fichier reçu (décodage + LOD en cours) — 41.B streaming léger. Alimente la
-   *  barre de chargement pour ouvrir vite les grosses scènes (le LOD GPU reste géré ailleurs). */
+  /** Progress of the network download of the splat file (0..1) while it arrives, then null
+   *  once the file is received (decoding and LOD in progress): 41.B light streaming. Feeds the
+   *  loading bar so large scenes open quickly (GPU LOD is handled elsewhere). */
   progress: number | null;
   captureCamera: () => SplatCamera | undefined;
   restoreCamera: (state: unknown) => void;
-  /** Point d'intérêt sur la surface **sous le pointeur** (coordonnées client) — pose au clic. */
+  /** Point of interest on the surface **under the pointer** (client coordinates): set on click. */
   hotspotAtPointer: (clientX: number, clientY: number) => Hotspot3D | null;
-  /** Pastilles numérotées à projeter à chaque frame (liste vide = aucune). */
+  /** Numbered pins to project each frame (empty list = none). */
   showPoiPoints: (points: readonly Hotspot3D[]) => void;
-  /** Arme (ou désarme) le déplacement et la désignation des pastilles — rédaction seulement. */
+  /** Arms (or disarms) the moving and designation of pins: composition only. */
   setPoiHandlers: (handlers: MarkerHandlers | null) => void;
-  /** Rang de la pastille mise en avant (rangée du composeur en cours d'édition), ou null. */
+  /** Rank of the highlighted pin (the composer row being edited), or null. */
   setPoiActive: (index: number | null) => void;
-  /** Ramène la caméra sur un point relu (numéro cliqué dans le fil). */
+  /** Brings the camera back to a re-read point (number clicked in the thread). */
   focusPoi: (point: Hotspot3D) => boolean;
-  /** Capture le rendu courant en miniature JPEG (data URL) — résolu après le prochain rendu. */
+  /** Captures the current render as a JPEG thumbnail (data URL), resolved after the next render. */
   captureThumbnail: () => Promise<string | null>;
-  /** PNG plein cadre de la vue courante (panneau Export) — `null` si la capture a échoué. */
+  /** Full-frame PNG of the current view (Export panel): `null` if the capture failed. */
   captureView: () => string | null;
-  /** Applique une transformation TRS au splat — preview live des gizmos et au chargement. */
+  /** Applies a TRS transform to the splat: live preview of the gizmos and on loading. */
   applyTransform: (t: SplatTransform | null) => void;
-  /** Flip d'orientation à l'import (11.E) : true (défaut) = convention .ply/.spz Y-down
-   *  redressée (rotation π sur X du groupe parent) ; false = fichier laissé tel quel. */
+  /** Import orientation flip (11.E): true (default) = .ply/.spz Y-down convention corrected
+   *  (rotation of π about X on the parent group); false = file left as is. */
   setBaseFlip: (flip: boolean) => void;
-  /** Bascule le mode de visualisation (splats / ellipses gaussiennes / points). */
+  /** Toggles the display mode (splats / gaussian ellipses / points). */
   setRenderMode: (mode: RenderMode) => void;
-  /** Reflète la sélection courante dans l'overlay « points » (teinte) — no-op hors mode points. */
+  /** Mirrors the current selection in the "points" overlay (tint): no-op outside points mode. */
   reflectSelection: (selected: ReadonlySet<number>) => void;
-  /** Reflète un (dé)masquage de splats dans l'overlay « points » — no-op hors mode points. */
+  /** Mirrors a (un)masking of splats in the "points" overlay: no-op outside points mode. */
   reflectHidden: (indices: Iterable<number>, hidden: boolean) => void;
-  /** Reflète l'escamotage des volumes de crop dans l'overlay « points » (Phase 28) — no-op sinon. */
+  /** Mirrors the carving of crop volumes in the "points" overlay (Phase 28): no-op otherwise. */
   reflectCropped: (indices: Iterable<number>) => void;
-  /** Abonne un panneau aux stats de rendu (FPS, splats, draw calls) — mesurées si abonné. */
+  /** Subscribes a panel to the render stats (FPS, splats, draw calls): measured only if subscribed. */
   subscribeStats: (cb: (stats: SplatStats) => void) => () => void;
-  /** Abonne un callback à chaque frame rendue (dt en secondes) — animations caméra (V5). */
+  /** Subscribes a callback to each rendered frame (dt in seconds): camera animations (V5). */
   subscribeFrame: (cb: (dt: number) => void) => () => void;
-  /** Neutralise (défaut) ou rétablit le culling Spark (clipXY/maxPixelRadius) — réglage live. */
+  /** Disables (default) or restores the Spark culling (clipXY/maxPixelRadius): live setting. */
   setCullingOff: (off: boolean) => void;
-  /** Vol en cours (clic droit + ZQSD) — les raccourcis d'édition doivent rester inertes (11.G). */
+  /** Fly in progress (right click + ZQSD): editing shortcuts must stay inert (11.G). */
   isFlying: () => boolean;
-  /** Rect de la fenêtre PiP (px CSS, origine haut-gauche) — non-null : 2ᵉ passe de rendu de la
-   *  caméra layout dans ce rect (mode layout, Phase 27) ; null : PiP éteint. */
+  /** Rect of the PiP window (CSS px, top-left origin): non-null means a second render pass of the
+   *  layout camera into this rect (layout mode, Phase 27); null means PiP off. */
   setPipRect: (rect: PipRect | null) => void;
-  /** Applique une pose (position/cible/fov/roll) à la caméra layout du PiP. */
+  /** Applies a pose (position/target/fov/roll) to the PiP's layout camera. */
   restorePipCamera: (state: unknown) => void;
-  /** Poignée impérative vers la scène (pour les hooks d'édition), ou null si pas encore prête. */
+  /** Imperative handle to the scene (for the editing hooks), or null if not ready yet. */
   getSceneHandle: () => SplatSceneHandle | null;
-  /** Canvas de rendu (auto-pause de l'animation caméra) — satisfait `CameraController`. */
+  /** Render canvas (auto-pauses the camera animation): satisfies `CameraController`. */
   getDom: () => HTMLElement | null;
 }
 
 /**
- * Moitié « interaction » de `SplatViewer` : les poignées impératives que `useSplatHandles`
- * dérive des refs de scène. Composée par `Pick` — une seule définition de chaque champ.
+ * Interaction half of `SplatViewer`: the imperative handles that `useSplatHandles` derives from
+ * the scene refs. Composed by `Pick`, with a single definition of each field.
  */
 export type SplatHandles = Pick<
   SplatViewer,

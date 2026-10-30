@@ -22,22 +22,22 @@ const source = (patch: Partial<ClientMediaSource> = {}): ClientMediaSource => ({
 });
 
 /**
- * Ce lot décide de ce qu'un invité peut voir avec ce que la route de partage lui donne.
- * Les cas vérifiés sont ceux qui font la différence entre « la 3D s'affiche » et « le client
- * reçoit un carré noir » : dérivé absent, extension portée par le nom et non par l'URL,
- * présentation ancienne, et le décalage de slate qui déplace tous les commentaires.
+ * This batch decides what a guest can see with what the share route gives them. The verified
+ * cases are those that make the difference between "the 3D shows" and "the client gets a
+ * black square": missing derivative, extension carried by the name rather than the URL, old
+ * presentation, and the slate offset that shifts every comment.
  */
 describe('resolveClientGlb', () => {
-  it('préfère le GLB converti quand le partage l’expose', () => {
+  it('prefers the converted GLB when the share exposes it', () => {
     expect(resolveClientGlb(source({ url: 'x/a.usdz', glbUrl: 'x/a.glb?sig' }))).toBe('x/a.glb?sig');
   });
 
-  it('accepte la source quand elle est déjà du glTF, signature comprise', () => {
+  it('accepts the source when it is already glTF, signature included', () => {
     expect(resolveClientGlb(source({ url: 'https://s3/a.glb?X-Amz-Signature=z' }))).toContain('.glb');
     expect(resolveClientGlb(source({ url: 'https://s3/a.gltf' }))).toContain('.gltf');
   });
 
-  it('refuse un original non convertible plutôt que de charger un fichier illisible', () => {
+  it('refuses a non-convertible original rather than loading an unreadable file', () => {
     expect(resolveClientGlb(source({ url: 'https://s3/scene.usda?sig' }))).toBeNull();
     expect(resolveClientGlb(source({ url: 'https://s3/mesh.fbx' }))).toBeNull();
     expect(resolveClientGlb(undefined)).toBeNull();
@@ -45,42 +45,42 @@ describe('resolveClientGlb', () => {
 });
 
 describe('resolveClientSplat', () => {
-  it('prend l’extension sur le nom d’origine — l’URL présignée porte une query', () => {
+  it('takes the extension from the original name, since the presigned URL carries a query', () => {
     const file = resolveClientSplat(source({ url: 'https://s3/obj?X-Amz-Signature=1' }), 'scan.spz');
     expect(file).toEqual({ url: 'https://s3/obj?X-Amz-Signature=1', fileName: 'scan.spz' });
   });
 
-  it('retombe sur l’URL nettoyée quand le nom d’origine n’est pas parlant', () => {
+  it('falls back to the cleaned URL when the original name is not informative', () => {
     const file = resolveClientSplat(source({ url: 'https://s3/scan.ply?sig=1' }), 'version-020');
     expect(file?.fileName).toBe('https://s3/scan.ply');
   });
 
-  it('refuse un fichier que Spark ne sait pas ouvrir', () => {
+  it('refuses a file that Spark cannot open', () => {
     expect(resolveClientSplat(source({ url: 'https://s3/a.mp4' }), 'a.mp4')).toBeNull();
   });
 
-  it('accepte les conteneurs SOG des deux orthographes', () => {
+  it('accepts the SOG containers in both spellings', () => {
     expect(resolveClientSplat(source(), 'scan.sog')?.fileName).toBe('scan.sog');
     expect(resolveClientSplat(source(), 'scan.sogs')?.fileName).toBe('scan.sogs');
   });
 });
 
 /**
- * Réécrit sciemment : la fonction rendait `undefined` dès qu'aucune présentation ne gelait
- * d'aspect, et chaque appelant recopiait son propre repli 16/9. Elle rend désormais le ratio
- * de livraison hérité que la route sert — l'invité annote le cadre du projet, pas un 16/9.
+ * Deliberately rewritten: the function returned `undefined` as soon as no presentation froze
+ * an aspect, and each caller copied its own 16/9 fallback. It now returns the inherited
+ * delivery ratio the route serves: the guest annotates the project's frame, not a 16/9.
  */
 describe('clientFrameAspect', () => {
-  it('rejoue l’aspect du cadre de livraison enregistré', () => {
+  it('replays the recorded delivery frame aspect', () => {
     const s = source({ splatPresentation: { camera: { position: p(), target: p(), aspect: 2.39 } } });
     expect(clientFrameAspect(s)).toBeCloseTo(2.39);
   });
 
-  it('prend le ratio hérité des réglages pipeline quand rien n’est gelé', () => {
+  it('takes the ratio inherited from pipeline settings when nothing is frozen', () => {
     expect(clientFrameAspect(source({ deliveryAspect: 2.39 }))).toBeCloseTo(2.39);
   });
 
-  it('ignore un aspect dégénéré plutôt que de produire un cadre de hauteur nulle', () => {
+  it('ignores a degenerate aspect rather than producing a zero-height frame', () => {
     const s = source({
       splatPresentation: { camera: { position: p(), target: p(), aspect: 0 } },
       deliveryAspect: 1.85,
@@ -91,7 +91,7 @@ describe('clientFrameAspect', () => {
 });
 
 describe('clientLighting', () => {
-  it('préfère le réglage du média au défaut du projet', () => {
+  it('prefers the media setting over the project default', () => {
     const s = source({
       splatPresentation: { lighting: { ...DEFAULT_LIGHTING, exposure: 2 } },
       projectDefaultLighting: { ...DEFAULT_LIGHTING, exposure: 5 },
@@ -99,13 +99,13 @@ describe('clientLighting', () => {
     expect(clientLighting(s).exposure).toBe(2);
   });
 
-  it('retombe sur le défaut du projet, puis sur l’éclairage neutre', () => {
+  it('falls back to the project default, then to neutral lighting', () => {
     const s = source({ projectDefaultLighting: { ...DEFAULT_LIGHTING, rotationDeg: 90 } });
     expect(clientLighting(s).rotationDeg).toBe(90);
     expect(clientLighting(source())).toEqual(DEFAULT_LIGHTING);
   });
 
-  it('complète un enregistrement ancien auquel un champ manque', () => {
+  it('completes an old record where a field is missing', () => {
     const partial = { exposure: 3 } as unknown as ClientMediaSource['projectDefaultLighting'];
     expect(clientLighting(source({ projectDefaultLighting: partial }))).toEqual({
       ...DEFAULT_LIGHTING,
@@ -115,7 +115,7 @@ describe('clientLighting', () => {
 });
 
 describe('clientVariantDefaults', () => {
-  it('regroupe par prim les jeux de variantes actifs à la conversion', () => {
+  it('groups the variant sets active at conversion by prim', () => {
     expect(
       clientVariantDefaults([
         { prim: '/World/Plate', name: 'modelingVariant', options: ['a', 'b'], selected: 'a' },
@@ -124,22 +124,22 @@ describe('clientVariantDefaults', () => {
     ).toEqual({ '/World/Plate': { modelingVariant: 'a', shadingVariant: 'clean' } });
   });
 
-  it('ne suppose rien quand la scène n’est pas décrite', () => {
+  it('assumes nothing when the scene is not described', () => {
     expect(clientVariantDefaults(null)).toEqual({});
   });
 });
 
-describe('décalage du slate', () => {
-  it('retire le slate à l’envoi et le remet au seek — aller-retour neutre', () => {
+describe('slate offset', () => {
+  it('removes the slate on submit and restores it on seek: neutral round trip', () => {
     expect(mediaTimeOf(8, 3)).toBe(5);
     expect(playerTimeOf(mediaTimeOf(8, 3), 3)).toBe(8);
   });
 
-  it('ne produit jamais de position négative pendant le slate lui-même', () => {
+  it('never produces a negative position during the slate itself', () => {
     expect(mediaTimeOf(1.2, 3)).toBe(0);
   });
 
-  it('déplace les marqueurs de la timeline dans le référentiel du lecteur', () => {
+  it('moves the timeline markers into the player frame of reference', () => {
     const mapped = toPlayerComments(
       [
         note({ id: 1, timestamp: 5, guestName: 'Cli' }),
@@ -152,22 +152,22 @@ describe('décalage du slate', () => {
     expect(mapped[1].author).toEqual({ id: 7, name: 'Sup' });
   });
 
-  it('laisse les timestamps intacts quand le dérivé n’a pas de slate', () => {
+  it('leaves timestamps intact when the derivative has no slate', () => {
     expect(toPlayerComments([note({ timestamp: 12 })], 0)[0].timestamp).toBe(12);
   });
 
   /**
-   * Le dessin arrivait bien du serveur et le front le jetait : une note annotée s'affichait
-   * donc sans son trait, et le client ne voyait jamais ce que le studio lui montrait.
+   * The drawing did arrive from the server and the front end discarded it: an annotated note
+   * therefore displayed without its stroke, and the client never saw what the studio showed.
    */
-  it('porte désormais l’annotation au lieu de la jeter', () => {
+  it('now carries the annotation instead of discarding it', () => {
     const shapes = [{ id: 'a', type: 'rect', color: '#ef4444', width: 3 }];
     expect(toPlayerComments([note({ annotation: shapes })], 0)[0].annotation).toEqual(shapes);
     expect(toPlayerComments([note()], 0)[0].annotation).toBeNull();
   });
 });
 
-/** Une note du partage, réduite à ce que la timeline en lit. */
+/** A share note, reduced to what the timeline reads from it. */
 function note(patch: Partial<ClientComment> = {}): ClientComment {
   return {
     id: 1,
@@ -183,7 +183,7 @@ function note(patch: Partial<ClientComment> = {}): ClientComment {
   };
 }
 
-/** Pose caméra minimale — seul `aspect` intéresse les tests de cadre. */
+/** Minimal camera pose: only `aspect` matters to the frame tests. */
 function p() {
   return { x: 0, y: 0, z: 0 };
 }

@@ -3,7 +3,7 @@
 
 import { Router } from 'express';
 import { z } from 'zod';
-import { authenticate } from '../middleware/auth';
+import { authenticate, requireUser } from '../middleware/auth';
 import { validate } from '../middleware/validate';
 import { prisma } from '../lib/prisma';
 import { badRequest, notFound } from '../lib/errors';
@@ -13,12 +13,12 @@ import { runSync } from '../services/shotgrid/ShotgridSyncService';
 import { createTaskFromStep, listProjectMembers, listSteps } from '../services/shotgrid/ShotgridSteps';
 
 /**
- * Réalignement d'une entité seule sur ShotGrid.
+ * Realigning a single entity on ShotGrid.
  *
- * La comparaison du projet dit ce qui diverge, mais tout réaligner d'un geste est une
- * décision lourde qu'on ne prend pas pour un plan. Ici on relit une entité précise :
- * ShotGrid fait foi, la valeur locale est réécrite depuis le site, et rien d'autre n'est
- * touché. C'est l'action qu'appelle la pastille posée sur un plan, un asset ou une tâche.
+ * Comparing the project says what diverges, but realigning everything in one gesture is a heavy decision
+ * that one does not take for a single shot. Here we re-read one specific entity: ShotGrid is
+ * authoritative, the local value is rewritten from the site, and nothing else is touched. It is the
+ * action called by the badge placed on a shot, an asset or a task.
  */
 const router = Router();
 router.use(authenticate);
@@ -36,7 +36,7 @@ router.post(
   }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId);
+    await assertProjectManager(requireUser(req), projectId);
     const connection = await Config.getConnection(projectId);
     if (!connection?.active) throw badRequest('Project not linked to ShotGrid');
 
@@ -48,27 +48,26 @@ router.post(
       },
       select: { sgType: true, sgId: true },
     });
-    // Une entité sans lien n'existe pas là-bas : la « réaligner » reviendrait à la créer,
-    // ce que le studio a précisément choisi de faire depuis ShotGrid. On le dit plutôt
-    // que d'inventer une entité distante.
+    // An entity without a link does not exist there: "realigning" it would amount to creating it, which
+    // the studio has precisely chosen to do from ShotGrid. We say so rather than inventing a remote entity.
     if (!link) throw notFound('This entity has no ShotGrid counterpart');
 
     const result = await runSync(projectId, {
       kind: 'incremental',
       onlySgIds: [{ sgType: link.sgType, sgId: link.sgId }],
       withMedia: req.body.localType === 'version',
-      triggeredById: req.user!.id,
+      triggeredById: requireUser(req).id,
     });
     res.json({ status: result.status, sgType: link.sgType, sgId: link.sgId });
   },
 );
 
 /**
- * Étapes de pipeline du site, pour créer la tâche qui manque.
+ * The site's pipeline steps, to create the missing task.
  *
- * Les colonnes qu'on voit dans ShotGrid — art, model, rig, groom, lookdev — sont des
- * étapes, pas des tâches : un asset neuf les porte toutes, vides. Les proposer ici évite
- * l'aller-retour « créer la tâche dans ShotGrid, revenir, resynchroniser ».
+ * The columns one sees in ShotGrid (art, model, rig, groom, lookdev) are steps, not tasks: a new asset
+ * carries them all, empty. Proposing them here avoids the round trip "create the task in ShotGrid, come
+ * back, resynchronize".
  */
 router.get(
   '/projects/:projectId/steps',
@@ -76,20 +75,20 @@ router.get(
     params: z.object({ projectId: z.coerce.number().int().positive() }),
     query: z.object({
       entityType: z.enum(['Asset', 'Shot']),
-      // Par défaut on s'en tient aux étapes que le projet emploie ; le catalogue complet
-      // du site reste accessible à qui le demande explicitement.
+      // By default we stick to the steps the project uses; the full catalog of the site remains
+      // accessible to whoever explicitly asks for it.
       all: z.coerce.boolean().optional(),
     }),
   }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId, { allowMembers: true });
+    await assertProjectManager(requireUser(req), projectId, { allowMembers: true });
     const connection = await Config.getConnection(projectId);
     if (!connection?.active) return res.json({ steps: [] });
     res.json({
       steps: await listSteps(projectId, req.query.entityType as 'Asset' | 'Shot', {
-        // Express 5 ne remplace pas `req.query` par la valeur validée : la valeur y reste
-        // une chaîne, quel que soit le schéma Zod.
+        // Express 5 does not replace `req.query` with the validated value: the value remains a string there,
+        // whatever the Zod schema.
         all: String(req.query.all) === 'true',
       }),
     });
@@ -110,18 +109,18 @@ router.post(
   }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId);
-    res.status(201).json(await createTaskFromStep(projectId, req.body, req.user!.email ?? null));
+    await assertProjectManager(requireUser(req), projectId);
+    res.status(201).json(await createTaskFromStep(projectId, req.body, requireUser(req).email ?? null));
   },
 );
 
-/** Personnes affectées au projet sur le site — celles à qui une tâche peut être confiée. */
+/** People assigned to the project on the site: those to whom a task can be entrusted. */
 router.get(
   '/projects/:projectId/members',
   validate({ params: z.object({ projectId: z.coerce.number().int().positive() }) }),
   async (req, res) => {
     const projectId = Number(req.params.projectId);
-    await assertProjectManager(req.user!, projectId, { allowMembers: true });
+    await assertProjectManager(requireUser(req), projectId, { allowMembers: true });
     const connection = await Config.getConnection(projectId);
     if (!connection?.active) return res.json({ members: [] });
     res.json({ members: await listProjectMembers(projectId) });

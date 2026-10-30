@@ -7,7 +7,7 @@ import { createHistory } from './history';
 const op = (label: string) => ({ label, undo: vi.fn(), redo: vi.fn() });
 
 describe('createHistory', () => {
-  it('undo/redo dépilent en appelant les callbacks', () => {
+  it('undo/redo pop by calling the callbacks', () => {
     const h = createHistory();
     const a = op('a');
     h.push(a);
@@ -24,7 +24,7 @@ describe('createHistory', () => {
     expect(h.canUndo).toBe(true);
   });
 
-  it('une nouvelle opération vide le futur (pas de redo après push)', () => {
+  it('a new operation empties the future (no redo after push)', () => {
     const h = createHistory();
     const a = op('a');
     const b = op('b');
@@ -35,7 +35,7 @@ describe('createHistory', () => {
     expect(h.redo()).toBe(false);
   });
 
-  it('respecte l’ordre LIFO sur plusieurs opérations', () => {
+  it('respects LIFO order over several operations', () => {
     const h = createHistory();
     const calls: string[] = [];
     const mk = (label: string) => ({
@@ -51,13 +51,13 @@ describe('createHistory', () => {
     expect(calls).toEqual(['undo-b', 'undo-a', 'redo-a']);
   });
 
-  it('undo/redo sans historique renvoient false', () => {
+  it('undo/redo with no history return false', () => {
     const h = createHistory();
     expect(h.undo()).toBe(false);
     expect(h.redo()).toBe(false);
   });
 
-  it('undoAll annule tout dans l’ordre inverse', () => {
+  it('undoAll cancels everything in reverse order', () => {
     const h = createHistory();
     const calls: string[] = [];
     h.push({ label: 'a', undo: () => calls.push('a'), redo: () => undefined });
@@ -68,7 +68,7 @@ describe('createHistory', () => {
     expect(h.canRedo).toBe(true);
   });
 
-  it('clear vide les deux piles', () => {
+  it('clear empties both stacks', () => {
     const h = createHistory();
     h.push(op('a'));
     h.undo();

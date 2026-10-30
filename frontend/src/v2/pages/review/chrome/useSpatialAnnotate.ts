@@ -7,30 +7,30 @@ import type { ChromeState } from './chromeState';
 import type { ToolId } from './tools';
 
 /**
- * Bouton « Annoter » du composer ↔ mode « Annoter » du rail, pour les **viewers spatiaux**.
+ * Composer "Annotate" button ↔ rail "Annotate" mode, for **spatial viewers**.
  *
- * Les médias plats ont ce pont depuis la Phase 50 (`useMediaChrome`) ; le modèle 3D et le splat,
- * non. Conséquence, constatée par l'utilisateur : cliquer « Annoter » sur une scène n'armait que
- * le calque de dessin 2D, avec son crayon et rien d'autre — le rail restait en exploration, et
- * les outils d'annotation de la scène (brosse de surface, gomme de trait, point d'intérêt) comme
- * leurs réglages n'apparaissaient nulle part.
+ * Flat media have had this bridge since Phase 50 (`useMediaChrome`); the 3D model and the splat
+ * did not. The consequence, observed by the user: clicking "Annotate" on a scene only armed the 2D
+ * drawing layer, with its pencil and nothing else — the rail stayed in exploration, and the
+ * scene's annotation tools (surface brush, stroke eraser, point of interest) as well as their
+ * settings appeared nowhere.
  *
- * Trois règles, chacune sur un FRONT et non sur un état — deux effets qui réagissent à l'état se
- * contrediraient à chaque rendu, l'un rallumant ce que l'autre vient d'éteindre :
+ * Three rules, each on an EDGE and not on a state — two effects reacting to the state would
+ * contradict each other on every render, one relighting what the other has just turned off:
  *
- *  1. **Le bouton arme le mode** (front montant de `annotating`). Son front descendant, lui, ne
- *     change pas le mode : ranger le crayon n'est pas sortir de l'annotation, et c'est
- *     précisément ce que fait la règle 3.
- *  2. **Sortir du mode éteint le bouton** (front descendant de « mode Annoter ») : il ne reste
- *     pas allumé sur une annotation qu'on vient de quitter.
- *  3. **Un outil de la scène reprend le pointeur.** Le calque 2D couvre tout le cadre (`z-[6]`)
- *     et, armé, capte le pointeur : il avalait les clics destinés à la surface — c'est ce qui
- *     rendait le placement d'un point d'intérêt inerte dès qu'on avait cliqué « Annoter ». Armer
- *     la brosse, la gomme ou l'épingle range donc le crayon 2D, qui reste ce que l'outil de
- *     repos laisse à l'écran.
+ *  1. **The button arms the mode** (rising edge of `annotating`). Its falling edge does not change
+ *     the mode: putting the pencil away is not leaving annotation, and that is precisely what
+ *     rule 3 does.
+ *  2. **Leaving the mode turns the button off** (falling edge of the "Annotate" mode): it does not
+ *     stay lit on an annotation one has just left.
+ *  3. **A scene tool takes back the pointer.** The 2D layer covers the whole frame (`z-[6]`) and,
+ *     when armed, captures the pointer: it swallowed the clicks meant for the surface — this is what
+ *     made placing a point of interest inert as soon as "Annotate" had been clicked. Arming the
+ *     brush, the eraser or the pin therefore stows the 2D pencil, which remains what the idle tool
+ *     leaves on screen.
  */
 
-/** Outils dont le geste vise la SCÈNE : ils ne peuvent pas partager le pointeur avec le calque 2D. */
+/** Tools whose gesture targets the SCENE: they cannot share the pointer with the 2D layer. */
 const SCENE_POINTER_TOOLS = new Set<ToolId>(['paint', 'paint-erase', 'pin']);
 
 export function useSpatialAnnotate({

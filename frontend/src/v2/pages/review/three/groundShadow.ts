@@ -13,18 +13,18 @@ interface GroundShadowState {
 }
 
 /**
- * Sol invisible récepteur d'ombres portées du modèle (39.F). Non destructif : ajoute un plan
- * `ShadowMaterial` transparent sous le modèle, active la **key light** (la directionnelle la plus
- * intense de la scène) comme source d'ombres et le shadow map du renderer. Idempotent — l'état est
- * mémorisé dans `scene.userData.__groundShadow` (reconstruit si le modèle change). `enabled=false`
- * retire le plan, coupe l'ombre de la key light et désactive le shadow map.
+ * Invisible ground receiving the model's cast shadows (39.F). Non-destructive: adds a transparent
+ * `ShadowMaterial` plane under the model, activates the **key light** (the most intense directional
+ * light of the scene) as a shadow source, and the renderer's shadow map. Idempotent: the state is kept
+ * in `scene.userData.__groundShadow` (rebuilt if the model changes). `enabled=false` removes the plane,
+ * cuts the key light's shadow and disables the shadow map.
  *
- * Le plan suit `box.min.y` du modèle **tel qu'il est en scène** : la normalisation posant le modèle
- * sur `y = 0`, il coïncide avec la grille tant que la transformation utilisateur est neutre, et
- * continue de le suivre sinon.
+ * The plane follows the model's `box.min.y` **as it is in the scene**: the normalisation puts the model
+ * on `y = 0`, so it coincides with the grid while the user transform is neutral, and it keeps following
+ * it otherwise.
  *
- * L'intensité de la key light (atténuée par l'HDRI, cf. `applyLighting`) n'affecte pas le rendu de
- * l'ombre : `ShadowMaterial` peint uniquement le masque d'ombre, d'opacité `SHADOW_OPACITY`.
+ * The key light's intensity (attenuated by the HDRI, cf. `applyLighting`) does not affect the shadow's
+ * rendering: `ShadowMaterial` only paints the shadow mask, with opacity `SHADOW_OPACITY`.
  */
 const SHADOW_OPACITY = 0.35;
 
@@ -45,7 +45,7 @@ export function setGroundShadow(handle: ViewerSceneHandle, enabled: boolean): vo
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 
-  // Boîte englobante du modèle → position/taille du sol et cadrage de la caméra d'ombre.
+  // Model bounding box: position and size of the ground, and framing of the shadow camera.
   const box = new THREE.Box3().setFromObject(mesh);
   if (box.isEmpty()) return;
   const size = new THREE.Vector3();
@@ -54,7 +54,7 @@ export function setGroundShadow(handle: ViewerSceneHandle, enabled: boolean): vo
   box.getCenter(center);
   const extent = Math.max(size.x, size.z) || 1;
 
-  // Le modèle projette des ombres (le sol les reçoit).
+  // The model casts shadows (the ground receives them).
   mesh.traverse((o) => {
     const m = o as THREE.Mesh;
     if (m.isMesh) m.castShadow = true;
@@ -75,7 +75,7 @@ export function setGroundShadow(handle: ViewerSceneHandle, enabled: boolean): vo
     cam.updateProjectionMatrix();
   }
 
-  // Reconstruit le plan (le modèle a pu changer de taille/position depuis le dernier appel).
+  // Rebuilds the plane (the model may have changed size or position since the last call).
   if (existing) disposeGround(scene, existing);
   const planeSize = extent * 6;
   const geometry = new THREE.PlaneGeometry(planeSize, planeSize);
@@ -95,8 +95,8 @@ function disposeGround(scene: THREE.Scene, state: GroundShadowState): void {
   delete scene.userData[GROUND_KEY];
 }
 
-/** Renvoie la lumière directionnelle la plus intense (key light), en s'appuyant sur `baseIntensity`
- *  quand l'HDRI a atténué l'intensité courante (cf. `applyLighting`). */
+/** Returns the most intense directional light (key light), relying on `baseIntensity`
+ *  when the HDRI attenuated the current intensity (cf. `applyLighting`). */
 function brightestDirectional(scene: THREE.Scene): THREE.DirectionalLight | null {
   let best: THREE.DirectionalLight | null = null;
   let bestBase = -1;

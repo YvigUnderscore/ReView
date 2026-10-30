@@ -3,8 +3,8 @@
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 
-// Seule la base est feinte : les fonctions de `lib/projectSettings` restent réelles, c'est
-// leur composition avec l'écriture qu'on vérifie ici.
+// Only the database is faked: the functions of `lib/projectSettings` remain real — it is their composition
+// with the write that is verified here.
 vi.mock('../lib/prisma', () => ({
   prisma: {
     project: { findFirst: vi.fn(), findUnique: vi.fn(), update: vi.fn() },
@@ -41,7 +41,7 @@ const update = vi.mocked(prisma.project.update);
 const departmentCount = vi.mocked(prisma.department.count);
 const departmentUpdateMany = vi.mocked(prisma.department.updateMany);
 
-/** Le JSON écrit par la dernière mise à jour du projet. */
+/** The JSON written by the project's latest update. */
 const writtenSettings = () =>
   (update.mock.calls.at(-1)![0] as { data: { settings: Record<string, unknown> } }).data.settings;
 
@@ -58,31 +58,31 @@ beforeEach(() => {
   findFirst.mockResolvedValue({ settings: {} } as never);
 });
 
-describe('getSettings — effectif + sections surchargées', () => {
-  it('404 quand le projet n’existe pas', async () => {
+describe('getSettings: effective + overridden sections', () => {
+  it('404 when the project does not exist', async () => {
     findFirst.mockResolvedValue(null);
     await expect(getSettings(7)).rejects.toMatchObject({ statusCode: 404 });
   });
 
-  it('ne signale aucune surcharge sur un projet qui hérite de tout', async () => {
+  it('reports no override on a project that inherits everything', async () => {
     const { settings, overrides } = await getSettings(7);
     expect(settings).toEqual(STUDIO);
     expect(overrides).toEqual([]);
   });
 
-  it('signale les sections réellement surchargées, et elles seules', async () => {
+  it('reports the sections actually overridden, and only those', async () => {
     findFirst.mockResolvedValue({ settings: { framerate: 25, isTemplate: true } } as never);
     expect((await getSettings(7)).overrides).toEqual(['framerate']);
   });
 
-  it('tient les départements pour surchargés dès que le projet a ses propres lignes', async () => {
+  it('treats departments as overridden as soon as the project has its own rows', async () => {
     departmentCount.mockResolvedValue(4);
     expect((await getSettings(7)).overrides).toEqual(['departments']);
   });
 });
 
-describe('getSettingsOverride — vue d’édition', () => {
-  it('rend l’override stocké ET les défauts studio dont le reste hérite', async () => {
+describe('getSettingsOverride: edit view', () => {
+  it('returns the stored override AND the studio defaults the rest inherits', async () => {
     findFirst.mockResolvedValue({ settings: { resolution: { width: 4096, height: 2160 } } } as never);
     const { override, studio, overrides } = await getSettingsOverride(7);
     expect(override).toEqual({ resolution: { width: 4096, height: 2160 } });
@@ -91,41 +91,41 @@ describe('getSettingsOverride — vue d’édition', () => {
   });
 });
 
-describe('updateSettings (PUT) — remplacement de l’override', () => {
-  it('N’ÉCRIT PAS les défauts studio reçus tels quels : seules les sections envoyées restent', async () => {
-    // Le corps que l'ancien écran envoyait : les réglages EFFECTIFS, défauts studio compris.
+describe('updateSettings (PUT): replacement of the override', () => {
+  it('does NOT WRITE the studio defaults received as is: only the sections sent remain', async () => {
+    // The body the old screen sent: the EFFECTIVE settings, studio defaults included.
     await updateSettings(admin, 7, { ...STUDIO, framerate: 25 });
     const stored = writtenSettings();
     expect(stored.framerate).toBe(25);
-    // La résolution envoyée était celle du studio : elle reste une surcharge explicite ici,
-    // puisque le PUT est un remplacement total — mais rien n'a été inventé en plus.
+    // The resolution sent was the studio's: it remains an explicit override here, since the PUT is a total
+    // replacement — but nothing was invented on top.
     expect(Object.keys(stored).sort()).toEqual(
       ['departments', 'framerate', 'naming', 'nomenclature', 'resolution', 'reviewRequest'].sort(),
     );
   });
 
-  it('rend à l’héritage les sections absentes du corps', async () => {
+  it('returns to inheritance the sections absent from the body', async () => {
     findFirst.mockResolvedValue({ settings: { framerate: 25, color: { configId: 'x' } } } as never);
     await updateSettings(admin, 7, { framerate: 30 });
     expect(writtenSettings()).toEqual({ framerate: 30 });
   });
 
-  it('404 quand le projet n’existe pas', async () => {
+  it('404 when the project does not exist', async () => {
     findFirst.mockResolvedValue(null);
     await expect(updateSettings(admin, 7, { framerate: 30 })).rejects.toMatchObject({ statusCode: 404 });
     expect(update).not.toHaveBeenCalled();
   });
 });
 
-describe('patchSettings (PATCH) — écriture section par section', () => {
-  it('n’enregistre QUE la section touchée : le studio continue de piloter le reste', async () => {
+describe('patchSettings (PATCH): section-by-section write', () => {
+  it('saves ONLY the touched section: the studio continues to drive the rest', async () => {
     await patchSettings(admin, 7, { nomenclature: { ...STUDIO.nomenclature, shotPrefix: 'PL' } });
     expect(writtenSettings()).toEqual({
       nomenclature: { sequencePrefix: 'SQ', shotPrefix: 'PL', padding: 3, step: 10 },
     });
   });
 
-  it('conserve les surcharges déjà posées', async () => {
+  it('keeps the overrides already set', async () => {
     findFirst.mockResolvedValue({ settings: { framerate: 25 } } as never);
     await patchSettings(admin, 7, { resolution: { width: 4096, height: 2160 } });
     expect(writtenSettings()).toEqual({
@@ -134,19 +134,19 @@ describe('patchSettings (PATCH) — écriture section par section', () => {
     });
   });
 
-  it('rend une section à l’héritage sur null', async () => {
+  it('returns a section to inheritance on null', async () => {
     findFirst.mockResolvedValue({ settings: { framerate: 25, color: { configId: 'x' } } } as never);
     await patchSettings(admin, 7, { framerate: null });
     expect(writtenSettings()).toEqual({ color: { configId: 'x' } });
   });
 
-  it('traduit une liste de départements en entités', async () => {
+  it('translates a list of departments into entities', async () => {
     await patchSettings(admin, 7, { departments: [{ key: 'FX', name: 'FX' }] });
     expect(DepartmentService.syncFromSettings).toHaveBeenCalledWith(7, [{ key: 'FX', name: 'FX' }]);
     expect(departmentUpdateMany).not.toHaveBeenCalled();
   });
 
-  it('retire le pipe propre du projet quand les départements retournent à l’héritage', async () => {
+  it("removes the project's own pipe when the departments return to inheritance", async () => {
     await patchSettings(admin, 7, { departments: null });
     expect(DepartmentService.syncFromSettings).not.toHaveBeenCalled();
     expect(departmentUpdateMany).toHaveBeenCalledWith(
@@ -154,7 +154,7 @@ describe('patchSettings (PATCH) — écriture section par section', () => {
     );
   });
 
-  it('ne touche pas aux départements quand le PATCH ne les mentionne pas', async () => {
+  it('does not touch the departments when the PATCH does not mention them', async () => {
     await patchSettings(admin, 7, { framerate: 30 });
     expect(DepartmentService.syncFromSettings).not.toHaveBeenCalled();
     expect(departmentUpdateMany).not.toHaveBeenCalled();

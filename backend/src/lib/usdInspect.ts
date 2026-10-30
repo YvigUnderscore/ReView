@@ -6,16 +6,16 @@ import { promisify } from 'node:util';
 import { z } from 'zod';
 
 /**
- * Pont vers l'analyseur USD (Phase 45, 45.B) — `workers/usd/analyze_usd.py`, execute par le
- * runtime OpenUSD officiel (`usd-core`). Deux responsabilites, volontairement separees :
+ * Bridge to the USD analyzer (Phase 45, 45.B): `workers/usd/analyze_usd.py`, executed by the
+ * official OpenUSD runtime (`usd-core`). Two responsibilities, deliberately separated:
  *
- *  - **parsing** (`parseUsdScan`, `parseUsdStageInfo`) : pur, valide par Zod, testable sans
- *    binaire. La sortie d'un script externe est une entree non fiable comme une autre.
- *  - **execution** : mince enveloppe `execFile` (jamais de shell) avec timeout obligatoire —
- *    une scene pathologique ne doit pas immobiliser un slot de worker.
+ *  - **parsing** (`parseUsdScan`, `parseUsdStageInfo`): pure, validated by Zod, testable without
+ *    the binary. The output of an external script is untrusted input like any other.
+ *  - **execution**: thin `execFile` wrapper (never a shell) with a mandatory timeout: a
+ *    pathological scene must not tie up a worker slot.
  *
- * L'outillage est **optionnel** : sans lui, le worker retombe sur les heuristiques de
- * `usdArchive.ts` et se prive du rapport d'assets manquants, sans casser la conversion.
+ * The tooling is **optional**: without it, the worker falls back to the heuristics of
+ * `usdArchive.ts` and forgoes the missing-assets report, without breaking the conversion.
  */
 
 const execFileAsync = promisify(execFile);
@@ -34,7 +34,7 @@ const variantSetSchema = z.object({
   selected: z.string().default(''),
 });
 
-/** Prim du scenegraph (46.A) — l'arbre est transporte a plat, le front le renested. */
+/** Prim of the scene graph (46.A): the tree is transported flat, and the front end nests it again. */
 const primSchema = z.object({
   path: z.string(),
   name: z.string().default(''),
@@ -50,7 +50,7 @@ export const usdStageInfoSchema = z.object({
   root: z.string(),
   stagePath: z.string(),
   defaultPrim: z.string().nullable().default(null),
-  // USD n'autorise que Y ou Z ; toute autre valeur est ramenee au defaut glTF (Y).
+  // USD only allows Y or Z; any other value is brought back to the glTF default (Y).
   upAxis: z.string().transform((v) => (v.toUpperCase() === 'Z' ? 'Z' : 'Y')),
   metersPerUnit: z.number().positive().default(1),
   startTimeCode: z.number().default(0),
@@ -61,7 +61,7 @@ export const usdStageInfoSchema = z.object({
   variantSets: z.array(variantSetSchema).default([]),
   appliedVariants: z.array(z.object({ prim: z.string(), name: z.string(), value: z.string() })).default([]),
   purposes: z.array(z.string()).default([]),
-  /** Chemins des prims `Material` — masque d'import des variantes cuites (46.G). */
+  /** Paths of the `Material` prims: import mask of the baked variants (46.G). */
   materialPaths: z.array(z.string()).default([]),
   missingAssets: z.array(z.string()).default([]),
   missingAssetsTotal: z.number().int().nonnegative().default(0),
@@ -76,12 +76,12 @@ export type UsdVariantSet = z.infer<typeof variantSetSchema>;
 export type UsdPrim = z.infer<typeof primSchema>;
 export type UsdStageInfo = z.infer<typeof usdStageInfoSchema>;
 
-/** Selection de variantes demandee : `{ "/World/Asset": { "modelingVariant": "hero" } }`. */
+/** Requested variant selection: `{ "/World/Asset": { "modelingVariant": "hero" } }`. */
 export type UsdVariantSelection = Record<string, Record<string, string>>;
 
 /**
- * Isole l'objet JSON produit par le script. OpenUSD ecrit ses avertissements sur stderr, mais un
- * plugin tiers peut polluer stdout : on retient la **derniere** ligne qui est un objet JSON.
+ * Isolates the JSON object produced by the script. OpenUSD writes its warnings to stderr, but a
+ * third-party plugin may pollute stdout: we keep the **last** line that is a JSON object.
  */
 export function extractJsonLine(stdout: string): string {
   const lines = stdout
@@ -93,14 +93,14 @@ export function extractJsonLine(stdout: string): string {
   return last;
 }
 
-/** Parse la sortie du mode `scan` (graphe de dependances entre couches). */
+/** Parses the output of the `scan` mode (dependency graph between layers). */
 export function parseUsdScan(stdout: string): UsdLayerDep[] {
   const parsed = usdScanSchema.safeParse(JSON.parse(extractJsonLine(stdout)));
   if (!parsed.success) throw new Error('USD analysis: invalid layer graph');
   return parsed.data.layers;
 }
 
-/** Parse la sortie du mode `inspect` (description de la scene), avec deduplication. */
+/** Parses the output of the `inspect` mode (scene description), with deduplication. */
 export function parseUsdStageInfo(stdout: string): UsdStageInfo {
   const parsed = usdStageInfoSchema.safeParse(JSON.parse(extractJsonLine(stdout)));
   if (!parsed.success) throw new Error('USD analysis: invalid scene description');
@@ -119,8 +119,8 @@ export function parseUsdStageInfo(stdout: string): UsdStageInfo {
 }
 
 /**
- * Ne conserve que les selections **connues** de la scene : un nom de variantSet ou une valeur
- * inventes ne doivent jamais atteindre le pipeline (l'entree vient d'une requete utilisateur).
+ * Keeps only the **known** selections of the scene: an invented variantSet name or value must
+ * never reach the pipeline (the input comes from a user request).
  */
 export function sanitizeVariantSelection(
   requested: UsdVariantSelection,
@@ -136,11 +136,11 @@ export function sanitizeVariantSelection(
   return clean;
 }
 
-/** Configuration d'execution injectee par l'appelant (valeurs issues de `config/env.ts`). */
+/** Execution configuration injected by the caller (values taken from `config/env.ts`). */
 export interface UsdToolConfig {
-  /** Interpreteur Python disposant du module `pxr` (venv `usd-core`). */
+  /** Python interpreter with the `pxr` module (`usd-core` venv). */
   python: string;
-  /** Chemin du script `analyze_usd.py`. */
+  /** Path of the `analyze_usd.py` script. */
   script: string;
   timeoutMs: number;
 }
@@ -152,7 +152,7 @@ const run = (cfg: UsdToolConfig, args: string[]) =>
     windowsHide: true,
   });
 
-/** Vrai si l'analyseur est utilisable (module `pxr` importable) — jamais d'exception. */
+/** True if the analyzer is usable (importable `pxr` module): never throws. */
 export async function isUsdToolingAvailable(cfg: UsdToolConfig): Promise<boolean> {
   try {
     await execFileAsync(cfg.python, ['-c', 'import pxr'], {
@@ -165,16 +165,16 @@ export async function isUsdToolingAvailable(cfg: UsdToolConfig): Promise<boolean
   }
 }
 
-/** Graphe de dependances des couches USD d'un dossier extrait. */
+/** Dependency graph of the USD layers of an extracted directory. */
 export async function scanUsdDirectory(directory: string, cfg: UsdToolConfig): Promise<UsdLayerDep[]> {
   const { stdout } = await run(cfg, ['scan', '--input', directory]);
   return parseUsdScan(stdout);
 }
 
 /**
- * Decrit une scene USD. `overlayOut` + `variantsFile` demandent l'ecriture d'une couche
- * d'overlay portant la selection de variantes : c'est `info.stagePath` qu'il faut alors
- * convertir, pas le fichier d'origine (qui n'est jamais modifie).
+ * Describes a USD scene. `overlayOut` + `variantsFile` request the writing of an overlay layer
+ * carrying the variant selection: it is then `info.stagePath` that must be converted, not the
+ * original file (which is never modified).
  */
 export async function inspectUsdStage(
   input: string,
@@ -188,16 +188,16 @@ export async function inspectUsdStage(
   return parseUsdStageInfo(stdout);
 }
 
-/** Une couche d'overlay a ecrire : selection de variantes posee au-dessus de la racine. */
+/** An overlay layer to write: variant selection set above the root layer. */
 export interface UsdOverlayRequest {
   out: string;
   variants: UsdVariantSelection;
 }
 
 /**
- * Ecrit un lot de couches d'overlay en **une** invocation (46.P) : la preparation des
- * variantes a cuire en demandait une par option, soit des centaines de compositions
- * completes sur une scene de production. Le script ecrit du Sdf pur, sans composer.
+ * Writes a batch of overlay layers in **one** invocation (46.P): preparing the variants to bake
+ * used to request one per option, i.e. hundreds of complete compositions on a production scene.
+ * The script writes pure Sdf, without composing.
  */
 export async function writeVariantOverlays(
   root: string,

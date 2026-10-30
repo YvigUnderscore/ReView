@@ -5,8 +5,8 @@ import { AtSign } from 'lucide-react';
 import type { Mentions } from './useMentions';
 
 /**
- * Menu d'autocomplete des mentions (32.B), affiché au-dessus du textarea
- * (le parent doit être `relative`). Navigation clavier gérée par `useMentions`.
+ * Mention autocomplete menu (32.B), shown above the textarea (the parent must be
+ * `relative`). Keyboard navigation is handled by `useMentions`.
  */
 export default function MentionMenu({ mentions }: { mentions: Mentions }) {
   if (!mentions.open) return null;
@@ -16,7 +16,7 @@ export default function MentionMenu({ mentions }: { mentions: Mentions }) {
         <button
           key={c.id}
           type="button"
-          // mousedown : évite de perdre le focus du textarea avant l'insertion
+          // mousedown: avoids losing the textarea's focus before the insertion
           onMouseDown={(e) => {
             e.preventDefault();
             mentions.pick(c);

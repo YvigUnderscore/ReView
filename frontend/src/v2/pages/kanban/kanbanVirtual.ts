@@ -2,43 +2,41 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Arithmétique de la colonne virtualisée (vague 2 — échelle).
+ * Arithmetic of the virtualized column (wave 2, scale).
  *
- * Une colonne de kanban montait jusqu'à soixante cartes puis s'arrêtait sur un « et
- * quarante autres » qu'aucun geste ne permettait d'atteindre : sur un long-métrage
- * (deux mille plans, dix mille tâches), la moitié du travail du studio était hors de
- * portée, et les soixante cartes montées portaient chacune un enregistrement dnd-kit et
- * un menu contextuel Radix.
+ * A kanban column mounted up to sixty cards, then stopped at an "and forty others" that no gesture
+ * could reach. On a feature film (two thousand shots, ten thousand tasks), half of the studio's
+ * work was out of reach, and the sixty mounted cards each carried a dnd-kit record and a Radix
+ * context menu.
  *
- * La colonne défile désormais pour elle-même et ne monte que sa fenêtre visible. Les
- * décisions qui n'ont pas besoin du DOM sont isolées ici pour être vérifiables sans
- * navigateur.
+ * The column now scrolls on its own and mounts only its visible window. Decisions that do not
+ * need the DOM are isolated here, so they can be verified without a browser.
  */
 
 /**
- * En deçà de ce nombre, la colonne se monte en entier.
+ * Below this number, the column is mounted in full.
  *
- * Virtualiser coûte un observateur de taille par carte et une mesure par rendu : sous
- * une trentaine de cartes, la fenêtre visible vaut à peu près la colonne entière et
- * l'écran d'un petit projet reste exactement ce qu'il était.
+ * Virtualizing costs a size observer per card and a measurement per render. Below about thirty
+ * cards, the visible window is roughly the whole column, and the screen of a small project stays
+ * exactly what it was.
  */
 export const VIRTUALIZE_FROM = 30;
 
-/** Hauteur estimée d'une carte, gouttière comprise — remesurée ensuite pour de vrai. */
+/** Estimated height of a card, gutter included, remeasured afterwards for real. */
 export const CARD_ESTIMATE = 64;
 
-/** Cartes montées de part et d'autre de la fenêtre : le défilement ne montre pas de vide. */
+/** Cards mounted on each side of the window: scrolling shows no gap. */
 export const CARD_OVERSCAN = 6;
 
-/** Une colonne assez dense pour mériter la virtualisation. */
+/** A column dense enough to deserve virtualization. */
 export function shouldVirtualize(count: number): boolean {
   return count > VIRTUALIZE_FROM;
 }
 
 /**
- * Position de la carte en cours de glissement dans la colonne, `-1` si elle n'y est pas.
+ * Position of the card being dragged within the column, `-1` if it is not there.
  *
- * Le board ne connaît qu'un identifiant : chaque colonne cherche s'il est chez elle.
+ * The board only knows an identifier: each column checks whether it is its own.
  */
 export function activeIndexIn(tasks: readonly { id: number }[], activeTaskId: number | null): number {
   if (activeTaskId == null) return -1;
@@ -46,12 +44,12 @@ export function activeIndexIn(tasks: readonly { id: number }[], activeTaskId: nu
 }
 
 /**
- * Force la carte glissée à rester montée, même sortie de la fenêtre visible.
+ * Forces the dragged card to stay mounted, even when it has left the visible window.
  *
- * Sans elle, faire défiler la colonne pendant un glisser démonterait la carte tenue à la
- * souris : la zone de dépôt (la colonne) tiendrait toujours, mais l'aperçu suivi par le
- * curseur perdrait sa taille de référence et la carte d'origine cesserait d'être grisée.
- * L'index revient trié — le virtualiseur suppose une fenêtre croissante.
+ * Without it, scrolling the column during a drag would unmount the card held by the mouse: the
+ * drop zone (the column) would still hold, but the preview followed by the cursor would lose its
+ * reference size, and the original card would stop being greyed out.
+ * The index comes back sorted, since the virtualizer assumes an ascending window.
  */
 export function withActiveIndex(indices: readonly number[], activeIndex: number): number[] {
   if (activeIndex < 0 || indices.includes(activeIndex)) return [...indices];

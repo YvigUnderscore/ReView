@@ -2,26 +2,24 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Détecte les **clés de traduction que plus personne ne cite** — l'inverse de
- * `check-raw-keys.mjs` (clé affichée telle quelle) et de `check-untranslated.mjs` (texte
- * jamais passé par `t()`).
+ * Detects **translation keys that nobody cites any more** — the opposite of `check-raw-keys.mjs`
+ * (key displayed as is) and of `check-untranslated.mjs` (text never passed through `t()`).
  *
- * Une clé morte ne casse rien : elle coûte. Chacune est écrite quatorze fois, et une
- * langue de plus, c'est quatorze traductions de plus à produire, à relire et à maintenir
- * pour du texte que personne n'affichera. `check-translations.mjs` ne voit que la faute
- * symétrique (clé présente dans une langue et absente d'`en.json`).
+ * A dead key breaks nothing: it costs. Each one is written fourteen times, and one more language means
+ * fourteen more translations to produce, proofread and maintain for text nobody will display.
+ * `check-translations.mjs` only sees the symmetric fault (key present in one language and absent from
+ * `en.json`).
  *
- * Le contrôle lit l'AST plutôt que le texte des fichiers, pour distinguer deux formes :
- *   1. la citation directe — `t('shots.add')` : la clé apparaît telle quelle ;
- *   2. la clé **construite** — `` t(`shotgrid.domain.${d}`) ``, `'admin.group.' + g` : rien
- *      dans le code ne cite la clé finale. Le préfixe littéral (`shotgrid.domain.`) est
- *      alors relevé, et toute clé qui en descend est tenue pour employée. Un préfixe est
- *      donc une **famille** — la contrepartie de la construction dynamique, assumée.
+ * The check reads the AST rather than the text of the files, to tell apart two forms:
+ *   1. the direct citation — `t('shots.add')`: the key appears as is;
+ *   2. the **built** key — `` t(`shotgrid.domain.${d}`) ``, `'admin.group.' + g`: nothing in the code
+ *      cites the final key. The literal prefix (`shotgrid.domain.`) is then recorded, and any key
+ *      below it is taken as used. A prefix is therefore a **family** — the accepted counterpart of
+ *      dynamic construction.
  *
- * Le total est comparé à un plafond (`CEILING`). Baisser le plafond quand on descend,
- * jamais l'inverse.
+ * The total is compared to a ceiling (`CEILING`). Lower the ceiling when going down, never the other way.
  *
- * Usage : node scripts/check-unused-keys.mjs [--list] [--set=frontend|backend]
+ * Usage: node scripts/check-unused-keys.mjs [--list] [--set=frontend|backend]
  */
 
 import { readFileSync, readdirSync, statSync } from 'node:fs';
@@ -29,24 +27,23 @@ import { createRequire } from 'node:module';
 import { dirname, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 
-// Chemins ancrés sur la racine du dépôt et non sur le répertoire courant : la suite
-// vitest du backend exécute ce fichier depuis `backend/`.
+// Paths anchored on the repository root and not on the current directory: the backend
+// vitest suite runs this file from `backend/`.
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const at = (...parts) => join(repoRoot, ...parts);
 
 const ts = createRequire(at('frontend', 'package.json'))('typescript');
 
-/** Reliquat de clés mortes toléré — dette à résorber, jamais à relever. */
+/** Tolerated remainder of dead keys — debt to be paid down, never raised. */
 const CEILING = 0;
 
 /**
- * Un jeu = un catalogue de référence et les sources qui l'emploient.
+ * A set = a reference catalogue and the sources that use it.
  *
- * Le backend cite des clés **du catalogue front** : une notification et une ligne de
- * journal ShotGrid voyagent en clé (`messageKey: 'notification.mentioned'`) et sont
- * traduites à l'affichage, dans la langue du lecteur et non dans celle du serveur. Ses
- * sources comptent donc pour le jeu frontend — les ignorer déclarerait mortes une
- * cinquantaine de clés bien vivantes.
+ * The backend cites keys **of the front-end catalogue**: a notification and a ShotGrid journal line
+ * travel as a key (`messageKey: 'notification.mentioned'`) and are translated at display time, in the
+ * reader's language rather than the server's. Its sources therefore count for the frontend set — ignoring
+ * them would declare some fifty perfectly alive keys dead.
  */
 export const SETS = [
   {
@@ -61,15 +58,15 @@ export const SETS = [
   },
 ];
 
-/** Clés du catalogue de référence, à plat. */
+/** Keys of the reference catalogue, flattened. */
 export const catalogKeys = (file) => Object.keys(JSON.parse(readFileSync(file, 'utf8')));
 
 /**
- * Citations trouvées dans un source : clés entières et préfixes de clés construites.
+ * Citations found in a source: whole keys and prefixes of built keys.
  *
- * Aucun filtre sur l'appelant : une clé peut transiter par une constante (`const KEY =
- * 'task.status.todo'`), une prop `…Key`, un tableau ou un test. Ce qui compte est qu'elle
- * soit **nommée** quelque part ; la faute inverse (clé jamais traduite) a son contrôle.
+ * No filter on the caller: a key may travel through a constant (`const KEY =
+ * 'task.status.todo'`), a `…Key` prop, an array or a test. What matters is that it is **named**
+ * somewhere; the opposite fault (key never translated) has its own check.
  */
 export function citations(source, fileName = 'x.ts') {
   const src = ts.createSourceFile(
@@ -85,10 +82,10 @@ export function citations(source, fileName = 'x.ts') {
   const visit = (node) => {
     if (ts.isStringLiteral(node) || ts.isNoSubstitutionTemplateLiteral(node)) {
       exact.add(node.text);
-      // `'admin.group.' + name` — la concaténation est l'autre façon de construire une clé.
+      // `'admin.group.' + name` — concatenation is the other way of building a key.
       if (node.text.endsWith('.') && ts.isBinaryExpression(node.parent)) prefixes.add(node.text);
     } else if (ts.isTemplateExpression(node)) {
-      // `` `shotgrid.entity.${kind}` `` — seule la tête est littérale.
+      // `` `shotgrid.entity.${kind}` `` — only the head is a literal.
       if (node.head.text.includes('.')) prefixes.add(node.head.text);
     }
     ts.forEachChild(node, visit);
@@ -101,7 +98,7 @@ function* sources(dir) {
   for (const entry of readdirSync(dir)) {
     const full = join(dir, entry);
     if (statSync(full).isDirectory()) {
-      // Les catalogues eux-mêmes ne citent rien : ils *sont* les clés.
+      // The catalogues themselves cite nothing: they *are* the keys.
       if (entry !== 'messages' && entry !== 'node_modules' && entry !== 'dist') yield* sources(full);
     } else if (/\.(tsx?|mjs)$/.test(entry)) {
       yield full;
@@ -109,7 +106,7 @@ function* sources(dir) {
   }
 }
 
-/** Clés du catalogue qu'aucune source ne cite, ni entière ni par préfixe. */
+/** Catalogue keys that no source cites, neither whole nor by prefix. */
 export function unusedKeys(set) {
   const exact = new Set();
   const prefixes = new Set();
@@ -146,5 +143,5 @@ function main() {
   process.exit(ok ? 0 : 1);
 }
 
-// Importable pour les tests ; exécuté seulement quand on l'appelle directement.
+// Importable for the tests; only runs when called directly.
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) main();

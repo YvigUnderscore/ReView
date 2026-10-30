@@ -5,7 +5,7 @@ import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { createSelectionGlow } from './selectionGlow';
 
-/** Groupe `Xform` portant deux meshes — la forme d'un prim USD converti. */
+/** `Xform` group carrying two meshes — the shape of a converted USD prim. */
 function makeScene() {
   const scene = new THREE.Scene();
   const group = new THREE.Group();
@@ -19,17 +19,17 @@ function makeScene() {
 const shellsOf = (scene: THREE.Scene) =>
   scene.children.find((o) => o.name === 'review-selection-glow')?.children.length ?? -1;
 
-describe('createSelectionGlow — halo de sélection (46)', () => {
-  it('entoure les meshes de la descendance d’un groupe sélectionné', () => {
+describe('createSelectionGlow — selection halo (46)', () => {
+  it('surrounds the meshes of the descendants of a selected group', () => {
     const { scene, group } = makeScene();
     const glow = createSelectionGlow(THREE, scene);
-    // Un prim USD est presque toujours un Xform : sans descente, rien ne serait entouré.
+    // A USD prim is almost always an Xform: without descending, nothing would be surrounded.
     glow.show([group]);
     expect(shellsOf(scene)).toBe(2);
     glow.dispose();
   });
 
-  it('ignore un mesh masqué par un parent', () => {
+  it('ignores a mesh hidden by a parent', () => {
     const { scene, group, a } = makeScene();
     a.visible = false;
     const glow = createSelectionGlow(THREE, scene);
@@ -38,7 +38,7 @@ describe('createSelectionGlow — halo de sélection (46)', () => {
     glow.dispose();
   });
 
-  it('n’entoure rien quand tout le sous-arbre est masqué', () => {
+  it('surrounds nothing when the whole subtree is hidden', () => {
     const { scene, group } = makeScene();
     group.visible = false;
     const glow = createSelectionGlow(THREE, scene);
@@ -47,7 +47,7 @@ describe('createSelectionGlow — halo de sélection (46)', () => {
     glow.dispose();
   });
 
-  it('une sélection vide efface le halo, et dispose retire le groupe', () => {
+  it('an empty selection clears the halo, and dispose removes the group', () => {
     const { scene, group } = makeScene();
     const glow = createSelectionGlow(THREE, scene);
     glow.show([group]);
@@ -57,9 +57,9 @@ describe('createSelectionGlow — halo de sélection (46)', () => {
     expect(shellsOf(scene)).toBe(-1);
   });
 
-  it('reste aligné sur une géométrie excentrée (transformations cuites dans les sommets)', () => {
+  it('stays aligned on an off-center geometry (transforms baked into the vertices)', () => {
     const scene = new THREE.Scene();
-    // Blender cuit souvent la position dans les sommets : géométrie loin de l'origine locale.
+    // Blender often bakes the position into the vertices: geometry far from the local origin.
     const geometry = new THREE.BoxGeometry(1, 1, 1);
     geometry.translate(10, 0, 0);
     const mesh = new THREE.Mesh(geometry, new THREE.MeshStandardMaterial());
@@ -68,20 +68,20 @@ describe('createSelectionGlow — halo de sélection (46)', () => {
     glow.show([mesh]);
 
     const shell = scene.children.find((o) => o.name === 'review-selection-glow')!.children[0] as THREE.Mesh;
-    // Le centre de la géométrie doit rester exactement au même point monde : la dilatation se
-    // fait autour de lui, pas autour de l'origine (qui décalerait le halo de 4 % de la distance).
+    // The geometry center must stay at exactly the same world point: dilation happens around
+    // it, not around the origin (which would shift the halo by 4% of the distance).
     const center = geometry.boundingSphere!.center.clone();
     const viaShell = center.clone().applyMatrix4(shell.matrix);
     const viaMesh = center.clone().applyMatrix4(mesh.matrixWorld);
     expect(viaShell.distanceTo(viaMesh)).toBeLessThan(1e-6);
-    // Et un point du bord est bien dilaté de SHELL_SCALE autour de ce centre.
+    // And a point on the edge is indeed dilated by SHELL_SCALE around that center.
     const edge = center.clone().add(new THREE.Vector3(0.5, 0, 0));
     const shellEdge = edge.clone().applyMatrix4(shell.matrix);
     expect(shellEdge.x - viaShell.x).toBeCloseTo(0.5 * 1.04, 5);
     glow.dispose();
   });
 
-  it('reste hors du raycast : c’est un repère d’interface', () => {
+  it('stays out of the raycast: it is an interface marker', () => {
     const { scene, group } = makeScene();
     const glow = createSelectionGlow(THREE, scene);
     glow.show([group]);

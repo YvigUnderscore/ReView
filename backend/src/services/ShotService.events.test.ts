@@ -2,12 +2,12 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 
 /**
- * Événements temps réel d'un lot de plans.
+ * Real-time events for a batch of shots.
  *
- * Une action de production sur trente plans émettait trente `shot:update` et trente
- * `timeline:update` ; chacun rechargeait le kanban ENTIER chez chaque personne connectée.
- * Elle en émet désormais un seul couple, qui porte les trente identifiants — et la forme
- * du singulier reste inchangée, sans quoi tout consommateur existant serait à reprendre.
+ * A production action on thirty shots used to emit thirty `shot:update` and thirty `timeline:update`;
+ * each one reloaded the WHOLE kanban on every connected user's screen. It now emits a single pair,
+ * which carries the thirty identifiers. The singular form is unchanged, otherwise every existing consumer
+ * would have to be rewritten.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -34,7 +34,7 @@ beforeEach(() => {
 });
 
 describe('emitShotsUpdated', () => {
-  it('un seul plan : exactement le payload d’avant, sans champ de lot', () => {
+  it('one shot: exactly the previous payload, with no batch field', () => {
     emitShotsUpdated(PROJECT, [21]);
 
     expect(socket.emitToProject.mock.calls).toEqual([
@@ -43,7 +43,7 @@ describe('emitShotsUpdated', () => {
     ]);
   });
 
-  it('trente plans : deux événements en tout, et non soixante', () => {
+  it('thirty shots: two events in total, not sixty', () => {
     const ids = Array.from({ length: 30 }, (_, i) => i + 1);
 
     emitShotsUpdated(PROJECT, ids);
@@ -55,13 +55,13 @@ describe('emitShotsUpdated', () => {
     ]);
   });
 
-  it('un lot vide n’émet rien — un lot entièrement refusé ne réveille personne', () => {
+  it('an empty batch emits nothing: a fully refused batch wakes nobody', () => {
     emitShotsUpdated(PROJECT, []);
 
     expect(socket.emitToProject).not.toHaveBeenCalled();
   });
 
-  it('le lot est recopié : le tableau de l’appelant peut vivre sa vie', () => {
+  it("the batch is copied: the caller's array may live its own life", () => {
     const ids = [4, 5];
     emitShotsUpdated(PROJECT, ids);
     ids.push(6);
@@ -74,16 +74,16 @@ describe('emitShotsUpdated', () => {
   });
 
   /**
-   * Le contrat que `BulkService` exploite : la boucle n'émet rien, l'appelant émet une
-   * fois. Sans `deferEvents`, trente passages donnaient soixante événements.
+   * The contract that `BulkService` relies on: the loop emits nothing, the caller emits once.
+   * Without `deferEvents`, thirty passes produced sixty events.
    */
-  it('deferEvents retient les émissions du chemin unitaire', async () => {
+  it('deferEvents holds back the emissions of the single-item path', async () => {
     await update(21, PROJECT, { pipelineStatusId: 8 }, 5, { deferEvents: true });
 
     expect(socket.emitToProject).not.toHaveBeenCalled();
   });
 
-  it('sans deferEvents, le chemin unitaire émet ses deux événements comme avant', async () => {
+  it('without deferEvents, the single-item path emits its two events as before', async () => {
     await update(21, PROJECT, { pipelineStatusId: 8 }, 5);
 
     expect(socket.emitToProject).toHaveBeenCalledTimes(2);

@@ -5,14 +5,14 @@ import type * as THREE from 'three';
 import type { GLTF } from 'three/addons/loaders/GLTFLoader.js';
 
 /**
- * Variantes de matériaux glTF `KHR_materials_variants` (Phase 40, 40.C) : bascule des matériaux
- * d'un mesh selon la variante sélectionnée (ex. plusieurs coloris d'un même asset). Le `GLTFLoader`
- * de Three.js expose les noms dans `gltf.userData.variants` et, par mesh, le mapping
- * variante→matériau dans `mesh.userData.gltfExtensions.KHR_materials_variants.mappings`.
- * Le matériau réel est chargé paresseusement via `gltf.parser.getDependency('material', i)`.
+ * glTF `KHR_materials_variants` material variants (Phase 40, 40.C): switches a mesh's materials
+ * according to the selected variant (e.g. several colorways of the same asset). Three.js'
+ * `GLTFLoader` exposes the names in `gltf.userData.variants` and, per mesh, the variant→material
+ * mapping in `mesh.userData.gltfExtensions.KHR_materials_variants.mappings`.
+ * The actual material is lazily loaded via `gltf.parser.getDependency('material', i)`.
  */
 
-/** Mapping d'un mesh : quel index de matériau utiliser pour quelles variantes. */
+/** Mapping of a mesh: which material index to use for which variants. */
 export interface VariantMapping {
   material: number;
   variants: number[];
@@ -23,15 +23,15 @@ interface VariantParser {
   assignFinalMaterial?: (mesh: THREE.Mesh) => void;
 }
 
-/** Noms des variantes déclarées par le fichier (`[]` si l'extension est absente). */
+/** Names of the variants declared by the file (`[]` if the extension is absent). */
 export function readVariants(gltf: GLTF): string[] {
   const v = (gltf.userData as { variants?: unknown }).variants;
   return Array.isArray(v) ? v.map((n) => String(n)) : [];
 }
 
 /**
- * Choisit l'index de matériau à appliquer pour une variante (pur/testable). `variantIndex < 0`
- * (défaut) ou aucun mapping correspondant → `null` (restaurer le matériau d'origine).
+ * Picks the material index to apply for a variant (pure, testable). `variantIndex < 0`
+ * (default) or no matching mapping → `null` (restore the original material).
  */
 export function pickVariantMaterialIndex(mappings: VariantMapping[], variantIndex: number): number | null {
   if (variantIndex < 0) return null;
@@ -45,9 +45,9 @@ interface VariantMeshUserData {
 }
 
 /**
- * Applique la variante `variantIndex` à tout le sous-arbre (`-1` = matériaux d'origine). Mémorise
- * le matériau d'origine de chaque mesh au premier passage (restauration non destructive). Async :
- * les matériaux sont chargés à la demande par le parser glTF.
+ * Applies variant `variantIndex` to the whole subtree (`-1` = original materials). Remembers
+ * each mesh's original material on the first pass (non-destructive restore). Async: materials
+ * are loaded on demand by the glTF parser.
  */
 export async function applyVariant(gltf: GLTF, root: THREE.Object3D, variantIndex: number): Promise<void> {
   const parser = gltf.parser as unknown as VariantParser;
@@ -66,7 +66,7 @@ export async function applyVariant(gltf: GLTF, root: THREE.Object3D, variantInde
     tasks.push(
       parser.getDependency('material', index).then((mat) => {
         mesh.material = mat;
-        parser.assignFinalMaterial?.(mesh); // (re)configure skinning/vertex colors sur le matériau
+        parser.assignFinalMaterial?.(mesh); // (Re)configure skinning/vertex colors on the material
       }),
     );
   });

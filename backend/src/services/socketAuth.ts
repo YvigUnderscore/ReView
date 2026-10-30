@@ -8,72 +8,61 @@ import { shareState, verifyShareSession } from '../lib/shareAccess';
 import { prisma } from '../lib/prisma';
 
 /**
- * Socket enrichi par la vérification du handshake : soit un membre du studio (`user`),
- * soit un invité arrivé par un lien de partage (`shareProjectId`), jamais les deux.
+ * Socket enriched by the handshake check: either a studio member (`user`) or a guest arriving through a share link (`shareProjectId`), never both.
  */
 export interface AuthedSocket extends Socket {
   user?: { id: number; email: string; role: import('@prisma/client').Role };
   /**
-   * Session de connexion (36.B) portée par le jeton du handshake.
+   * Connection session (36.B) carried by the handshake token.
    *
-   * Elle est conservée parce qu'une websocket vit des jours : sans le `sid`, la seule
-   * vérification de la session était celle du handshake, et révoquer une session laissait
-   * le canal temps réel ouvert. `SocketService` la rejoue périodiquement (A3-02).
+   * It is kept because a websocket lives for days: without the `sid`, the only session check was the one at handshake, and revoking a session left the real-time
+   * channel open. `SocketService` replays it periodically (A3-02).
    */
   authSid?: string;
   shareProjectId?: number;
 }
 
-/** Refus uniforme : le client n'apprend jamais POURQUOI son handshake est rejeté. */
+/** Uniform refusal: the client never learns WHY its handshake is rejected. */
 const REFUS = (): Error => new Error('Authentication error');
 
 /**
- * Porte d'entrée du canal temps réel — extraite de `SocketService` pour être testable :
- * un socket donne accès aux mêmes données qu'une requête HTTP, il mérite donc les mêmes
- * garanties que `middleware/auth`, et une garantie que personne ne peut exercer est une
- * garantie qu'on croit avoir.
+ * Entry gate of the real-time channel — extracted from `SocketService` so that it can be tested: a socket gives access to the same data as an HTTP request, so it deserves
+ * the same guarantees as `middleware/auth`, and a guarantee that nobody can exercise is a guarantee one merely believes one has.
  */
 export const authenticateSocket = async (
   socket: AuthedSocket,
   next: (err?: Error) => void,
 ): Promise<void> => {
-  // Le client pose le jeton dans `auth` (hors query string, donc hors journaux du
-  // frontal). La query reste acceptée le temps qu'un onglet ouvert avant la bascule se
-  // reconnecte ; elle pourra disparaître ensuite.
+  // The client puts the token in `auth` (outside the query string, hence outside the front end's logs). The query is still accepted for as long as a tab opened
+  // before the switch reconnects; it may disappear afterwards.
   const authToken = (socket.handshake.auth as { token?: unknown } | undefined)?.token;
   const token = typeof authToken === 'string' && authToken ? authToken : socket.handshake.query?.token;
   if (typeof token !== 'string' || !token) return next(REFUS());
 
-  // Mêmes garanties que `middleware/auth` côté HTTP — un socket ne doit pas être une
-  // porte dérobée. Tous les jetons de l'app sont signés avec le même JWT_SECRET : seul
-  // un jeton d'accès (sans `kind`) est recevable. Accepter un `kind: '2fa'` reviendrait
-  // à contourner le second facteur, un `refresh`/`share`/`oidc` à confondre les usages.
+  // Same guarantees as `middleware/auth` on the HTTP side — a socket must not be a back door. All the app's tokens are signed with the same JWT_SECRET: only an
+  // access token (without `kind`) is acceptable. Accepting a `kind: '2fa'` would amount to bypassing the second factor, a `refresh`/`share`/`oidc` to confusing the uses.
   const payload = verifyToken(token);
   if (payload) {
     if (payload.kind !== undefined || typeof payload.id !== 'number') return next(REFUS());
 
-    // Session revoked (36.B) : la déconnexion doit aussi fermer le canal temps réel.
-    // Un jeton sans `sid` est refusé comme côté HTTP — sinon le socket resterait la
-    // seule porte qu'aucune révocation ne ferme.
+    // Session revoked (36.B): logging out must also close the real-time channel.
+    // A token without `sid` is refused as on HTTP — otherwise the socket would remain the only door that no revocation closes.
     if (!payload.sid || !(await isSessionActive(payload.sid))) return next(REFUS());
 
-    // Zombie-token check + rôle courant relu en base (un rôle rétrogradé prend effet).
+    // Zombie-token check + current role re-read from the database (a demoted role takes effect).
     const dbUser = await prisma.user.findUnique({
       where: { id: payload.id },
       select: { id: true, email: true, role: true, disabledAt: true },
     });
-    // Offboarding (A1-01) : un compte désactivé n'ouvre pas de canal temps réel. Le socket
-    // donne accès aux mêmes données que l'API — il se ferme sur les mêmes conditions.
+    // Offboarding (A1-01): a deactivated account opens no real-time channel. The socket gives access to the same data as the API — it closes under the same conditions.
     if (!dbUser || dbUser.disabledAt) return next(REFUS());
     socket.user = { id: dbUser.id, email: dbUser.email, role: dbUser.role };
     socket.authSid = payload.sid;
     return next();
   }
 
-  // Sinon : token de partage client (ShareLink) — mêmes règles que les routes /api/client
-  // (révocation, expiration ET limite de vues atteinte). Un lien protégé par mot de passe
-  // exige en plus la session de partage émise après déverrouillage : le token seul est
-  // dans l'URL, l'accepter ferait du mot de passe une formalité.
+  // Otherwise: client share token (ShareLink) — same rules as the /api/client routes (revocation, expiry AND view limit reached). A link protected by a password
+  // additionally requires the share session issued after unlocking: the token alone is in the URL, accepting it would make the password a formality.
   const share = await prisma.shareLink.findUnique({ where: { token } });
   if (share && shareState(share) === 'ok') {
     if (share.passwordHash) {

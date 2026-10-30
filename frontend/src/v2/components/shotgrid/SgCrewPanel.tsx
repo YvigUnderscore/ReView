@@ -11,15 +11,15 @@ import { invitableOf, isInvitable, splitOutcome, summarize } from './crewSelecti
 import type { SgCrewPerson } from '../../types/shotgrid';
 
 /**
- * L'équipe du projet ShotGrid, et son accès à ReView.
+ * The ShotGrid project crew and their access to ReView.
  *
- * Relier un projet apportait ses plans et ses médias, mais pas les gens : il fallait
- * ressaisir chaque adresse dans l'écran d'administration, puis rattacher chacun au projet.
- * Ici, la liste vient du site et un clic donne l'accès — compte créé si besoin,
- * invitation envoyée, rattachement au projet fait.
+ * Linking a project brought its plans and media, but not its people: each address had to
+ * be re-entered in the admin screen, then each person attached to the project. Here the
+ * list comes from the site and one click grants access: the account is created if needed,
+ * the invitation is sent, and the person is attached to the project.
  *
- * Le chargement est explicite : la requête interroge le site distant, elle n'a pas à
- * partir dès qu'on ouvre l'onglet Membres.
+ * Loading is explicit: the query hits the remote site, so it should not start as soon as
+ * the Members tab is opened.
  */
 export default function SgCrewPanel({ projectId }: { projectId: number }) {
   const t = useT();
@@ -31,8 +31,8 @@ export default function SgCrewPanel({ projectId }: { projectId: number }) {
   const crew = data?.crew ?? [];
   const invitable = invitableOf(crew);
   const { willCreate, willAdd } = splitOutcome(crew, selected);
-  // Un superviseur de projet peut rattacher un compte existant, pas en fabriquer un :
-  // l'écran d'administration ne le lui permet pas davantage.
+  // A project supervisor can attach an existing account but not create one: the admin
+  // screen does not allow that either.
   const blocked = willCreate.length > 0 && data?.canCreateAccounts === false;
 
   const toggle = (sgId: number) =>
@@ -68,7 +68,7 @@ export default function SgCrewPanel({ projectId }: { projectId: number }) {
 
       {error && <p className="text-xs text-destructive">{error.message}</p>}
 
-      {/* Sans relais courriel, l'invitation ne partirait pas : le dire avant, pas après. */}
+      {/* Without an email relay the invitation would not be sent: say so up front, not after. */}
       {data && !data.smtpReady && (
         <p className="flex items-center gap-1.5 rounded-md border border-warning/40 bg-warning/10 p-2 text-xs">
           <AlertTriangle size={13} className="shrink-0" /> {t('shotgrid.crew.noSmtp')}
@@ -150,10 +150,10 @@ function CrewRow({
               <code className="text-2xs">{person.login}</code>
             </>
           )}
-          {/* Département du site (lot 10). Il n'est posé dans ReView que s'il correspond à
-              une étape déjà déclarée : un département ShotGrid est une unité
-              d'organisation, pas forcément une étape du pipe. Le dire évite d'attendre
-              un rattachement qui n'aura pas lieu. */}
+          {/* Site department (batch 10). It is only applied in ReView if it matches a stage
+              already declared: a ShotGrid department is an organisational unit, not
+              necessarily a pipeline stage. Saying so avoids waiting for a link that will
+              never happen. */}
           {person.sgDepartment && (
             <>
               {' · '}

@@ -39,22 +39,20 @@ import { enqueuePush } from './ShotgridPushService';
 import { emitToProject } from '../SocketService';
 import { isReplayable, TOUCHED_EVENT_NAME, type TouchedEntities, type TouchedKind } from './ShotgridTouched';
 import { resolveForTask, type TaskDepartment } from '../DepartmentService';
+import { ignoreFailure } from '../../lib/ignoreFailure';
 
 /**
- * Import de la hiérarchie de production depuis ShotGrid.
+ * Import of the production hierarchy from ShotGrid.
  *
- * Chaque requête porte le filtre de projet ET chaque entité reçue est revérifiée :
- * ShotGrid héberge tous les projets du studio sur le même site, et un filtre oublié
- * ne se voit pas — il importe simplement le projet du voisin par-dessus le nôtre.
+ * Every request carries the project filter AND every entity received is rechecked: ShotGrid hosts all the studio's projects on the same site, and a forgotten
+ * filter is not visible: it simply imports the neighbour's project over ours.
  *
- * L'import est idempotent : re-synchroniser un projet inchangé ne produit aucune
- * écriture. C'est ce qui rend la réconciliation périodique sans risque.
+ * The import is idempotent: re-synchronizing an unchanged project produces no write. This is what makes periodic reconciliation safe.
  */
 
 /**
- * `image` est la vignette choisie sur le site : demandée partout où ReView sait en
- * porter une (séquence, plan, asset). Voir `ShotgridThumbnails` — la valeur est une URL
- * signée à durée de vie courte, donc recopiée et jamais pointée.
+ * `image` is the thumbnail chosen on the site: requested everywhere ReView can carry one (sequence, shot, asset). See `ShotgridThumbnails`: the value is a
+ * short-lived signed URL, so it is copied and never pointed to.
  */
 const SEQUENCE_FIELDS = ['code', 'description', 'sg_status_list', 'image', 'project', 'updated_at'];
 const SHOT_FIELDS = [
@@ -75,8 +73,7 @@ const ASSET_FIELDS = [
   'sg_asset_type',
   'sg_status_list',
   'image',
-  // Rattachements portés par l'asset côté ShotGrid : c'est de là que sortent les
-  // listes « quels assets pour ce plan », et les lire évite de les ressaisir ici.
+  // Asset-side links held in ShotGrid: this is where the "which assets for this shot" lists come from, and reading them avoids re-entering them here.
   'shots',
   'sequences',
   'project',
@@ -96,9 +93,9 @@ const TASK_FIELDS = [
 ];
 
 export interface PullOptions {
-  /** Ne reprendre que ce qui a changé depuis cette date (réconciliation, incrémental). */
+  /** Only take over what has changed since this date (reconciliation, incremental). */
   since?: Date | null;
-  /** Restreindre à quelques entités distantes (traitement d'un événement). */
+  /** Restrict to a few remote entities (processing an event). */
   onlySgIds?: { sgType: string; sgId: number }[];
 }
 
@@ -106,21 +103,18 @@ interface PullContext extends ConnectionContext {
   journal: SyncJournal;
   scope: ProjectScope;
   /**
-   * Accumulateur des entités réalignées. Absent, chaque entité émet son événement tout
-   * de suite — c'est le comportement attendu des appelants qui n'orchestrent qu'une
-   * passe isolée (import manuel de versions).
+   * Accumulator of the realigned entities. When absent, each entity emits its event at once: this is the expected behaviour of callers that orchestrate only an
+   * isolated pass (manual import of versions).
    */
   touched?: TouchedEntities;
 }
 
 /**
- * Signale qu'une entité vient d'être réalignée.
+ * Signals that an entity has just been realigned.
  *
- * Avec collecteur, l'entité est retenue et la décision d'émettre est prise en fin de
- * passe (voir `ShotgridTouched`). Sans collecteur, on émet comme avant : un appelant
- * isolé n'a personne pour vider l'accumulateur derrière lui. Les familles sans événement
- * fin côté client (notes, playlists) ne comptent alors pour rien — elles n'ont jamais
- * rien émis.
+ * With a collector, the entity is retained and the decision to emit is taken at the end of the pass (see `ShotgridTouched`). Without a collector, we emit as before:
+ * an isolated caller has nobody to empty the accumulator behind it. Families without a closing event on the client side (notes, playlists) count for nothing then:
+ * they never emitted anything anyway.
  */
 export function touch(
   ctx: PullContext,
@@ -141,22 +135,16 @@ export function touch(
 }
 
 /**
- * Ce que le site ne rend plus est mis à la corbeille — sur une passe complète **comme**
- * sur une passe ciblée.
+ * What the site no longer returns is put in the trash — on a complete pass **as** on a targeted pass.
  *
- * C'est la correction d'un silence complet : un événement `Shotgun_Shot_Retirement`
- * était accepté, mis en file, exécuté — et ne faisait rien. La passe qu'il déclenche est
- * ciblée, la mise à la corbeille était réservée à la passe complète, et la lecture
- * ciblée d'une entité retirée ne rend évidemment rien. Le journal enregistrait une
- * exécution « ok » aux statistiques vides, et la suppression faite dans ShotGrid
- * n'atteignait ReView qu'au prochain balayage complet, déclenché à la main.
+ * This corrects a complete silence: a `Shotgun_Shot_Retirement` event was accepted, queued, executed, and did nothing. The pass it triggers is targeted, the trashing
+ * was reserved to the complete pass, and the targeted read of a retired entity obviously returns nothing. The journal recorded an "ok" run with empty statistics, and the
+ * deletion made in ShotGrid only reached ReView at the next complete sweep, triggered by hand.
  *
- * Les trois cas ne se valent pas, et c'est tout l'objet de cette fonction :
- *  - **complète** : le lot reçu fait autorité, ce qui en manque a été retiré ;
- *  - **ciblée** : seuls les identifiants demandés concluent — le site vient de nommer
- *    ces entités-là, leur absence de la réponse est une réponse ;
- *  - **incrémentale** (`since`) : une entité absente du lot n'a simplement pas changé.
- *    En déduire un retrait viderait le projet à chaque rattrapage nocturne.
+ * The three cases are not equal, and that is the whole point of this function:
+ *  - **complete**: the batch received is authoritative, what is missing from it has been removed;
+ *  - **targeted**: only the identifiers requested conclude: the site has just named these entities, their absence from the response is an answer;
+ *  - **incremental** (`since`): an entity absent from the batch has simply not changed. Deducing a removal from it would empty the project at every nightly catch-up.
  */
 async function trashMissing(
   ctx: PullContext,
@@ -176,18 +164,13 @@ async function trashMissing(
 }
 
 /**
- * Parmi les identifiants visés absents de la lecture, ceux que le site ne connaît
- * vraiment plus.
+ * Among the targeted identifiers absent from the read, those the site really no longer knows.
  *
- * L'absence a deux causes, et une seule est un retrait : l'entité a disparu du site, ou
- * bien elle en revient encore mais `keepInProject` l'a écartée — elle appartient
- * désormais à un autre projet. Mettre la seconde à la corbeille sous le message « retirée
- * dans ShotGrid » dirait quelque chose de faux, et agirait précisément là où la garde de
- * projet, partout ailleurs dans ce fichier, refuse d'agir.
+ * The absence has two causes, and only one is a removal: the entity has disappeared from the site, or it still exists but `keepInProject` discarded it — it now
+ * belongs to another project. Putting the second in the trash under the message "removed in ShotGrid" would say something false, and would act precisely where the
+ * project guard, everywhere else in this file, refuses to act.
  *
- * Une relecture par identifiant tranche. Elle ne coûte qu'un appel, et seulement pour un
- * identifiant déjà manquant — c'est-à-dire sur un événement de retrait, pas sur le
- * trafic courant.
+ * One re-read per identifier settles it. It costs a single call, and only for an identifier already missing — that is, on a removal event, not on current traffic.
  */
 export async function confirmGone(
   ctx: PullContext,
@@ -204,7 +187,7 @@ export async function confirmGone(
   return gone;
 }
 
-/** Filtres d'une recherche : projet obligatoire, plus la fenêtre temporelle éventuelle. */
+/** Filters of a search: project required, plus the time window if any. */
 function buildFilters(scope: ProjectScope, since?: Date | null): Array<[string, string, unknown]> {
   const filters: Array<[string, string, unknown]> = [projectFilter(scope.sgProjectId)];
   if (since) filters.push(['updated_at', 'greater_than', since.toISOString()]);
@@ -212,11 +195,10 @@ function buildFilters(scope: ProjectScope, since?: Date | null): Array<[string, 
 }
 
 /**
- * Écarte toute entité qui n'appartient pas au projet lié.
+ * Discards any entity that does not belong to the linked project.
  *
- * Ce contrôle ne devrait jamais rien attraper puisque les requêtes sont filtrées —
- * c'est précisément pourquoi il est là : le jour où un filtre saute, on refuse
- * l'entité au lieu d'écraser le travail d'un autre projet, et on le dit fort.
+ * This check should never catch anything since the queries are filtered — that is precisely why it is there: the day a filter fails, we refuse the entity
+ * instead of overwriting another project's work, and we say so loudly.
  */
 async function keepInProject(records: SgRecord[], ctx: PullContext): Promise<SgRecord[]> {
   const kept: SgRecord[] = [];
@@ -245,13 +227,13 @@ async function keepInProject(records: SgRecord[], ctx: PullContext): Promise<SgR
         expected: ctx.scope.sgProjectId,
         found: verdict.foundProjectId,
       },
-      'Entité ShotGrid hors du projet lié — écartée',
+      'ShotGrid entity outside the linked project — discarded',
     );
   }
   return kept;
 }
 
-/** Lecture d'un lot d'entités, filtrée et vérifiée. */
+/** Read of a batch of entities, filtered and verified. */
 async function fetchScoped(
   ctx: PullContext,
   entity: string,
@@ -277,13 +259,11 @@ async function fetchScoped(
 }
 
 /**
- * Une entité locale trouvée par son nom peut-elle accueillir cette entité ShotGrid ?
+ * Can a local entity found by its name host this ShotGrid entity?
  *
- * Non si elle est déjà la contrepartie d'une autre : un site héberge sans peine quatre
- * séquences nommées « DO_NOT_USE_ », et les fondre sur la même ligne locale n'en
- * importerait qu'une — les trois autres manqueraient à chaque comparaison, sans que rien
- * ne dise pourquoi. Le nom sert donc à adopter ce qui existait avant la liaison, jamais
- * à confondre deux entités distinctes du site.
+ * No if it is already the counterpart of another one: a site easily hosts four sequences named "DO_NOT_USE_", and merging them onto the same local row would import
+ * only one — the other three would be missing at every comparison, with nothing saying why. The name therefore serves to adopt what existed before the link, never to
+ * conflate two distinct entities of the site.
  */
 async function adoptable(
   connectionId: number,
@@ -296,25 +276,21 @@ async function adoptable(
 }
 
 /**
- * Où écrire cette entité du site, et sous quel nom.
+ * Where to write this entity of the site, and under what name.
  *
- * Trois questions dans l'ordre : a-t-elle déjà une contrepartie locale (le lien) ? sinon,
- * peut-elle adopter une entité de même nom créée avant la liaison ? et surtout : le nom
- * du site est-il libre au moment d'écrire ?
+ * Three questions in order: does it already have a local counterpart (the link)? If not, can it adopt an entity of the same name created before the link? And above all:
+ * is the site's name free at the moment of writing?
  *
- * Cette dernière question vaut aussi à la mise à jour, pas seulement à la création. La
- * poser trop tard coûte une violation de contrainte d'unicité : une entité déjà
- * désambiguïsée se ferait renommer vers le nom du site à la passe suivante — nom que sa
- * jumelle porte toujours.
+ * This last question also applies to updates, not only to creation. Asking it too late costs a unique-constraint violation: an already disambiguated entity would be
+ * renamed to the site's name at the next pass — a name its twin still carries.
  *
- * Les accès à la base sont injectés : cette résolution est une règle, et elle se teste
- * comme telle.
+ * Database accesses are injected: this resolution is a rule, and it is tested as such.
  */
 export async function localTarget<T extends { id: number }>(params: {
   connectionId: number;
   localType: LocalType;
   sgId: number;
-  /** Nom porté par l'entité côté ShotGrid. */
+  /** Name carried by the entity on the ShotGrid side. */
   sgName: string;
   linkedId: number | null;
   findById: (id: number) => Promise<T | null>;
@@ -329,23 +305,20 @@ export async function localTarget<T extends { id: number }>(params: {
     else if (sameName) existing = await params.findByName(disambiguatedName(sgName, sgId));
   }
 
-  // Le nom du site s'il est libre ou déjà le nôtre ; sinon le nôtre, suffixé.
+  // The site's name if it is free or already ours; otherwise ours, suffixed.
   const holder = await params.findByName(sgName);
   const name = !holder || holder.id === existing?.id ? sgName : disambiguatedName(sgName, sgId);
   return { existing, name };
 }
 
 /**
- * Y a-t-il vraiment conflit ? Deux conditions, et il faut les deux.
+ * Is there really a conflict? Two conditions, and both are needed.
  *
- * Le côté ReView doit avoir bougé depuis la dernière synchronisation, **et** les deux
- * valeurs doivent réellement diverger. La seconde manquait : tout changement local
- * déclarait un conflit, y compris quand les deux côtés portaient déjà la même valeur.
- * Le journal du studio en était plein — « review: ip, shotgrid: ip » — et l'on ne
- * distinguait plus les vrais désaccords du bruit.
+ * The ReView side must have moved since the last synchronization, **and** the two values must really diverge. The second was missing: any local change declared a
+ * conflict, even when both sides already carried the same value. The studio's journal was full of it — "review: ip, shotgrid: ip" — and one could no longer tell
+ * real disagreements from noise.
  *
- * Pire : `updatedAt` bouge pour n'importe quelle modification de la tâche (checklist,
- * assigné, dates). Cocher une case déclarait donc un conflit **de statut**.
+ * Worse: `updatedAt` moves for any modification of the task (checklist, assignee, dates). Ticking a box therefore declared a **status** conflict.
  */
 export function isRealConflict(params: {
   localUpdatedAt: Date | null | undefined;
@@ -355,12 +328,10 @@ export function isRealConflict(params: {
 }): boolean {
   const { localUpdatedAt, linkSyncedAt } = params;
   if (!localUpdatedAt || !linkSyncedAt) return false;
-  // Une seconde de tolérance : l'écriture locale et l'horodatage du lien ne sont jamais
-  // simultanés à la milliseconde près.
+  // One second of tolerance: the local write and the link's timestamp are never simultaneous to the millisecond.
   if (localUpdatedAt.getTime() <= linkSyncedAt.getTime() + 1000) return false;
-  // Valeurs connues et identiques : le site et ReView disent la même chose, il n'y a
-  // rien à arbitrer. Valeurs inconnues (appelant qui n'en fournit pas) : on s'en tient
-  // à la date, comme avant.
+  // Known and identical values: the site and ReView say the same thing, there is nothing to arbitrate. Unknown values (a caller that supplies none): we stick
+  // to the date, as before.
   if (params.reviewValue !== undefined && params.remoteValue !== undefined) {
     return (params.reviewValue ?? null) !== (params.remoteValue ?? null);
   }
@@ -368,12 +339,11 @@ export function isRealConflict(params: {
 }
 
 /**
- * Verdict d'arbitrage. `overwrite` : la valeur du site descend. `keep` : ReView garde la
- * sienne et la renvoie au site. `defer` : personne ne bouge, un humain tranchera.
+ * Arbitration verdict. `overwrite`: the site's value comes down. `keep`: ReView keeps its own and sends it back to the site. `defer`: nobody moves, a human will decide.
  */
 export type ConflictVerdict = 'overwrite' | 'keep' | 'defer';
 
-/** Traduit le réglage du studio en verdict. Pure — c'est la règle, sans les effets. */
+/** Translates the studio setting into a verdict. Pure: this is the rule, without the effects. */
 export function arbitrate(policy: string | undefined): ConflictVerdict {
   if (policy === 'review_wins') return 'keep';
   if (policy === 'manual') return 'defer';
@@ -381,10 +351,9 @@ export function arbitrate(policy: string | undefined): ConflictVerdict {
 }
 
 /**
- * Retire du `data` le champ que l'arbitrage a laissé à ReView.
+ * Removes from `data` the field that arbitration left to ReView.
  *
- * On retire le champ, pas l'écriture : le nom, les dates et le rattachement ne sont pas
- * en conflit et doivent continuer à descendre du site.
+ * We remove the field, not the write: the name, dates and link are not in conflict and must keep coming down from the site.
  */
 function withoutStatus<T extends Record<string, unknown>>(data: T, verdict: ConflictVerdict): T {
   if (verdict === 'overwrite') return data;
@@ -393,16 +362,13 @@ function withoutStatus<T extends Record<string, unknown>>(data: T, verdict: Conf
 }
 
 /**
- * Arbitre un conflit et le journalise.
+ * Arbitrates a conflict and logs it.
  *
- * Le réglage « Quand les deux côtés ont changé » proposait trois politiques et n'en
- * appliquait aucune : `conflictPolicy` n'était lu que comme variable d'un message, et
- * l'appelant écrivait la valeur du site quoi qu'il arrive. Un studio en `review_wins`
- * voyait donc ses décisions écrasées exactement comme en `sg_wins`, avec en prime une
- * ligne de journal affirmant le contraire.
+ * The "When both sides have changed" setting offered three policies and applied none: `conflictPolicy` was only read as a variable of a message, and the caller
+ * wrote the site's value no matter what. A studio on `review_wins` therefore saw its decisions overwritten exactly as with `sg_wins`, with in addition a journal line
+ * claiming the opposite.
  *
- * Renvoie le verdict ; c'est à l'appelant de retirer le champ litigieux de son `data`
- * (et lui seul : les autres champs, eux, ne sont pas en conflit et doivent descendre).
+ * Returns the verdict; it is up to the caller to remove the disputed field from its `data` (and only that one: the other fields are not in conflict and must come down).
  */
 async function arbitrateConflict(
   ctx: PullContext,
@@ -415,9 +381,8 @@ async function arbitrateConflict(
     sgId: number;
     name: string;
     /**
-     * Champ concerné et valeurs en présence — ce que l'arbitre doit voir.
-     * `field` est un identifiant stable (`status`…), pas un libellé : c'est le lecteur
-     * qui décide de la langue, pas le serveur qui a écrit la ligne.
+     * Field concerned and the values at stake: what the arbiter must see.
+     * `field` is a stable identifier (`status`...), not a label: it is the reader who decides the language, not the server that wrote the row.
      */
     field?: string;
     reviewValue?: string | null;
@@ -428,9 +393,8 @@ async function arbitrateConflict(
   if (!isRealConflict(params)) return 'overwrite';
   const verdict = arbitrate(ctx.settings.conflictPolicy);
   ctx.journal.count('conflicts', 'updated');
-  // Une clé par issue : le message est écrit après l'arbitrage, pas avant. L'ancien
-  // texte annonçait un écrasement en interpolant la politique — il pouvait donc dire
-  // « review_wins » au moment même où il écrasait.
+  // One key per outcome: the message is written after arbitration, not before. The former text announced an overwrite by interpolating the policy: it could
+  // therefore say "review_wins" at the very moment it was overwriting.
   const key =
     verdict === 'keep'
       ? 'shotgrid.log.conflictKept'
@@ -442,12 +406,11 @@ async function arbitrateConflict(
     {
       name: params.name,
       policy: ctx.settings.conflictPolicy,
-      // Sans ces repères, la ligne de conflit ne dit pas ce qui a divergé ni quand :
-      // impossible d'arbitrer en connaissance de cause.
+      // Without these markers, the conflict row does not say what diverged or when: impossible to arbitrate knowingly.
       ...(params.field ? { field: params.field } : {}),
       review: params.reviewValue ?? '—',
       shotgrid: params.remoteValue ?? '—',
-      // `isRealConflict` a déjà écarté le cas sans date : elle est forcément là.
+      // `isRealConflict` has already discarded the case without a date: it is necessarily there.
       localAt: localUpdatedAt?.toISOString() ?? '—',
     },
     {
@@ -461,32 +424,25 @@ async function arbitrateConflict(
 }
 
 /**
- * Traduit un `sg_status_list` en écriture Prisma — trois situations, trois réponses.
+ * Translates a `sg_status_list` into a Prisma write — three situations, three answers.
  *
- * Le code d'origine les confondait, et de deux façons opposées :
- * séquence et plan écrivaient `null` dès que la carte des statuts ne reconnaissait pas
- * le code (statut **effacé** en silence), tandis que la tâche omettait le champ même
- * quand le site avait vidé le statut (effacement **jamais propagé**). La carte est vide
- * dans des cas ordinaires — `statuses.read` fermé, schéma du site inaccessible, code
- * retiré des `valid_values` — donc une passe de routine suffisait à vider les statuts
- * d'un projet entier sans une ligne de journal.
+ * The original code confused them, in two opposite ways: sequence and shot wrote `null` as soon as the status map did not recognize the code (status **silently erased**),
+ * while the task omitted the field even when the site had emptied the status (erasure **never propagated**). The map is empty in ordinary cases — `statuses.read` closed,
+ * the site's schema inaccessible, code removed from the `valid_values` — so a routine pass was enough to empty the statuses of a whole project without a single journal line.
  *
- * - code absent/vide  → `{ pipelineStatusId: null }` : le site a vidé, on propage.
- * - code connu        → on écrit le statut.
- * - code inconnu      → **rien** : on garde la valeur locale, et on le dit au journal.
+ * - code absent/empty -> `{ pipelineStatusId: null }`: the site emptied it, we propagate.
+ * - known code        -> we write the status.
+ * - unknown code      -> **nothing**: we keep the local value, and say so in the journal.
  */
 /**
- * La description reçue du site, quand c'est lui qui fait foi.
+ * The description received from the site, when it is the authoritative one.
  *
- * Elle était demandée dans `SEQUENCE_FIELDS` et `SHOT_FIELDS` depuis toujours, puis jetée :
- * seul l'asset l'écrivait. Un plan importé de ShotGrid arrivait donc sans son brief, et la
- * production le ressaisissait à la main dans ReView — pour le voir diverger aussitôt.
+ * It had been requested in `SEQUENCE_FIELDS` and `SHOT_FIELDS` forever, then thrown away: only the asset wrote it. A shot imported from ShotGrid therefore arrived without
+ * its brief, and production re-entered it by hand in ReView — only to see it diverge at once.
  *
- * Quand le studio a choisi que ReView fasse foi (`descriptions.source = 'review'`), on
- * n'écrit rien : recopier écraserait ce qu'un superviseur vient d'y écrire.
+ * When the studio has chosen that ReView is authoritative (`descriptions.source = 'review'`), we write nothing: copying would overwrite what a supervisor has just written there.
  *
- * Le vide du site est traduit en `null` plutôt qu'en chaîne vide — c'est ce que porte la
- * colonne quand personne n'a rien écrit, et les deux ne doivent pas cohabiter.
+ * The site's emptiness is translated to `null` rather than to an empty string: that is what the column holds when nobody has written anything, and the two must not coexist.
  */
 export function descriptionPatch(ctx: PullContext, raw: unknown): { description?: string | null } {
   if (ctx.settings.descriptions.source !== 'shotgrid') return {};
@@ -505,9 +461,8 @@ export function statusPatch(
 }
 
 /**
- * Signale un code de statut inconnu — une seule fois par (portée, code) et par passe.
- * Une passe complète sur trois mille plans écrirait autrement trois mille lignes
- * identiques et noierait le journal.
+ * Reports an unknown status code — only once per (scope, code) and per pass.
+ * A complete pass over three thousand shots would otherwise write three thousand identical lines and drown the journal.
  */
 const reportedUnknownStatus = new WeakMap<SyncJournal, Set<string>>();
 
@@ -529,7 +484,7 @@ export async function noteUnknownStatus(
   await ctx.journal.log('warn', 'shotgrid.log.unknownStatusCode', { code, scope, name });
 }
 
-// ───────────────────────────── Séquences ─────────────────────────────
+// ───────────────────────────── Sequences ─────────────────────────────
 
 export async function pullSequences(
   ctx: PullContext,
@@ -539,13 +494,11 @@ export async function pullSequences(
   if (!can(ctx.settings, 'hierarchy', 'read')) return;
   const records = await fetchScoped(ctx, 'Sequence', SEQUENCE_FIELDS, options);
   /**
-   * `order` se déduit du rang dans le lot reçu. Il n'a donc de sens que si le lot est le
-   * projet entier : sur une relecture ciblée (un webhook de statut) le lot fait un
-   * élément, et l'entité repartait à `order: 0` — le changement de statut d'un plan
-   * remontait la séquence en tête de liste pour tout le monde.
+   * `order` is deduced from the rank within the batch received. It only makes sense if the batch is the whole project: on a targeted re-read (a status webhook) the batch
+   * is one element, and the entity restarted at `order: 0` — the status change of a shot brought the sequence to the top of the list for everyone.
    */
   const fullPass = !options.since && !options.onlySgIds;
-  // Ce que le site ne renvoie plus y a été mis à la corbeille — voir `trashMissing`.
+  // What the site no longer returns has been put in the trash there — see `trashMissing`.
   await trashMissing(ctx, 'Sequence', records, options);
   const links = await mapSgToLocal(ctx.connection.id, 'sequence');
 
@@ -584,8 +537,7 @@ export async function pullSequences(
         ? ((await prisma.pipelineStatus.findUnique({ where: { id: existing.pipelineStatusId } }))?.code ??
           null)
         : null;
-      // La séquence n'était pas arbitrée du tout : elle était écrasée sans détection ni
-      // trace, quelle que soit la politique du studio.
+      // The sequence was not arbitrated at all: it was overwritten without detection or trace, whatever the studio's policy.
       const verdict = await arbitrateConflict(ctx, {
         localUpdatedAt: existing.updatedAt,
         linkSyncedAt: link?.syncedAt,
@@ -612,9 +564,8 @@ export async function pullSequences(
       saved = await prisma.sequence.create({ data });
     }
     /**
-     * La vignette est alignée AVANT le signal : `touch` est la seule notification de la
-     * boucle, et l'émettre en premier laissait l'écran se rafraîchir sur la carte encore
-     * vide, sans plus rien derrière pour lui annoncer l'image.
+     * The thumbnail is aligned BEFORE the signal: `touch` is the only notification of the loop, and emitting it first let the screen refresh on the card still
+     * empty, with nothing behind it to announce the image.
      */
     const sgThumbSrc = await syncThumbnail(ctx, {
       holder: 'sequence',
@@ -626,8 +577,7 @@ export async function pullSequences(
       previous: (link?.data as SequenceLinkData | undefined)?.sgThumbSrc,
       currentKey: saved.thumbnailKey,
     });
-    // Sans ce signal, un statut lu depuis le site n'atteint jamais un écran ouvert :
-    // il fallait recharger la page pour le voir apparaître.
+    // Without this signal, a status read from the site never reaches an open screen: one had to reload the page to see it appear.
     touch(ctx, 'sequence', saved.id);
 
     await upsertLink({
@@ -643,7 +593,7 @@ export async function pullSequences(
   }
 }
 
-// ───────────────────────────── Plans ─────────────────────────────
+// ───────────────────────────── Shots ─────────────────────────────
 
 export async function pullShots(
   ctx: PullContext,
@@ -652,7 +602,7 @@ export async function pullShots(
 ) {
   if (!can(ctx.settings, 'hierarchy', 'read')) return;
   const records = await fetchScoped(ctx, 'Shot', SHOT_FIELDS, options);
-  // Même raison que pour les séquences : `order` n'a de sens qu'en passe complète.
+  // Same reason as for sequences: `order` only makes sense in a complete pass.
   const fullPass = !options.since && !options.onlySgIds;
   await trashMissing(ctx, 'Shot', records, options);
   const sequenceLinks = await mapSgToLocal(ctx.connection.id, 'sequence');
@@ -715,7 +665,7 @@ export async function pullShots(
       ctx.journal.count('shots', 'created');
     }
     const savedId = saved.id;
-    // Avant `touch`, pour la même raison que sur les séquences : un seul signal part.
+    // Before `touch`, for the same reason as for sequences: a single signal goes out.
     const sgThumbSrc = await syncThumbnail(ctx, {
       holder: 'shot',
       localId: savedId,
@@ -756,8 +706,7 @@ export async function pullAssets(
   const records = await fetchScoped(ctx, 'Asset', ASSET_FIELDS, options);
   await trashMissing(ctx, 'Asset', records, options);
   const assetLinks = await mapSgToLocal(ctx.connection.id, 'asset');
-  // Les plans et sequences ont été importés juste avant : leurs correspondances
-  // existent, on peut donc rattacher sans rien créer au passage.
+  // The shots and sequences were imported just before: their matches exist, so we can attach without creating anything along the way.
   const shotLinks = await mapSgToLocal(ctx.connection.id, 'shot');
   const sequenceLinks = await mapSgToLocal(ctx.connection.id, 'sequence');
 
@@ -784,7 +733,7 @@ export async function pullAssets(
     const data = {
       projectId: ctx.connection.projectId,
       name: localName,
-      // L'énumération sert aux filtres ; le libellé exact du studio est ce qui s'affiche.
+      // The enumeration serves the filters; the studio's exact label is what is displayed.
       type: sgAssetType(sgType),
       typeLabel: sgType,
       ...descriptionPatch(ctx, record.description),
@@ -795,9 +744,8 @@ export async function pullAssets(
       ? await prisma.asset.update({ where: { id: existing.id }, data })
       : await prisma.asset.create({ data });
 
-    // Rattachements : `set` remplace la liste entière plutôt que d'ajouter — c'est ce
-    // qui empêche les doublons quand une synchronisation repasse. Seules les entités
-    // déjà reliées sont citées : un shot inconnu de ReView n'a rien à rattacher.
+    // Attachments: `set` replaces the whole list rather than adding — this is what prevents duplicates when a synchronization runs again. Only entities already
+    // linked are cited: a shot unknown to ReView has nothing to attach.
     const shotIds = asEntityRefs(record.shots)
       .map((r) => shotLinks.get(r.id)?.localId)
       .filter((id): id is number => typeof id === 'number');
@@ -836,21 +784,19 @@ export async function pullAssets(
       sgUpdatedAt: asDate(record.updated_at),
       data: linkData,
     });
-    // L'asset n'émettait rien : un asset créé ou renommé depuis le site n'atteignait pas
-    // un écran ouvert, alors même que le client sait traiter `asset:update`.
+    // The asset emitted nothing: an asset created or renamed from the site did not reach an open screen, although the client knows how to handle `asset:update`.
     touch(ctx, 'asset', saved.id);
     ctx.journal.count('assets', existing ? 'updated' : 'created');
   }
 }
 
-// ───────────────────────────── Tâches ─────────────────────────────
+// ───────────────────────────── Tasks ─────────────────────────────
 
 /**
- * Correspondance des comptes par adresse électronique.
+ * Matching of accounts by e-mail address.
  *
- * Aucun compte n'est créé : un artiste ShotGrid sans compte ReView reste affiché par
- * son nom (conservé dans le lien) mais la tâche n'est assignée à personne. Inventer
- * des comptes depuis une synchronisation ouvrirait des accès que personne n'a validés.
+ * No account is created: a ShotGrid artist without a ReView account stays displayed by their name (kept in the link), but the task is assigned to nobody. Inventing
+ * accounts from a synchronization would open access nobody has validated.
  */
 export async function buildUserMap(ctx: PullContext): Promise<Map<number, number>> {
   if (!can(ctx.settings, 'users', 'read')) return new Map();
@@ -890,11 +836,10 @@ export async function buildUserMap(ctx: PullContext): Promise<Map<number, number
 }
 
 /**
- * Résolution mémorisée des étapes en départements, le temps d'une passe.
+ * Memoized resolution of steps into departments, for the duration of a pass.
  *
- * Un projet compte des milliers de tâches pour une dizaine d'étapes : sans mémoire, la
- * synchronisation ferait autant d'allers-retours en base qu'il y a de tâches, pour
- * retrouver chaque fois les mêmes dix lignes.
+ * A project counts thousands of tasks for about ten steps: without memory, the synchronization would make as many database round trips as there are tasks, to
+ * find each time the same ten rows.
  */
 export function departmentResolver(
   projectId: number,
@@ -919,7 +864,7 @@ export async function pullTasks(
 ) {
   if (!can(ctx.settings, 'tasks', 'read')) return;
   const records = await fetchScoped(ctx, 'Task', TASK_FIELDS, options);
-  // Une tâche que le site ne renvoie plus y a été mise à la corbeille.
+  // A task the site no longer returns has been put in the trash there.
   await trashMissing(ctx, 'Task', records, options);
   const shotLinks = await mapSgToLocal(ctx.connection.id, 'shot');
   const assetLinks = await mapSgToLocal(ctx.connection.id, 'asset');
@@ -956,10 +901,8 @@ export async function pullTasks(
     const link = taskLinks.get(record.id);
     const existing = link ? await prisma.task.findUnique({ where: { id: link.localId } }) : null;
 
-    // L'étape du site devient un département local, relation comprise : n'écrire que la
-    // chaîne laissait `departmentId` vide sur TOUTES les tâches d'un projet piloté depuis
-    // ShotGrid, et l'assignation par département — qui interroge la relation — refusait
-    // des tâches qui existent.
+    // The site's step becomes a local department, relation included: writing only the string left `departmentId` empty on ALL the tasks of a project driven
+    // from ShotGrid, and the assignment by department — which queries the relation — refused tasks that do exist.
     const department = await departmentOf(stepName);
 
     const data = {
@@ -972,7 +915,7 @@ export async function pullTasks(
       startDate: asDate(record.start_date),
       dueDate: asDate(record.due_date),
       ...taskStatus.patch,
-      // L'enum historique suit le statut de pipeline tant qu'elle existe (`legacyStatus`).
+      // The historical enum follows the pipeline status for as long as it exists (`legacyStatus`).
       ...(status?.legacyStatus ? { status: status.legacyStatus } : {}),
     };
 
@@ -1026,15 +969,12 @@ export async function pullTasks(
 }
 
 /**
- * Entités retirées côté ShotGrid : mises à la corbeille, jamais supprimées.
- * Le travail associé (commentaires, versions, historique) reste consultable, et un
- * retrait par erreur côté ShotGrid se répare sans perte.
+ * Entities removed on the ShotGrid side: put in the trash, never deleted.
+ * The associated work (comments, versions, history) stays viewable, and a removal made by mistake on the ShotGrid side is repaired without loss.
  *
- * `scope` borne les identifiants examinés, et c'est ce qui rend la fonction utilisable
- * sur une passe ciblée. Sans lui, elle ne pouvait tourner qu'en passe complète — seule
- * situation où « absent du lot reçu » signifie « retiré du site ». Un événement de
- * retrait, lui, nomme UNE entité : l'absence de cet identifiant-là est une information
- * sûre, celle des autres ne l'est pas.
+ * `scope` bounds the identifiers examined, and that is what makes the function usable on a targeted pass. Without it, it could only run on a complete pass — the only
+ * situation where "absent from the batch received" means "removed from the site". A removal event, for its part, names ONE entity: the absence of that identifier is safe
+ * information, the absence of the others is not.
  */
 export async function trashRemoved(
   ctx: PullContext,
@@ -1046,7 +986,7 @@ export async function trashRemoved(
   const links = await mapSgToLocal(ctx.connection.id, localType);
   for (const sgId of scope ?? links.keys()) {
     const link = links.get(sgId);
-    // Identifiant visé qui n'a jamais été importé : rien à mettre à la corbeille.
+    // Targeted identifier that was never imported: nothing to put in the trash.
     if (!link || aliveSgIds.has(sgId)) continue;
 
     const table =
@@ -1061,8 +1001,7 @@ export async function trashRemoved(
       where: { id: link.localId },
     })) as { id: number } | null;
 
-    // Cible déjà disparue : le lien ne désigne plus rien. Le garder ferait rejouer ce
-    // retrait — et son message — à chaque synchronisation, indéfiniment.
+    // Target already gone: the link designates nothing any more. Keeping it would replay this removal — and its message — at every synchronization, indefinitely.
     if (!target) {
       await removeLink(ctx.connection.id, sgType, sgId);
       continue;
@@ -1070,14 +1009,18 @@ export async function trashRemoved(
 
     if (sgType === 'Task') {
       if (!(await retireTask(ctx, link.localId, sgId))) continue;
-      // La task est partie pour de bon : plus rien à relier.
+      // The task has gone for good: nothing left to attach.
       await removeLink(ctx.connection.id, sgType, sgId);
     } else {
-      // Le lien survit à la mise à la corbeille : restaurer côté ShotGrid doit rendre
-      // l'entité telle qu'elle était, avec son historique, pas en fabriquer une copie.
+      // The link survives the trashing: restoring on the ShotGrid side must bring back the entity as it was, with its history, not manufacture a copy.
       await (table as { update: (a: unknown) => Promise<unknown> })
         .update({ where: { id: link.localId }, data: { deletedAt: new Date() } })
-        .catch(() => undefined);
+        .catch(
+          ignoreFailure('[shotgrid] trash of a remotely retired entity failed', {
+            localType,
+            localId: link.localId,
+          }),
+        );
     }
     ctx.journal.count(`${localType}s`, 'skipped');
     await ctx.journal.log(
@@ -1090,14 +1033,12 @@ export async function trashRemoved(
 }
 
 /**
- * Retrait d'une tâche mise à la corbeille côté ShotGrid.
+ * Removal of a task put in the trash on the ShotGrid side.
  *
- * Une tâche n'a pas de suppression douce : la supprimer emporte ses versions en cascade,
- * donc le travail de review qui y est attaché. On ne retire donc que les tâches vides ;
- * une tâche qui porte des versions reste en place et le journal le dit, à charge d'un
- * humain de décider quoi faire de ce travail devenu orphelin.
+ * A task has no soft deletion: deleting it takes its versions with it in cascade, and so the review work attached to it. Only empty tasks are therefore removed;
+ * a task carrying versions stays in place and the journal says so, leaving it to a human to decide what to do with this work become orphaned.
  *
- * Renvoie `true` si la tâche a effectivement été retirée.
+ * Returns `true` if the task was actually removed.
  */
 async function retireTask(ctx: PullContext, localId: number, sgId: number): Promise<boolean> {
   const versions = await prisma.version.count({ where: { taskId: localId } });
@@ -1110,7 +1051,9 @@ async function retireTask(ctx: PullContext, localId: number, sgId: number): Prom
     );
     return false;
   }
-  await prisma.task.delete({ where: { id: localId } }).catch(() => undefined);
+  await prisma.task
+    .delete({ where: { id: localId } })
+    .catch(ignoreFailure('[shotgrid] retired task delete failed', { taskId: localId }));
   return true;
 }
 

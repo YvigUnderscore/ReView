@@ -4,31 +4,29 @@
 import { badRequest } from './errors';
 
 /**
- * Chemins de pipeline (API v1) — analyse PURE, testée.
+ * Pipeline paths (API v1) — PURE analysis, tested.
  *
- * Un DCC ne connaît pas les identifiants de la base : il connaît des noms, ceux du plan
- * ouvert dans Maya ou du shot que Prism vient de publier. Un chemin les met bout à bout
- * et devient l'adresse d'une entité :
+ * A DCC does not know database identifiers: it knows names, those of the scene open in Maya or of the shot Prism has just
+ * published. A path strings them together and becomes the address of an entity:
  *
- *   PROJ                              projet
- *   PROJ/SQ010                        séquence
+ *   PROJ                              project
+ *   PROJ/SQ010                        sequence
  *   PROJ/SQ010/SH0100                 shot
- *   PROJ/SQ010/SH0100/anim            tâche
+ *   PROJ/SQ010/SH0100/anim            task
  *   PROJ/SQ010/SH0100/anim/v003       version
- *   PROJ/SQ010/SH0100/layout:main     tâche « main » du département « layout »
- *   PROJ/shots/SH0100[/anim[/v003]]   shot rattaché à aucune séquence
- *   PROJ/assets/hero[/model[/v003]]   asset réutilisable
+ *   PROJ/SQ010/SH0100/layout:main     task "main" of the "layout" department
+ *   PROJ/shots/SH0100[/anim[/v003]]   shot attached to no sequence
+ *   PROJ/assets/hero[/model[/v003]]   reusable asset
  *
- * Les segments `shots` et `assets` sont des mots-clés de branche : ils lèvent l'ambiguïté
- * entre « une séquence nommée X » et « un shot nommé X sans séquence ». La résolution en
- * base (insensible à la casse, par code ou par nom) vit dans `services/PipelineResolveService`.
+ * The segments `shots` and `assets` are branch keywords: they remove the ambiguity between "a sequence named X" and "a shot
+ * named X without a sequence". Resolution in the database (case-insensitive, by code or by name) lives in
+ * `services/PipelineResolveService`.
  *
- * Le département se préfixe au nom de tâche plutôt que d'occuper un segment à lui : les
- * pipelines nomment couramment `main` la tâche de chaque département, et un chemin
- * positionnel de plus rendrait `.../modeling/main` indistinguable de `.../anim/v003`.
+ * The department is prefixed to the task name rather than taking a segment of its own: pipelines commonly name the task of
+ * each department `main`, and one more positional segment would make `.../modeling/main` indistinguishable from `.../anim/v003`.
  */
 
-/** Mots-clés de branche, réservés en deuxième position. */
+/** Branch keywords, reserved in second position. */
 export const PATH_KEYWORDS = ['shots', 'assets'] as const;
 
 export type PipelineEntityKind = 'project' | 'sequence' | 'shot' | 'asset' | 'task' | 'version';
@@ -39,17 +37,17 @@ export interface PipelinePath {
   shot?: string;
   asset?: string;
   task?: string;
-  /** Département porté par le segment de tâche (`layout:main`), absent sinon. */
+  /** Department carried by the task segment (`layout:main`), absent otherwise. */
   department?: string;
   version?: string;
-  /** Type de la dernière entité désignée — ce que le chemin adresse réellement. */
+  /** Type of the last designated entity — what the path actually addresses. */
   kind: PipelineEntityKind;
 }
 
 const MAX_SEGMENTS = 6;
 const MAX_SEGMENT_LENGTH = 200;
 
-/** Découpe et valide les segments bruts (bornes strictes : le chemin vient du réseau). */
+/** Splits and validates the raw segments (strict bounds: the path comes from the network). */
 function splitSegments(raw: string): string[] {
   const segments = raw
     .split('/')
@@ -64,8 +62,8 @@ function splitSegments(raw: string): string[] {
 }
 
 /**
- * Sépare `departement:tache`. Sans deux-points, tout le segment est le nom de la tâche —
- * c'est la forme historique, et elle doit continuer de fonctionner telle quelle.
+ * Splits `department:task`. Without a colon, the whole segment is the task name — this is the historical form, and it must
+ * keep working as-is.
  */
 function splitTaskSegment(segment?: string): { task?: string; department?: string } {
   if (!segment) return {};
@@ -75,16 +73,16 @@ function splitTaskSegment(segment?: string): { task?: string; department?: strin
   const task = segment.slice(at + 1).trim();
   if (!department || !task)
     throw badRequest(
-      'Segment de tâche malformé : « département:tâche » attendu de part et d’autre du deux-points',
+      'Malformed task segment: "department:task" expected on both sides of the colon',
       'PATH_TASK_MALFORMED',
     );
   return { task, department };
 }
 
-/** Branche `PROJ/assets/<asset>[/<task>[/<version>]]`. */
+/** Branch `PROJ/assets/<asset>[/<task>[/<version>]]`. */
 function parseAssetBranch(project: string, rest: string[]): PipelinePath {
   const [asset, taskSegment, version] = rest;
-  if (!asset) throw badRequest("Chemin d'asset incomplet : nom d'asset attendu", 'PATH_INCOMPLETE');
+  if (!asset) throw badRequest('Incomplete asset path: asset name expected', 'PATH_INCOMPLETE');
   const { task, department } = splitTaskSegment(taskSegment);
   return {
     project,
@@ -96,7 +94,7 @@ function parseAssetBranch(project: string, rest: string[]): PipelinePath {
   };
 }
 
-/** Branche `PROJ/shots/<shot>[/<task>[/<version>]]` — shot sans séquence. */
+/** Branch `PROJ/shots/<shot>[/<task>[/<version>]]` — shot without a sequence. */
 function parseLooseShotBranch(project: string, rest: string[]): PipelinePath {
   const [shot, taskSegment, version] = rest;
   if (!shot) throw badRequest('Incomplete shot path: a shot code is expected', 'PATH_INCOMPLETE');
@@ -111,7 +109,7 @@ function parseLooseShotBranch(project: string, rest: string[]): PipelinePath {
   };
 }
 
-/** Branche `PROJ/<sequence>[/<shot>[/<task>[/<version>]]]`. */
+/** Branch `PROJ/<sequence>[/<shot>[/<task>[/<version>]]]`. */
 function parseSequenceBranch(project: string, rest: string[]): PipelinePath {
   const [sequence, shot, taskSegment, version] = rest;
   const { task, department } = splitTaskSegment(taskSegment);
@@ -127,9 +125,8 @@ function parseSequenceBranch(project: string, rest: string[]): PipelinePath {
 }
 
 /**
- * Analyse un chemin de pipeline. Lève une `AppError` 400 si le chemin est malformé —
- * jamais de résolution silencieuse : un chemin approximatif doit se voir refusé, pas
- * atterrir sur la mauvaise entité.
+ * Parses a pipeline path. Throws an `AppError` 400 if the path is malformed — never a silent resolution: an approximate path must
+ * be seen refused, not land on the wrong entity.
  */
 export function parsePipelinePath(raw: string): PipelinePath {
   const segments = splitSegments(raw);
@@ -143,7 +140,7 @@ export function parsePipelinePath(raw: string): PipelinePath {
   return parseSequenceBranch(project, rest);
 }
 
-/** Reconstruit le chemin canonique d'une entité (réponses de l'API, journaux, webhooks). */
+/** Rebuilds the canonical path of an entity (API responses, logs, webhooks). */
 export function formatPipelinePath(p: PipelinePath): string {
   const parts: string[] = [p.project];
   if (p.asset) parts.push('assets', p.asset);

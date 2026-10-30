@@ -3,35 +3,35 @@
 
 import type { MediaObject } from '@prisma/client';
 import { prisma } from '../lib/prisma';
-import { storage } from './StorageService';
+import { storage } from '../lib/storage';
 import { mediaViewKey } from './MediaService';
 import { findWithUrl } from './HdriService';
 import { resolveProjectSettingsById } from '../lib/projectSettings';
 import { resolveDeliveryAspect } from '../lib/deliveryAspect';
 
 /**
- * Ce qu'un invité reçoit pour ouvrir UN média du lien — extrait de `client.routes.ts`, où
- * il ne restait plus de place, et complété.
+ * What a guest receives to open ONE media of the link: extracted from `client.routes.ts`, where there was no
+ * room left, and completed.
  *
- * La page publique déclarait depuis le début quatorze champs et la route n'en servait que
- * trois : le viewer invité retombait donc sur des valeurs par défaut aveugles. Deux d'entre
- * elles se voient tout de suite dès qu'on laisse le client annoter :
+ * The public page had declared fourteen fields from the start, and the route only served three: the guest
+ * viewer therefore fell back to blind default values. Two of them show up immediately as soon as the client
+ * is allowed to annotate:
  *
- *  - **`fps`** : une annotation vidéo est ancrée à une frame. Sans la cadence réelle, le
- *    repli 24 fps décale d'une frame par seconde sur un média en 23.976 — le client cite
- *    alors un numéro que l'artiste ne retrouve pas.
- *  - **`startFrame`** : c'est la numérotation du studio. Répondre 1001 partout revient à
- *    parler d'une autre bobine.
+ * - **`fps`**: a video annotation is anchored to a frame. Without the real frame rate, the 24 fps fallback
+ * drifts by one frame
+ *    per second on a 23.976 media, and the client then cites a number the artist cannot find.
+ * - **`startFrame`**: this is the studio's numbering. Answering 1001 everywhere amounts to talking about
+ * another reel.
  *
- * Le reste (mise en scène splat, override USD, éclairage, HDRI) est ce qui fait qu'un
- * spatial s'ouvre chez le client **tel que le studio l'a mis en scène**, et non brut.
+ * The rest (splat staging, USD override, lighting, HDRI) is what makes a spatial media open for the client
+ * **as the studio staged it**, and not raw.
  *
- * Tout se lit dans `media.metadata`, déjà chargé par `findShareMedia` — la portée du lien a
- * donc déjà tranché l'accès. Aucun champ n'ouvre un fichier qui n'appartienne pas à ce
- * média : chaque URL est présignée en lecture seule, comme les autres.
+ * Everything is read from `media.metadata`, already loaded by `findShareMedia`: the scope of the link has
+ * therefore already settled access. No field opens a file that does not belong to this media: each URL is
+ * presigned read-only, like the others.
  */
 
-/** Métadonnées lues ici — miroir partiel de ce qu'écrit le worker. */
+/** Metadata read here: a partial mirror of what the worker writes. */
 interface ClientMediaMeta {
   clientProxyKey?: string;
   slateSec?: number;
@@ -48,9 +48,9 @@ interface ClientMediaMeta {
 const str = (value: unknown): string | null => (typeof value === 'string' && value ? value : null);
 
 /**
- * HDRI de la présentation, déjà résolue en URL pour l'invité. Le viewer connecté interroge
- * `/api/studio/hdris`, une route authentifiée : sans cette résolution côté serveur, un splat
- * mis en scène sous une HDRI s'ouvre chez le client dans un éclairage neutre.
+ * Presentation HDRI, already resolved to a URL for the guest. The connected viewer queries
+ * `/api/studio/hdris`, an authenticated route: without this resolution server-side, a splat staged under an
+ * HDRI opens for the client with neutral lighting.
  */
 async function resolveHdri(meta: ClientMediaMeta): Promise<{ url: string; format: string } | null> {
   const hdriId = str(meta.splatPresentation?.lighting?.hdriId);
@@ -61,16 +61,15 @@ async function resolveHdri(meta: ClientMediaMeta): Promise<{ url: string; format
 
 export async function buildClientMediaSource(media: MediaObject, projectId: number) {
   const meta = (media.metadata ?? {}) as ClientMediaMeta;
-  // Le dérivé client (vidéo, slate et burn-ins en tête) est prioritaire ; à défaut,
-  // `mediaViewKey` et non `mediaSourceKey` — le client reçoit ce qu'un navigateur sait
-  // afficher. Un EXR, un DPX ou un TIFF partagés arrivaient sinon en format d'origine,
-  // c'est-à-dire en image cassée, alors que le proxy web existe déjà.
+  // The client derivative (video, slate and burn-ins first) takes priority; otherwise `mediaViewKey` and not
+  // `mediaSourceKey`: the client receives what a browser can display. Otherwise a shared EXR, DPX or TIFF
+  // would arrive in its original format, i.e. as a broken image, although the web proxy already exists.
   const clientKey = str(meta.clientProxyKey);
   const [url, glbUrl, splatMaskUrl, splatSubsetUrl, project, projectSettings, deliveryAspect, hdri] =
     await Promise.all([
       storage.getPresignedGetUrl(clientKey ?? mediaViewKey(media)),
-      // Le dérivé GLB appartient au même média, donc à la même portée : un .fbx, un .obj ou
-      // un .usd n'est lisible par aucun navigateur.
+      // The GLB derivative belongs to the same media, hence to the same scope: a .fbx, .obj or .usd is
+      // readable by no browser.
       str(meta.glbKey) ? storage.getPresignedGetUrl(meta.glbKey as string) : Promise.resolve(null),
       str(meta.splatMaskKey)
         ? storage.getPresignedGetUrl(meta.splatMaskKey as string)
@@ -80,8 +79,8 @@ export async function buildClientMediaSource(media: MediaObject, projectId: numb
         : Promise.resolve(null),
       prisma.project.findUnique({ where: { id: projectId }, select: { startFrame: true } }),
       resolveProjectSettingsById(projectId),
-      // Ratio du cadre de livraison (réglage pipeline hérité studio → projet → séquence → plan) :
-      // sans lui, l'invité ouvre un spatial non mis en scène dans un cadre 16/9 arbitraire.
+      // Delivery frame ratio (pipeline setting inherited studio -> project -> sequence -> shot):
+      // without it, the guest opens an unstaged spatial in an arbitrary 16:9 frame.
       resolveDeliveryAspect(media.versionId, projectId),
       resolveHdri(meta),
     ]);
@@ -89,23 +88,23 @@ export async function buildClientMediaSource(media: MediaObject, projectId: numb
   const usd = meta.model?.usd ?? null;
   return {
     url,
-    // Le slate n'existe que dans le dérivé client : le front décale ses timestamps d'autant,
-    // pour que l'invité et l'artiste parlent de la même image.
+    // The slate only exists in the client derivative: the front end shifts its timestamps accordingly, so
+    // that the guest and the artist talk about the same image.
     slateSec: clientKey && typeof meta.slateSec === 'number' ? meta.slateSec : 0,
     glbUrl,
     fps: typeof meta.fps === 'number' ? meta.fps : null,
     startFrame: project?.startFrame ?? 1001,
     usdOverride: meta.usdOverride ?? null,
-    // Clé d'indexation de l'override : sans elle, la scène s'affiche telle que le GLB a été
-    // cuit — un repli correct, pas la mise en scène du superviseur.
+    // Override indexing key: without it, the scene displays as the GLB was baked: a correct fallback, not the
+    // supervisor's staging.
     usdPrimPaths: usd?.prims?.map((prim) => prim.path) ?? null,
     usdVariantSets: usd?.variantSets ?? null,
     splatEdits: meta.splatEdits ?? null,
     splatMaskUrl,
     splatSubsetUrl,
     splatPresentation: meta.splatPresentation ?? null,
-    // Ratio du cadre de review : valeur PAR DÉFAUT, que l'aspect gelé dans la présentation
-    // (quand il y en a un) continue de primer — exactement comme dans la review interne.
+    // Review frame ratio: a DEFAULT value, which the aspect frozen in the presentation (when there is one)
+    // keeps overriding, exactly as in the internal review.
     deliveryAspect,
     projectDefaultLighting: projectSettings.defaultLighting ?? null,
     hdri,

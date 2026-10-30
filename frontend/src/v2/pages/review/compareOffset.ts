@@ -4,37 +4,36 @@
 import { create } from 'zustand';
 
 /**
- * Décalage temporel de la comparaison A/B, en frames.
+ * Time offset of the A/B comparison, in frames.
  *
- * Les panes B recopiaient le temps du maître à l'identique. C'est le bon réglage quand les
- * deux versions partagent le même conform — et le mauvais dès qu'il y a eu un retime, une
- * poignée rallongée ou un point d'entrée déplacé entre la v02 et la v03. Le superviseur qui
- * vérifie un raccord voyait alors deux images qui ne se correspondent pas, sans moyen de les
- * recaler autrement qu'en renonçant à la synchronisation.
+ * The B panes copied the master's time as is. That is the right setting when the two versions
+ * share the same conform, and the wrong one as soon as there has been a retime, a lengthened
+ * handle or a moved entry point between v02 and v03. The supervisor checking a join then saw
+ * two images that do not match, with no way to realign them other than giving up on sync.
  *
- * Le décalage vit ici, hors de l'arbre React : `useVideoSync` le lit pour chaque pane
- * esclave, les raccourcis du lecteur l'ajustent. Il vaut pour tous les panes B — un décalage
- * par pane demanderait de le hisser dans `useCompareState`, ce que la grille 2×2 justifiera
- * le jour où l'on comparera trois conforms différents à la fois.
+ * The offset lives here, outside the React tree: `useVideoSync` reads it for each slave pane,
+ * and the player shortcuts adjust it. It applies to all B panes. A per-pane offset would require
+ * hoisting it into `useCompareState`, which the 2×2 grid will justify on the day three different
+ * conforms are compared at once.
  */
 
-/** Bornes : au-delà de dix secondes de décalage, ce n'est plus un recalage de conform. */
+/** Bounds: beyond ten seconds of offset, it is no longer a conform realignment. */
 export const MAX_COMPARE_OFFSET_FRAMES = 240;
 
-/** Ramène un décalage dans les bornes, à la frame entière. */
+/** Clamps an offset into the bounds, at whole-frame precision. */
 export function clampOffsetFrames(frames: number): number {
   if (!Number.isFinite(frames)) return 0;
   return Math.max(-MAX_COMPARE_OFFSET_FRAMES, Math.min(MAX_COMPARE_OFFSET_FRAMES, Math.round(frames)));
 }
 
 interface CompareOffsetState {
-  /** Décalage courant, en frames — positif : la version B est en avance sur la A. */
+  /** Current offset, in frames. Positive: version B is ahead of A. */
   frames: number;
-  /** Le même décalage en secondes, seule unité que connaisse un `HTMLVideoElement`. */
+  /** The same offset in seconds, the only unit an `HTMLVideoElement` knows. */
   seconds: number;
-  /** Ajoute `delta` frames au décalage courant, à la cadence donnée. */
+  /** Adds `delta` frames to the current offset, at the given frame rate. */
   nudge: (delta: number, fps: number) => void;
-  /** Fixe le décalage (utilisé par les tests et par une éventuelle saisie directe). */
+  /** Sets the offset (used by tests and by any direct input). */
   set: (frames: number, fps: number) => void;
   reset: () => void;
 }

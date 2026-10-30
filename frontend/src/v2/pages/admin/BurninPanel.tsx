@@ -5,7 +5,7 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Save } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -15,7 +15,7 @@ import type { BurninConfig } from '../../types/share';
 import { useT, type MessageKey } from '../../i18n';
 import { Hint } from '../../components/ui/hint';
 
-/** Traducteur passé aux tables de libellés, recalculées à chaque rendu. */
+/** Translator passed to the label tables, recomputed on each render. */
 type Tr = (key: MessageKey) => string;
 
 const burninflags = (t: Tr): { key: keyof BurninConfig & string; label: string; hint?: string }[] => [
@@ -27,7 +27,7 @@ const burninflags = (t: Tr): { key: keyof BurninConfig & string; label: string; 
   { key: 'slate', label: t('burnin.slateShort'), hint: t('burnin.slateHint') },
 ];
 
-/** Template studio des burn-ins/slates (35.A) — appliqué aux prochains transcodages. */
+/** Studio template for burn-ins/slates (35.A) — applied to upcoming transcodes. */
 export default function BurninPanel() {
   const t = useT();
   const qc = useQueryClient();

@@ -5,7 +5,7 @@ import { useState } from 'react';
 import QRCode from 'qrcode';
 import { ShieldCheck, ShieldOff } from 'lucide-react';
 import { toast } from 'sonner';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { useAuth } from '../../stores/useAuth';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
@@ -15,8 +15,8 @@ import { SETTINGS_KEYWORDS } from '../../components/settings/settingsKeywords';
 import { Hint } from '../../components/ui/hint';
 
 /**
- * 2FA TOTP (36.A) : enrôlement (QR + code), codes de secours affichés une fois,
- * désactivation par mot de passe. L'état vient de /api/auth/me (twoFaEnabled).
+ * 2FA TOTP (36.A): enrolment (QR code and code), backup codes shown once, deactivation by password.
+ * The state comes from /api/auth/me (twoFaEnabled).
  */
 export default function TwoFaSection() {
   const t = useT();

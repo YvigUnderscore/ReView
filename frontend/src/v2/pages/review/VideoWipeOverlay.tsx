@@ -4,7 +4,7 @@
 import { useRef, useState, type RefObject } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Columns2, Diff, X } from 'lucide-react';
-import { api } from '../../../lib/apiClient';
+import { api } from '@/lib/apiClient';
 import { qk } from '../../lib/query';
 import { type MediaResp } from './reviewTypes';
 import { useVideoSync } from './useVideoSync';
@@ -13,9 +13,9 @@ import WipeControl from './WipeControl';
 import { useT } from '../../i18n';
 
 /**
- * Comparaison A/B vidéo en mode **wipe** (14.C) : la vidéo B, synchronisée sur le maître,
- * est superposée à A et rognée par une barre déplaçable **et rotative** (clip-path
- * polygonal). À placer dans le conteneur `relative` de la vidéo A.
+ * Video A/B comparison in **wipe** mode (14.C): video B, synchronized to the master, is
+ * overlaid on A and clipped by a movable **and rotatable** bar (polygonal clip-path). Place it
+ * inside the `relative` container of video A.
  */
 export default function VideoWipeOverlay({
   compareId,
@@ -29,9 +29,9 @@ export default function VideoWipeOverlay({
   masterRef: RefObject<HTMLVideoElement | null>;
   onClose: () => void;
   onSide: () => void;
-  /** Bascule vers le mode différence amplifiée (34.E). */
+  /** Switches to the amplified difference mode (34.E). */
   onDiff?: () => void;
-  /** Position/angle hissés (répliqués en session live). */
+  /** Position/angle lifted to the parent (mirrored in the live session). */
   sharedWipe?: WipeShared;
 }) {
   const t = useT();
@@ -62,7 +62,7 @@ export default function VideoWipeOverlay({
         />
       )}
       <WipeControl wipe={wipe} />
-      {/* Contrôles flottants */}
+      {/* Floating controls */}
       <div className="absolute right-2 top-2 z-40 flex items-center gap-1 rounded-md border border-border bg-card/90 px-1 py-0.5 backdrop-blur">
         <button
           onClick={onSide}

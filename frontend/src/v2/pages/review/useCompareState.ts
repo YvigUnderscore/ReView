@@ -4,16 +4,16 @@
 import { useState } from 'react';
 import type { WipeShared } from './useWipe';
 
-/** Nombre max de panes B (34.D) : 3 esclaves + le maître = grille 2×2 pleine. */
+/** Max number of B panes (34.D): 3 slaves + the master = full 2×2 grid. */
 export const MAX_COMPARE = 3;
 
-/** Modes de comparaison A/B : côte-à-côte, wipe (barre), différence amplifiée (34.E). */
+/** A/B comparison modes: side by side, wipe (bar), amplified difference (34.E). */
 export type CompareMode = 'side' | 'wipe' | 'diff';
 
 /**
- * Comparaison hissée dans l'orchestrateur (retours 33 + 34.D) : liste des médias B
- * (1 = A/B classique côte-à-côte/wipe ; 2-3 = grille 2×2 vidéo synchronisée), mode et
- * barre de wipe. Le premier id reste la comparaison répliquée en session live.
+ * Comparison lifted into the orchestrator (feedback 33 + 34.D): list of B media (1 = classic A/B,
+ * side by side or wipe; 2-3 = synchronized video 2×2 grid), mode and wipe bar. The first id remains
+ * the comparison replicated in the live session.
  */
 export function useCompareState() {
   const [compareIds, setCompareIds] = useState<number[]>([]);
@@ -21,19 +21,19 @@ export function useCompareState() {
   const [wipePos, setWipePos] = useState(0.5);
   const [wipeAngle, setWipeAngle] = useState(0);
 
-  /** Compat A/B simple (live, sélection image) : remplace toute la sélection. */
+  /** Simple A/B compat (live, image selection): replaces the whole selection. */
   const setCompareId = (id: number | null) => setCompareIds(id == null ? [] : [id]);
   const addCompareId = (id: number) =>
     setCompareIds((ids) => (ids.includes(id) || ids.length >= MAX_COMPARE ? ids : [...ids, id]));
   const removeCompareId = (id: number) => setCompareIds((ids) => ids.filter((i) => i !== id));
 
-  /** Application d'une sync live (spectateur). */
+  /** Applies a live sync (viewer side). */
   const applyWipe = (pos: number, angle: number) => {
     setWipePos(pos);
     setWipeAngle(angle);
   };
 
-  /** État partagé consommé par les overlays de wipe ; `onGrab` = prise de main live. */
+  /** Shared state consumed by the wipe overlays; `onGrab` = live takeover. */
   const makeSharedWipe = (onGrab: () => void): WipeShared => ({
     pos: wipePos,
     angle: wipeAngle,

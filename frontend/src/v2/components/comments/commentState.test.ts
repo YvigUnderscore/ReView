@@ -5,30 +5,30 @@ import { describe, it, expect } from 'vitest';
 import { isClosed, matchesFilter, stateOf, toggleState } from './commentState';
 
 describe('stateOf', () => {
-  it('lit l’état quand il est là', () => {
+  it('reads the state when it is present', () => {
     expect(stateOf({ state: 'WIP', isResolved: false })).toBe('WIP');
     expect(stateOf({ state: 'WONT_FIX', isResolved: false })).toBe('WONT_FIX');
   });
 
-  it('retombe sur le booléen pour les commentaires antérieurs', () => {
-    // Sans ce repli, tous les fils déjà résolus se rouvriraient à l'écran.
+  it('falls back to the boolean for older comments', () => {
+    // Without this fallback, every already-resolved thread would reopen on screen.
     expect(stateOf({ isResolved: true })).toBe('RESOLVED');
     expect(stateOf({ isResolved: false })).toBe('OPEN');
     expect(stateOf({ state: null, isResolved: true })).toBe('RESOLVED');
   });
 
-  it('ignore une valeur inconnue plutôt que de l’afficher telle quelle', () => {
+  it('ignores an unknown value instead of displaying it as is', () => {
     expect(stateOf({ state: 'BIDON', isResolved: true })).toBe('RESOLVED');
   });
 });
 
 describe('isClosed', () => {
-  it('range « ne sera pas corrigé » avec « résolu »', () => {
+  it('groups "will not be fixed" with "resolved"', () => {
     expect(isClosed('RESOLVED')).toBe(true);
     expect(isClosed('WONT_FIX')).toBe(true);
   });
 
-  it('laisse ouverts les états qui attendent encore quelque chose', () => {
+  it('leaves open the states that still wait for something', () => {
     expect(isClosed('OPEN')).toBe(false);
     expect(isClosed('WIP')).toBe(false);
     expect(isClosed('QUESTION')).toBe(false);
@@ -36,11 +36,11 @@ describe('isClosed', () => {
 });
 
 describe('matchesFilter', () => {
-  it('laisse tout passer sans filtre', () => {
+  it('lets everything through without a filter', () => {
     expect(matchesFilter({ isResolved: true }, null)).toBe(true);
   });
 
-  it('compare à l’état effectif, repli compris', () => {
+  it('compares against the effective state, fallback included', () => {
     expect(matchesFilter({ isResolved: true }, 'RESOLVED')).toBe(true);
     expect(matchesFilter({ isResolved: false }, 'RESOLVED')).toBe(false);
     expect(matchesFilter({ state: 'QUESTION', isResolved: false }, 'QUESTION')).toBe(true);
@@ -48,7 +48,7 @@ describe('matchesFilter', () => {
 });
 
 describe('toggleState', () => {
-  it('résout ce qui ne l’est pas, rouvre ce qui l’est', () => {
+  it('resolves what is not resolved, reopens what is', () => {
     expect(toggleState('OPEN')).toBe('RESOLVED');
     expect(toggleState('WIP')).toBe('RESOLVED');
     expect(toggleState('RESOLVED')).toBe('OPEN');

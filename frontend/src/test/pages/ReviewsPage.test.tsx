@@ -9,14 +9,14 @@ import type { MockResolver } from '../apiMock';
 import { page, renderWithProviders } from '../renderWithProviders';
 
 /**
- * La page Reviews affiche cent cartes, chacune avec son menu contextuel Radix, sa case
- * cochable et son aperçu animé. Cocher **une** case en re-rendait cent : les descripteurs
- * de menu étaient recréés à chaque rendu de la page, donc aucune carte ne pouvait être
- * mémoïsée. Sur une grille pleine, chaque clic de sélection coûtait plusieurs centaines
- * de millisecondes.
+ * The Reviews page shows a hundred cards, each with its Radix context menu, its checkbox
+ * and its animated preview. Ticking **one** box re-rendered all hundred: the menu descriptors
+ * were recreated at each render of the page, so no card could be
+ * memoized. On a full grid, each selection click cost several hundred
+ * of milliseconds.
  *
- * La grandeur mesurée ici est donc un **nombre de rendus de carte**, compté sur le calcul
- * que chaque carte fait une fois par rendu — son lien de review.
+ * The quantity measured here is therefore a **count of card renders**, counted on the computation
+ * that each card does once per render: its review link.
  */
 const probe = vi.hoisted(() => ({ cardRenders: 0 }));
 
@@ -52,8 +52,8 @@ const mount = (items: ReviewItem[], extra: Record<string, MockResolver> = {}) =>
     route: '/reviews',
     path: '/reviews',
     api: {
-      // L'encart « assigned to me » disparaît quand il est vide : il ne rend alors
-      // aucune carte, et ne pèse pas sur le compteur.
+      // The "assigned to me" box disappears when empty: it then renders
+      // no card, and does not weigh on the counter.
       'GET /api/media/reviews?assigned=me&pageSize=6': { items: [], total: 0 },
       'GET /api/media/reviews': page(items),
       'GET /api/projects': page([]),
@@ -61,28 +61,28 @@ const mount = (items: ReviewItem[], extra: Record<string, MockResolver> = {}) =>
     },
   });
 
-describe('ReviewsPage — coût d’un clic de sélection', () => {
-  it('rend une carte par média', async () => {
+describe('ReviewsPage — cost of a selection click', () => {
+  it('renders one card per media', async () => {
     mount([item(1), item(2)]);
 
     expect(await screen.findByText('shot_0001.mov')).toBeInTheDocument();
     expect(screen.getByText('shot_0002.mov')).toBeInTheDocument();
   });
 
-  it('ne re-rend que la carte dont la case change', async () => {
+  it('re-renders only the card whose checkbox changes', async () => {
     const items = Array.from({ length: 30 }, (_, i) => item(i + 1));
     const { user } = mount(items);
 
     const boxes = await screen.findAllByRole('checkbox');
     expect(boxes).toHaveLength(items.length);
-    // La liste est posée et les requêtes retombées : ce qui suit n'est dû qu'au clic.
+    // The list is set and the requests have settled: what follows is only due to the click.
     await waitFor(() => expect(screen.getByText('shot_0030.mov')).toBeInTheDocument());
     const before = probe.cardRenders;
 
     await user.click(boxes[0]);
     await waitFor(() => expect(boxes[0]).toHaveAttribute('aria-checked', 'true'));
 
-    // Une carte re-rendue — celle qu'on vient de cocher — et pas trente.
+    // One card re-rendered (the one we just ticked), and not thirty.
     expect(probe.cardRenders - before).toBe(1);
   });
 });

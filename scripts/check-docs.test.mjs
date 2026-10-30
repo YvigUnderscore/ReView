@@ -14,36 +14,36 @@ import {
 } from './check-docs.mjs';
 
 describe('slugifyHeading', () => {
-  it('suit GitHub : minuscules, ponctuation retirée, chaque espace devenu tiret', () => {
+  it('follows GitHub: lowercase, punctuation removed, each space turned into a dash', () => {
     expect(slugifyHeading('Playback quality')).toBe('playback-quality');
     expect(slugifyHeading('Transport & timeline')).toBe('transport--timeline');
     expect(slugifyHeading('  Loop (I/O points)  ')).toBe('loop-io-points');
   });
 
-  it('conserve accents et tiret bas', () => {
+  it('keeps accents and underscores', () => {
     expect(slugifyHeading('Réglages hérités')).toBe('réglages-hérités');
     expect(slugifyHeading('MEDIA_ROOT')).toBe('media_root');
   });
 
-  it('rend une ancre valable quand il ne reste rien', () => {
+  it('returns a valid anchor when nothing is left', () => {
     expect(slugifyHeading('***')).toBe('section');
   });
 });
 
 describe('headingAnchors', () => {
-  it('relève les titres de niveau 1 à 4', () => {
+  it('collects the level 1 to 4 headings', () => {
     expect(headingAnchors('# A\n\n## B\n\n### C\n\n##### E\n')).toEqual(['a', 'b', 'c']);
   });
 
-  it('numérote les titres répétés, comme l’application', () => {
+  it('numbers repeated headings, as the application does', () => {
     expect(headingAnchors('## Limits\n\n## Limits\n')).toEqual(['limits', 'limits-1']);
   });
 
-  it('ignore un dièse à l’intérieur d’un bloc de code', () => {
+  it('ignores a hash inside a code block', () => {
     expect(headingAnchors('## Vrai\n\n```bash\n# commentaire shell\n```\n')).toEqual(['vrai']);
   });
 
-  it('retire le markdown en ligne du texte du titre', () => {
+  it('strips inline markdown from the heading text', () => {
     expect(headingAnchors('## The **review** `workspace`\n')).toEqual(['the-review-workspace']);
   });
 });
@@ -51,34 +51,34 @@ describe('headingAnchors', () => {
 describe('missingPreamble', () => {
   const page = '# Video review\n\n*Frame-accurate playback.*\n\n> Updated: 2026-08-23\n\n## Transport\n';
 
-  it('ne reproche rien à une page conforme', () => {
+  it('reports nothing for a compliant page', () => {
     expect(missingPreamble(page)).toEqual([]);
   });
 
-  it('relève le titre, le sous-titre et la date manquants', () => {
+  it('reports the missing title, subtitle and date', () => {
     expect(missingPreamble('Texte sans rien.\n')).toHaveLength(3);
   });
 
-  it('ne prend pas un paragraphe en gras pour un sous-titre', () => {
+  it('does not take a bold paragraph for a subtitle', () => {
     expect(missingPreamble('# T\n\n**Gras.**\n\n> Updated: 2026-08-23\n')).toEqual([
       'sous-titre en italique (*…*)',
     ]);
   });
 
-  it('exige une date complète', () => {
+  it('requires a complete date', () => {
     expect(missingPreamble('# T\n\n*S.*\n\n> Updated: soon\n')).toEqual(['ligne « > Updated: AAAA-MM-JJ »']);
   });
 });
 
 describe('references', () => {
-  it('distingue les images des liens', () => {
+  it('distinguishes images from links', () => {
     expect(references('![Une figure](../assets/a.svg) et [une page](b.md)')).toEqual([
       { image: true, text: 'Une figure', target: '../assets/a.svg' },
       { image: false, text: 'une page', target: 'b.md' },
     ]);
   });
 
-  it('ignore ce qui vit dans un bloc de code — un exemple n’est pas un lien', () => {
+  it('ignores what lives in a code block — an example is not a link', () => {
     expect(references('```md\n[exemple](inexistant.md)\n```\n\n[vrai](a.md)')).toEqual([
       { image: false, text: 'vrai', target: 'a.md' },
     ]);
@@ -94,29 +94,29 @@ describe('figureProblems', () => {
     '</svg>',
   ].join('\n');
 
-  it('ne reproche rien à une figure conforme', () => {
+  it('reports nothing for a compliant figure', () => {
     expect(figureProblems(svg)).toEqual([]);
   });
 
-  it('relève l’absence de viewBox, de taille, de titre, de rôle et de variante sombre', () => {
+  it('reports the absence of viewBox, size, title, role and dark variant', () => {
     expect(figureProblems('<svg xmlns="x"><rect/></svg>')).toHaveLength(5);
   });
 
   /**
-   * `viewBox` seul ne donne qu'un rapport d'aspect. Sans taille intrinsèque, la figure
-   * retombe sur les 300×150 par défaut du navigateur et son contenu sort du cadre — c'est
-   * ce qui est arrivé à `brief-blocks.svg`, seule des 146 à ne pas la déclarer.
+   * `viewBox` alone only gives an aspect ratio. Without an intrinsic size, the figure
+   * falls back to the browser's 300×150 default and its content spills out of the frame — this
+   * is what happened to `brief-blocks.svg`, the only one of the 146 not to declare it.
    */
-  it('exige une taille intrinsèque sur la racine, pas seulement un viewBox', () => {
+  it('requires an intrinsic size on the root, not just a viewBox', () => {
     const sansTaille = svg.replace(' width="100" height="50"', '');
     expect(figureProblems(sansTaille).join(' ')).toMatch(/width\/height/);
 
-    // La taille d'un `<rect>` interne ne compte pas : seule celle de la racine dimensionne.
+    // The size of an inner `<rect>` does not count: only the root's sizes the figure.
     const rectSeul = svg.replace('viewBox="0 0 100 50" width="100" height="50"', 'viewBox="0 0 100 50"');
     expect(figureProblems(rectSeul).join(' ')).toMatch(/width\/height/);
   });
 
-  it('refuse les id génériques title et desc, qui se marchent dessus entre figures', () => {
+  it('refuses the generic title and desc ids, which trample each other across figures', () => {
     const generique = svg
       .replace('aria-labelledby="t"', 'aria-labelledby="title"')
       .replace('id="t"', 'id="title"');
@@ -129,12 +129,12 @@ describe('figureProblems', () => {
     expect(figureProblems(desc).join(' ')).toMatch(/id="desc" générique/);
   });
 
-  it('relève une balise laissée ouverte', () => {
+  it('reports a tag left open', () => {
     const broken = svg.replace('</svg>', '');
     expect(figureProblems(broken).join(' ')).toMatch(/non fermée/);
   });
 
-  it('ne prend pas les éléments sans contenu pour des balises ouvertes', () => {
+  it('does not take empty elements for open tags', () => {
     expect(
       figureProblems(
         svg.replace(
@@ -147,7 +147,7 @@ describe('figureProblems', () => {
 });
 
 describe('renderProblems', () => {
-  /** En-têtes réels, tronqués : le contrôle ne lit que les premiers octets. */
+  /** Real headers, truncated: the check only reads the first bytes. */
   const mp4 = Buffer.concat([
     Buffer.from([0, 0, 0, 0x20]),
     Buffer.from('ftypisom', 'latin1'),
@@ -156,32 +156,32 @@ describe('renderProblems', () => {
   const webm = Buffer.concat([Buffer.from('1a45dfa3', 'hex'), Buffer.alloc(64)]);
   const gif = Buffer.concat([Buffer.from('GIF89a', 'latin1'), Buffer.alloc(64)]);
 
-  it('ne reproche rien à un rendu conforme, quel que soit le conteneur', () => {
+  it('reports nothing for a compliant render, whatever the container', () => {
     expect(renderProblems(mp4, 'assets/user-guide/a.mp4')).toEqual([]);
     expect(renderProblems(webm, 'assets/user-guide/a.webm')).toEqual([]);
     expect(renderProblems(gif, 'assets/user-guide/a.gif')).toEqual([]);
   });
 
-  it('accepte l’extension en majuscules — le nom du fichier n’est pas le sujet', () => {
+  it('accepts the extension in uppercase — the file name is not the point', () => {
     expect(renderProblems(mp4, 'assets/user-guide/A.MP4')).toEqual([]);
   });
 
-  it('refuse une extension hors de la liste des rendus', () => {
+  it('refuses an extension outside the list of renders', () => {
     expect(renderProblems(mp4, 'assets/user-guide/a.mov').join(' ')).toMatch(/extension de rendu inconnue/);
   });
 
-  it('relève un fichier vide — un rendu interrompu laisse zéro octet', () => {
+  it('reports an empty file — an interrupted render leaves zero bytes', () => {
     expect(renderProblems(Buffer.alloc(0), 'assets/user-guide/a.mp4')).toEqual([
       'fichier vide (rendu interrompu ?)',
     ]);
   });
 
   /**
-   * Le cas qui motive ce contrôle : le fichier existe, donc le contrôle d'image le laisse
-   * passer, mais rien ne le lit. Un `.webm` renommé en `.mp4`, une sortie tronquée, un
-   * pointeur Git-LFS resté texte — tous se voient à l'en-tête, aucun ne se voit au nom.
+   * The case that motivates this check: the file exists, so the image check lets it through,
+   * but nothing can read it. A `.webm` renamed to `.mp4`, a truncated output, a Git-LFS
+   * pointer left as text — all of them show in the header, none of them shows in the name.
    */
-  it('relève un contenu qui ne correspond pas à l’extension', () => {
+  it('reports content that does not match the extension', () => {
     expect(renderProblems(webm, 'assets/user-guide/a.mp4').join(' ')).toMatch(/n’est pas un MP4/);
     expect(
       renderProblems(Buffer.from('version https://git-lfs…'), 'assets/user-guide/a.webm').join(' '),
@@ -191,12 +191,12 @@ describe('renderProblems', () => {
     );
   });
 
-  it('accepte GIF87a comme GIF89a', () => {
+  it('accepts GIF87a just like GIF89a', () => {
     const ancien = Buffer.concat([Buffer.from('GIF87a', 'latin1'), Buffer.alloc(64)]);
     expect(renderProblems(ancien, 'assets/user-guide/a.gif')).toEqual([]);
   });
 
-  it('plafonne le poids : DOCUMENTATION/ est versionné, le binaire y reste', () => {
+  it('caps the weight: DOCUMENTATION/ is versioned, the binary stays there', () => {
     const lourd = Buffer.concat([mp4, Buffer.alloc(RENDER_MAX_BYTES)]);
     expect(renderProblems(lourd, 'assets/user-guide/a.mp4').join(' ')).toMatch(/Mio > 4 Mio/);
 
@@ -204,12 +204,12 @@ describe('renderProblems', () => {
     expect(renderProblems(juste, 'assets/user-guide/a.mp4')).toEqual([]);
   });
 
-  it('cumule les reproches plutôt que de s’arrêter au premier', () => {
+  it('accumulates the complaints instead of stopping at the first', () => {
     const lourdEtFaux = Buffer.concat([webm, Buffer.alloc(RENDER_MAX_BYTES)]);
     expect(renderProblems(lourdEtFaux, 'assets/user-guide/a.mp4')).toHaveLength(2);
   });
 
-  it('n’annonce que des extensions en minuscules, comme les compare le balayage', () => {
+  it('only announces lowercase extensions, as the scan compares them', () => {
     expect(RENDER_EXT).toEqual(RENDER_EXT.map((e) => e.toLowerCase()));
     expect(RENDER_EXT).toContain('.mp4');
   });

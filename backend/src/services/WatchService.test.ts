@@ -29,7 +29,7 @@ describe('setWatch (32.G)', () => {
       }),
     );
   });
-  it('désactive : deleteMany', async () => {
+  it('deactivates: deleteMany', async () => {
     await setWatch(1, 'SHOT', 7, false);
     expect(prisma.watch.deleteMany).toHaveBeenCalledWith({
       where: { userId: 1, targetType: 'SHOT', targetId: 7 },
@@ -38,7 +38,7 @@ describe('setWatch (32.G)', () => {
 });
 
 describe('notifyWatchers (32.G)', () => {
-  it('notifie les suiveurs de la chaîne du média, exclusions déduites', async () => {
+  it('notifies the followers of the media chain, exclusions deducted', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue({
       versionId: 42,
       version: { assetId: null, task: { shotId: 7, assetId: null } },
@@ -72,7 +72,7 @@ describe('notifyWatchers (32.G)', () => {
     );
   });
 
-  it('chaîne par version (décision) : referenceId explicite conservé', async () => {
+  it('chain per version (decision): explicit referenceId kept', async () => {
     vi.mocked(prisma.version.findUnique).mockResolvedValue({
       assetId: 12,
       task: null,
@@ -87,7 +87,7 @@ describe('notifyWatchers (32.G)', () => {
     expect(notify).toHaveBeenCalledWith(expect.objectContaining({ userId: 6, referenceId: 77 }));
   });
 
-  it('média inconnu : personne à notifier', async () => {
+  it('unknown media: nobody to notify', async () => {
     vi.mocked(prisma.mediaObject.findUnique).mockResolvedValue(null);
     const out = await notifyWatchers({
       mediaObjectId: 999,
